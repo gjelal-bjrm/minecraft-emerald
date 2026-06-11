@@ -1,0 +1,26 @@
+modLoader="javafml"
+loaderVersion="[4,)"  # vérifie que c'est bien la version de loader que tu utilises
+license="All Rights Reserved"
+
+[[mods]]
+modId="emeraldweapons"
+version="1.0.0"
+displayName="Emerald Weapons"
+authors="Instinctif"
+description='''
+Ajoute des armes en émeraude avec des effets spéciaux, particules et recettes personnalisées.
+'''
+
+[[dependencies.emeraldweapons]]
+modId="neoforge"
+type="required"
+versionRange="[21.1.174,)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.emeraldweapons]]
+modId="minecraft"
+type="required"
+versionRange="[1.21.1,1.22)"
+ordering="NONE"
+side="BOTH"

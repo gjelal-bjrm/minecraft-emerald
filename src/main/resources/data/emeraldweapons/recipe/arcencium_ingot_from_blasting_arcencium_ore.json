@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:blasting",
+  "category": "misc",
+  "cookingtime": 100,
+  "experience": 0.25,
+  "group": "arcencium_ingot",
+  "ingredient": {
+    "item": "emeraldweapons:arcencium_ore"
+  },
+  "result": {
+    "count": 1,
+    "id": "emeraldweapons:arcencium_ingot"
+  }
+}

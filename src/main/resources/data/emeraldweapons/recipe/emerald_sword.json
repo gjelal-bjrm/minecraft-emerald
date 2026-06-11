@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "ENE",
+    "AAA",
+    " N "
+  ],
+  "key": {
+    "E": { "item": "minecraft:emerald" },
+    "N": { "item": "minecraft:netherite_sword" },
+    "A": { "item": "emeraldweapons:arcencium_ingot" }
+  },
+  "result": {
+    "id": "emeraldweapons:emerald_sword"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:smelting",
+  "category": "misc",
+  "cookingtime": 200,
+  "experience": 0.25,
+  "group": "arcencium_ingot",
+  "ingredient": {
+    "item": "emeraldweapons:raw_arcencium"
+  },
+  "result": {
+    "count": 1,
+    "id": "emeraldweapons:arcencium_ingot"
+  }
+}

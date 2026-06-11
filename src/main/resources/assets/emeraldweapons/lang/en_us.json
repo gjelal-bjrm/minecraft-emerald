@@ -1,0 +1,13 @@
+{
+  "effect.emeraldweapons.crystalline_aura": "Crystalline Aura",
+
+  "item.emeraldweapons.emerald_sword": "Emerald Sword",
+  "item.emeraldweapons.arcencium_ingot": "Arcencium Ingot",
+  "item.emeraldweapons.raw_arcencium": "Raw Arcencium",
+
+  "block.emeraldweapons.arcencium_block": "Arcencium Block",
+  "block.emeraldweapons.arcencium_ore": "Arcencium Ore",
+
+  "creativetab.emeraldweaponsmod.arcencium_items": "Arcencium Items",
+  "creativetab.emeraldweaponsmod.arcencium_blocks": "Arcencium Blocks"
+}

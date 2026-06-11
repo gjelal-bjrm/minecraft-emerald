@@ -1,0 +1,4 @@
+// 1.21.1	2026-05-02T19:41:52.7024078	Registries
+1c5539a8ee885dff5b40291b8e8e28fb9766e9d8 data/emeraldweapons/neoforge/biome_modifier/add_arcencium_ore.json
+8ec003c5956edd37df0deaec9eb0d0ae6a0e69f4 data/emeraldweapons/worldgen/configured_feature/arcencium_ore.json
+9a85f928d3f8b8d353a7414caeb58073701d494d data/emeraldweapons/worldgen/placed_feature/arcencium_ore.json
