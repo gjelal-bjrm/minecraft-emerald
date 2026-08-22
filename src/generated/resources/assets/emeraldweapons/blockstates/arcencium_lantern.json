@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "hanging=false": {
+      "model": "emeraldweapons:block/arcencium_lantern"
+    },
+    "hanging=true": {
+      "model": "emeraldweapons:block/arcencium_lantern_hanging"
+    }
+  }
+}

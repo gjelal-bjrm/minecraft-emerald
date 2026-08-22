@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/stairs",
+  "textures": {
+    "bottom": "emeraldweapons:block/gangue_bricks",
+    "side": "emeraldweapons:block/gangue_bricks",
+    "top": "emeraldweapons:block/gangue_bricks"
+  }
+}

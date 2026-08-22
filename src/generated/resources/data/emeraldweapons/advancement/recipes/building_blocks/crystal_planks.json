@@ -1,0 +1,32 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_prism_log": {
+      "conditions": {
+        "items": [
+          {
+            "items": "emeraldweapons:prism_log"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "has_the_recipe": {
+      "conditions": {
+        "recipe": "emeraldweapons:crystal_planks"
+      },
+      "trigger": "minecraft:recipe_unlocked"
+    }
+  },
+  "requirements": [
+    [
+      "has_the_recipe",
+      "has_prism_log"
+    ]
+  ],
+  "rewards": {
+    "recipes": [
+      "emeraldweapons:crystal_planks"
+    ]
+  }
+}

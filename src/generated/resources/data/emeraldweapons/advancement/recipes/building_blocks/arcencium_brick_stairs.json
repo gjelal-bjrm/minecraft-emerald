@@ -1,0 +1,32 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_arcencium_bricks": {
+      "conditions": {
+        "items": [
+          {
+            "items": "emeraldweapons:arcencium_bricks"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "has_the_recipe": {
+      "conditions": {
+        "recipe": "emeraldweapons:arcencium_brick_stairs"
+      },
+      "trigger": "minecraft:recipe_unlocked"
+    }
+  },
+  "requirements": [
+    [
+      "has_the_recipe",
+      "has_arcencium_bricks"
+    ]
+  ],
+  "rewards": {
+    "recipes": [
+      "emeraldweapons:arcencium_brick_stairs"
+    ]
+  }
+}

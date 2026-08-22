@@ -1,0 +1,32 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_ecru_wool": {
+      "conditions": {
+        "items": [
+          {
+            "items": "emeraldweapons:ecru_wool"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "has_the_recipe": {
+      "conditions": {
+        "recipe": "emeraldweapons:ecru_carpet"
+      },
+      "trigger": "minecraft:recipe_unlocked"
+    }
+  },
+  "requirements": [
+    [
+      "has_the_recipe",
+      "has_ecru_wool"
+    ]
+  ],
+  "rewards": {
+    "recipes": [
+      "emeraldweapons:ecru_carpet"
+    ]
+  }
+}

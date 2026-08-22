@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/cube_bottom_top",
+  "textures": {
+    "bottom": "minecraft:block/dirt",
+    "side": "emeraldweapons:block/prismatic_grass_block_side",
+    "top": "emeraldweapons:block/prismatic_grass_block_top"
+  }
+}

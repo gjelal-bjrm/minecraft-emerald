@@ -1,0 +1,9 @@
+{
+  "type": "emeraldweapons:centered_template",
+  "biomes": "#emeraldweapons:has_structure/arcencium_cathedral",
+  "step": "surface_structures",
+  "spawn_overrides": {},
+  "terrain_adaptation": "none",
+  "template": "emeraldweapons:cathedral_main_0",
+  "base_y": 54
+}

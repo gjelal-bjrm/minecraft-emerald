@@ -24,3 +24,8 @@ runs
 run-data
 
 repo
+# outils : les apercus sont regenerables (block_designer, build_view, iso_render).
+# tools/refs/ est en revanche versionne : ce sont les images de reference de
+# l'auteur, sources des textures de buches, briques et gangue.
+tools/preview
+tools/__pycache__

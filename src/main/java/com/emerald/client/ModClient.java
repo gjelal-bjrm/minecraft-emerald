@@ -17,6 +17,76 @@ public class ModClient {
         event.registerSpriteSet(ModParticles.CRYSTAL_PINK.get(), CrystalParticle.Provider::new);
         event.registerSpriteSet(ModParticles.CRYSTAL_RED.get(), CrystalParticle.Provider::new);
         event.registerSpriteSet(ModParticles.CRYSTAL_YELLOW.get(), CrystalParticle.Provider::new);
+        event.registerSpriteSet(ModParticles.PRISM_MOTE.get(), PrismMoteParticle.Provider::new);
+    }
+
+    /**
+     * Mote prismatique : point lumineux teinte au hasard parmi les 5 cristaux.
+     * Rendu plein feu (getLightColor) : il luit dans le noir. La vitesse
+     * initiale decide du comportement : negative en y = tombe des feuilles,
+     * positive = s'eleve des plantes.
+     */
+    public static class PrismMoteParticle extends TextureSheetParticle {
+        private static final float[][] COLORS = {
+                {1.00f, 0.38f, 0.42f},    // rouge
+                {1.00f, 0.61f, 0.19f},    // orange
+                {0.38f, 0.77f, 1.00f},    // bleu
+                {1.00f, 0.49f, 0.84f},    // rose
+                {0.47f, 1.00f, 0.75f},    // vert
+        };
+        private final float baseSize;
+
+        protected PrismMoteParticle(ClientLevel level, double x, double y, double z,
+                                    double dx, double dy, double dz, SpriteSet sprites) {
+            super(level, x, y, z, dx, dy, dz);
+            // le constructeur parent brouille la vitesse : on la reimpose
+            this.xd = dx;
+            this.yd = dy;
+            this.zd = dz;
+            float[] c = COLORS[level.random.nextInt(COLORS.length)];
+            this.setColor(c[0], c[1], c[2]);
+            this.gravity = dy < 0 ? 0.015f : 0.0f;
+            this.friction = 0.97f;
+            this.hasPhysics = false;
+            this.lifetime = 30 + level.random.nextInt(25);
+            this.baseSize = 0.05f + level.random.nextFloat() * 0.05f;
+            this.quadSize = baseSize;
+            this.alpha = 0.0f;
+            this.pickSprite(sprites);
+        }
+
+        @Override
+        public void tick() {
+            super.tick();
+            float t = (float) this.age / this.lifetime;
+            // apparition douce, scintillement, extinction
+            this.alpha = t < 0.15f ? t / 0.15f : (t > 0.7f ? (1.0f - t) / 0.3f : 1.0f);
+            this.quadSize = baseSize * (0.85f + 0.15f * (float) Math.sin(this.age * 0.6));
+        }
+
+        @Override
+        public int getLightColor(float partialTick) {
+            return 0xF000F0;      // plein feu : visible et lumineux la nuit
+        }
+
+        @Override
+        public ParticleRenderType getRenderType() {
+            return ParticleRenderType.PARTICLE_SHEET_TRANSLUCENT;
+        }
+
+        public static class Provider implements ParticleProvider<SimpleParticleType> {
+            private final SpriteSet sprites;
+
+            public Provider(SpriteSet sprites) {
+                this.sprites = sprites;
+            }
+
+            @Override
+            public Particle createParticle(SimpleParticleType type, ClientLevel level, double x, double y, double z,
+                                           double dx, double dy, double dz) {
+                return new PrismMoteParticle(level, x, y, z, dx, dy, dz, this.sprites);
+            }
+        }
     }
 
     /*public static void clientTick(Minecraft mc) {

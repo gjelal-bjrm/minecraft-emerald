@@ -26,14 +26,15 @@ public class ModDataGenerators {
         ExistingFileHelper existingFileHelper = event.getExistingFileHelper();
 
         generator.addProvider(event.includeClient(), new ModItemModelProvider(packOutput, existingFileHelper));
-        /*generator.addProvider(event.includeServer(), new LootTableProvider(
+        generator.addProvider(event.includeClient(), new ModBlockStateProvider(packOutput, existingFileHelper));
+
+        generator.addProvider(event.includeServer(), new LootTableProvider(
                 packOutput,
                 Collections.emptySet(),
-                List.of(new LootTableProvider.SubProviderEntry(ModBlockLootTables::new, LootContextParamSets.BLOCK)),
+                List.of(new LootTableProvider.SubProviderEntry(ModBlockLootTableProvider::new, LootContextParamSets.BLOCK)),
                 lookupProvider
         ));
-
-        generator.addProvider(event.includeServer(), new ModRecipeProvider(packOutput, lookupProvider));*/
+        generator.addProvider(event.includeServer(), new ModRecipeProvider(packOutput, lookupProvider));
 
         var blockTags = new ModBlockTagProvider(packOutput, lookupProvider, fileHelper);
         generator.addProvider(event.includeServer(), blockTags);

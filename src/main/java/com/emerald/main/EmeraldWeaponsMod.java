@@ -29,6 +29,7 @@ public class EmeraldWeaponsMod {
         ModCreativeModeTabs.register(modEventBus);
         ModBlocks.register(modEventBus);
         Jak3Registry.register(modEventBus);         // ← modBus → modEventBus
+        com.emerald.world.structure.ModStructures.register(modEventBus);
         modEventBus.addListener(this::registerJak3Attributes); // ← modBus → modEventBus
     }
 

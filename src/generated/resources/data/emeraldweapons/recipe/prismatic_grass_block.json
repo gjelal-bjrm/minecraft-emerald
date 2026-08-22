@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "building",
+  "ingredients": [
+    {
+      "item": "minecraft:grass_block"
+    },
+    {
+      "item": "emeraldweapons:raw_arcencium"
+    }
+  ],
+  "result": {
+    "count": 1,
+    "id": "emeraldweapons:prismatic_grass_block"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "structures": [
+    {
+      "structure": "emeraldweapons:arcencium_village_taiga",
+      "weight": 1
+    }
+  ],
+  "placement": {
+    "type": "minecraft:random_spread",
+    "spacing": 28,
+    "separation": 10,
+    "salt": 1519453651
+  }
+}

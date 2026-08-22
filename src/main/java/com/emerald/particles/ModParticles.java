@@ -27,4 +27,9 @@ public class ModParticles {
 
     public static final DeferredHolder<ParticleType<?>, SimpleParticleType> CRYSTAL_YELLOW =
             PARTICLES.register("crystal_yellow", () -> new SimpleParticleType(true));
+
+    /** Mote prismatique : point lumineux teinte au hasard parmi les 5 cristaux,
+     *  emis par les plantes et l'arbre de Prisme (voir ModClient.PrismMoteParticle). */
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> PRISM_MOTE =
+            PARTICLES.register("prism_mote", () -> new SimpleParticleType(false));
 }

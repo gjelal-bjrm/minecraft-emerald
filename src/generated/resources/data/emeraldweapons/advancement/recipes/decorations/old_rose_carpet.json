@@ -1,0 +1,32 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_old_rose_wool": {
+      "conditions": {
+        "items": [
+          {
+            "items": "emeraldweapons:old_rose_wool"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "has_the_recipe": {
+      "conditions": {
+        "recipe": "emeraldweapons:old_rose_carpet"
+      },
+      "trigger": "minecraft:recipe_unlocked"
+    }
+  },
+  "requirements": [
+    [
+      "has_the_recipe",
+      "has_old_rose_wool"
+    ]
+  ],
+  "rewards": {
+    "recipes": [
+      "emeraldweapons:old_rose_carpet"
+    ]
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/inner_stairs",
+  "textures": {
+    "bottom": "emeraldweapons:block/corrupted_bricks",
+    "side": "emeraldweapons:block/corrupted_bricks",
+    "top": "emeraldweapons:block/corrupted_bricks"
+  }
+}

@@ -2,6 +2,14 @@ package com.emerald.datagen;
 
 import com.emerald.block.ModBlocks;
 import com.emerald.main.EmeraldWeaponsMod;
+import com.emerald.world.ModConfiguredFeatures;
+import net.minecraft.util.valueproviders.ConstantInt;
+import net.minecraft.util.valueproviders.UniformInt;
+import net.minecraft.world.level.levelgen.feature.configurations.TreeConfiguration;
+import net.minecraft.world.level.levelgen.feature.featuresize.TwoLayersFeatureSize;
+import net.minecraft.world.level.levelgen.feature.foliageplacers.RandomSpreadFoliagePlacer;
+import net.minecraft.world.level.levelgen.feature.stateproviders.BlockStateProvider;
+import net.minecraft.world.level.levelgen.feature.trunkplacers.BendingTrunkPlacer;
 import net.minecraft.core.HolderGetter;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.HolderSet;
@@ -61,6 +69,18 @@ public class ModWorldGenProvider extends DatapackBuiltinEntriesProvider {
                         OreConfiguration.target(new TagMatchTest(BlockTags.DEEPSLATE_ORE_REPLACEABLES),
                                 ModBlocks.ARCENCIUM_ORE.get().defaultBlockState())
                 ), 6))); // veine de 6 blocs
+
+        // Arbre de Prisme : tronc qui se courbe + feuillage en nuage irregulier
+        // (silhouette azalee), plus organique qu'un chene droit
+        ctx.register(ModConfiguredFeatures.PRISM_TREE, new ConfiguredFeature<>(Feature.TREE,
+                new TreeConfiguration.TreeConfigurationBuilder(
+                        BlockStateProvider.simple(ModBlocks.PRISM_LOG.get()),
+                        new BendingTrunkPlacer(5, 2, 0, 3, UniformInt.of(1, 2)),
+                        BlockStateProvider.simple(ModBlocks.PRISM_LEAVES.get()),
+                        new RandomSpreadFoliagePlacer(ConstantInt.of(3), ConstantInt.of(0), ConstantInt.of(2), 50),
+                        new TwoLayersFeatureSize(1, 0, 1))
+                        .ignoreVines()
+                        .build()));
     }
 
     private static void bootstrapPF(BootstrapContext<PlacedFeature> ctx) {

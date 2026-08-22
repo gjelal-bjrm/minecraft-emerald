@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "I": {
+      "item": "emeraldweapons:arcencium_ingot"
+    },
+    "N": {
+      "item": "minecraft:gold_nugget"
+    }
+  },
+  "pattern": [
+    "NNN",
+    "NIN",
+    "NNN"
+  ],
+  "result": {
+    "count": 1,
+    "id": "emeraldweapons:arcencium_lantern"
+  }
+}

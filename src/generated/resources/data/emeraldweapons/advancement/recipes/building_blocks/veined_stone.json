@@ -1,0 +1,32 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_raw_arcencium": {
+      "conditions": {
+        "items": [
+          {
+            "items": "emeraldweapons:raw_arcencium"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "has_the_recipe": {
+      "conditions": {
+        "recipe": "emeraldweapons:veined_stone"
+      },
+      "trigger": "minecraft:recipe_unlocked"
+    }
+  },
+  "requirements": [
+    [
+      "has_the_recipe",
+      "has_raw_arcencium"
+    ]
+  ],
+  "rewards": {
+    "recipes": [
+      "emeraldweapons:veined_stone"
+    ]
+  }
+}

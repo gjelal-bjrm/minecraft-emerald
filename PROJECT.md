@@ -52,6 +52,24 @@ Ce mod enrichit l'expérience de jeu de fin de partie avec un matériau rare à 
 - Client : `ArcenciumBowClient` enregistre les prédicats `pull` (normalisé sur 50 ticks) / `pulling` ; le modèle a **5 overrides** de tension (un par cristal) au lieu des 3 vanilla
 - Textures générées par `tools/bow_designer.py --install` : repos + 5 états de tension, chacun animé 12 frames (corde prismatique, pulsation, particules)
 
+### Palette du village d'Arcencium (47 blocs)
+Règle directrice : ~85 % de matière sourde, ~15 % d'accents colorés. Tout est enregistré dans `ModBlocks.VILLAGE_BLOCKS` (onglet créatif « Arcencium Blocks »), blockstates/modèles/loot tables/recettes/tags générés par datagen.
+- **Gangue** (la roche stérile de la mine, matériau de masse, gris-beige) : `gangue_stone`, `gangue_bricks`, `polished_gangue`, `veined_stone` — chacun avec escaliers / dalle / mur (sauf polie : pas de mur). Recette : 8 cobblestone + 1 arcencium brut → 8 ; tailleur de pierre depuis la gangue brute
+- **Arcencium** (le noble, réservé aux édifices importants) : `arcencium_bricks` (+ escaliers/dalle/mur, **texture animée** : veines organiques aux couleurs qui vibrent, 8 frames), `chiseled_arcencium` (animé, lumière 6), `corrupted_bricks` (+ famille, palette violette pour le village hostile). Recettes : 8 gangue taillée + 1 lingot → 8 ; corrompue = 8 briques + œil d'araignée fermenté
+- **Verre & lumière** : `prismatic_glass` (+ vitre `prismatic_glass_pane`), `arcencium_lantern` (lumière 14, posée/suspendue)
+- **Végétal** : `prismatic_grass_block`, `prism_bloom` et `prism_tuft` (classe `GlowingPlantBlock` : lumière faible constante + particules colorées **uniquement la nuit**), **Arbre de Prisme** : `prism_log` (`PrismLogBlock`, animé, lumière 5, étincelles nocturnes), `prism_leaves` (`PrismLeavesBlock`, motes multicolores qui tombent), `prism_sapling` (TreeGrower → configured feature `prism_tree` : tronc courbe + feuillage azalée), `crystal_planks` (+ escaliers/dalle/barrière)
+- **Textile** (teintures poussiéreuses, laine vanilla trop saturée) : `verdigris_wool`, `ochre_wool`, `old_rose_wool`, `slate_blue_wool`, `ecru_wool` + les 5 tapis. Recette : 4 laines blanches + teinture + lingot → 4
+- **Particule** `prism_mote` (`ModClient.PrismMoteParticle`) : point lumineux plein feu, teinte aléatoire parmi les 5 cristaux, tombe ou s'élève selon la vitesse initiale
+- **Outils** : `tools/block_designer.py` (textures tuilables, veines par marcheurs aléatoires, `--install`, `--check` pour le tiling), `tools/iso_render.py` (rendu isométrique d'une scène de blocs — maison test dans `tools/preview/iso/`)
+
+### Village d'Arcencium (génération Jigsaw)
+- Structure `emeraldweapons:arcencium_village_taiga` (`minecraft:jigsaw`, start pool `village/taiga/town_centers`, size 6, `beard_thin`, biomes taïga via tag `has_structure/arcencium_village`), structure set `arcencium_villages` (random_spread, spacing 28 / separation 10)
+- **145 structures NBT** dans `data/emeraldweapons/structure/` : le village taïga de CTOV (mod du modpack ATM10, **usage privé uniquement**) rehabillé bloc à bloc avec notre palette par `tools/reskin.py` (~120 correspondances ; mobilier fonctionnel laissé vanilla ; propriétés de blockstate filtrées selon le bloc cible ; pools et `final_state` des blocs jigsaw redirigés vers nos pools)
+- **23 template pools** (`village/taiga/*`, `village/common/*`) copiés de CTOV et réécrits (namespace, structures, processeurs → `minecraft:empty`)
+- Pipeline : `tools/nbt_structure.py` (lecture/écriture NBT, jars vanilla + mods), `tools/build_view.py` (rendu iso 4 angles + coupe + plans, formes réelles), `tools/import_village.py`, `tools/make_village.py` (datapack complet + validation des références), `tools/preview/builds/commandes.txt` (`/place template …` pour visiter)
+- En jeu : `/locate structure emeraldweapons:arcencium_village_taiga`
+- Textures des bûches de Prisme : issues des **images de référence de l'auteur** (`tools/refs/`, 64×64, animées par rotation de teinte des éclairs — `tools/log_from_refs.py`), non régénérées par `block_designer.py`
+
 ### Effet de statut custom
 - `crystalline_aura` (catégorie BENEFICIAL, couleur 0x80FFDA) avec modificateurs d'attributs transitoires
 - `prismatic_mark` (HARMFUL, 0xE478FF) — drapeau passif de synergie arc → épée

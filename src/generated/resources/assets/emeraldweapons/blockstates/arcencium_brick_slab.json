@@ -1,0 +1,13 @@
+{
+  "variants": {
+    "type=bottom": {
+      "model": "emeraldweapons:block/arcencium_brick_slab"
+    },
+    "type=double": {
+      "model": "emeraldweapons:block/arcencium_bricks"
+    },
+    "type=top": {
+      "model": "emeraldweapons:block/arcencium_brick_slab_top"
+    }
+  }
+}
