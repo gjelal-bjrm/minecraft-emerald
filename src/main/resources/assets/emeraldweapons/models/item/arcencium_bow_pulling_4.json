@@ -1,0 +1,6 @@
+{
+  "parent": "emeraldweapons:item/arcencium_bow",
+  "textures": {
+    "layer0": "emeraldweapons:item/arcencium_bow_pulling_4"
+  }
+}

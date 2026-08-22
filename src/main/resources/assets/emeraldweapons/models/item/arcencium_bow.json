@@ -1,0 +1,13 @@
+{
+  "parent": "minecraft:item/bow",
+  "textures": {
+    "layer0": "emeraldweapons:item/arcencium_bow"
+  },
+  "overrides": [
+    { "predicate": { "pulling": 1 },                "model": "emeraldweapons:item/arcencium_bow_pulling_0" },
+    { "predicate": { "pulling": 1, "pull": 0.36 },  "model": "emeraldweapons:item/arcencium_bow_pulling_1" },
+    { "predicate": { "pulling": 1, "pull": 0.56 },  "model": "emeraldweapons:item/arcencium_bow_pulling_2" },
+    { "predicate": { "pulling": 1, "pull": 0.76 },  "model": "emeraldweapons:item/arcencium_bow_pulling_3" },
+    { "predicate": { "pulling": 1, "pull": 0.99 },  "model": "emeraldweapons:item/arcencium_bow_pulling_4" }
+  ]
+}

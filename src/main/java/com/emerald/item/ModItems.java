@@ -1,6 +1,7 @@
 package com.emerald.item;
 
 import com.emerald.tiers.EmeraldTier;
+import com.emerald.weapons.ArcenciumBowItem;
 import com.emerald.weapons.EmeraldWindblade;
 import com.emerald.main.EmeraldWeaponsMod;
 import net.minecraft.world.item.Item;
@@ -26,6 +27,11 @@ public class ModItems {
                                     .attributes(SwordItem.createAttributes(new EmeraldTier(), 4.0F, -2.2F))
                     )
             );
+
+    /** Arcencium Bow -- Tension Prismatique (voir ArcenciumBowItem). */
+    public static final DeferredItem<ArcenciumBowItem> ARCENCIUM_BOW =
+            ITEMS.register("arcencium_bow", () ->
+                    new ArcenciumBowItem(new Item.Properties().durability(1500)));
 
     public static void register(IEventBus eventBus) {
         ITEMS.register(eventBus);

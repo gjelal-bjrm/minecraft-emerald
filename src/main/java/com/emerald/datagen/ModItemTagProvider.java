@@ -23,5 +23,11 @@ public class ModItemTagProvider extends ItemTagsProvider {
         tag(ItemTags.SWORDS)
                 .add(ModItems.EMERALD_SWORD.get());
 
+        // Sans ces tags, l'arc refuserait Power / Punch / Flame / Infinity
+        // et Unbreaking / Mending (1.21 : enchantabilite pilotee par tags)
+        tag(ItemTags.BOW_ENCHANTABLE)
+                .add(ModItems.ARCENCIUM_BOW.get());
+        tag(ItemTags.DURABILITY_ENCHANTABLE)
+                .add(ModItems.ARCENCIUM_BOW.get());
     }
 }

@@ -35,6 +35,7 @@ public class EmeraldWeaponsMod {
     private void addItemsToCreativeTab(BuildCreativeModeTabContentsEvent event) {
         if (event.getTabKey() == CreativeModeTabs.COMBAT) {
             event.accept(ModItems.EMERALD_SWORD.get());
+            event.accept(ModItems.ARCENCIUM_BOW.get());
         } else if (event.getTabKey() == CreativeModeTabs.INGREDIENTS) {
             event.accept(ModItems.ARCENCIUM_INGOT);
             event.accept(ModItems.RAW_ARCENCIUM);

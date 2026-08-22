@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "EA ",
+    "AB ",
+    "EA "
+  ],
+  "key": {
+    "A": { "item": "emeraldweapons:arcencium_ingot" },
+    "E": { "item": "minecraft:emerald" },
+    "B": { "item": "minecraft:bow" }
+  },
+  "result": {
+    "id": "emeraldweapons:arcencium_bow"
+  }
+}

@@ -24,6 +24,7 @@ public class ModCreativeModeTabs {
                         output.accept(ModItems.RAW_ARCENCIUM);
                         output.accept(ModItems.ARCENCIUM_INGOT);
                         output.accept(ModItems.EMERALD_SWORD);
+                        output.accept(ModItems.ARCENCIUM_BOW);
                     }).build()
     );
 

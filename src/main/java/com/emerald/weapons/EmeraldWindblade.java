@@ -49,9 +49,20 @@ public class EmeraldWindblade extends SwordItem {
         return 1f - (elapsed / (float) COOLDOWN_MS);
     }
 
-    private static boolean canTriggerColorEffect(LivingEntity attacker) {
+    /**
+     * Synergie arc -> epee : une cible portant la Marque Prismatique (posee par
+     * la Fleche Prismatique de l'Arcencium Bow) voit les chances de proc de
+     * l'epee DOUBLEES : cooldown des cristaux divise par 2, chances d'Aura et
+     * de Thunder multipliees par 2.
+     */
+    public static double procMultiplier(LivingEntity target) {
+        return target.hasEffect(ModEffects.PRISMATIC_MARK) ? 2.0 : 1.0;
+    }
+
+    private static boolean canTriggerColorEffect(LivingEntity attacker, double mult) {
         long now = System.currentTimeMillis();
-        return colorEffectCooldowns.getOrDefault(attacker.getUUID(), 0L) + COOLDOWN_MS <= now;
+        long cooldown = (long) (COOLDOWN_MS / mult);
+        return colorEffectCooldowns.getOrDefault(attacker.getUUID(), 0L) + cooldown <= now;
     }
 
     private static void updateColorEffectCooldown(LivingEntity attacker) {
@@ -82,8 +93,8 @@ public class EmeraldWindblade extends SwordItem {
         return damageMultiplier;
     }
 
-    private void procDamageType(LivingEntity target, LivingEntity attacker, ServerLevel serverLevel, Level level) {
-        if (canTriggerColorEffect(attacker)) {
+    private void procDamageType(LivingEntity target, LivingEntity attacker, ServerLevel serverLevel, Level level, double mult) {
+        if (canTriggerColorEffect(attacker, mult)) {
             updateColorEffectCooldown(attacker);
             int colorIndex = level.random.nextInt(5);
             Vec3 p = target.position();
@@ -141,8 +152,8 @@ public class EmeraldWindblade extends SwordItem {
         }
     }
 
-    private void applyCrystallineBuff(LivingEntity attacker, Level level) {
-        if (attacker instanceof Player player && Math.random() < 0.08) {
+    private void applyCrystallineBuff(LivingEntity attacker, Level level, double mult) {
+        if (attacker instanceof Player player && Math.random() < 0.08 * mult) {
             player.addEffect(new MobEffectInstance(ModEffects.CRYSTALLINE_AURA, 20 * 20));
             level.playSound(null, player.blockPosition(), SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.PLAYERS, 1.0f, 1.2f);
         }
@@ -369,8 +380,8 @@ public class EmeraldWindblade extends SwordItem {
      * sonne différente, évite l'effet "son en boucle" après plusieurs procs rapides
      * Enregistrement de la zone d'électrification dans electrifiedZones après l'impact
      */
-    private void summonCrystallineThunder(LivingEntity target, LivingEntity attacker, ServerLevel serverLevel, Level level) {
-        if (attacker instanceof Player player && Math.random() < 0.03) { // FIX: 0.93 → 0.03
+    private void summonCrystallineThunder(LivingEntity target, LivingEntity attacker, ServerLevel serverLevel, Level level, double mult) {
+        if (attacker instanceof Player player && Math.random() < 0.03 * mult) { // FIX: 0.93 → 0.03
             Vec3 attackerPos = attacker.position();
             Vec3 lookVec = attacker.getLookAngle();
 
@@ -420,10 +431,11 @@ public class EmeraldWindblade extends SwordItem {
     public boolean hurtEnemy(ItemStack stack, LivingEntity target, LivingEntity attacker) {
         Level level = attacker.level();
         if (!level.isClientSide && level instanceof ServerLevel serverLevel) {
+            double mult = procMultiplier(target);   // x2 si Marque Prismatique
             applyCrystallineEffects(attacker);
-            procDamageType(target, attacker, serverLevel, level);
-            applyCrystallineBuff(attacker, level);
-            summonCrystallineThunder(target, attacker, serverLevel, level);
+            procDamageType(target, attacker, serverLevel, level, mult);
+            applyCrystallineBuff(attacker, level, mult);
+            summonCrystallineThunder(target, attacker, serverLevel, level, mult);
             // Vérifie et applique la zone d'électrification active à chaque coup
             tickElectrifiedZone(attacker, serverLevel, level);
         }

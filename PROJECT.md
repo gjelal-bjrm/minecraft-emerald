@@ -40,8 +40,21 @@ Ce mod enrichit l'expérience de jeu de fin de partie avec un matériau rare à 
 - **Crystalline Aura** (8 %) : buff joueur turquoise (movement speed +10 %, attack speed +10 %, lifesteal 5 %)
 - **Crystalline Thunder** (3 %) : foudre arc-en-ciel sur jusqu'à 6 ennemis dans un cône de 6 blocs, 15.0 dégâts magiques + 6 effets de debuff + onde de choc + zone électrifiée 3 s
 
+### Arc Légendaire — Arcencium Bow (`arcencium_bow`)
+- Classe `ArcenciumBowItem` (extends `BowItem`), 1500 durabilité, enchantabilité 22, tags `enchantable/bow` + `enchantable/durability` (datagen)
+- **Recette** : `EA_ / AB_ / EA_` (Arcencium_Ingot × 3, Émeraude × 2, Bow × 1)
+- **Tension Prismatique** : la charge allume les cristaux un à un selon le temps de bandage (8 / 18 / 28 / 38 / 50 ticks) :
+  1. rouge → flèche enflammée · 2. orange → knockback · 3. bleu → gel temporaire (`setTicksFrozen` + Slowness VI 3 s) · 4. rose → poison II · 5. vert → **Flèche Prismatique**
+- **Flèche Prismatique** (pleine tension) : critique, puis à l'impact 3 éclats frappent jusqu'à 3 ennemis dans 5 blocs (4 dégâts magiques chacun) avec effet aléatoire parmi 5 — l'éclat 1 porte toujours un effet, les autres une fois sur deux
+- **Portée indépendante de la charge** : vitesse 2.7 → 3.0 quel que soit le cran, seuls dégâts (base 2.0 → 6.0) et effets montent
+- **Marque Prismatique** (`prismatic_mark`, 8 s, + Glowing) posée par la Flèche Prismatique : les procs de l'épée sur une cible marquée sont doublés (`EmeraldWindblade.procMultiplier`)
+- Impacts gérés par `ArcenciumBowEvents` via `ProjectileImpactEvent` (stade stocké dans les persistent data de la flèche, pas d'entité custom)
+- Client : `ArcenciumBowClient` enregistre les prédicats `pull` (normalisé sur 50 ticks) / `pulling` ; le modèle a **5 overrides** de tension (un par cristal) au lieu des 3 vanilla
+- Textures générées par `tools/bow_designer.py --install` : repos + 5 états de tension, chacun animé 12 frames (corde prismatique, pulsation, particules)
+
 ### Effet de statut custom
 - `crystalline_aura` (catégorie BENEFICIAL, couleur 0x80FFDA) avec modificateurs d'attributs transitoires
+- `prismatic_mark` (HARMFUL, 0xE478FF) — drapeau passif de synergie arc → épée
 
 ### Système de particules (6 types)
 - `crystalline_fissure` (3 frames d'animation), `crystal_red/orange/yellow/green/pink` — oscillation circulaire ou pulsation sinusoïdale, rendu client dédié
