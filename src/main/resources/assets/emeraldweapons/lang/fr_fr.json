@@ -147,7 +147,7 @@
   "game.emeraldweapons.blade_pulled": "Le Serment vous lie",
   "game.emeraldweapons.blade_pulled.sub": "Les Corrompus arrivent. Tenez le village.",
   "game.emeraldweapons.village_lost": "Le village est tombé",
-  "game.emeraldweapons.village_lost.sub": "La lame retourne en terre. Réessayez.",
+  "game.emeraldweapons.village_lost.sub": "Le dernier villageois est tombé. La lame retourne en terre.",
   "game.emeraldweapons.anchors_risen": "Trois faisceaux à l'horizon",
   "game.emeraldweapons.anchors_risen.sub": "La lame se dissout en ancres. Le chronomètre tourne.",
   "game.emeraldweapons.ritual_begun": "Le rituel a commencé",

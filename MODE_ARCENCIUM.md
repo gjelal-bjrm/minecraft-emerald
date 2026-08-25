@@ -109,6 +109,16 @@ de 60 secondes**, puis se repete.
 
 ### 3.2 Le siege du village
 
+**Condition de defaite : plus aucun villageois vivant.** Pas la mort d'un joueur,
+qui reapparait et revient -- sa chute ne doit pas condamner l'equipe. Tant qu'un
+villageois tient debout, la defense continue.
+
+Si aucun joueur n'est present, le siege **se suspend** au lieu d'echouer.
+
+Six villageois au minimum sont reposes avant chaque tentative, et le village est
+repeuple apres un echec : sa condition de defaite etant justement leur absence,
+sans repeuplement la mission serait perdue pour toujours.
+
 - Le village est attaque. Les monstres **entrent dans le village** et attaquent
   joueurs et villageois.
 - Les monstres sont **attaches au village** (rayon 40 blocs) : `restrictTo(centre, 40)`

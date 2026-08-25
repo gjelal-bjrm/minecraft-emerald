@@ -44,9 +44,20 @@ public class Siege {
     private static final int SPAWN_MAX = 26;
     private static final int WAVE_GAP = 5 * 20;
 
+    /**
+     * Ce qui fait perdre un siege.
+     *
+     * VILLAGERS : le prologue. On ne perd que si les villageois sont tous
+     * tombes -- la mort d'un joueur ne compte pas, il reapparait et revient.
+     * DEFENDERS : les rituels d'ancre. La disparition de tous les defenseurs
+     * rompt le rituel, comme prevu au cahier.
+     */
+    public enum Failure { VILLAGERS, DEFENDERS }
+
     private final ServerLevel level;
     private final BlockPos center;
     private final int tier;
+    private final Failure failure;
     private final int[] waveSizes;
     private final ServerBossEvent bar;
     private final List<UUID> alive = new ArrayList<>();
@@ -57,10 +68,11 @@ public class Siege {
     private boolean won;
 
     public Siege(ServerLevel level, BlockPos center, int tier, int[] waveSizes,
-                 Component title, BossEvent.BossBarColor color) {
+                 Component title, BossEvent.BossBarColor color, Failure failure) {
         this.level = level;
         this.center = center;
         this.tier = tier;
+        this.failure = failure;
         this.waveSizes = waveSizes;
         this.bar = new ServerBossEvent(title, color, BossEvent.BossBarOverlay.NOTCHED_10);
         this.bar.setProgress(1.0F);
@@ -102,7 +114,15 @@ public class Siege {
         });
         refreshBar();
 
-        if (defendersGone()) {
+        if (this.failure == Failure.VILLAGERS) {
+            if (villagersGone()) {
+                end(false);
+                return;
+            }
+            if (defendersGone()) {
+                return;          // personne sur place : on suspend, on n'echoue pas
+            }
+        } else if (defendersGone()) {
             end(false);
             return;
         }
@@ -120,6 +140,19 @@ public class Siege {
         spawnWave(this.waveSizes[this.wave]);
         this.wave++;
         this.gap = WAVE_GAP;
+    }
+
+    /**
+     * Le village est-il perdu ?
+     *
+     * C'est la seule condition d'echec du prologue : tant qu'il reste un
+     * villageois debout, la defense continue. Un joueur tombe reapparait et
+     * revient -- sa mort ne doit pas condamner l'equipe.
+     */
+    private boolean villagersGone() {
+        return this.level.getEntitiesOfClass(net.minecraft.world.entity.npc.Villager.class,
+                new net.minecraft.world.phys.AABB(this.center).inflate(LEASH),
+                e -> e.isAlive()).isEmpty();
     }
 
     private boolean defendersGone() {

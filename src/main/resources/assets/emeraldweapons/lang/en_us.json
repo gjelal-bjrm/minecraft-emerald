@@ -147,7 +147,7 @@
   "game.emeraldweapons.blade_pulled": "The Oath binds you",
   "game.emeraldweapons.blade_pulled.sub": "The Corrupted are coming. Hold the village.",
   "game.emeraldweapons.village_lost": "The village has fallen",
-  "game.emeraldweapons.village_lost.sub": "The blade returns to the ground. Try again.",
+  "game.emeraldweapons.village_lost.sub": "The last villager has fallen. The blade returns to the ground.",
   "game.emeraldweapons.anchors_risen": "Three beams on the horizon",
   "game.emeraldweapons.anchors_risen.sub": "The blade dissolves into the anchors. The clock is running.",
   "game.emeraldweapons.ritual_begun": "The ritual has begun",

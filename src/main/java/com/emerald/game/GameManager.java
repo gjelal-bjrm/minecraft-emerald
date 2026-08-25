@@ -94,6 +94,10 @@ public class GameManager {
                     GameState.get(level).returnToLobby();
                     dissolveBlades(level);
                     replantBlade(level, finished.center());
+                    // sans repeuplement, la mission serait perdue pour toujours :
+                    // sa condition d'echec est justement l'absence de villageois
+                    surroundWithVillagers(level, finished.center());
+                    WorldSetup.clearHostiles(level, finished.center());
                 }
             }
         }
@@ -249,28 +253,36 @@ public class GameManager {
         plantBlade(level, ground);
     }
 
+    /** Nombre de villageois garanti avant chaque tentative de defense. */
+    private static final int MIN_VILLAGERS = 6;
+
     /**
      * Les villageois autour de la lame.
      *
-     * Ils ne servent aucun objectif : ils sont l'appat. Une place vide
-     * n'attire personne, une place peuplee si.
-     *
-     * On n'en ajoute que si le lieu en manque : dans un vrai village genere, ils
-     * sont deja la, et en rajouter huit donnerait une foule absurde.
+     * Ils sont l'appat qui attire les joueurs vers la place -- mais surtout,
+     * ce sont EUX qu'il faut garder en vie : le prologue n'est perdu que
+     * lorsqu'il n'en reste aucun. On en repose donc autant qu'il en manque
+     * avant chaque tentative, sans quoi un village decime rendrait la mission
+     * definitivement injouable.
      */
     private static void surroundWithVillagers(ServerLevel level, BlockPos center) {
-        long present = level.getEntitiesOfClass(
+        int present = level.getEntitiesOfClass(
                 net.minecraft.world.entity.npc.Villager.class,
-                new net.minecraft.world.phys.AABB(center).inflate(24)).size();
-        if (present >= 4) {
-            return;
-        }
-        for (int i = 0; i < 8; i++) {
-            double angle = i / 8.0 * Math.PI * 2;
-            int x = center.getX() + (int) Math.round(Math.cos(angle) * 4);
-            int z = center.getZ() + (int) Math.round(Math.sin(angle) * 4);
-            EntityType.VILLAGER.spawn(level, surface(level, new BlockPos(x, 0, z)),
+                new net.minecraft.world.phys.AABB(center).inflate(Siege.LEASH),
+                e -> e.isAlive()).size();
+        int missing = MIN_VILLAGERS - present;
+        for (int i = 0; i < missing; i++) {
+            double angle = i / (double) MIN_VILLAGERS * Math.PI * 2;
+            int x = center.getX() + (int) Math.round(Math.cos(angle) * 5);
+            int z = center.getZ() + (int) Math.round(Math.sin(angle) * 5);
+            var villager = EntityType.VILLAGER.spawn(level, surface(level, new BlockPos(x, 0, z)),
                     net.minecraft.world.entity.MobSpawnType.EVENT);
+            if (villager != null) {
+                // sans persistance, un villageois pose par le mod peut disparaitre
+                // et faire echouer la mission tout seul
+                villager.setPersistenceRequired();
+                villager.restrictTo(center, Siege.LEASH);
+            }
         }
     }
 
@@ -324,9 +336,10 @@ public class GameManager {
                 "game.emeraldweapons.blade_pulled.sub", 0xFFD36B);
 
         state.beginPrologue();
+        surroundWithVillagers(level, pos);
         prologue = new Siege(level, pos, 1, PROLOGUE_WAVES,
                 Component.translatable("game.emeraldweapons.siege.village"),
-                BossEvent.BossBarColor.RED);
+                BossEvent.BossBarColor.RED, Siege.Failure.VILLAGERS);
     }
 
     /**
@@ -394,7 +407,8 @@ public class GameManager {
         state.anchorStarted();
         anchorSieges.put(pos, new Siege(level, pos, tier, WAVES[tier - 1],
                 Component.translatable("game.emeraldweapons.siege.anchor", tier),
-                tier >= 3 ? BossEvent.BossBarColor.PURPLE : BossEvent.BossBarColor.BLUE));
+                tier >= 3 ? BossEvent.BossBarColor.PURPLE : BossEvent.BossBarColor.BLUE,
+                Siege.Failure.DEFENDERS));
 
         level.playSound(null, pos, SoundEvents.RESPAWN_ANCHOR_CHARGE, SoundSource.PLAYERS, 1.2F, 1.0F);
         announce(level, "game.emeraldweapons.ritual_begun",
