@@ -1,21 +1,21 @@
 {
-  "type": "minecraft:crafting_shaped",
-  "category": "building",
-  "key": {
-    "A": {
-      "item": "emeraldweapons:gangue_bricks"
+    "type": "minecraft:crafting_shaped",
+    "category": "building",
+    "key": {
+        "A": {
+            "item": "emeraldweapons:gangue_bricks"
+        },
+        "C": {
+            "item": "emeraldweapons:arcencium_ingot"
+        }
     },
-    "C": {
-      "item": "emeraldweapons:arcencium_ingot"
+    "pattern": [
+        "AAA",
+        "ACA",
+        "AAA"
+    ],
+    "result": {
+        "count": 8,
+        "id": "emeraldweapons:arcencium_bricks"
     }
-  },
-  "pattern": [
-    "AAA",
-    "ACA",
-    "AAA"
-  ],
-  "result": {
-    "count": 8,
-    "id": "emeraldweapons:arcencium_bricks"
-  }
 }

@@ -1,11 +1,11 @@
 {
-  "values": [
-    "emeraldweapons:gangue_stone_slab",
-    "emeraldweapons:gangue_brick_slab",
-    "emeraldweapons:polished_gangue_slab",
-    "emeraldweapons:veined_stone_slab",
-    "emeraldweapons:arcencium_brick_slab",
-    "emeraldweapons:corrupted_brick_slab",
-    "emeraldweapons:crystal_slab"
-  ]
+    "values": [
+        "emeraldweapons:gangue_stone_slab",
+        "emeraldweapons:gangue_brick_slab",
+        "emeraldweapons:polished_gangue_slab",
+        "emeraldweapons:veined_stone_slab",
+        "emeraldweapons:arcencium_brick_slab",
+        "emeraldweapons:corrupted_brick_slab",
+        "emeraldweapons:crystal_slab"
+    ]
 }

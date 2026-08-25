@@ -1,17 +1,17 @@
 {
-  "type": "minecraft:crafting_shaped",
-  "category": "misc",
-  "group": "carpet",
-  "key": {
-    "#": {
-      "item": "emeraldweapons:slate_blue_wool"
+    "type": "minecraft:crafting_shaped",
+    "category": "misc",
+    "group": "carpet",
+    "key": {
+        "#": {
+            "item": "emeraldweapons:slate_blue_wool"
+        }
+    },
+    "pattern": [
+        "##"
+    ],
+    "result": {
+        "count": 3,
+        "id": "emeraldweapons:slate_blue_carpet"
     }
-  },
-  "pattern": [
-    "##"
-  ],
-  "result": {
-    "count": 3,
-    "id": "emeraldweapons:slate_blue_carpet"
-  }
 }

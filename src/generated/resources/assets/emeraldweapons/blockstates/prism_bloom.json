@@ -1,7 +1,7 @@
 {
-  "variants": {
-    "": {
-      "model": "emeraldweapons:block/prism_bloom"
+    "variants": {
+        "": {
+            "model": "emeraldweapons:block/prism_bloom"
+        }
     }
-  }
 }

@@ -1,7 +1,7 @@
 {
-  "variants": {
-    "": {
-      "model": "emeraldweapons:block/prism_tuft"
+    "variants": {
+        "": {
+            "model": "emeraldweapons:block/prism_tuft"
+        }
     }
-  }
 }

@@ -1,32 +1,32 @@
 {
-  "parent": "minecraft:recipes/root",
-  "criteria": {
-    "has_crystal_planks": {
-      "conditions": {
-        "items": [
-          {
-            "items": "emeraldweapons:crystal_planks"
-          }
-        ]
-      },
-      "trigger": "minecraft:inventory_changed"
+    "parent": "minecraft:recipes/root",
+    "criteria": {
+        "has_crystal_planks": {
+            "conditions": {
+                "items": [
+                    {
+                        "items": "emeraldweapons:crystal_planks"
+                    }
+                ]
+            },
+            "trigger": "minecraft:inventory_changed"
+        },
+        "has_the_recipe": {
+            "conditions": {
+                "recipe": "emeraldweapons:prism_branch"
+            },
+            "trigger": "minecraft:recipe_unlocked"
+        }
     },
-    "has_the_recipe": {
-      "conditions": {
-        "recipe": "emeraldweapons:prism_branch"
-      },
-      "trigger": "minecraft:recipe_unlocked"
+    "requirements": [
+        [
+            "has_the_recipe",
+            "has_crystal_planks"
+        ]
+    ],
+    "rewards": {
+        "recipes": [
+            "emeraldweapons:prism_branch"
+        ]
     }
-  },
-  "requirements": [
-    [
-      "has_the_recipe",
-      "has_crystal_planks"
-    ]
-  ],
-  "rewards": {
-    "recipes": [
-      "emeraldweapons:prism_branch"
-    ]
-  }
 }

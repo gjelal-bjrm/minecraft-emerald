@@ -1,17 +1,17 @@
 {
-  "type": "minecraft:crafting_shaped",
-  "category": "misc",
-  "key": {
-    "P": {
-      "item": "emeraldweapons:crystal_planks"
+    "type": "minecraft:crafting_shaped",
+    "category": "misc",
+    "key": {
+        "P": {
+            "item": "emeraldweapons:crystal_planks"
+        }
+    },
+    "pattern": [
+        "P",
+        "P"
+    ],
+    "result": {
+        "count": 4,
+        "id": "emeraldweapons:prism_branch"
     }
-  },
-  "pattern": [
-    "P",
-    "P"
-  ],
-  "result": {
-    "count": 4,
-    "id": "emeraldweapons:prism_branch"
-  }
 }

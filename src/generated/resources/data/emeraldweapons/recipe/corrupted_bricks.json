@@ -1,21 +1,21 @@
 {
-  "type": "minecraft:crafting_shaped",
-  "category": "building",
-  "key": {
-    "A": {
-      "item": "emeraldweapons:arcencium_bricks"
+    "type": "minecraft:crafting_shaped",
+    "category": "building",
+    "key": {
+        "A": {
+            "item": "emeraldweapons:arcencium_bricks"
+        },
+        "C": {
+            "item": "minecraft:fermented_spider_eye"
+        }
     },
-    "C": {
-      "item": "minecraft:fermented_spider_eye"
+    "pattern": [
+        "AAA",
+        "ACA",
+        "AAA"
+    ],
+    "result": {
+        "count": 8,
+        "id": "emeraldweapons:corrupted_bricks"
     }
-  },
-  "pattern": [
-    "AAA",
-    "ACA",
-    "AAA"
-  ],
-  "result": {
-    "count": 8,
-    "id": "emeraldweapons:corrupted_bricks"
-  }
 }

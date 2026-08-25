@@ -1,32 +1,32 @@
 {
-  "parent": "minecraft:recipes/root",
-  "criteria": {
-    "has_prism_leaves": {
-      "conditions": {
-        "items": [
-          {
-            "items": "emeraldweapons:prism_leaves"
-          }
-        ]
-      },
-      "trigger": "minecraft:inventory_changed"
+    "parent": "minecraft:recipes/root",
+    "criteria": {
+        "has_prism_leaves": {
+            "conditions": {
+                "items": [
+                    {
+                        "items": "emeraldweapons:prism_leaves"
+                    }
+                ]
+            },
+            "trigger": "minecraft:inventory_changed"
+        },
+        "has_the_recipe": {
+            "conditions": {
+                "recipe": "emeraldweapons:prism_fiber"
+            },
+            "trigger": "minecraft:recipe_unlocked"
+        }
     },
-    "has_the_recipe": {
-      "conditions": {
-        "recipe": "emeraldweapons:prism_fiber"
-      },
-      "trigger": "minecraft:recipe_unlocked"
+    "requirements": [
+        [
+            "has_the_recipe",
+            "has_prism_leaves"
+        ]
+    ],
+    "rewards": {
+        "recipes": [
+            "emeraldweapons:prism_fiber"
+        ]
     }
-  },
-  "requirements": [
-    [
-      "has_the_recipe",
-      "has_prism_leaves"
-    ]
-  ],
-  "rewards": {
-    "recipes": [
-      "emeraldweapons:prism_fiber"
-    ]
-  }
 }

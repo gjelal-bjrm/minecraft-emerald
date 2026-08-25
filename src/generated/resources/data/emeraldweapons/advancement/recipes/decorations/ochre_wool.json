@@ -1,32 +1,32 @@
 {
-  "parent": "minecraft:recipes/root",
-  "criteria": {
-    "has_arcencium_ingot": {
-      "conditions": {
-        "items": [
-          {
-            "items": "emeraldweapons:arcencium_ingot"
-          }
-        ]
-      },
-      "trigger": "minecraft:inventory_changed"
+    "parent": "minecraft:recipes/root",
+    "criteria": {
+        "has_arcencium_ingot": {
+            "conditions": {
+                "items": [
+                    {
+                        "items": "emeraldweapons:arcencium_ingot"
+                    }
+                ]
+            },
+            "trigger": "minecraft:inventory_changed"
+        },
+        "has_the_recipe": {
+            "conditions": {
+                "recipe": "emeraldweapons:ochre_wool"
+            },
+            "trigger": "minecraft:recipe_unlocked"
+        }
     },
-    "has_the_recipe": {
-      "conditions": {
-        "recipe": "emeraldweapons:ochre_wool"
-      },
-      "trigger": "minecraft:recipe_unlocked"
+    "requirements": [
+        [
+            "has_the_recipe",
+            "has_arcencium_ingot"
+        ]
+    ],
+    "rewards": {
+        "recipes": [
+            "emeraldweapons:ochre_wool"
+        ]
     }
-  },
-  "requirements": [
-    [
-      "has_the_recipe",
-      "has_arcencium_ingot"
-    ]
-  ],
-  "rewards": {
-    "recipes": [
-      "emeraldweapons:ochre_wool"
-    ]
-  }
 }

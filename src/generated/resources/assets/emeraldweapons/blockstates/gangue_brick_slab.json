@@ -1,13 +1,13 @@
 {
-  "variants": {
-    "type=bottom": {
-      "model": "emeraldweapons:block/gangue_brick_slab"
-    },
-    "type=double": {
-      "model": "emeraldweapons:block/gangue_bricks"
-    },
-    "type=top": {
-      "model": "emeraldweapons:block/gangue_brick_slab_top"
+    "variants": {
+        "type=bottom": {
+            "model": "emeraldweapons:block/gangue_brick_slab"
+        },
+        "type=double": {
+            "model": "emeraldweapons:block/gangue_bricks"
+        },
+        "type=top": {
+            "model": "emeraldweapons:block/gangue_brick_slab_top"
+        }
     }
-  }
 }

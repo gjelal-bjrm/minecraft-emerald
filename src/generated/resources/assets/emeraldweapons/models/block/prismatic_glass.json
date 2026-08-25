@@ -1,7 +1,7 @@
 {
-  "parent": "minecraft:block/cube_all",
-  "render_type": "minecraft:translucent",
-  "textures": {
-    "all": "emeraldweapons:block/prismatic_glass"
-  }
+    "parent": "minecraft:block/cube_all",
+    "render_type": "minecraft:translucent",
+    "textures": {
+        "all": "emeraldweapons:block/prismatic_glass"
+    }
 }

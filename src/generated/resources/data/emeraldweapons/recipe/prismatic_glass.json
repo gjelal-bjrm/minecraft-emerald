@@ -1,21 +1,21 @@
 {
-  "type": "minecraft:crafting_shaped",
-  "category": "building",
-  "key": {
-    "A": {
-      "item": "minecraft:glass"
+    "type": "minecraft:crafting_shaped",
+    "category": "building",
+    "key": {
+        "A": {
+            "item": "minecraft:glass"
+        },
+        "C": {
+            "item": "emeraldweapons:arcencium_ingot"
+        }
     },
-    "C": {
-      "item": "emeraldweapons:arcencium_ingot"
+    "pattern": [
+        "AAA",
+        "ACA",
+        "AAA"
+    ],
+    "result": {
+        "count": 8,
+        "id": "emeraldweapons:prismatic_glass"
     }
-  },
-  "pattern": [
-    "AAA",
-    "ACA",
-    "AAA"
-  ],
-  "result": {
-    "count": 8,
-    "id": "emeraldweapons:prismatic_glass"
-  }
 }

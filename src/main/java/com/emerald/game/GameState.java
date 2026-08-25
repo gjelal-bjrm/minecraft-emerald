@@ -1,9 +1,13 @@
 package com.emerald.game;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.saveddata.SavedData;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * L'etat d'une partie, sauvegarde avec le monde.
@@ -26,10 +30,16 @@ public class GameState extends SavedData {
 
     public enum Status { LOBBY, PROLOGUE, RUNNING, WON, LOST }
 
+    /** Distance entre le village et chaque ancre. */
+    public static final int ANCHOR_DISTANCE = 450;
+
     private Status status = Status.LOBBY;
     private long startTick;
     private int anchorsActive;
     private int anchorsInProgress;
+    private BlockPos village = BlockPos.ZERO;
+    private final List<BlockPos> anchors = new ArrayList<>();
+    private final List<BlockPos> activated = new ArrayList<>();
 
     public static GameState get(ServerLevel level) {
         return level.getServer().overworld().getDataStorage().computeIfAbsent(
@@ -42,6 +52,13 @@ public class GameState extends SavedData {
         state.startTick = tag.getLong("StartTick");
         state.anchorsActive = tag.getInt("AnchorsActive");
         state.anchorsInProgress = tag.getInt("AnchorsInProgress");
+        state.village = BlockPos.of(tag.getLong("Village"));
+        for (long packed : tag.getLongArray("Anchors")) {
+            state.anchors.add(BlockPos.of(packed));
+        }
+        for (long packed : tag.getLongArray("Activated")) {
+            state.activated.add(BlockPos.of(packed));
+        }
         return state;
     }
 
@@ -51,6 +68,9 @@ public class GameState extends SavedData {
         tag.putLong("StartTick", this.startTick);
         tag.putInt("AnchorsActive", this.anchorsActive);
         tag.putInt("AnchorsInProgress", this.anchorsInProgress);
+        tag.putLong("Village", this.village.asLong());
+        tag.putLongArray("Anchors", this.anchors.stream().mapToLong(BlockPos::asLong).toArray());
+        tag.putLongArray("Activated", this.activated.stream().mapToLong(BlockPos::asLong).toArray());
         return tag;
     }
 
@@ -62,6 +82,39 @@ public class GameState extends SavedData {
 
     public int anchorsActive() {
         return this.anchorsActive;
+    }
+
+    public BlockPos village() {
+        return this.village;
+    }
+
+    public List<BlockPos> anchors() {
+        return List.copyOf(this.anchors);
+    }
+
+    public boolean isActivated(BlockPos pos) {
+        return this.activated.contains(pos);
+    }
+
+    /**
+     * Le point de reapparition le plus proche : une ancre activee, ou le
+     * village a defaut.
+     *
+     * Les ancres SONT les points de reapparition du mode : c'est ce qui lie
+     * l'objectif principal a la penalite de mort, plutot que d'en faire deux
+     * systemes independants.
+     */
+    public BlockPos respawnFor(BlockPos from) {
+        BlockPos best = this.village;
+        double bestDist = from.distSqr(this.village);
+        for (BlockPos anchor : this.activated) {
+            double dist = from.distSqr(anchor);
+            if (dist < bestDist) {
+                bestDist = dist;
+                best = anchor;
+            }
+        }
+        return best;
     }
 
     /**
@@ -104,6 +157,7 @@ public class GameState extends SavedData {
         this.startTick = level.getGameTime();
         this.anchorsActive = 0;
         this.anchorsInProgress = 0;
+        this.activated.clear();
         setDirty();
     }
 
@@ -112,11 +166,23 @@ public class GameState extends SavedData {
         setDirty();
     }
 
-    public void anchorFinished(boolean won) {
+    public void anchorFinished(BlockPos pos, boolean won) {
         this.anchorsInProgress = Math.max(0, this.anchorsInProgress - 1);
-        if (won) {
-            this.anchorsActive++;
+        if (won && !this.activated.contains(pos)) {
+            this.activated.add(pos);
+            this.anchorsActive = this.activated.size();
         }
+        setDirty();
+    }
+
+    public void setVillage(BlockPos pos) {
+        this.village = pos;
+        setDirty();
+    }
+
+    public void setAnchors(List<BlockPos> positions) {
+        this.anchors.clear();
+        this.anchors.addAll(positions);
         setDirty();
     }
 
@@ -130,6 +196,8 @@ public class GameState extends SavedData {
         this.startTick = 0L;
         this.anchorsActive = 0;
         this.anchorsInProgress = 0;
+        this.anchors.clear();
+        this.activated.clear();
         setDirty();
     }
 }

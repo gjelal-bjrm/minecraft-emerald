@@ -466,6 +466,26 @@ Maquette du chronometre a produire **avant** de coder l'interface.
 | **Waystones, JourneyMap** | Confort. Deja presents dans l'instance. |
 | **Curios** | API des emplacements d'accessoires. |
 
+### Le modpack dans l'environnement de developpement
+
+`tools/dev_mods.py` copie des mods du modpack vers `run/mods/` en resolvant leurs
+dependances transitivement -- un jar seul refuse de demarrer si l'une manque.
+
+```
+python tools/dev_mods.py gateways apotheosis cataclysm irons_spellbooks curios jade
+```
+
+Regle de travail : **quand le projet a besoin d'une fonctionnalite, on prend ce
+qui existe dans le modpack plutot que d'ecrire une alternative maison.**
+
+Deja installes : Gateways, Apotheosis (+ Attributes, Enchanting, Spawners),
+Cataclysm (+ LionfishAPI), Iron's Spellbooks, Curios, GeckoLib, Placebo, Jade.
+
+**Apotheosis fait deja les escouades** : ses `apothic_elites` acceptent des
+`supporting_entities`, soit un meneur avec ses gardes -- exactement la structure
+prevue en 5.2, et c'est ce meneur que designera le Repere d'Echo. Ses
+`apothic_invaders` fourniront les elites a equipement et butin dedies.
+
 ### Dependances souples
 
 Verifier au demarrage quelles entites existent reellement

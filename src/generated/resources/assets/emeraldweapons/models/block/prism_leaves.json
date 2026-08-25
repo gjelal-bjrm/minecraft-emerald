@@ -1,7 +1,7 @@
 {
-  "parent": "minecraft:block/cube_all",
-  "render_type": "minecraft:cutout_mipped",
-  "textures": {
-    "all": "emeraldweapons:block/prism_leaves"
-  }
+    "parent": "minecraft:block/cube_all",
+    "render_type": "minecraft:cutout_mipped",
+    "textures": {
+        "all": "emeraldweapons:block/prism_leaves"
+    }
 }

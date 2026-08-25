@@ -1,32 +1,32 @@
 {
-  "parent": "minecraft:recipes/root",
-  "criteria": {
-    "has_the_recipe": {
-      "conditions": {
-        "recipe": "emeraldweapons:verdigris_carpet"
-      },
-      "trigger": "minecraft:recipe_unlocked"
+    "parent": "minecraft:recipes/root",
+    "criteria": {
+        "has_the_recipe": {
+            "conditions": {
+                "recipe": "emeraldweapons:verdigris_carpet"
+            },
+            "trigger": "minecraft:recipe_unlocked"
+        },
+        "has_verdigris_wool": {
+            "conditions": {
+                "items": [
+                    {
+                        "items": "emeraldweapons:verdigris_wool"
+                    }
+                ]
+            },
+            "trigger": "minecraft:inventory_changed"
+        }
     },
-    "has_verdigris_wool": {
-      "conditions": {
-        "items": [
-          {
-            "items": "emeraldweapons:verdigris_wool"
-          }
+    "requirements": [
+        [
+            "has_the_recipe",
+            "has_verdigris_wool"
         ]
-      },
-      "trigger": "minecraft:inventory_changed"
+    ],
+    "rewards": {
+        "recipes": [
+            "emeraldweapons:verdigris_carpet"
+        ]
     }
-  },
-  "requirements": [
-    [
-      "has_the_recipe",
-      "has_verdigris_wool"
-    ]
-  ],
-  "rewards": {
-    "recipes": [
-      "emeraldweapons:verdigris_carpet"
-    ]
-  }
 }

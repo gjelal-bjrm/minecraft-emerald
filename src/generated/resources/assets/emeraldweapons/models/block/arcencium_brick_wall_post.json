@@ -1,6 +1,6 @@
 {
-  "parent": "minecraft:block/template_wall_post",
-  "textures": {
-    "wall": "emeraldweapons:block/arcencium_bricks"
-  }
+    "parent": "minecraft:block/template_wall_post",
+    "textures": {
+        "wall": "emeraldweapons:block/arcencium_bricks"
+    }
 }

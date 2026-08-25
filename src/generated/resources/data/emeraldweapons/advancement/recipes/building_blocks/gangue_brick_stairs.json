@@ -1,32 +1,32 @@
 {
-  "parent": "minecraft:recipes/root",
-  "criteria": {
-    "has_gangue_bricks": {
-      "conditions": {
-        "items": [
-          {
-            "items": "emeraldweapons:gangue_bricks"
-          }
-        ]
-      },
-      "trigger": "minecraft:inventory_changed"
+    "parent": "minecraft:recipes/root",
+    "criteria": {
+        "has_gangue_bricks": {
+            "conditions": {
+                "items": [
+                    {
+                        "items": "emeraldweapons:gangue_bricks"
+                    }
+                ]
+            },
+            "trigger": "minecraft:inventory_changed"
+        },
+        "has_the_recipe": {
+            "conditions": {
+                "recipe": "emeraldweapons:gangue_brick_stairs"
+            },
+            "trigger": "minecraft:recipe_unlocked"
+        }
     },
-    "has_the_recipe": {
-      "conditions": {
-        "recipe": "emeraldweapons:gangue_brick_stairs"
-      },
-      "trigger": "minecraft:recipe_unlocked"
+    "requirements": [
+        [
+            "has_the_recipe",
+            "has_gangue_bricks"
+        ]
+    ],
+    "rewards": {
+        "recipes": [
+            "emeraldweapons:gangue_brick_stairs"
+        ]
     }
-  },
-  "requirements": [
-    [
-      "has_the_recipe",
-      "has_gangue_bricks"
-    ]
-  ],
-  "rewards": {
-    "recipes": [
-      "emeraldweapons:gangue_brick_stairs"
-    ]
-  }
 }

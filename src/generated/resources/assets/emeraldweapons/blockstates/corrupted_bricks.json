@@ -1,7 +1,7 @@
 {
-  "variants": {
-    "": {
-      "model": "emeraldweapons:block/corrupted_bricks"
+    "variants": {
+        "": {
+            "model": "emeraldweapons:block/corrupted_bricks"
+        }
     }
-  }
 }

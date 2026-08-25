@@ -1,8 +1,8 @@
 {
-  "parent": "minecraft:block/template_glass_pane_post",
-  "render_type": "minecraft:translucent",
-  "textures": {
-    "edge": "emeraldweapons:block/prismatic_glass_pane_top",
-    "pane": "emeraldweapons:block/prismatic_glass"
-  }
+    "parent": "minecraft:block/template_glass_pane_post",
+    "render_type": "minecraft:translucent",
+    "textures": {
+        "edge": "emeraldweapons:block/prismatic_glass_pane_top",
+        "pane": "emeraldweapons:block/prismatic_glass"
+    }
 }

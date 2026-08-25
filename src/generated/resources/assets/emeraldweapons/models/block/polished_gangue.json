@@ -1,6 +1,6 @@
 {
-  "parent": "minecraft:block/cube_all",
-  "textures": {
-    "all": "emeraldweapons:block/polished_gangue"
-  }
+    "parent": "minecraft:block/cube_all",
+    "textures": {
+        "all": "emeraldweapons:block/polished_gangue"
+    }
 }

@@ -1,17 +1,17 @@
 {
-  "type": "minecraft:crafting_shaped",
-  "category": "building",
-  "key": {
-    "S": {
-      "item": "emeraldweapons:gangue_bricks"
+    "type": "minecraft:crafting_shaped",
+    "category": "building",
+    "key": {
+        "S": {
+            "item": "emeraldweapons:gangue_bricks"
+        }
+    },
+    "pattern": [
+        "SS",
+        "SS"
+    ],
+    "result": {
+        "count": 4,
+        "id": "emeraldweapons:polished_gangue"
     }
-  },
-  "pattern": [
-    "SS",
-    "SS"
-  ],
-  "result": {
-    "count": 4,
-    "id": "emeraldweapons:polished_gangue"
-  }
 }

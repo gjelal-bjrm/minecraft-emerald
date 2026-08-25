@@ -1,6 +1,6 @@
 {
-  "parent": "minecraft:block/cube_all",
-  "textures": {
-    "all": "emeraldweapons:block/chiseled_arcencium"
-  }
+    "parent": "minecraft:block/cube_all",
+    "textures": {
+        "all": "emeraldweapons:block/chiseled_arcencium"
+    }
 }

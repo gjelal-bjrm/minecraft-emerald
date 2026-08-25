@@ -1,6 +1,6 @@
 {
-  "parent": "minecraft:block/cube_all",
-  "textures": {
-    "all": "emeraldweapons:block/corrupted_bricks"
-  }
+    "parent": "minecraft:block/cube_all",
+    "textures": {
+        "all": "emeraldweapons:block/corrupted_bricks"
+    }
 }

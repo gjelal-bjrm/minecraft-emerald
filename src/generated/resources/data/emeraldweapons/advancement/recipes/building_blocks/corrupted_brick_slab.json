@@ -1,32 +1,32 @@
 {
-  "parent": "minecraft:recipes/root",
-  "criteria": {
-    "has_corrupted_bricks": {
-      "conditions": {
-        "items": [
-          {
-            "items": "emeraldweapons:corrupted_bricks"
-          }
-        ]
-      },
-      "trigger": "minecraft:inventory_changed"
+    "parent": "minecraft:recipes/root",
+    "criteria": {
+        "has_corrupted_bricks": {
+            "conditions": {
+                "items": [
+                    {
+                        "items": "emeraldweapons:corrupted_bricks"
+                    }
+                ]
+            },
+            "trigger": "minecraft:inventory_changed"
+        },
+        "has_the_recipe": {
+            "conditions": {
+                "recipe": "emeraldweapons:corrupted_brick_slab"
+            },
+            "trigger": "minecraft:recipe_unlocked"
+        }
     },
-    "has_the_recipe": {
-      "conditions": {
-        "recipe": "emeraldweapons:corrupted_brick_slab"
-      },
-      "trigger": "minecraft:recipe_unlocked"
+    "requirements": [
+        [
+            "has_the_recipe",
+            "has_corrupted_bricks"
+        ]
+    ],
+    "rewards": {
+        "recipes": [
+            "emeraldweapons:corrupted_brick_slab"
+        ]
     }
-  },
-  "requirements": [
-    [
-      "has_the_recipe",
-      "has_corrupted_bricks"
-    ]
-  ],
-  "rewards": {
-    "recipes": [
-      "emeraldweapons:corrupted_brick_slab"
-    ]
-  }
 }

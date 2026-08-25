@@ -1,7 +1,7 @@
 {
-  "variants": {
-    "": {
-      "model": "emeraldweapons:block/ochre_wool"
+    "variants": {
+        "": {
+            "model": "emeraldweapons:block/ochre_wool"
+        }
     }
-  }
 }

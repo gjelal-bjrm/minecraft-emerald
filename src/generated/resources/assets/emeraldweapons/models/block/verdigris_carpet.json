@@ -1,6 +1,6 @@
 {
-  "parent": "minecraft:block/carpet",
-  "textures": {
-    "wool": "emeraldweapons:block/verdigris_carpet"
-  }
+    "parent": "minecraft:block/carpet",
+    "textures": {
+        "wool": "emeraldweapons:block/verdigris_carpet"
+    }
 }

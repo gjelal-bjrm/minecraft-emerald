@@ -1,11 +1,11 @@
 {
-  "values": [
-    "emeraldweapons:gangue_stone_stairs",
-    "emeraldweapons:gangue_brick_stairs",
-    "emeraldweapons:polished_gangue_stairs",
-    "emeraldweapons:veined_stone_stairs",
-    "emeraldweapons:arcencium_brick_stairs",
-    "emeraldweapons:corrupted_brick_stairs",
-    "emeraldweapons:crystal_stairs"
-  ]
+    "values": [
+        "emeraldweapons:gangue_stone_stairs",
+        "emeraldweapons:gangue_brick_stairs",
+        "emeraldweapons:polished_gangue_stairs",
+        "emeraldweapons:veined_stone_stairs",
+        "emeraldweapons:arcencium_brick_stairs",
+        "emeraldweapons:corrupted_brick_stairs",
+        "emeraldweapons:crystal_stairs"
+    ]
 }

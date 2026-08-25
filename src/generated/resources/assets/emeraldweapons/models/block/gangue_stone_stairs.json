@@ -1,8 +1,8 @@
 {
-  "parent": "minecraft:block/stairs",
-  "textures": {
-    "bottom": "emeraldweapons:block/gangue_stone",
-    "side": "emeraldweapons:block/gangue_stone",
-    "top": "emeraldweapons:block/gangue_stone"
-  }
+    "parent": "minecraft:block/stairs",
+    "textures": {
+        "bottom": "emeraldweapons:block/gangue_stone",
+        "side": "emeraldweapons:block/gangue_stone",
+        "top": "emeraldweapons:block/gangue_stone"
+    }
 }

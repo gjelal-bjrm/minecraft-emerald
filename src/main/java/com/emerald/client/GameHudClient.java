@@ -25,8 +25,10 @@ import java.util.Locale;
  *
  * Le compte a rebours se lit d'abord a sa COULEUR : vert, ambre, puis rouge.
  * On sait qu'on est en retard avant meme d'avoir lu les chiffres.
+ *
+ * Seule la classe imbriquee Setup porte @EventBusSubscriber : annoter aussi
+ * l'exterieure, qui n'a aucun @SubscribeEvent, fait echouer le chargement du mod.
  */
-@EventBusSubscriber(modid = EmeraldWeaponsMod.MODID, value = Dist.CLIENT)
 public class GameHudClient {
 
     private static final int PANEL_W = 92;

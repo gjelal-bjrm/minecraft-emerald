@@ -1,9 +1,9 @@
 {
-  "values": [
-    "emeraldweapons:gangue_stone_wall",
-    "emeraldweapons:gangue_brick_wall",
-    "emeraldweapons:veined_stone_wall",
-    "emeraldweapons:arcencium_brick_wall",
-    "emeraldweapons:corrupted_brick_wall"
-  ]
+    "values": [
+        "emeraldweapons:gangue_stone_wall",
+        "emeraldweapons:gangue_brick_wall",
+        "emeraldweapons:veined_stone_wall",
+        "emeraldweapons:arcencium_brick_wall",
+        "emeraldweapons:corrupted_brick_wall"
+    ]
 }

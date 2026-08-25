@@ -1,7 +1,7 @@
 {
-  "variants": {
-    "": {
-      "model": "emeraldweapons:block/prism_sapling"
+    "variants": {
+        "": {
+            "model": "emeraldweapons:block/prism_sapling"
+        }
     }
-  }
 }

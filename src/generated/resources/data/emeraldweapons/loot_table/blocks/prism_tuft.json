@@ -1,24 +1,24 @@
 {
-  "type": "minecraft:block",
-  "pools": [
-    {
-      "bonus_rolls": 0.0,
-      "conditions": [
+    "type": "minecraft:block",
+    "pools": [
         {
-          "condition": "minecraft:match_tool",
-          "predicate": {
-            "items": "minecraft:shears"
-          }
+            "bonus_rolls": 0.0,
+            "conditions": [
+                {
+                    "condition": "minecraft:match_tool",
+                    "predicate": {
+                        "items": "minecraft:shears"
+                    }
+                }
+            ],
+            "entries": [
+                {
+                    "type": "minecraft:item",
+                    "name": "emeraldweapons:prism_tuft"
+                }
+            ],
+            "rolls": 1.0
         }
-      ],
-      "entries": [
-        {
-          "type": "minecraft:item",
-          "name": "emeraldweapons:prism_tuft"
-        }
-      ],
-      "rolls": 1.0
-    }
-  ],
-  "random_sequence": "emeraldweapons:blocks/prism_tuft"
+    ],
+    "random_sequence": "emeraldweapons:blocks/prism_tuft"
 }

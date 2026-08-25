@@ -1,6 +1,6 @@
 {
-  "parent": "minecraft:item/generated",
-  "textures": {
-    "layer0": "emeraldweapons:block/arcencium_lantern"
-  }
+    "parent": "minecraft:item/generated",
+    "textures": {
+        "layer0": "emeraldweapons:block/arcencium_lantern"
+    }
 }

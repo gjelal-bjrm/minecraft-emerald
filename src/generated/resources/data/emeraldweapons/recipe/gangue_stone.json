@@ -1,21 +1,21 @@
 {
-  "type": "minecraft:crafting_shaped",
-  "category": "building",
-  "key": {
-    "A": {
-      "item": "minecraft:cobblestone"
+    "type": "minecraft:crafting_shaped",
+    "category": "building",
+    "key": {
+        "A": {
+            "item": "minecraft:cobblestone"
+        },
+        "C": {
+            "item": "emeraldweapons:raw_arcencium"
+        }
     },
-    "C": {
-      "item": "emeraldweapons:raw_arcencium"
+    "pattern": [
+        "AAA",
+        "ACA",
+        "AAA"
+    ],
+    "result": {
+        "count": 8,
+        "id": "emeraldweapons:gangue_stone"
     }
-  },
-  "pattern": [
-    "AAA",
-    "ACA",
-    "AAA"
-  ],
-  "result": {
-    "count": 8,
-    "id": "emeraldweapons:gangue_stone"
-  }
 }

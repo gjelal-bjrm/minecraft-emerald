@@ -1,6 +1,6 @@
 {
-  "parent": "minecraft:block/cube_all",
-  "textures": {
-    "all": "emeraldweapons:block/slate_blue_wool"
-  }
+    "parent": "minecraft:block/cube_all",
+    "textures": {
+        "all": "emeraldweapons:block/slate_blue_wool"
+    }
 }

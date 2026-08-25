@@ -1,7 +1,7 @@
 {
-  "variants": {
-    "": {
-      "model": "emeraldweapons:block/old_rose_wool"
+    "variants": {
+        "": {
+            "model": "emeraldweapons:block/old_rose_wool"
+        }
     }
-  }
 }

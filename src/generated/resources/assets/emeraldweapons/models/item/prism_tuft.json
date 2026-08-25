@@ -1,6 +1,6 @@
 {
-  "parent": "minecraft:item/generated",
-  "textures": {
-    "layer0": "emeraldweapons:block/prism_tuft"
-  }
+    "parent": "minecraft:item/generated",
+    "textures": {
+        "layer0": "emeraldweapons:block/prism_tuft"
+    }
 }

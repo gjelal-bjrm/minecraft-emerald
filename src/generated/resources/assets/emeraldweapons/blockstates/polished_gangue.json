@@ -1,7 +1,7 @@
 {
-  "variants": {
-    "": {
-      "model": "emeraldweapons:block/polished_gangue"
+    "variants": {
+        "": {
+            "model": "emeraldweapons:block/polished_gangue"
+        }
     }
-  }
 }
