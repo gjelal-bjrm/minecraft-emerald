@@ -1,5 +1,8 @@
 package com.emerald.weapons;
 
+import com.emerald.artifact.Artifact;
+import com.emerald.artifact.ArtifactEvents;
+import com.emerald.artifact.Artifacts;
 import com.emerald.effects.ModEffects;
 import com.emerald.particles.ModParticles;
 import net.minecraft.core.BlockPos;
@@ -57,6 +60,47 @@ public class EmeraldWindblade extends SwordItem {
      */
     public static double procMultiplier(LivingEntity target) {
         return target.hasEffect(ModEffects.PRISMATIC_MARK) ? 2.0 : 1.0;
+    }
+
+    /**
+     * Multiplicateur applique a la montee de Fureur.
+     *
+     * Le Regulateur de Lame se cumule avec la synergie de la Marque : une cible
+     * marquee frappee par une lame reglee monte quatre fois plus vite. C'est
+     * volontaire -- c'est la recompense de qui joue les trois armes ensemble.
+     */
+    public static double furyMultiplier(LivingEntity attacker, LivingEntity target) {
+        double mult = procMultiplier(target);
+        if (Artifacts.has(attacker.getMainHandItem(), Artifact.REGULATEUR_DE_LAME)) {
+            mult *= 2.0;
+        }
+        return mult;
+    }
+
+    /**
+     * Lame de Chaine : le coup se propage aux ennemis colles a la cible.
+     *
+     * Les eclats sont volontairement plus faibles que le coup d'origine, sinon
+     * l'epee balaierait un groupe entier pour le prix d'une frappe.
+     */
+    public static void chainStrike(LivingEntity attacker, LivingEntity target) {
+        if (!Artifacts.has(attacker.getMainHandItem(), Artifact.LAME_DE_CHAINE)
+                || attacker.level().isClientSide) {
+            return;
+        }
+        double splash = (double) attacker.getAttributeValue(
+                net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE) * 0.45;
+        for (LivingEntity foe : attacker.level().getEntitiesOfClass(LivingEntity.class,
+                target.getBoundingBox().inflate(2.5),
+                e -> e != attacker && e != target && e.isAlive()
+                        && e instanceof net.minecraft.world.entity.monster.Enemy)) {
+            foe.hurt(attacker.damageSources().mobAttack(attacker), (float) splash);
+            if (attacker.level() instanceof net.minecraft.server.level.ServerLevel server) {
+                server.sendParticles(ModParticles.PRISM_MOTE.get(),
+                        foe.getX(), foe.getY() + foe.getBbHeight() * 0.6, foe.getZ(),
+                        6, 0.2, 0.3, 0.2, 0.05);
+            }
+        }
     }
 
     private static boolean canTriggerColorEffect(LivingEntity attacker, double mult) {
@@ -448,8 +492,11 @@ public class EmeraldWindblade extends SwordItem {
             double mult = procMultiplier(target);   // x2 si Marque Prismatique
             applyCrystallineEffects(attacker);
             procDamageType(target, attacker, serverLevel, level, mult);
-            applyCrystallineBuff(attacker, level, mult);
+            // la Fureur suit son propre multiplicateur : le Regulateur de Lame
+            // s'y ajoute sans doper aussi les procs de degats elementaires
+            applyCrystallineBuff(attacker, level, furyMultiplier(attacker, target));
             summonCrystallineThunder(target, attacker, serverLevel, level, mult);
+            chainStrike(attacker, target);
             // Vérifie et applique la zone d'électrification active à chaque coup
             tickElectrifiedZone(attacker, serverLevel, level);
         }

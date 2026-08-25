@@ -1,0 +1,153 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "emeraldweapons:item/artifact_lentille_du_prisme"
+  },
+  "_comment": "variant = ordinal de l'artefact, en entier. Un entier est exact en flottant, contrairement a une fraction : voir ArtifactClient.",
+  "overrides": [
+    {
+      "predicate": {
+        "emeraldweapons:variant": 0
+      },
+      "model": "emeraldweapons:item/artifact_lentille_du_prisme"
+    },
+    {
+      "predicate": {
+        "emeraldweapons:variant": 1
+      },
+      "model": "emeraldweapons:item/artifact_filtre_de_brume"
+    },
+    {
+      "predicate": {
+        "emeraldweapons:variant": 2
+      },
+      "model": "emeraldweapons:item/artifact_repere_d_echo"
+    },
+    {
+      "predicate": {
+        "emeraldweapons:variant": 3
+      },
+      "model": "emeraldweapons:item/artifact_lentille_d_aurore"
+    },
+    {
+      "predicate": {
+        "emeraldweapons:variant": 4
+      },
+      "model": "emeraldweapons:item/artifact_plaque_de_gangue"
+    },
+    {
+      "predicate": {
+        "emeraldweapons:variant": 5
+      },
+      "model": "emeraldweapons:item/artifact_coque_prismatique"
+    },
+    {
+      "predicate": {
+        "emeraldweapons:variant": 6
+      },
+      "model": "emeraldweapons:item/artifact_reservoir_de_prisme"
+    },
+    {
+      "predicate": {
+        "emeraldweapons:variant": 7
+      },
+      "model": "emeraldweapons:item/artifact_plastron_de_resonance"
+    },
+    {
+      "predicate": {
+        "emeraldweapons:variant": 8
+      },
+      "model": "emeraldweapons:item/artifact_lest_de_gangue"
+    },
+    {
+      "predicate": {
+        "emeraldweapons:variant": 9
+      },
+      "model": "emeraldweapons:item/artifact_jambieres_de_maree"
+    },
+    {
+      "predicate": {
+        "emeraldweapons:variant": 10
+      },
+      "model": "emeraldweapons:item/artifact_champ_de_cristal"
+    },
+    {
+      "predicate": {
+        "emeraldweapons:variant": 11
+      },
+      "model": "emeraldweapons:item/artifact_renfort_de_siege"
+    },
+    {
+      "predicate": {
+        "emeraldweapons:variant": 12
+      },
+      "model": "emeraldweapons:item/artifact_semelle_de_prisme"
+    },
+    {
+      "predicate": {
+        "emeraldweapons:variant": 13
+      },
+      "model": "emeraldweapons:item/artifact_bottes_d_eclair"
+    },
+    {
+      "predicate": {
+        "emeraldweapons:variant": 14
+      },
+      "model": "emeraldweapons:item/artifact_semelle_vaporeuse"
+    },
+    {
+      "predicate": {
+        "emeraldweapons:variant": 15
+      },
+      "model": "emeraldweapons:item/artifact_bottes_de_retour"
+    },
+    {
+      "predicate": {
+        "emeraldweapons:variant": 16
+      },
+      "model": "emeraldweapons:item/artifact_regulateur_de_lame"
+    },
+    {
+      "predicate": {
+        "emeraldweapons:variant": 17
+      },
+      "model": "emeraldweapons:item/artifact_lame_de_chaine"
+    },
+    {
+      "predicate": {
+        "emeraldweapons:variant": 18
+      },
+      "model": "emeraldweapons:item/artifact_drain_de_cristal"
+    },
+    {
+      "predicate": {
+        "emeraldweapons:variant": 19
+      },
+      "model": "emeraldweapons:item/artifact_eclat_final"
+    },
+    {
+      "predicate": {
+        "emeraldweapons:variant": 20
+      },
+      "model": "emeraldweapons:item/artifact_tension_rapide"
+    },
+    {
+      "predicate": {
+        "emeraldweapons:variant": 21
+      },
+      "model": "emeraldweapons:item/artifact_fleche_fourchue"
+    },
+    {
+      "predicate": {
+        "emeraldweapons:variant": 22
+      },
+      "model": "emeraldweapons:item/artifact_marque_prolongee"
+    },
+    {
+      "predicate": {
+        "emeraldweapons:variant": 23
+      },
+      "model": "emeraldweapons:item/artifact_fleche_tracante"
+    }
+  ]
+}

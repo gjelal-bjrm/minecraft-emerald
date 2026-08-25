@@ -1,5 +1,7 @@
 package com.emerald.weapons;
 
+import com.emerald.artifact.Artifact;
+import com.emerald.artifact.Artifacts;
 import com.emerald.particles.ModParticles;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
@@ -60,6 +62,24 @@ public class ArcenciumBowItem extends BowItem {
         return stage;
     }
 
+    /**
+     * Meme calcul, mais en tenant compte de l'artefact Tension Rapide, qui fait
+     * monter la tension deux fois plus vite.
+     *
+     * On multiplie les ticks ecoules plutot que de diviser les seuils : les
+     * paliers restent des entiers exacts, donc le carillon et les particules
+     * tombent toujours pile au changement de cran.
+     */
+    public static int stageForTicks(int ticks, ItemStack bow) {
+        return stageForTicks(Artifacts.has(bow, Artifact.TENSION_RAPIDE) ? ticks * 2 : ticks);
+    }
+
+    /** Ticks reellement necessaires pour atteindre un cran avec cet arc. */
+    public static int ticksForStage(int stage, ItemStack bow) {
+        int base = STAGE_TICKS[Math.max(0, Math.min(STAGE_TICKS.length - 1, stage - 1))];
+        return Artifacts.has(bow, Artifact.TENSION_RAPIDE) ? (base + 1) / 2 : base;
+    }
+
     /** Vitesse quasi pleine des le premier cran (vanilla pleine tension = 3.0). */
     public static float velocityForStage(int stage) {
         return 2.7F + 0.06F * stage;
@@ -96,8 +116,8 @@ public class ArcenciumBowItem extends BowItem {
     public void onUseTick(Level level, LivingEntity entity, ItemStack stack, int remaining) {
         if (!(level instanceof ServerLevel server)) return;
         int ticks = this.getUseDuration(stack, entity) - remaining;
-        int stage = stageForTicks(ticks);
-        if (stage == 0 || ticks != STAGE_TICKS[stage - 1]) return;
+        int stage = stageForTicks(ticks, stack);
+        if (stage == 0 || ticks != ticksForStage(stage, stack)) return;
 
         float pitch = 0.7F + 0.12F * stage;
         server.playSound(null, entity.getX(), entity.getY(), entity.getZ(),
@@ -118,7 +138,7 @@ public class ArcenciumBowItem extends BowItem {
         if (ammo.isEmpty()) return;
         int ticks = this.getUseDuration(stack, entity) - timeLeft;
         if (ticks < MIN_DRAW_TICKS) return;
-        int stage = stageForTicks(ticks);
+        int stage = stageForTicks(ticks, stack);
 
         List<ItemStack> projectiles = draw(stack, ammo, player);
         if (level instanceof ServerLevel server && !projectiles.isEmpty()) {
@@ -135,16 +155,42 @@ public class ArcenciumBowItem extends BowItem {
         player.awardStat(Stats.ITEM_USED.get(this));
     }
 
+    /** Marque une fleche a infléchir : voir ArcenciumBowEvents.steerHoming. */
+    public static final String TAG_HOMING = "ArcenciumHoming";
+
+    /** Ecarts lateraux de la Fleche Fourchue, en degres. */
+    private static final float[] FORK_ANGLES = {-6.0F, 0.0F, 6.0F};
+
     private void shootPrismatic(ServerLevel level, Player player, ItemStack bow,
                                 List<ItemStack> projectiles, int stage) {
         float velocity = velocityForStage(stage);
+        // La Fleche Fourchue ne se declenche qu'a pleine tension : elle
+        // recompense la charge complete au lieu de tripler chaque tir.
+        boolean fork = stage >= MAX_STAGE && Artifacts.has(bow, Artifact.FLECHE_FOURCHUE);
         for (int i = 0; i < projectiles.size(); i++) {
             ItemStack ammo = projectiles.get(i);
             if (ammo.isEmpty()) continue;
+            if (fork) {
+                for (float angle : FORK_ANGLES) {
+                    Projectile shard = this.createProjectile(level, player, bow, ammo, true);
+                    if (shard instanceof AbstractArrow arrow) {
+                        arrow.setBaseDamage(baseDamageForStage(stage) * 0.6);
+                        arrow.getPersistentData().putInt(TAG_STAGE, stage);
+                        arrow.setCritArrow(true);
+                        arrow.igniteForSeconds(100);
+                    }
+                    this.shootProjectile(player, shard, i, velocity, 1.0F, angle, null);
+                    level.addFreshEntity(shard);
+                }
+                continue;
+            }
             Projectile projectile = this.createProjectile(level, player, bow, ammo, stage >= MAX_STAGE);
             if (projectile instanceof AbstractArrow arrow) {
                 arrow.setBaseDamage(baseDamageForStage(stage));
                 arrow.getPersistentData().putInt(TAG_STAGE, stage);
+                if (Artifacts.has(bow, Artifact.FLECHE_TRACANTE)) {
+                    arrow.getPersistentData().putBoolean(TAG_HOMING, true);
+                }
                 if (stage >= 1) {
                     arrow.igniteForSeconds(100);          // cristal rouge : feu
                 }

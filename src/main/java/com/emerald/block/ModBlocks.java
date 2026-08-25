@@ -47,6 +47,11 @@ public class ModBlocks {
                     .strength(3.5F).requiresCorrectToolForDrops().sound(SoundType.AMETHYST)
                     .noOcclusion()));
 
+    /** Etabli de Sertissage : voir SocketBenchBlock. */
+    public static final DeferredBlock<SocketBenchBlock> SOCKET_BENCH = registerBlock("socket_bench",
+            () -> new SocketBenchBlock(BlockBehaviour.Properties.of()
+                    .strength(2.5F).sound(SoundType.WOOD)));
+
     // --------------------------------------------- Gangue : la masse du village
 
     public static final DeferredBlock<Block> GANGUE_STONE = village("gangue_stone",

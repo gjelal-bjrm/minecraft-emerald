@@ -32,6 +32,11 @@ public class ModCreativeModeTabs {
                         output.accept(ModItems.ARCENCIUM_CHESTPLATE);
                         output.accept(ModItems.ARCENCIUM_LEGGINGS);
                         output.accept(ModItems.ARCENCIUM_BOOTS);
+                        // un exemplaire de chaque artefact, deja serti dans l'objet
+                        for (var artifact : com.emerald.artifact.Artifact.values()) {
+                            output.accept(com.emerald.artifact.ArtifactItem.stack(
+                                    artifact, ModItems.ARTIFACT.get()));
+                        }
                     }).build()
     );
 
@@ -44,6 +49,7 @@ public class ModCreativeModeTabs {
                         output.accept(ModBlocks.ARCENCIUM_ORE);
                         output.accept(ModBlocks.ARCENCIUM_BLOCK);
                         output.accept(ModBlocks.ARCENCIUM_CHEST);
+                        output.accept(ModBlocks.SOCKET_BENCH);
                         // toute la palette du village, dans l'ordre de declaration
                         for (var block : ModBlocks.VILLAGE_BLOCKS) {
                             output.accept(block.get());

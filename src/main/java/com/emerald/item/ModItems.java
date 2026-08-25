@@ -40,6 +40,11 @@ public class ModItems {
             ITEMS.register("arcencium_scepter", () ->
                     new ArcenciumScepterItem(new Item.Properties().durability(900)));
 
+    /** Objet artefact : voir com.emerald.artifact.ArtifactItem. */
+    public static final DeferredItem<com.emerald.artifact.ArtifactItem> ARTIFACT =
+            ITEMS.register("artifact", () ->
+                    new com.emerald.artifact.ArtifactItem(new Item.Properties()));
+
     // ------------------------------------------------- derives de l'Arbre de Prisme
     // Aucune piece d'Arcencium n'est fabricable sans passer par l'arbre : c'est
     // ce qui rend le bucheronnage aussi necessaire que le minage.

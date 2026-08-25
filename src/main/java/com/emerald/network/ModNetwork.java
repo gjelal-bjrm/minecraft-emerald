@@ -22,6 +22,16 @@ public class ModNetwork {
                         onFireRequest(player);
                     }
                 }));
+
+        registrar.playToServer(ArtifactActionPayload.TYPE, ArtifactActionPayload.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(() -> {
+                    if (context.player() instanceof ServerPlayer player) {
+                        switch (payload.action()) {
+                            case DOUBLE_JUMP -> com.emerald.artifact.ArtifactActions.doubleJump(player);
+                            case RETURN -> com.emerald.artifact.ArtifactActions.returnHome(player);
+                        }
+                    }
+                }));
     }
 
     /**

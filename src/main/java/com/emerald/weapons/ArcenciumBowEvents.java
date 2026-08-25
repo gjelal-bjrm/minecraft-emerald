@@ -1,5 +1,7 @@
 package com.emerald.weapons;
 
+import com.emerald.artifact.Artifact;
+import com.emerald.artifact.Artifacts;
 import com.emerald.effects.ModEffects;
 import com.emerald.main.EmeraldWeaponsMod;
 import com.emerald.particles.ModParticles;
@@ -25,6 +27,8 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.ProjectileImpactEvent;
 
+import javax.annotation.Nullable;
+
 import java.util.Comparator;
 import java.util.List;
 
@@ -40,6 +44,9 @@ public class ArcenciumBowEvents {
     private static final double BURST_RADIUS = 5.0;
     private static final int SHARDS = 3;
     private static final float SHARD_DAMAGE = 4.0F;
+    private static final double HOMING_RANGE = 12.0;
+    private static final double HOMING_STRENGTH = 0.12;
+
     private static final int MARK_TICKS = 160;          // 8 s
 
     @SubscribeEvent
@@ -107,7 +114,7 @@ public class ArcenciumBowEvents {
                                        LivingEntity mainTarget, Entity owner) {
         RandomSource rng = level.getRandom();
         if (mainTarget != null) {
-            mark(level, mainTarget);
+            mark(level, mainTarget, arrow.getOwner());
         }
         List<LivingEntity> candidates = level.getEntitiesOfClass(LivingEntity.class,
                 new AABB(pos, pos).inflate(BURST_RADIUS),
@@ -136,7 +143,7 @@ public class ArcenciumBowEvents {
                     ? level.damageSources().indirectMagic(arrow, owner)
                     : level.damageSources().magic();
             victim.hurt(src, SHARD_DAMAGE);
-            mark(level, victim);
+            mark(level, victim, arrow.getOwner());
             applyShardEffect(level, victim, effect, pos);
         }
     }
@@ -168,10 +175,61 @@ public class ArcenciumBowEvents {
         }
     }
 
-    /** Marque Prismatique : 8 s, visible (glowing) -- les procs de l'epee doublent. */
-    private static void mark(ServerLevel level, LivingEntity target) {
-        target.addEffect(new MobEffectInstance(ModEffects.PRISMATIC_MARK, MARK_TICKS, 0, false, true, true));
-        target.addEffect(new MobEffectInstance(MobEffects.GLOWING, MARK_TICKS, 0, false, false, false));
+    /**
+     * Fleche Tracante : la fleche corrige doucement sa course.
+     *
+     * L'inflexion est volontairement faible et ne s'applique qu'a une cible
+     * DEVANT la fleche : une correction forte transformerait l'arc en arme
+     * automatique, et viser cesserait d'avoir un sens.
+     */
+    @SubscribeEvent
+    public static void onArrowTick(net.neoforged.neoforge.event.tick.EntityTickEvent.Post event) {
+        if (!(event.getEntity() instanceof AbstractArrow arrow)
+                || arrow.level().isClientSide
+                || !arrow.getPersistentData().getBoolean(ArcenciumBowItem.TAG_HOMING)
+                || arrow.onGround()) {
+            return;
+        }
+        Vec3 motion = arrow.getDeltaMovement();
+        if (motion.lengthSqr() < 1.0E-4) {
+            return;
+        }
+        Vec3 heading = motion.normalize();
+        LivingEntity best = null;
+        double bestScore = 0.55;                       // cone d'environ 57 degres
+        for (LivingEntity candidate : arrow.level().getEntitiesOfClass(LivingEntity.class,
+                arrow.getBoundingBox().inflate(HOMING_RANGE),
+                e -> e.isAlive() && e != arrow.getOwner())) {
+            Vec3 toward = candidate.getEyePosition().subtract(arrow.position()).normalize();
+            double score = heading.dot(toward);
+            if (score > bestScore) {
+                bestScore = score;
+                best = candidate;
+            }
+        }
+        if (best == null) {
+            return;
+        }
+        Vec3 toward = best.getEyePosition().subtract(arrow.position()).normalize();
+        Vec3 steered = heading.add(toward.subtract(heading).scale(HOMING_STRENGTH)).normalize();
+        arrow.setDeltaMovement(steered.scale(motion.length()));
+    }
+
+    /**
+     * Marque Prismatique : 8 s, visible (glowing) -- les procs de l'epee doublent.
+     *
+     * L'artefact Marque Prolongee triple cette duree. On lit l'arc du tireur
+     * plutot que la fleche : une fleche ne conserve pas l'equipement d'origine,
+     * et le tireur tient encore son arc a l'impact dans l'immense majorite des cas.
+     */
+    private static void mark(ServerLevel level, LivingEntity target, @Nullable Entity shooter) {
+        int ticks = MARK_TICKS;
+        if (shooter instanceof LivingEntity living
+                && Artifacts.has(living.getMainHandItem(), Artifact.MARQUE_PROLONGEE)) {
+            ticks *= 3;
+        }
+        target.addEffect(new MobEffectInstance(ModEffects.PRISMATIC_MARK, ticks, 0, false, true, true));
+        target.addEffect(new MobEffectInstance(MobEffects.GLOWING, ticks, 0, false, false, false));
         Vec3 p = target.position();
         level.sendParticles(ParticleTypes.ENCHANT, p.x, p.y + 1, p.z, 12, 0.3, 0.5, 0.3, 0.5);
     }

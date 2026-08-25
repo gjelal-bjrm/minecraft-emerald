@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/cube_bottom_top",
+  "textures": {
+    "top": "emeraldweapons:block/socket_bench_top",
+    "side": "emeraldweapons:block/socket_bench_side",
+    "bottom": "emeraldweapons:block/crystal_planks"
+  }
+}

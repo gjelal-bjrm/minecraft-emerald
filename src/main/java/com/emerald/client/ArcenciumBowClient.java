@@ -28,6 +28,12 @@ public class ArcenciumBowClient {
                     (stack, level, entity, seed) -> {
                         if (entity == null || entity.getUseItem() != stack) return 0.0F;
                         int used = stack.getUseDuration(entity) - entity.getUseItemRemainingTicks();
+                        // Tension Rapide raccourcit la charge : sans ce facteur,
+                        // la texture de l'arc resterait en retard sur son etat reel
+                        if (com.emerald.artifact.Artifacts.has(stack,
+                                com.emerald.artifact.Artifact.TENSION_RAPIDE)) {
+                            used *= 2;
+                        }
                         return Math.min(1.0F, used / (float) ArcenciumBowItem.FULL_CHARGE_TICKS);
                     });
             ItemProperties.register(ModItems.ARCENCIUM_BOW.get(),

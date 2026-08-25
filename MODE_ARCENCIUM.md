@@ -173,7 +173,7 @@ pillards partout. Les factions doivent rester ancrees dans un Minecraft reconnai
 | **Traqueur** | `the_prowler`, `stalker`, `endermaptera`, `nightfall_spider` |
 | **Meneur** | `archevoker`, `royal_draugr`, `knight_phantom`, `deepling_warlock`, `death_tome` |
 
-Le **Meneur** buffe ou soigne autour de lui : c'est la cible que designe le Diademe d'Echo.
+Le **Meneur** buffe ou soigne autour de lui : c'est la cible que designe le Repere d'Echo.
 
 ### Le boss final
 
@@ -235,38 +235,42 @@ sans detruire la carte :
 
 ### 7.1 Notre systeme — un artefact par emplacement
 
+**Convention de nommage** : uniquement des objets et des mecanismes. Rien qui
+evoque un etre vivant, une benediction, une malediction ou une divinite. Un
+artefact est une piece qu'on sertit, pas une faveur qu'on recoit.
+
 **Six emplacements** : casque, plastron, jambieres, bottes, epee, arc.
 Quatre artefacts possibles par emplacement, tous a effet **comportemental**
 (pas de simples bonus de statistiques : c'est ce qui nous distingue des gemmes d'Apotheosis).
 
 **Casque, la perception**
-- **Oeil du Prisme** : voit ancres, coffres et artefacts a travers les murs, a 40 blocs.
-- **Couronne de Brume** : immunise aux degats des meteos agressives.
-- **Diademe d'Echo** : voir 7.2.
-- **Visiere d'Aurore** : vision nocturne, monstres luisants dans le noir.
+- **Lentille du Prisme** : voit ancres, coffres et artefacts a travers les murs, a 40 blocs.
+- **Filtre de Brume** : immunise aux degats des meteos agressives.
+- **Repere d'Echo** : voir 7.2.
+- **Lentille d'Aurore** : vision nocturne, monstres luisants dans le noir.
 
 **Plastron, la survie**
-- **Coeur de Gangue** : le coup fatal laisse a 1 PV (recharge 3 min).
-- **Carapace Prismatique** : absorbe les degats, libere une onde de choc une fois pleine.
-- **Seve de Prisme** : regeneration lente permanente, doublee hors combat.
+- **Plaque de Gangue** : le coup fatal laisse a 1 PV (recharge 3 min).
+- **Coque Prismatique** : absorbe les degats, libere une onde de choc une fois pleine.
+- **Reservoir de Prisme** : regeneration lente permanente, doublee hors combat.
 - **Plastron de Resonance** : +5 % de degats par coup recu, jusqu'a +50 %.
 
 **Jambieres, le controle**
-- **Ancrage de Gangue** : immunite au recul, insensible a la tornade.
+- **Lest de Gangue** : immunite au recul, insensible a la tornade.
 - **Jambieres de Maree** : la Maree Prismatique ne ronge plus, permet de rester dans la zone qui se ferme.
-- **Pas de Cristal** : ralentit les ennemis a moins de 4 blocs.
-- **Serments du Siege** : +40 % d'armure pendant un siege d'ancre.
+- **Champ de Cristal** : ralentit les ennemis a moins de 4 blocs.
+- **Renfort de Siege** : +40 % d'armure pendant un siege d'ancre.
 
 **Bottes, le deplacement**
 - **Semelle de Prisme** : vitesse +20 %.
 - **Bottes d'Eclair** : double saut.
-- **Foulee Vaporeuse** : marche sur l'eau et la lave.
+- **Semelle Vaporeuse** : marche sur l'eau et la lave.
 - **Bottes de Retour** : teleportation a l'ancre active la plus proche (recharge 2 min).
 
 **Epee, le corps-a-corps**
-- **Fureur Amplifiee** : la Fureur Cristalline monte deux fois plus vite.
+- **Regulateur de Lame** : la Fureur Cristalline monte deux fois plus vite.
 - **Lame de Chaine** : les coups touchent aussi les ennemis adjacents.
-- **Soif de Cristal** : 15 % de vol de vie.
+- **Drain de Cristal** : 15 % de vol de vie.
 - **Eclat Final** : tuer un ennemi declenche une explosion prismatique.
 
 **Arc, la distance**
@@ -275,7 +279,7 @@ Quatre artefacts possibles par emplacement, tous a effet **comportemental**
 - **Marque Prolongee** : la Marque Prismatique dure trois fois plus longtemps.
 - **Fleche Tracante** : les fleches inflechissent leur course vers la cible.
 
-### 7.2 Le Diademe d'Echo (regle particuliere)
+### 7.2 Le Repere d'Echo (regle particuliere)
 
 - **Actif uniquement pendant les sieges d'ancre.**
 - **Une fois par siege** (equivaut au cooldown de 15 min evoque, mais lisible sans minuteur invisible).
@@ -319,7 +323,7 @@ protection 22 contre 20, tenacite 3,5 contre 3,0, resistance au recul 0,15
 contre 0,10, durabilite facteur 45 contre 37, enchantement 22 contre 15.
 | **Sceptre d'Arcencium** | **fait**, voir 8.3 |
 | **Coffre d'Arcencium** simple + double | **fait** |
-| **Etabli de Sertissage** | a faire |
+| **Etabli de Sertissage** | **fait** |
 | **Lame du Serment** (ceremonielle, voir 3.1) | a faire |
 
 **Bonus de set complet, « Resonance Prismatique »** : la Fureur Cristalline ne
@@ -536,12 +540,27 @@ ChestRenderer avec nos materiaux. Aucun fichier d'atlas n'a ete necessaire :
 la source du sheet vanilla balaie `entity/chest` de tous les namespaces.
 
 - [x] **Coffre d'Arcencium** simple et double : modele, block entity, texture
-- [ ] **Etabli de Sertissage** : bloc, interface, logique de sertissage/retrait
+- [x] **Etabli de Sertissage** : bloc, interface, logique de sertissage/retrait
 
 ### Etape 4 — Le systeme d'artefacts
 
-- [ ] Composant de donnees « artefact serti » sur l'equipement
-- [ ] Les 24 artefacts, par emplacement
+Les 24 artefacts existent et fonctionnent. Un SEUL objet les porte tous :
+l'artefact est un composant de donnees et le modele choisit sa texture par le
+predicat `emeraldweapons:variant`. Chaque texture part d'une silhouette vanilla
+noircie, teintee et sertie d'or.
+
+Deux artefacts restent inertes tant que le mode de jeu n'existe pas :
+**Filtre de Brume** (pas de meteo) et **Jambieres de Maree** (pas de Maree).
+Deux autres ont une version generale en attendant : **Renfort de Siege** se
+declenche des que trois ennemis pressent le porteur, et **Bottes de Retour**
+vise le point de reapparition -- qui SERA l'ancre, celles-ci faisant office de
+points de reapparition dans le mode.
+
+Le sertissage n'accepte que notre equipement : armure d'Arcencium, Epee
+d'Emeraude, Arc et Sceptre. Aucun equipement vanilla ni d'un autre mod.
+
+- [x] Composant de donnees « artefact serti » sur l'equipement
+- [x] Les 24 artefacts, par emplacement
 - [ ] Regle particuliere du Diademe d'Echo
 - [ ] Tables de butin (coffres + tempete)
 

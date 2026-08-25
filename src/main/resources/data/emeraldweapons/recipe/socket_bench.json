@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "AAA",
+    "PPP",
+    "P P"
+  ],
+  "key": {
+    "A": {
+      "item": "emeraldweapons:arcencium_ingot"
+    },
+    "P": {
+      "item": "emeraldweapons:crystal_planks"
+    }
+  },
+  "result": {
+    "id": "emeraldweapons:socket_bench"
+  }
+}

@@ -1,4 +1,4 @@
-// 1.21.1	2026-08-25T17:21:51.3185561	Loot Tables
+// 1.21.1	2026-08-25T17:53:51.9606053	Loot Tables
 eccde64915752926f7ed2b80daa6256a72c6a4b8 data/emeraldweapons/loot_table/blocks/arcencium_bricks.json
 5f1c138502033337e4566d05cfb00e34a1110123 data/emeraldweapons/loot_table/blocks/arcencium_brick_slab.json
 29815017e75e38a4b44c915884cc5afeb72c18d0 data/emeraldweapons/loot_table/blocks/arcencium_brick_stairs.json
@@ -41,6 +41,7 @@ bc652aff59f4602dc4de5b746557e0cd2cdd9671 data/emeraldweapons/loot_table/blocks/p
 a11068835514f0fb13330e419ec3b13558b75676 data/emeraldweapons/loot_table/blocks/prism_tuft.json
 2e05a1f68abfbcc797a6228cec096a4f21311cba data/emeraldweapons/loot_table/blocks/slate_blue_carpet.json
 16d7e31154451d1091b986ebd96b49951b35a9f9 data/emeraldweapons/loot_table/blocks/slate_blue_wool.json
+04b85fa0b0a613bbf7d12c3e724860e8ac248d7c data/emeraldweapons/loot_table/blocks/socket_bench.json
 e751a413fe527dd365559cf57cb2a009897562b3 data/emeraldweapons/loot_table/blocks/veined_stone.json
 5081da663c69ec94e215679ed0cecde6cfeabce7 data/emeraldweapons/loot_table/blocks/veined_stone_slab.json
 adeb37795de67ee30f7ba5dfd49e25e1faf4705d data/emeraldweapons/loot_table/blocks/veined_stone_stairs.json

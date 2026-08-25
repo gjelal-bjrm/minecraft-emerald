@@ -16,6 +16,11 @@ import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 public class Jak3ClientEvents {
 
     @SubscribeEvent
+    public static void registerScreens(net.neoforged.neoforge.client.event.RegisterMenuScreensEvent event) {
+        event.register(com.emerald.menu.ModMenus.SOCKET_BENCH.get(), SocketBenchScreen::new);
+    }
+
+    @SubscribeEvent
     public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
         // Le trait du sceptre n'a pas de modele : sa trainee de particules EST
         // son rendu. NoopRenderer suffit, mais il faut l'enregistrer, sinon le

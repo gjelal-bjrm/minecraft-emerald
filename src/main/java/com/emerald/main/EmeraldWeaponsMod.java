@@ -23,6 +23,7 @@ public class EmeraldWeaponsMod {
     public EmeraldWeaponsMod(IEventBus modEventBus) {
         ModItems.ITEMS.register(modEventBus);
         ModArmorMaterials.register(modEventBus);
+        com.emerald.artifact.ModDataComponents.register(modEventBus);
         modEventBus.addListener(this::addItemsToCreativeTab);
         com.emerald.effects.ModEffects.EFFECTS.register(modEventBus);
         com.emerald.particles.ModParticles.PARTICLES.register(modEventBus);
@@ -31,6 +32,7 @@ public class EmeraldWeaponsMod {
         ModCreativeModeTabs.register(modEventBus);
         ModBlocks.register(modEventBus);
         com.emerald.block.entity.ModBlockEntities.register(modEventBus);
+        com.emerald.menu.ModMenus.register(modEventBus);
         Jak3Registry.register(modEventBus);         // ← modBus → modEventBus
         com.emerald.world.structure.ModStructures.register(modEventBus);
         modEventBus.addListener(this::registerJak3Attributes); // ← modBus → modEventBus

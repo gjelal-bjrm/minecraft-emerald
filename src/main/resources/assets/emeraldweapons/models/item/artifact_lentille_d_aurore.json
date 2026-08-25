@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "emeraldweapons:item/artifact_lentille_d_aurore"
+  }
+}
