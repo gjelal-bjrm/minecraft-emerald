@@ -152,8 +152,33 @@ public class GameManager {
         return new BlockPos(around.getX(), y, around.getZ());
     }
 
+    /**
+     * Plante la lame sur un socle.
+     *
+     * La lame seule, fichee dans l'herbe, ne se lit pas : c'est le socle qui
+     * fait le monument. Trois anneaux, du plus large au plus etroit, avec des
+     * lanternes aux angles -- de quoi la reperer de loin et de nuit.
+     */
     private static void plantBlade(ServerLevel level, BlockPos ground) {
-        level.setBlockAndUpdate(ground.below(), ModBlocks.ARCENCIUM_BLOCK.get().defaultBlockState());
+        BlockState rim = ModBlocks.POLISHED_GANGUE.get().defaultBlockState();
+        BlockState core = ModBlocks.ARCENCIUM_BRICKS.get().defaultBlockState();
+        BlockState crown = ModBlocks.CHISELED_ARCENCIUM.get().defaultBlockState();
+
+        for (int dx = -2; dx <= 2; dx++) {
+            for (int dz = -2; dz <= 2; dz++) {
+                int ring = Math.max(Math.abs(dx), Math.abs(dz));
+                BlockPos base = ground.offset(dx, -1, dz);
+                level.setBlockAndUpdate(base, ring == 0 ? crown : (ring == 1 ? core : rim));
+                if (ring <= 1 && !(dx == 0 && dz == 0)) {
+                    level.setBlockAndUpdate(base.above(), net.minecraft.world.level.block.Blocks.AIR
+                            .defaultBlockState());
+                }
+                if (ring == 2 && Math.abs(dx) == 2 && Math.abs(dz) == 2) {
+                    level.setBlockAndUpdate(base.above(),
+                            ModBlocks.ARCENCIUM_LANTERN.get().defaultBlockState());
+                }
+            }
+        }
         level.setBlockAndUpdate(ground, ModBlocks.OATH_BLADE.get().defaultBlockState()
                 .setValue(OathBladeBlock.PLANTED, true));
     }
