@@ -72,6 +72,15 @@ public class GameManager {
                 || !level.dimension().equals(Level.OVERWORLD)) {
             return;
         }
+        // La Lame du Serment n'existe QUE pendant le prologue. Un balayage
+        // periodique vaut mieux qu'un nettoyage a chaque bascule : il rattrape
+        // aussi les cas qu'on n'a pas prevus -- lame rangee dans un coffre,
+        // laissee au sol, ou recuperee apres un echec, qui permettait sinon
+        // d'en accumuler autant qu'on ratait de sieges.
+        if (level.getGameTime() % 20 == 0
+                && GameState.get(level).status() != GameState.Status.PROLOGUE) {
+            dissolveBlades(level);
+        }
         if (prologue != null) {
             prologue.tick();
             if (prologue.isDone()) {
@@ -83,6 +92,7 @@ public class GameManager {
                     announce(level, "game.emeraldweapons.village_lost",
                             "game.emeraldweapons.village_lost.sub", 0xFF616B);
                     GameState.get(level).returnToLobby();
+                    dissolveBlades(level);
                     replantBlade(level, finished.center());
                 }
             }
@@ -106,6 +116,32 @@ public class GameManager {
             Siege siege = anchorSieges.remove(pos);
             resolveAnchor(level, pos, siege.isWon());
         }
+    }
+
+    /** Efface toute Lame du Serment du monde : inventaires et objets au sol. */
+    private static void dissolveBlades(ServerLevel level) {
+        for (ServerPlayer player : level.players()) {
+            var inventory = player.getInventory();
+            for (int slot = 0; slot < inventory.getContainerSize(); slot++) {
+                if (inventory.getItem(slot).is(ModItems.OATH_BLADE.get())) {
+                    inventory.setItem(slot, ItemStack.EMPTY);
+                    sparkle(level, player.blockPosition());
+                }
+            }
+        }
+        for (net.minecraft.world.entity.item.ItemEntity dropped
+                : level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class,
+                        new net.minecraft.world.phys.AABB(level.getSharedSpawnPos())
+                                .inflate(GameState.PLAY_RADIUS),
+                        e -> e.getItem().is(ModItems.OATH_BLADE.get()))) {
+            sparkle(level, dropped.blockPosition());
+            dropped.discard();
+        }
+    }
+
+    private static void sparkle(ServerLevel level, BlockPos pos) {
+        level.sendParticles(ParticleTypes.END_ROD, pos.getX() + 0.5, pos.getY() + 1.0,
+                pos.getZ() + 0.5, 12, 0.3, 0.5, 0.3, 0.08);
     }
 
     // -------------------------------------------------------- mise en place
@@ -301,10 +337,7 @@ public class GameManager {
      */
     private static void openTheGame(ServerLevel level, BlockPos center) {
         GameState state = GameState.get(level);
-        for (ServerPlayer player : level.players()) {
-            player.getInventory().clearOrCountMatchingItems(
-                    stack -> stack.is(ModItems.OATH_BLADE.get()), -1, player.inventoryMenu.getCraftSlots());
-        }
+        dissolveBlades(level);
         level.sendParticles(ParticleTypes.END_ROD, center.getX() + 0.5, center.getY() + 1.0,
                 center.getZ() + 0.5, 120, 1.0, 1.5, 1.0, 0.5);
         level.playSound(null, center, SoundEvents.BEACON_ACTIVATE, SoundSource.PLAYERS, 1.4F, 0.9F);
