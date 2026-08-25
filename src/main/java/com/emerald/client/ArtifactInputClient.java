@@ -36,7 +36,7 @@ public class ArtifactInputClient {
             "key.categories.emeraldweapons");
 
     /** Vrai tant que le second saut n'a pas ete consomme depuis le dernier appui au sol. */
-    private static boolean jumpAvailable;
+    private static boolean jumpAvailable = true;
     private static boolean jumpWasDown;
 
     @EventBusSubscriber(modid = EmeraldWeaponsMod.MODID, value = Dist.CLIENT,
@@ -64,7 +64,13 @@ public class ArtifactInputClient {
         }
 
         boolean jumpDown = mc.options.keyJump.isDown();
-        if (player.onGround() || player.isInWater()) {
+        // en vol creatif, la touche de saut sert deja a monter : s'y greffer
+        // rendrait le double saut invisible et le vol saccade
+        if (player.getAbilities().flying) {
+            jumpWasDown = jumpDown;
+            return;
+        }
+        if (player.onGround() || player.isInWater() || player.onClimbable()) {
             jumpAvailable = true;
         } else if (jumpDown && !jumpWasDown && jumpAvailable
                 && Artifacts.wearing(player, Artifact.BOTTES_D_ECLAIR)) {

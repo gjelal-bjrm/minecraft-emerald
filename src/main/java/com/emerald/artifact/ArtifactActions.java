@@ -2,6 +2,7 @@ package com.emerald.artifact;
 
 import com.emerald.particles.ModParticles;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
@@ -23,6 +24,12 @@ public final class ArtifactActions {
      *
      * Le serveur revalide que le joueur est bien en l'air ; le client peut
      * seulement demander, jamais decider.
+     *
+     * Le mouvement d'un joueur est pilote par SON client : modifier sa velocite
+     * cote serveur ne produit rien, le client reimposant sa propre position au
+     * tick suivant. Il faut donc la lui renvoyer explicitement -- c'est ce que
+     * fait ClientboundSetEntityMotionPacket, et c'est la seule facon de pousser
+     * un joueur depuis le serveur.
      */
     public static void doubleJump(ServerPlayer player) {
         if (!Artifacts.wearing(player, Artifact.BOTTES_D_ECLAIR)
@@ -30,8 +37,11 @@ public final class ArtifactActions {
             return;
         }
         Vec3 motion = player.getDeltaMovement();
-        player.setDeltaMovement(motion.x, JUMP_IMPULSE, motion.z);
-        player.hasImpulse = true;
+        // on conserve un peu d'elan horizontal : un second saut qui coupe la
+        // course casse le mouvement au lieu de le prolonger
+        player.setDeltaMovement(motion.x * 1.15, JUMP_IMPULSE, motion.z * 1.15);
+        player.hurtMarked = true;
+        player.connection.send(new ClientboundSetEntityMotionPacket(player));
         player.fallDistance = 0.0F;
         player.level().playSound(null, player.blockPosition(), SoundEvents.AMETHYST_BLOCK_CHIME,
                 SoundSource.PLAYERS, 0.7F, 1.8F);
