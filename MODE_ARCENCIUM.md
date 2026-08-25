@@ -54,11 +54,19 @@ Tous les joueurs apparaissent **au meme endroit**, sur la place du village.
 
 ### 3.1 La Lame du Serment — le declencheur
 
-**Mise en place automatique.** Aucune commande n'est necessaire : au premier
-chargement du monde, le mod cherche un **vrai village genere** (tag
-`minecraft:village`, qui couvre le vanilla, les mods du modpack et le notre) dans
-un rayon de 96 chunks, y plante la lame, y fixe le point d'apparition, chasse les
-monstres alentour et met le jour. A defaut de village, repli sur le spawn.
+**Mise en place automatique.** Aucune commande n'est necessaire. Au premier
+chargement du monde, le mod cherche **le village d'Arcencium** (tag
+`emeraldweapons:arcencium_village`, rayon 160 chunks) : le mode doit commencer
+dans son propre decor. A defaut, il se rabat sur un village ordinaire (tag
+`minecraft:village`, rayon 96 chunks), puis sur le point d'apparition.
+
+Le village d'Arcencium apparait desormais dans **21 biomes** au lieu des quatre
+taigas d'origine, ce qui garantit qu'il en existe un a portee dans presque tous
+les mondes. Il rejoint aussi le tag vanilla des villages, si bien que les cartes
+et boussoles d'exploration le trouvent comme n'importe quel autre.
+
+Le mod y plante la lame, y fixe le point d'apparition, chasse les monstres
+alentour et met le jour.
 
 Chercher un village plutot qu'en improviser un : il existe forcement dans un
 biome habitable, avec ses maisons et sa lumiere -- deux choses qu'on ne saurait

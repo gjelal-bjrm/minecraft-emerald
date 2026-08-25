@@ -6,7 +6,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
@@ -24,8 +23,13 @@ import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 @EventBusSubscriber(modid = EmeraldWeaponsMod.MODID)
 public class LobbyRules {
 
-    /** Rayon dans lequel les joueurs sont tenus avant le depart. */
-    public static final int LOBBY_RADIUS = 48;
+    /**
+     * Rayon dans lequel les joueurs sont tenus avant le depart.
+     *
+     * Large : il s'agit d'empecher de partir explorer, pas d'interdire de faire
+     * le tour du village.
+     */
+    public static final int LOBBY_RADIUS = 96;
 
     /** Intervalle du rappel a l'ecran quand la lame reste plantee. */
     private static final int REMINDER = 60 * 20;
@@ -35,14 +39,21 @@ public class LobbyRules {
         return status == GameState.Status.LOBBY || status == GameState.Status.PROLOGUE;
     }
 
+    /**
+     * La barriere ne vaut que TANT QUE LA LAME EST PLANTEE.
+     *
+     * Pendant le siege, les monstres apparaissent jusqu'a 26 blocs et se
+     * poursuivent : enfermer les defenseurs les empecherait de se battre.
+     */
+    private static boolean confined(ServerLevel level) {
+        return waiting(level) && !GameManager.prologueRunning();
+    }
+
     /** Aucun minage avant le depart : le village doit rester intact pour le siege. */
     @SubscribeEvent
     public static void onBreak(BlockEvent.BreakEvent event) {
-        if (!(event.getLevel() instanceof ServerLevel level) || !waiting(level)) {
+        if (!(event.getLevel() instanceof ServerLevel level) || !confined(level)) {
             return;
-        }
-        if (GameManager.prologueRunning()) {
-            return;                        // pendant le siege, on laisse se defendre
         }
         event.setCanceled(true);
         if (event.getPlayer() instanceof ServerPlayer player) {
@@ -54,13 +65,20 @@ public class LobbyRules {
     /**
      * La barriere de village, et le rappel periodique.
      *
-     * On repousse vers le centre plutot que de teleporter : un joueur repousse
-     * comprend qu'il y a un mur, un joueur teleporte croit a un bogue.
+     * On TELEPORTE au bord plutot que de repousser par la vitesse. Une premiere
+     * version imposait une velocite a chaque tick, composante verticale
+     * comprise : le joueur montait de 0,25 par tick sans jamais reprendre la
+     * main, puisque sa vitesse etait ecrasee vingt fois par seconde. Une
+     * teleportation ne peut pas boucler.
      */
     @SubscribeEvent
     public static void onPlayerTick(PlayerTickEvent.Post event) {
         if (!(event.getEntity() instanceof ServerPlayer player)
-                || !(player.level() instanceof ServerLevel level) || !waiting(level)) {
+                || !(player.level() instanceof ServerLevel level) || !confined(level)) {
+            return;
+        }
+        // un controle par demi-seconde suffit, et evite toute lutte avec le client
+        if (level.getGameTime() % 10 != 0) {
             return;
         }
         GameState state = GameState.get(level);
@@ -68,14 +86,20 @@ public class LobbyRules {
         if (village.equals(BlockPos.ZERO)) {
             return;
         }
-        if (player.blockPosition().distSqr(village) > (double) LOBBY_RADIUS * LOBBY_RADIUS) {
-            Vec3 back = Vec3.atCenterOf(village).subtract(player.position()).normalize().scale(0.55);
-            player.setDeltaMovement(back.x, 0.25, back.z);
-            player.hurtMarked = true;
+        double dx = player.getX() - (village.getX() + 0.5);
+        double dz = player.getZ() - (village.getZ() + 0.5);
+        double dist = Math.sqrt(dx * dx + dz * dz);
+        if (dist > LOBBY_RADIUS) {
+            // on le ramene juste en deca du bord, dans la direction d'ou il vient
+            double scale = (LOBBY_RADIUS - 4) / dist;
+            BlockPos edge = WorldSetup.findOpenGround(level, new BlockPos(
+                    (int) Math.round(village.getX() + dx * scale), village.getY(),
+                    (int) Math.round(village.getZ() + dz * scale)), 8);
+            player.teleportTo(edge.getX() + 0.5, edge.getY(), edge.getZ() + 0.5);
             player.displayClientMessage(Component.translatable(
                     "game.emeraldweapons.locked.leave").withStyle(ChatFormatting.RED), true);
         }
-        if (!GameManager.prologueRunning() && level.getGameTime() % REMINDER == 0) {
+        if (level.getGameTime() % REMINDER == 0) {
             player.displayClientMessage(Component.translatable(
                     "game.emeraldweapons.locked.hint").withStyle(ChatFormatting.YELLOW), true);
         }

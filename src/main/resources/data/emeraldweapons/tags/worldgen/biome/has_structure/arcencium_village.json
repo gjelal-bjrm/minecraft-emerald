@@ -4,6 +4,23 @@
     "minecraft:taiga",
     "minecraft:old_growth_pine_taiga",
     "minecraft:old_growth_spruce_taiga",
-    "minecraft:snowy_taiga"
+    "minecraft:snowy_taiga",
+    "minecraft:plains",
+    "minecraft:sunflower_plains",
+    "minecraft:meadow",
+    "minecraft:forest",
+    "minecraft:flower_forest",
+    "minecraft:birch_forest",
+    "minecraft:old_growth_birch_forest",
+    "minecraft:dark_forest",
+    "minecraft:savanna",
+    "minecraft:savanna_plateau",
+    "minecraft:snowy_plains",
+    "minecraft:grove",
+    "minecraft:cherry_grove",
+    "minecraft:windswept_hills",
+    "minecraft:windswept_forest",
+    "minecraft:jungle",
+    "minecraft:sparse_jungle"
   ]
 }

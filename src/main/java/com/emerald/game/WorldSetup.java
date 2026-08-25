@@ -32,6 +32,21 @@ public class WorldSetup {
     /** Rayon de recherche, en chunks. Au-dela, la generation coute trop cher. */
     private static final int SEARCH_CHUNKS = 96;
 
+    /**
+     * Notre propre village, cherche en priorite.
+     *
+     * On lui accorde un rayon plus large qu'aux autres : c'est celui qu'on veut,
+     * et le trouver une fois vaut la depense d'une generation un peu plus large
+     * au tout premier chargement.
+     */
+    private static final int OWN_SEARCH_CHUNKS = 160;
+
+    private static final net.minecraft.tags.TagKey<net.minecraft.world.level.levelgen.structure.Structure>
+            ARCENCIUM_VILLAGE = net.minecraft.tags.TagKey.create(
+                    net.minecraft.core.registries.Registries.STRUCTURE,
+                    net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(
+                            EmeraldWeaponsMod.MODID, "arcencium_village"));
+
     /** Zone nettoyee de ses monstres autour du village avant le depart. */
     private static final int CLEAR_RADIUS = 64;
 
@@ -56,17 +71,24 @@ public class WorldSetup {
     }
 
     /**
-     * Le village genere le plus proche de l'origine.
+     * Le village d'accueil : le NOTRE en priorite, un autre a defaut.
      *
-     * On interroge le tag des villages plutot qu'une structure precise : il
-     * couvre les cinq villages vanilla et tous ceux qu'ajoutent les mods du
-     * modpack, y compris le notre.
+     * Le mode doit commencer dans son propre decor -- palette d'Arcencium,
+     * Arbres de Prisme, lanternes. On ne se rabat sur un village vanilla ou d'un
+     * autre mod que si aucun des notres n'est a portee, ce qui reste possible
+     * malgre les vingt et un biomes ou il apparait.
      */
     @Nullable
     private static BlockPos findVillage(ServerLevel level) {
         BlockPos from = level.getSharedSpawnPos();
-        BlockPos found = level.findNearestMapStructure(StructureTags.VILLAGE, from,
-                SEARCH_CHUNKS, false);
+        BlockPos found = level.findNearestMapStructure(ARCENCIUM_VILLAGE, from,
+                OWN_SEARCH_CHUNKS, false);
+        if (found == null) {
+            org.slf4j.LoggerFactory.getLogger(EmeraldWeaponsMod.MODID).info(
+                    "Aucun village d'Arcencium a portee, recherche d'un village ordinaire");
+            found = level.findNearestMapStructure(StructureTags.VILLAGE, from,
+                    SEARCH_CHUNKS, false);
+        }
         return found == null ? null : findOpenGround(level, found, 24);
     }
 
