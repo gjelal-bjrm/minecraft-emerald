@@ -28,9 +28,19 @@ import javax.annotation.Nullable;
  */
 public class SocketBenchMenu extends AbstractContainerMenu {
 
+    // Index dans le MENU : c'est ce que manipulent quickMoveStack et le reseau.
     public static final int SLOT_GEAR = 0;
     public static final int SLOT_ARTIFACT = 1;
     public static final int SLOT_RESULT = 2;
+
+    /**
+     * Index dans le CONTENEUR de resultat, qui ne compte qu'une case.
+     *
+     * Le second parametre de Slot est l'index dans son conteneur, pas dans le
+     * menu. Y passer SLOT_RESULT revenait a lire la case 2 d'un tableau de
+     * longueur 1, et le client se deconnectait des l'ouverture de l'ecran.
+     */
+    private static final int RESULT_IN_CONTAINER = 0;
 
     private final ContainerLevelAccess access;
     private final Container inputs = new SimpleContainer(2) {
@@ -68,7 +78,7 @@ public class SocketBenchMenu extends AbstractContainerMenu {
                 return stack.getItem() instanceof ArtifactItem && Artifacts.of(stack) != null;
             }
         });
-        this.addSlot(new Slot(this.result, SLOT_RESULT, 134, 47) {
+        this.addSlot(new Slot(this.result, RESULT_IN_CONTAINER, 134, 47) {
             @Override
             public boolean mayPlace(ItemStack stack) {
                 return false;
