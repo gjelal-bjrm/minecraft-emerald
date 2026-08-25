@@ -184,7 +184,26 @@ public class Siege {
         return n;
     }
 
+    /**
+     * Le nombre de defenseurs presents, jamais moins de un.
+     *
+     * Une vague calibree pour quatre joueurs est infaisable en solo : la taille
+     * des vagues suit donc l'effectif reellement sur place.
+     */
+    private int defenders() {
+        int n = 0;
+        for (ServerPlayer player : this.level.players()) {
+            if (player.isAlive() && !player.isSpectator()
+                    && player.blockPosition().closerThan(this.center, LEASH * 1.5)) {
+                n++;
+            }
+        }
+        return Math.max(1, n);
+    }
+
     private void spawnWave(int count) {
+        // moitie de la vague de base par joueur supplementaire
+        count = count + (defenders() - 1) * Math.max(1, count / 2);
         this.level.playSound(null, this.center, SoundEvents.RAID_HORN.value(),
                 SoundSource.HOSTILE, 2.0F, 0.9F + 0.1F * this.tier);
         EntityType<?>[] roster = roster();
@@ -253,7 +272,9 @@ public class Siege {
      */
     private EntityType<?>[] roster() {
         List<EntityType<?>> pool = new ArrayList<>();
-        for (String id : SiegeRoster.forTier(this.tier)) {
+        List<String> ids = this.failure == Failure.VILLAGERS
+                ? SiegeRoster.prologue() : SiegeRoster.forTier(this.tier);
+        for (String id : ids) {
             EntityType.byString(id).ifPresent(pool::add);
         }
         if (pool.size() >= 3) {

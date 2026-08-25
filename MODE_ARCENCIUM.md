@@ -109,6 +109,20 @@ de 60 secondes**, puis se repete.
 
 ### 3.2 Le siege du village
 
+**Difficulte.** Le prologue n'emploie QUE des monstres vanilla faibles -- zombie,
+squelette, husk. Les factions du modpack sont taillees pour du jeu tres avance
+et massacraient des defenseurs en armure de fer ; elles restent reservees aux
+sieges d'ancre, comme le prevoyait deja le cahier.
+
+Trois vagues de 3, 5 et 6, **mises a l'echelle du nombre de joueurs presents** :
+une vague calibree pour quatre est infaisable en solo.
+
+Le **Serment** (Force I, Resistance I, Regeneration I) est renouvele pendant TOUT
+le siege, et non quarante secondes : c'est lui qui rend le village tenable.
+
+L'equipement de depart est conserve apres la victoire -- le retirer punirait
+d'avoir gagne. Seule la Lame du Serment se dissout.
+
 **Condition de defaite : plus aucun villageois vivant.** Pas la mort d'un joueur,
 qui reapparait et revient -- sa chute ne doit pas condamner l'equipe. Tant qu'un
 villageois tient debout, la defense continue.

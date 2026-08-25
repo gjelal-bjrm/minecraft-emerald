@@ -53,11 +53,34 @@ public class GameManager {
             {8, 10, 12, 14, 16},
     };
 
-    private static final int[] PROLOGUE_WAVES = {4, 6, 8};
+    /** Volontairement court : le prologue enseigne, il ne doit pas user. */
+    private static final int[] PROLOGUE_WAVES = {3, 5, 6};
 
     @Nullable
     private static Siege prologue;
     private static final Map<BlockPos, Siege> anchorSieges = new HashMap<>();
+
+    /**
+     * Le Serment porte les defenseurs pendant toute la duree du prologue.
+     *
+     * Un buff de quarante secondes au retrait de la lame retombait bien avant la
+     * derniere vague. Il est renouvele tant que le siege dure : c'est ce qui
+     * rend le village tenable en armure de fer, et c'est coherent avec ce que
+     * le Serment est cense etre.
+     */
+    private static void sustainOath(ServerLevel level) {
+        if (level.getGameTime() % 20 != 0) {
+            return;
+        }
+        for (ServerPlayer player : level.players()) {
+            player.addEffect(new net.minecraft.world.effect.MobEffectInstance(
+                    net.minecraft.world.effect.MobEffects.DAMAGE_BOOST, 120, 0, true, false, true));
+            player.addEffect(new net.minecraft.world.effect.MobEffectInstance(
+                    net.minecraft.world.effect.MobEffects.DAMAGE_RESISTANCE, 120, 0, true, false, true));
+            player.addEffect(new net.minecraft.world.effect.MobEffectInstance(
+                    net.minecraft.world.effect.MobEffects.REGENERATION, 120, 0, true, false, true));
+        }
+    }
 
     /** Vrai pendant le siege du village : les regles de lobby s'assouplissent alors. */
     public static boolean prologueRunning() {
@@ -82,6 +105,7 @@ public class GameManager {
             dissolveBlades(level);
         }
         if (prologue != null) {
+            sustainOath(level);
             prologue.tick();
             if (prologue.isDone()) {
                 Siege finished = prologue;
@@ -321,20 +345,38 @@ public class GameManager {
     public static void equipStarter(ServerPlayer player) {
         player.getInventory().clearContent();
         player.setItemSlot(net.minecraft.world.entity.EquipmentSlot.HEAD,
-                new ItemStack(net.minecraft.world.item.Items.IRON_HELMET));
+                enchanted(player, net.minecraft.world.item.Items.IRON_HELMET,
+                        net.minecraft.world.item.enchantment.Enchantments.PROTECTION, 1));
         player.setItemSlot(net.minecraft.world.entity.EquipmentSlot.CHEST,
-                new ItemStack(net.minecraft.world.item.Items.IRON_CHESTPLATE));
+                enchanted(player, net.minecraft.world.item.Items.IRON_CHESTPLATE,
+                        net.minecraft.world.item.enchantment.Enchantments.PROTECTION, 1));
         player.setItemSlot(net.minecraft.world.entity.EquipmentSlot.LEGS,
-                new ItemStack(net.minecraft.world.item.Items.IRON_LEGGINGS));
+                enchanted(player, net.minecraft.world.item.Items.IRON_LEGGINGS,
+                        net.minecraft.world.item.enchantment.Enchantments.PROTECTION, 1));
         player.setItemSlot(net.minecraft.world.entity.EquipmentSlot.FEET,
-                new ItemStack(net.minecraft.world.item.Items.IRON_BOOTS));
-        player.getInventory().add(new ItemStack(net.minecraft.world.item.Items.IRON_SWORD));
+                enchanted(player, net.minecraft.world.item.Items.IRON_BOOTS,
+                        net.minecraft.world.item.enchantment.Enchantments.PROTECTION, 1));
+        player.getInventory().add(enchanted(player, net.minecraft.world.item.Items.IRON_SWORD,
+                net.minecraft.world.item.enchantment.Enchantments.SHARPNESS, 1));
         player.getInventory().add(new ItemStack(net.minecraft.world.item.Items.SHIELD));
         player.getInventory().add(new ItemStack(net.minecraft.world.item.Items.BREAD, 16));
         // Rien ne peut etre casse avant le depart : sans de quoi monter, un
         // joueur au pied d'une falaise reste bloque. L'echafaudage sert a ca et
         // a rien d'autre -- il ne se transforme en aucune ressource.
         player.getInventory().add(new ItemStack(net.minecraft.world.item.Items.SCAFFOLDING, 32));
+    }
+
+    /** Protection I et Tranchant I, comme prevu au cahier. */
+    private static ItemStack enchanted(ServerPlayer player, net.minecraft.world.item.Item item,
+                                       net.minecraft.resources.ResourceKey<
+                                               net.minecraft.world.item.enchantment.Enchantment> key,
+                                       int level) {
+        ItemStack stack = new ItemStack(item);
+        player.level().registryAccess()
+                .lookup(net.minecraft.core.registries.Registries.ENCHANTMENT)
+                .flatMap(registry -> registry.get(key))
+                .ifPresent(holder -> stack.enchant(holder, level));
+        return stack;
     }
 
     // ----------------------------------------------------- la Lame du Serment

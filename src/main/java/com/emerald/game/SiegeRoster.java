@@ -27,12 +27,24 @@ public final class SiegeRoster {
     private SiegeRoster() {
     }
 
+    /**
+     * Le prologue n'utilise QUE du vanilla, et du plus faible.
+     *
+     * Il se joue en armure de fer, sans artefact ni equipement d'Arcencium :
+     * c'est la ou l'on apprend a se battre, pas ou l'on meurt. Les factions du
+     * modpack -- draugr, cultistes, deeplings -- sont taillees pour du jeu tres
+     * avance et massacraient les defenseurs en quelques secondes.
+     */
+    public static List<String> prologue() {
+        return List.of("minecraft:zombie", "minecraft:skeleton", "minecraft:husk");
+    }
+
     public static List<String> forTier(int tier) {
         return switch (tier) {
             case 1 -> List.of(
-                    "cataclysm:deepling", "cataclysm:draugr", "undergarden:rotling",
-                    "twilightforest:kobold", "irons_spellbooks:cultist",
-                    "minecraft:zombie", "minecraft:skeleton", "minecraft:pillager");
+                    "cataclysm:deepling", "undergarden:rotling", "twilightforest:kobold",
+                    "minecraft:zombie", "minecraft:skeleton", "minecraft:pillager",
+                    "minecraft:husk", "minecraft:stray");
             case 2 -> List.of(
                     "cataclysm:deepling_brute", "cataclysm:deepling_angler",
                     "cataclysm:elite_draugr", "cataclysm:koboleton",
