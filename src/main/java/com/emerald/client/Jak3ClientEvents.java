@@ -17,6 +17,12 @@ public class Jak3ClientEvents {
 
     @SubscribeEvent
     public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
+        // Le trait du sceptre n'a pas de modele : sa trainee de particules EST
+        // son rendu. NoopRenderer suffit, mais il faut l'enregistrer, sinon le
+        // jeu refuse de charger l'entite.
+        event.registerEntityRenderer(Jak3Registry.PRISMATIC_BOLT.get(),
+                net.minecraft.client.renderer.entity.NoopRenderer::new);
+
         event.registerEntityRenderer(Jak3Registry.WASTELANDER.get(),
                 ctx -> new MobRenderer<WastelanderEntity, HumanoidModel<WastelanderEntity>>(ctx,
                         new HumanoidModel<>(ctx.bakeLayer(ModelLayers.PLAYER_INNER_ARMOR)), 0.5f) {

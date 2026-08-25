@@ -1,0 +1,15 @@
+{
+  "parent": "minecraft:item/handheld",
+  "textures": {
+    "layer0": "emeraldweapons:item/arcencium_scepter"
+  },
+  "_comment": "charge = 1 quand l'Onde de Concorde est prete. Les cinq eclats du bandeau s'allument un a un a mesure que le rechargement avance.",
+  "overrides": [
+    { "predicate": { "emeraldweapons:charge": 0.0 },  "model": "emeraldweapons:item/arcencium_scepter_0" },
+    { "predicate": { "emeraldweapons:charge": 0.2 },  "model": "emeraldweapons:item/arcencium_scepter_1" },
+    { "predicate": { "emeraldweapons:charge": 0.4 },  "model": "emeraldweapons:item/arcencium_scepter_2" },
+    { "predicate": { "emeraldweapons:charge": 0.6 },  "model": "emeraldweapons:item/arcencium_scepter_3" },
+    { "predicate": { "emeraldweapons:charge": 0.8 },  "model": "emeraldweapons:item/arcencium_scepter_4" },
+    { "predicate": { "emeraldweapons:charge": 1.0 },  "model": "emeraldweapons:item/arcencium_scepter_full" }
+  ]
+}

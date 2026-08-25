@@ -1,15 +1,19 @@
 {
   "effect.emeraldweapons.crystalline_aura": "Crystalline Aura",
   "effect.emeraldweapons.prismatic_mark": "Prismatic Mark",
-
   "item.emeraldweapons.emerald_sword": "Emerald Sword",
   "item.emeraldweapons.arcencium_bow": "Arcencium Bow",
+  "item.emeraldweapons.arcencium_scepter": "Arcencium Scepter",
   "item.emeraldweapons.arcencium_ingot": "Arcencium Ingot",
   "item.emeraldweapons.raw_arcencium": "Raw Arcencium",
-
+  "item.emeraldweapons.prism_branch": "Prism Branch",
+  "item.emeraldweapons.prism_fiber": "Prism Fiber",
+  "item.emeraldweapons.arcencium_helmet": "Arcencium Helmet",
+  "item.emeraldweapons.arcencium_chestplate": "Arcencium Chestplate",
+  "item.emeraldweapons.arcencium_leggings": "Arcencium Leggings",
+  "item.emeraldweapons.arcencium_boots": "Arcencium Boots",
   "block.emeraldweapons.arcencium_block": "Arcencium Block",
   "block.emeraldweapons.arcencium_ore": "Arcencium Ore",
-
   "block.emeraldweapons.gangue_stone": "Gangue Stone",
   "block.emeraldweapons.gangue_stone_stairs": "Gangue Stone Stairs",
   "block.emeraldweapons.gangue_stone_slab": "Gangue Stone Slab",
@@ -25,7 +29,6 @@
   "block.emeraldweapons.veined_stone_stairs": "Veined Stone Stairs",
   "block.emeraldweapons.veined_stone_slab": "Veined Stone Slab",
   "block.emeraldweapons.veined_stone_wall": "Veined Stone Wall",
-
   "block.emeraldweapons.arcencium_bricks": "Arcencium Bricks",
   "block.emeraldweapons.arcencium_brick_stairs": "Arcencium Brick Stairs",
   "block.emeraldweapons.arcencium_brick_slab": "Arcencium Brick Slab",
@@ -35,11 +38,9 @@
   "block.emeraldweapons.corrupted_brick_stairs": "Corrupted Brick Stairs",
   "block.emeraldweapons.corrupted_brick_slab": "Corrupted Brick Slab",
   "block.emeraldweapons.corrupted_brick_wall": "Corrupted Brick Wall",
-
   "block.emeraldweapons.prismatic_glass": "Prismatic Glass",
   "block.emeraldweapons.prismatic_glass_pane": "Prismatic Glass Pane",
   "block.emeraldweapons.arcencium_lantern": "Arcencium Lantern",
-
   "block.emeraldweapons.prismatic_grass_block": "Prismatic Grass Block",
   "block.emeraldweapons.prism_bloom": "Prism Bloom",
   "block.emeraldweapons.prism_tuft": "Prism Tuft",
@@ -50,7 +51,6 @@
   "block.emeraldweapons.crystal_stairs": "Crystallized Stairs",
   "block.emeraldweapons.crystal_slab": "Crystallized Slab",
   "block.emeraldweapons.crystal_fence": "Crystallized Fence",
-
   "block.emeraldweapons.verdigris_wool": "Verdigris Wool",
   "block.emeraldweapons.ochre_wool": "Ochre Wool",
   "block.emeraldweapons.old_rose_wool": "Old Rose Wool",
@@ -61,7 +61,6 @@
   "block.emeraldweapons.old_rose_carpet": "Old Rose Carpet",
   "block.emeraldweapons.slate_blue_carpet": "Slate Blue Carpet",
   "block.emeraldweapons.ecru_carpet": "Ecru Carpet",
-
   "creativetab.emeraldweaponsmod.arcencium_items": "Arcencium Items",
   "creativetab.emeraldweaponsmod.arcencium_blocks": "Arcencium Blocks"
 }

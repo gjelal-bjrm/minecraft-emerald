@@ -2,8 +2,10 @@ package com.emerald.item;
 
 import com.emerald.tiers.EmeraldTier;
 import com.emerald.weapons.ArcenciumBowItem;
+import com.emerald.weapons.ArcenciumScepterItem;
 import com.emerald.weapons.EmeraldWindblade;
 import com.emerald.main.EmeraldWeaponsMod;
+import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.SwordItem;
 import net.neoforged.bus.api.IEventBus;
@@ -32,6 +34,42 @@ public class ModItems {
     public static final DeferredItem<ArcenciumBowItem> ARCENCIUM_BOW =
             ITEMS.register("arcencium_bow", () ->
                     new ArcenciumBowItem(new Item.Properties().durability(1500)));
+
+    /** Sceptre d'Arcencium -- la Concorde (voir ArcenciumScepterItem). */
+    public static final DeferredItem<ArcenciumScepterItem> ARCENCIUM_SCEPTER =
+            ITEMS.register("arcencium_scepter", () ->
+                    new ArcenciumScepterItem(new Item.Properties().durability(900)));
+
+    // ------------------------------------------------- derives de l'Arbre de Prisme
+    // Aucune piece d'Arcencium n'est fabricable sans passer par l'arbre : c'est
+    // ce qui rend le bucheronnage aussi necessaire que le minage.
+
+    /** Le manche : epee, arc, sceptre. */
+    public static final DeferredItem<Item> PRISM_BRANCH = ITEMS.register("prism_branch",
+            () -> new Item(new Item.Properties()));
+
+    /** La doublure : les quatre pieces d'armure. */
+    public static final DeferredItem<Item> PRISM_FIBER = ITEMS.register("prism_fiber",
+            () -> new Item(new Item.Properties()));
+
+    // ------------------------------------------------------- armure d'Arcencium
+
+    public static final DeferredItem<ArmorItem> ARCENCIUM_HELMET =
+            ITEMS.register("arcencium_helmet", () -> armor(ArmorItem.Type.HELMET));
+
+    public static final DeferredItem<ArmorItem> ARCENCIUM_CHESTPLATE =
+            ITEMS.register("arcencium_chestplate", () -> armor(ArmorItem.Type.CHESTPLATE));
+
+    public static final DeferredItem<ArmorItem> ARCENCIUM_LEGGINGS =
+            ITEMS.register("arcencium_leggings", () -> armor(ArmorItem.Type.LEGGINGS));
+
+    public static final DeferredItem<ArmorItem> ARCENCIUM_BOOTS =
+            ITEMS.register("arcencium_boots", () -> armor(ArmorItem.Type.BOOTS));
+
+    private static ArmorItem armor(ArmorItem.Type type) {
+        return new ArmorItem(ModArmorMaterials.ARCENCIUM, type,
+                new Item.Properties().durability(ModArmorMaterials.durabilityFor(type)));
+    }
 
     public static void register(IEventBus eventBus) {
         ITEMS.register(eventBus);

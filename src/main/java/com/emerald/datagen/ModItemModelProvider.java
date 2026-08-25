@@ -24,6 +24,16 @@ public class ModItemModelProvider extends ItemModelProvider {
 
         // Armes et outils (modèle "handheld")
         handheldItem(ModItems.EMERALD_SWORD);
+
+        // Derives de l'Arbre de Prisme et armure d'Arcencium.
+        // La branche est un manche : comme le baton vanilla elle prend le
+        // modele "handheld", sinon le joueur la tient a plat devant lui.
+        handheldItem(ModItems.PRISM_BRANCH);
+        basicItem(ModItems.PRISM_FIBER);
+        basicItem(ModItems.ARCENCIUM_HELMET);
+        basicItem(ModItems.ARCENCIUM_CHESTPLATE);
+        basicItem(ModItems.ARCENCIUM_LEGGINGS);
+        basicItem(ModItems.ARCENCIUM_BOOTS);
         /*handheldItem(ModItems.EMERALD_AXE);
         handheldItem(ModItems.EMERALD_PICKAXE);
         handheldItem(ModItems.EMERALD_SHOVEL);

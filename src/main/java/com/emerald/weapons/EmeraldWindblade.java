@@ -152,11 +152,25 @@ public class EmeraldWindblade extends SwordItem {
         }
     }
 
+    /** Niveau maximal de la Fureur Cristalline (amplificateur 0 a 2). */
+    public static final int MAX_FURY_AMPLIFIER = 2;
+
+    private static final int FURY_TICKS = 20 * 20;
+
+    /**
+     * La Fureur monte d'un cran a chaque declenchement au lieu de simplement se
+     * reamorcer : rester au contact vaut mieux que frapper de loin par a-coups.
+     */
     private void applyCrystallineBuff(LivingEntity attacker, Level level, double mult) {
-        if (attacker instanceof Player player && Math.random() < 0.08 * mult) {
-            player.addEffect(new MobEffectInstance(ModEffects.CRYSTALLINE_AURA, 20 * 20));
-            level.playSound(null, player.blockPosition(), SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.PLAYERS, 1.0f, 1.2f);
+        if (!(attacker instanceof Player player) || Math.random() >= 0.08 * mult) {
+            return;
         }
+        MobEffectInstance current = player.getEffect(ModEffects.CRYSTALLINE_AURA);
+        int amplifier = current == null ? 0
+                : Math.min(current.getAmplifier() + 1, MAX_FURY_AMPLIFIER);
+        player.addEffect(new MobEffectInstance(ModEffects.CRYSTALLINE_AURA, FURY_TICKS, amplifier));
+        level.playSound(null, player.blockPosition(), SoundEvents.AMETHYST_BLOCK_CHIME,
+                SoundSource.PLAYERS, 1.0f, 1.2f + 0.15f * amplifier);
     }
 
     /*

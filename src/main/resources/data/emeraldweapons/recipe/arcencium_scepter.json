@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "AEA",
+    " A ",
+    " B "
+  ],
+  "key": {
+    "A": {
+      "item": "emeraldweapons:arcencium_ingot"
+    },
+    "E": {
+      "item": "minecraft:emerald"
+    },
+    "B": {
+      "item": "emeraldweapons:prism_branch"
+    }
+  },
+  "result": {
+    "id": "emeraldweapons:arcencium_scepter"
+  }
+}

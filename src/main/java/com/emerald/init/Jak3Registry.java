@@ -1,6 +1,7 @@
 package com.emerald.init;
 
 import com.emerald.entity.KGDeathbotEntity;
+import com.emerald.entity.PrismaticBoltEntity;
 import com.emerald.entity.WastelanderEntity;
 import com.emerald.world.structure.HavenCityStructure;
 import com.emerald.world.structure.SpargusCityStructure;
@@ -39,6 +40,15 @@ public class Jak3Registry {
                             .sized(0.8f, 2.2f)  // plus grand qu'un joueur
                             .clientTrackingRange(10)
                             .build("kg_deathbot"));
+
+    /** Trait du Sceptre d'Arcencium. Aucun modele : il se voit a ses particules. */
+    public static final DeferredHolder<EntityType<?>, EntityType<PrismaticBoltEntity>> PRISMATIC_BOLT =
+            ENTITIES.register("prismatic_bolt", () ->
+                    EntityType.Builder.<PrismaticBoltEntity>of(PrismaticBoltEntity::new, MobCategory.MISC)
+                            .sized(0.25f, 0.25f)
+                            .clientTrackingRange(4)
+                            .updateInterval(10)
+                            .build("prismatic_bolt"));
 
     // -------------------------------------------------------------------------
     // Structure types

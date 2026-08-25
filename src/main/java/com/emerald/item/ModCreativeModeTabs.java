@@ -23,8 +23,15 @@ public class ModCreativeModeTabs {
                     .displayItems((itemDisplayParameters, output) -> {
                         output.accept(ModItems.RAW_ARCENCIUM);
                         output.accept(ModItems.ARCENCIUM_INGOT);
+                        output.accept(ModItems.PRISM_BRANCH);
+                        output.accept(ModItems.PRISM_FIBER);
                         output.accept(ModItems.EMERALD_SWORD);
                         output.accept(ModItems.ARCENCIUM_BOW);
+                        output.accept(ModItems.ARCENCIUM_SCEPTER);
+                        output.accept(ModItems.ARCENCIUM_HELMET);
+                        output.accept(ModItems.ARCENCIUM_CHESTPLATE);
+                        output.accept(ModItems.ARCENCIUM_LEGGINGS);
+                        output.accept(ModItems.ARCENCIUM_BOOTS);
                     }).build()
     );
 

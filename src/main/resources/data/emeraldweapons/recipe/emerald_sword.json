@@ -3,12 +3,21 @@
   "pattern": [
     "ENE",
     "AAA",
-    " N "
+    "BNB"
   ],
   "key": {
-    "E": { "item": "minecraft:emerald" },
-    "N": { "item": "minecraft:netherite_sword" },
-    "A": { "item": "emeraldweapons:arcencium_ingot" }
+    "E": {
+      "item": "minecraft:emerald"
+    },
+    "N": {
+      "item": "minecraft:netherite_sword"
+    },
+    "A": {
+      "item": "emeraldweapons:arcencium_ingot"
+    },
+    "B": {
+      "item": "emeraldweapons:prism_branch"
+    }
   },
   "result": {
     "id": "emeraldweapons:emerald_sword"

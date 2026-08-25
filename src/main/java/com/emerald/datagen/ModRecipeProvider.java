@@ -93,6 +93,27 @@ public class ModRecipeProvider extends RecipeProvider {
                 .unlockedBy(getHasName(ModBlocks.CRYSTAL_PLANKS.get()), has(ModBlocks.CRYSTAL_PLANKS.get()))
                 .save(out);
 
+        // --------------------------------------------- derives de l'Arbre de Prisme
+        // Le manche et la doublure : sans eux, aucune piece d'Arcencium n'est
+        // fabricable. C'est ce qui rend le bucheronnage aussi obligatoire que
+        // le minage.
+        ShapedRecipeBuilder.shaped(RecipeCategory.MISC, ModItems.PRISM_BRANCH.get(), 4)
+                .pattern("P").pattern("P")
+                .define('P', ModBlocks.CRYSTAL_PLANKS.get())
+                .unlockedBy(getHasName(ModBlocks.CRYSTAL_PLANKS.get()), has(ModBlocks.CRYSTAL_PLANKS.get()))
+                .save(out);
+        ShapelessRecipeBuilder.shapeless(RecipeCategory.MISC, ModItems.PRISM_FIBER.get())
+                .requires(ModBlocks.PRISM_LEAVES.get(), 3)
+                .unlockedBy(getHasName(ModBlocks.PRISM_LEAVES.get()), has(ModBlocks.PRISM_LEAVES.get()))
+                .save(out);
+
+        // ------------------------------------------------------ armure d'Arcencium
+        // Forme vanilla, avec la Fibre de Prisme en doublure au creux de la piece.
+        armor(out, ModItems.ARCENCIUM_HELMET.get(), "AAA", "AFA", null);
+        armor(out, ModItems.ARCENCIUM_CHESTPLATE.get(), "A A", "AFA", "AAA");
+        armor(out, ModItems.ARCENCIUM_LEGGINGS.get(), "AAA", "AFA", "A A");
+        armor(out, ModItems.ARCENCIUM_BOOTS.get(), "A A", "AFA", null);
+
         // ------------------------------------------------------------ textile
         dye(out, ModBlocks.VERDIGRIS_WOOL.get(), Items.GREEN_DYE);
         dye(out, ModBlocks.OCHRE_WOOL.get(), Items.ORANGE_DYE);
@@ -140,6 +161,19 @@ public class ModRecipeProvider extends RecipeProvider {
         SingleItemRecipeBuilder.stonecutting(Ingredient.of(base), RecipeCategory.BUILDING_BLOCKS, result, count)
                 .unlockedBy(getHasName(base), has(base))
                 .save(out, ResourceLocation.fromNamespaceAndPath(EmeraldWeaponsMod.MODID, name));
+    }
+
+    /** Piece d'armure : 'A' lingot d'Arcencium, 'F' fibre de Prisme. */
+    private static void armor(RecipeOutput out, ItemLike result, String r1, String r2, String r3) {
+        ShapedRecipeBuilder b = ShapedRecipeBuilder.shaped(RecipeCategory.COMBAT, result)
+                .pattern(r1).pattern(r2);
+        if (r3 != null) {
+            b.pattern(r3);
+        }
+        b.define('A', ModItems.ARCENCIUM_INGOT.get())
+                .define('F', ModItems.PRISM_FIBER.get())
+                .unlockedBy(getHasName(ModItems.ARCENCIUM_INGOT.get()), has(ModItems.ARCENCIUM_INGOT.get()))
+                .save(out);
     }
 
     /** Bain de teinture : 4 laines blanches + 1 teinture + 1 lingot -> 4 laines. */

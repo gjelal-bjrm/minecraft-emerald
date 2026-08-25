@@ -1,0 +1,598 @@
+# Mode Arcencium — cahier de conception et d'implémentation
+
+Document de travail. Il recense **tout** ce qui a ete decide pour le mode de jeu,
+et sert de liste de taches. Rien ici n'est encore code sauf mention explicite.
+
+Etat au 2026-08-25. Branche `feat/arcencium-bow`.
+
+---
+
+## 1. Le mode en une phrase
+
+Un mode roguelite jouable en solo ou en multijoueur, sur un monde genere a neuf
+a chaque partie, ou une equipe dispose de **45 a 50 minutes** pour activer trois
+ancres, faire apparaitre l'Arc-en-ciel, et tuer le boss a son sommet — avant que
+la Maree Prismatique ne referme la zone de jeu.
+
+Principes directeurs, valides au fil de la discussion :
+
+- **La meteo doit ouvrir une facon de jouer, pas seulement taxer la facon en cours.**
+- **Trois activites complementaires** (mine, bois, tempete) dont aucune ne peut etre negligee.
+- **La strategie prime sur l'equipement** : les monstres viennent en escouades avec des roles.
+- **La vitesse se paie en difficulte** : se separer va plus vite mais affronte les paliers durs a effectif reduit.
+
+---
+
+## 2. Deroule d'une partie
+
+| Phase | Minutes | Contenu |
+|---|---|---|
+| **Prologue** | avant le chrono | Defense du village. Le chrono ne demarre qu'a la fin. |
+| **Exploration** | 0-15 | Brume Prismatique, Aurore. Mine, bois, premier equipement. |
+| **Montee** | 15-30 | + Nuit d'Arcencium. Premiere fenetre a artefacts. |
+| **Pression** | 30-40 | + Meteores, Tornade, Orage. La Maree commence a monter. |
+| **Assaut** | 40-50 | Orage permanent. Arc-en-ciel et boss. |
+
+- Monde **genere a neuf** a chaque partie.
+- Zone de jeu : **rayon 750 blocs** (bordure de monde). Ancres a ~450 du centre, a 120 deg.
+- Mort d'un joueur : **reapparition + perte de l'equipement au sol**, comme en vanilla.
+- Points de reapparition : le village, puis **chaque ancre activee**.
+
+### Conditions de fin
+
+- **Victoire** : le boss du sommet de l'Arc-en-ciel est tue.
+- **Defaite** : la Maree Prismatique referme entierement la zone a la fin du temps.
+
+---
+
+## 3. Prologue — « La Nuit des Corrompus »
+
+Tous les joueurs apparaissent **au meme endroit**, sur la place du village.
+
+- Equipement de depart : **armure de fer complete + epee de fer + bouclier**,
+  avec Protection I et Tranchant I. Rien de plus.
+
+### 3.1 La Lame du Serment — le declencheur
+
+Au centre du village, **une epee de notre mode est plantee dans le sol**,
+entouree de nombreux villageois. C'est l'appat : elle attire les joueurs vers
+la place avant que quoi que ce soit ne commence.
+
+**Tant que la lame n'est pas retiree, la partie n'a pas commence :**
+- les joueurs **ne peuvent pas sortir du village** (barriere invisible ~40 blocs,
+  le joueur est repousse avec un message),
+- ils **ne peuvent pas casser de bloc** (`BlockEvent.BreakEvent` annule),
+- aucun chronometre, aucune ancre, aucun monstre.
+
+**Retirer la lame declenche tout.** C'est une action volontaire, donc personne
+ne peut rater l'annonce : un joueur qui rejoint en retard trouve la partie
+encore en attente, ou deja lancee mais avec les autres au meme endroit.
+
+**La lame elle-meme** : une Epee d'Emeraude ceremonielle, aux cristaux de
+Fureur **eteints**. Elle montre des la premiere minute a quoi ressemble
+l'equipement du mode, sans court-circuiter la progression.
+- Seul **le joueur qui la retire** la porte.
+- S'il meurt pendant le siege, elle tombe au sol et reste jouable : un autre
+  peut la ramasser.
+- **A la mort du dernier monstre, elle se dissout** en particules prismatiques
+  -- et c'est de cette dissolution que naissent les trois faisceaux des ancres.
+  La lame ceremonielle *devient* les trois ancres.
+
+**Acte** : au retrait, toute l'equipe recoit un buff court **« le Serment vous
+lie »** -- le moment est collectif, pas reserve au porteur.
+
+**Acte** : si personne ne retire la lame, un **rappel a l'ecran apparait au bout
+de 60 secondes**, puis se repete.
+
+### 3.2 Le siege du village
+
+- Le village est attaque. Les monstres **entrent dans le village** et attaquent
+  joueurs et villageois.
+- Les monstres sont **attaches au village** (rayon 40 blocs) : `restrictTo(centre, 40)`
+  ou, plus simplement, la laisse native de Gateways.
+- **Compteur visible** : barre de boss segmentee, « CORROMPUS RESTANTS · N ».
+- Message clair a l'ecran : defendre le village.
+
+A la mort du dernier monstre :
+1. Quelques secondes de calme.
+2. **La Lame du Serment se dissout.**
+3. Trois faisceaux de lumiere jaillissent a l'horizon, aux positions des ancres.
+4. Titre plein ecran.
+5. **Le chronometre apparait et demarre.** Il reste visible toute la partie.
+
+---
+
+## 4. Les ancres
+
+### Cout et paliers
+
+Le palier depend du **rang d'activation**, pas de l'ancre choisie. Il est verrouille
+au moment ou le rituel demarre, sur la formule :
+
+> palier = (nombre d'ancres deja actives) + (nombre de sieges deja en cours) + 1
+
+| Palier | Cout | Siege |
+|---|---|---|
+| 1 | 8 lingots d'Arcencium | 3 vagues, ~2 min |
+| 2 | 16 lingots | 4 vagues avec elites, ~3 min |
+| 3 | 32 lingots | 5 vagues + mini-boss, ~4 min |
+
+Cela couvre le cas multijoueur ou trois groupes lancent trois rituels en parallele :
+ils affrontent les paliers 1, 2 et 3 dans l'ordre de depose de l'Arcencium.
+
+### Echec
+
+Si **tous les joueurs de la zone meurent** : l'ancre se desactive, **l'Arcencium est perdu**,
+le compteur redescend. Une nouvelle tentative recalcule son palier au demarrage
+(pas de punition qui s'empile).
+
+> A regler a l'essai : la perte totale de l'Arcencium est peut-etre trop punitive.
+
+### Recompense — « l'Echo de la Victoire »
+
+Tous les joueurs ayant inflige des degats pendant le siege recoivent :
+- une grosse dotation d'XP,
+- un buff de **3 minutes** : Force, Regeneration, Vitesse, de niveau proportionnel au palier.
+
+L'ancre devient un **point de reapparition**.
+
+---
+
+## 5. Les monstres
+
+### Spawn classique
+
+**Le systeme de spawn vanilla reste totalement intact.** Les factions n'apparaissent
+que dans les sieges d'ancre et dans nos structures.
+
+### Les six factions
+
+Une faction est tiree au sort par ancre, **jamais deux fois la meme dans une partie**
+(120 combinaisons). Chaque faction possede deja sa structure d'escouade.
+
+| Faction | Mod | Composition |
+|---|---|---|
+| **La Cour Noyee** | Cataclysm | `deepling`, `deepling_angler` *(archer)*, `deepling_brute` *(garde)*, `deepling_priest` *(soigneur)*, `deepling_warlock` *(mage)*, `coral_golem` *(elite)* |
+| **La Legion Draugr** | Cataclysm | `draugr`, `koboleton` *(archer)*, `elite_draugr`, `royal_draugr` *(elite)*, `kobolediator` *(elite)* |
+| **Le Cercle Arcanique** | Iron's Spellbooks | `cultist`, `pyromancer`, `cryomancer`, `necromancer`, `priest` *(soigneur)*, `archevoker` *(elite)* |
+| **Les Oublies** | Undergarden | `rotling`, `rotwalker`, `rotbeast`, `nargoyle` *(volant)*, `forgotten_guardian` *(elite)* |
+| **La Horde Gobeline** | Twilight Forest | `kobold`, `blockchain_goblin`, `lower_goblin_knight`, `helmet_crab`, `armored_giant` *(elite)* |
+| **Le Sculk** | Deeper Darker | `sculk_snapper`, `sculk_centipede`, `sculk_leech`, `stalker`, `shattered` *(elite)* |
+
+Le Sculk est reserve a l'arene finale.
+
+**Melange vanilla obligatoire** : squelettes en archers, evokers dans le Cercle,
+pillards partout. Les factions doivent rester ancrees dans un Minecraft reconnaissable.
+
+### Les elites, par role
+
+| Role | Candidats |
+|---|---|
+| **Brise-ligne** | `ignited_berserker`, `netherite_ministrosity`, `armored_giant`, `minotaur`, `troll` |
+| **Sentinelle** | `coral_golem`, `forgotten_guardian`, `ender_golem`, `citadel_keeper` |
+| **Traqueur** | `the_prowler`, `stalker`, `endermaptera`, `nightfall_spider` |
+| **Meneur** | `archevoker`, `royal_draugr`, `knight_phantom`, `deepling_warlock`, `death_tome` |
+
+Le **Meneur** buffe ou soigne autour de lui : c'est la cible que designe le Diademe d'Echo.
+
+### Le boss final
+
+**Un des trois, tire au hasard a chaque partie :**
+
+- **Ignis** *(Cataclysm)* — titan de feu, plusieurs phases.
+- **Ender Guardian** *(Cataclysm)* — teleportations, rayons, invocations. Theme celeste.
+- **Twilight Lich** *(Twilight Forest)* — trois phases : bouclier reflechissant, sbires, corps-a-corps.
+
+Le Warden est **ecarte** : concu pour qu'on le fuie, il s'enterre et tue en un coup.
+Mauvais boss d'arene.
+
+> Optionnel : reskin prismatique des trois boss via un pack de ressources livre avec le modpack.
+
+---
+
+## 6. La meteo
+
+**Globale** : elle touche toute la zone en meme temps, pour rendre les parties
+imprevisibles. Ciel global, effets locaux instancies pres des joueurs.
+
+**Progressive** : les meteos douces d'abord, les agressives arrivent avec la
+progression des ancres (voir le tableau de la section 2).
+
+Regles communes a toutes les meteos agressives :
+- Elles **s'annoncent ~15 secondes a l'avance**.
+- Un abri construit en **materiaux du mod est toujours sur**.
+- Duree **2 a 4 minutes**.
+- Chaque tempete agressive est suivie de **l'Embellie** : une accalmie sans monstres.
+
+### Douces
+
+- **Brume Prismatique** — validee.
+- **Aurore** — validee.
+
+### Nuit d'Arcencium
+
+Fusion des idees « Vents d'Arcencium » et « Gresil Cristallin », qui etaient
+punitives sans ouvrir de gameplay. Un grand nuage provoque **la nuit** sur une region.
+Les monstres apparaissent en plein jour. Le repli naturel est la grotte —
+mais c'est aussi la meilleure fenetre a artefacts (section 9.3).
+
+### Agressives — principe : « une fenetre d'opportunite qui fait mal »
+
+- **Pluie de Meteores d'Arcencium** — les crateres livrent des fragments d'Arcencium et ouvrent des grottes.
+- **Tornade Prismatique** — emporte le butin, aspire les monstres, projette le joueur tres loin (voyage rapide).
+- **Orage Prismatique** — points d'impact marques au sol : gros degats, mais un buff **Surcharge** de 30 s a qui encaisse.
+
+### Destruction de decor
+
+Systeme de **resistance par materiau**. Les meteos agressives abiment le decor,
+sans detruire la carte :
+- blocs vanilla fragiles : destructibles,
+- **materiaux du mod : tres resistants voire indestructibles.**
+
+---
+
+## 7. Les artefacts
+
+### 7.1 Notre systeme — un artefact par emplacement
+
+**Six emplacements** : casque, plastron, jambieres, bottes, epee, arc.
+Quatre artefacts possibles par emplacement, tous a effet **comportemental**
+(pas de simples bonus de statistiques : c'est ce qui nous distingue des gemmes d'Apotheosis).
+
+**Casque, la perception**
+- **Oeil du Prisme** : voit ancres, coffres et artefacts a travers les murs, a 40 blocs.
+- **Couronne de Brume** : immunise aux degats des meteos agressives.
+- **Diademe d'Echo** : voir 7.2.
+- **Visiere d'Aurore** : vision nocturne, monstres luisants dans le noir.
+
+**Plastron, la survie**
+- **Coeur de Gangue** : le coup fatal laisse a 1 PV (recharge 3 min).
+- **Carapace Prismatique** : absorbe les degats, libere une onde de choc une fois pleine.
+- **Seve de Prisme** : regeneration lente permanente, doublee hors combat.
+- **Plastron de Resonance** : +5 % de degats par coup recu, jusqu'a +50 %.
+
+**Jambieres, le controle**
+- **Ancrage de Gangue** : immunite au recul, insensible a la tornade.
+- **Jambieres de Maree** : la Maree Prismatique ne ronge plus, permet de rester dans la zone qui se ferme.
+- **Pas de Cristal** : ralentit les ennemis a moins de 4 blocs.
+- **Serments du Siege** : +40 % d'armure pendant un siege d'ancre.
+
+**Bottes, le deplacement**
+- **Semelle de Prisme** : vitesse +20 %.
+- **Bottes d'Eclair** : double saut.
+- **Foulee Vaporeuse** : marche sur l'eau et la lave.
+- **Bottes de Retour** : teleportation a l'ancre active la plus proche (recharge 2 min).
+
+**Epee, le corps-a-corps**
+- **Fureur Amplifiee** : la Fureur Cristalline monte deux fois plus vite.
+- **Lame de Chaine** : les coups touchent aussi les ennemis adjacents.
+- **Soif de Cristal** : 15 % de vol de vie.
+- **Eclat Final** : tuer un ennemi declenche une explosion prismatique.
+
+**Arc, la distance**
+- **Tension Rapide** : charge complete en deux fois moins de temps.
+- **Fleche Fourchue** : le tir a pleine tension part en trois fleches.
+- **Marque Prolongee** : la Marque Prismatique dure trois fois plus longtemps.
+- **Fleche Tracante** : les fleches inflechissent leur course vers la cible.
+
+### 7.2 Le Diademe d'Echo (regle particuliere)
+
+- **Actif uniquement pendant les sieges d'ancre.**
+- **Une fois par siege** (equivaut au cooldown de 15 min evoque, mais lisible sans minuteur invisible).
+- Au debut du siege, il **designe un elite** parmi les assaillants (un Meneur).
+- Le tuer avant la fin de la vague donne **un artefact garanti**, beaucoup d'XP,
+  et un **buff pour toute l'equipe**. Le laisser filer ne donne rien.
+
+### 7.3 Sertissage
+
+- Se fait a **l'Etabli de Sertissage** (section 8.4).
+- **Amovible, mais l'artefact retire est detruit.** *(recommandation, a confirmer)*
+
+### 7.4 Les artefacts du modpack
+
+**Artifacts** (49 objets) et **Relics** (30 objets) sont des accessoires Curios :
+ils occupent des emplacements **separes** des notres et s'y ajoutent.
+
+- **On garde tout, y compris les objets comiques** (decision utilisateur).
+- Relics monte de niveau a l'usage, avec un arbre de capacites : excellente courbe
+  de progression pour une partie de 45 minutes.
+
+Un personnage complet = **6 sertissages + accessoires Curios**.
+
+---
+
+## 8. Equipement et fabrication
+
+### 8.1 A creer
+
+| Objet | Etat |
+|---|---|
+| Epee d'Emeraude | **existe** |
+| Arcencium Bow | **existe** |
+| **Heaume d'Arcencium** (armure 3) | **fait** |
+| **Plastron d'Arcencium** (armure 9) | **fait** |
+| **Jambieres d'Arcencium** (armure 7) | **fait** |
+| **Greves d'Arcencium** (armure 3) | **fait** |
+
+Statistiques **legerement au-dessus de la netherite**, sur tous les tableaux :
+protection 22 contre 20, tenacite 3,5 contre 3,0, resistance au recul 0,15
+contre 0,10, durabilite facteur 45 contre 37, enchantement 22 contre 15.
+| **Sceptre d'Arcencium** | **fait**, voir 8.3 |
+| **Coffre d'Arcencium** simple + double | a faire |
+| **Etabli de Sertissage** | a faire |
+| **Lame du Serment** (ceremonielle, voir 3.1) | a faire |
+
+**Bonus de set complet, « Resonance Prismatique »** : la Fureur Cristalline ne
+retombe plus a zero quand elle expire, elle redescend d'un cran.
+
+### 8.2 Derives de l'Arbre de Prisme
+
+Aucune piece d'Arcencium n'est fabricable sans passer par l'arbre.
+
+- **Branche de Prisme** : le manche. Epee, arc, sceptre.
+- **Fibre de Prisme** : la doublure. Casque, plastron, jambieres, bottes.
+
+### 8.3 Le Sceptre d'Arcencium
+
+Troisieme piece de la triade : l'epee est la **Fureur**, l'arc la **Tension**,
+le sceptre la **Concorde**.
+
+**Design** : reprend l'epee a la lettre. Hampe sombre, couronne doree ailee
+reprenant la garde, cristal prismatique en levitation dans la couronne.
+Les cinq cristaux de Fureur deviennent un **anneau de cinq eclats** autour de la
+couronne, qui **s'allument un par un pour afficher le rechargement**
+(le cooldown se lit sur l'objet, sans interface).
+
+**Clic gauche** : trait prismatique lent.
+- 2,5 degats sur un ennemi (epee ~7, arc jusqu'a 6). **Volontairement plus faible.**
+- 1 coeur rendu a un allie touche.
+- Anti-abus : un meme allie ne peut etre soigne qu'une fois toutes les **1,5 s**.
+
+**Clic droit, l'Onde de Concorde** (rayon 8, recharge 25 s)
+- Repousse les monstres.
+- Allies : **Regeneration II 8 s** et **+8 % d'armure 15 s**.
+
+### 8.4 L'Etabli de Sertissage
+
+**Seul moyen d'installer un artefact dans une piece d'equipement.**
+Fabrique en **Planches Cristallisees + Arcencium**.
+
+C'est la piece qui verrouille la complementarite : les artefacts arraches a la
+tempete ne servent a rien sans avoir abattu des Arbres de Prisme.
+
+---
+
+## 9. Economie
+
+### 9.1 Les trois activites complementaires
+
+| Source | Donne | Ne donne pas |
+|---|---|---|
+| **Grottes** | l'**Arcencium**, monnaie des ancres | aucun artefact |
+| **Tempetes** | les **artefacts**, l'equipement enchante | pas d'Arcencium en quantite |
+| **Bois** | l'**Etabli de Sertissage** | rien de combattif |
+
+Liens secondaires du bois : les abris (les meteos rendent le bati utile), et les
+**Arbres de Prisme qui ne poussent pas partout** (bosquets, pres des villages).
+
+### 9.2 Ou trouver l'Arcencium
+
+| Source | Rendement | Cout |
+|---|---|---|
+| Filons en grotte | 1-3 lingots / veine | pioche en diamant, exploration. Sur mais lent. |
+| Cathedrale, dernier etage | 3-8 lingots + equipement enchante | monter 250 blocs. Dangereux, tres rentable. |
+| Crateres de meteorites | 1-2 fragments | sortir sous la tempete. |
+| Vaisseau, coffres au tresor | 3-7 lingots | le trouver et y monter. |
+
+**A faire : reduire la frequence de generation du minerai** (actuellement 4 veines/chunk, trop genereux).
+
+### 9.3 Butin en tempete
+
+Un monstre lache un artefact **si et seulement si** :
+1. une meteo agressive est active, **et**
+2. il meurt **a ciel ouvert** : verification `level.canSeeSky(pos)`, le meme test
+   que la pluie vanilla. Sous un arbre, sous un toit, en grotte : rien.
+
+| Ancres actives | Artefact | Equipement enchante | Niveau du butin |
+|---|---|---|---|
+| 0 | 4 % | 10 % | fer, ench. I |
+| 1 | 8 % | 15 % | fer/diamant, ench. I-II |
+| 2 | 14 % | 20 % | diamant, ench. II-III |
+| 3 | 22 % | 25 % | diamant/arcencium, ench. III-IV |
+
+Les **elites lachent toujours** : 40 % artefact, 60 % equipement.
+
+Le niveau de l'equipement est fourni par les **affixes d'Apotheosis**, branches sur
+le nombre d'ancres activees. Rien a ecrire.
+
+### 9.4 Experience
+
+- **x3** sur tous les gains d'XP dans le mode.
+- **x5** sur les monstres tues sous une tempete, a ciel ouvert.
+- Le minerai d'Arcencium en donne davantage.
+- Grosse dotation a chaque siege reussi (l'Echo de la Victoire).
+
+Les **couts d'enchantement ne sont pas touches** : l'acceleration de l'XP suffit,
+et ne casse pas la compatibilite avec le modpack.
+
+---
+
+## 10. Le vaisseau, la Racine de Prisme
+
+Probleme : le vaisseau flotte dans le ciel, inatteignable, et hors budget-temps.
+
+**Solution retenue (option A)** : le vaisseau est retenu au sol par une **immense
+racine de cristal** descendant jusqu'a la terre.
+- Visible de tres loin : donne une raison de lever les yeux des la premiere minute.
+- **Escaladable** (~1 a 2 min de montee).
+- **Gardee a sa base.**
+
+**Recompense** pour qu'il vaille le detour : un **artefact garanti** plus une reserve
+d'Arcencium suffisante pour **payer une ancre entiere**. C'est un troisieme chemin,
+un raccourci risque qui court-circuite le minage.
+
+---
+
+## 11. L'interface
+
+Exigence explicite de l'utilisateur : « une interface un minimum travaillee qui ne
+soit pas tres moche ».
+
+| Element | Rendu |
+|---|---|
+| **Chronometre** | Haut au centre, cadre prismatique dessine a la main, nom de la phase en dessous. Couleur du vert au rouge a mesure que le temps s'epuise. Visible toute la partie. |
+| **Compteur de monstres** | Barre de boss segmentee (natif, fourni par Gateways). |
+| **Maree Prismatique** | Barre de boss. |
+| **Annonces majeures** | Titres plein ecran natifs. |
+
+Maquette du chronometre a produire **avant** de coder l'interface.
+
+---
+
+## 12. Les mods tiers utilises
+
+| Mod | Role dans notre mode |
+|---|---|
+| **Gateways to Eternity** | **Le moteur des sieges.** Vagues, composition, modificateurs d'attributs par vague, recompenses, temps limite, barre de boss avec compteur, laisse anti-fuite. Entierement pilotable en JSON. |
+| **Apotheosis** | Les **affixes** : equipement a prefixes aleatoires, six rangs de rarete. Branche sur le nombre d'ancres. |
+| **Apothic Spawners** | Peuplement de la cathedrale (plus tard). |
+| **Lootr** | Coffres a contenu **par joueur**. Supprime la course au coffre en multijoueur. |
+| **Artifacts** + **Relics** | 79 accessoires Curios, en plus de nos sertissages. |
+| **Cataclysm, Iron's Spellbooks, Undergarden, Twilight Forest, Deeper Darker** | Les six factions et les elites. |
+| **Waystones, JourneyMap** | Confort. Deja presents dans l'instance. |
+| **Curios** | API des emplacements d'accessoires. |
+
+### Dependances souples
+
+Verifier au demarrage quelles entites existent reellement
+(`BuiltInRegistries.ENTITY_TYPE.containsKey`). Les factions absentes sont retirees
+du tirage, avec un **repli vanilla** (pillards, squelettes, evokers) si aucune n'est
+disponible. Le mod reste jouable seul et devient meilleur dans le modpack.
+
+---
+
+## 13. Le modpack livrable
+
+Objectif : un pack importable dans CurseForge contenant tous les mods necessaires.
+
+L'instance `All the Mods 10 - CUSTOM` contient un `minecraftinstance.json` avec les
+**446 identifiants projet/fichier CurseForge**, ce qui permet de generer un
+`manifest.json` valide automatiquement.
+
+```
+EmeraldWeapons-Pack.zip
+├── manifest.json        mods references par ID CurseForge
+├── modlist.html
+└── overrides/
+    ├── mods/            notre jar (absent de CurseForge)
+    ├── config/          reglages Gateways, Apotheosis, Lootr...
+    ├── defaultconfigs/
+    └── resourcepacks/   reskin prismatique des boss (optionnel)
+```
+
+Import via *Creer un profil personnalise → Importer*.
+
+A ecrire : `tools/export_modpack.py`.
+
+---
+
+## 14. Ordre d'implementation
+
+### Etape 1 — Les fondations *(faite)*
+
+L'armure est **derivee de la netherite vanilla** : noircie, puis gravee d'un
+reseau de fissures ramifiees qui brillent en arc-en-ciel. Les icones
+d'inventaire s'animent par .mcmeta (12 images) ; l'armure PORTEE s'anime via un
+calque de rendu maison (`ArcenciumArmorLayer`), les calques d'armure ne passant
+pas par un atlas. Genere par `tools/armor_textures.py`.
+
+- [x] **Branche de Prisme** et **Fibre de Prisme** (items + recettes + textures)
+- [x] **Armure d'Arcencium** : 4 pieces, materiau d'armure, textures d'objet, texture de calque porte
+- [x] Recettes des 4 pieces (Arcencium + Fibre)
+- [x] **Bonus de set « Resonance Prismatique »**
+- [x] Ajouter Branche/Fibre aux recettes existantes de l'epee et de l'arc
+- [x] Onglet creatif, tags, datagen, langue FR/EN
+
+### Etape 2 — Le Sceptre d'Arcencium *(faite)*
+
+Variante **S2** (couronne ouverte). Clic gauche : trait prismatique (2,5 degats,
+ou 1 coeur rendu a un allie, plafonne a un soin par allie et par 1,5 s).
+Clic droit : Onde de Concorde. Les cinq eclats du bandeau affichent le
+rechargement via le predicat de modele `emeraldweapons:charge`.
+
+- [x] Maquette de la texture **a valider avant le code**
+- [x] Projectile prismatique (degats 2,5 / soin 1 coeur, cooldown 1,5 s par allie)
+- [x] Onde de Concorde (rayon 8, repousse, Regeneration II 8 s, +8 % armure 15 s, recharge 25 s)
+- [x] Anneau de 5 eclats qui s'allument selon le rechargement
+- [x] Recette (Arcencium + Branche de Prisme)
+
+### Etape 3 — Le coffre et l'etabli
+
+- [ ] **Coffre d'Arcencium** simple et double : modele, block entity, texture
+- [ ] **Etabli de Sertissage** : bloc, interface, logique de sertissage/retrait
+
+### Etape 4 — Le systeme d'artefacts
+
+- [ ] Composant de donnees « artefact serti » sur l'equipement
+- [ ] Les 24 artefacts, par emplacement
+- [ ] Regle particuliere du Diademe d'Echo
+- [ ] Tables de butin (coffres + tempete)
+
+### Etape 5 — La boucle de jeu minimale
+
+- [ ] Preregle de monde « Arcencium », bordure a 750
+- [ ] **Lame du Serment** plantee au centre, villageois autour
+- [ ] Confinement avant declenchement (sortie bloquee, minage bloque)
+- [ ] Retrait de la lame = declencheur de partie
+- [ ] Buff d'equipe « le Serment vous lie » au retrait
+- [ ] Rappel a l'ecran apres 60 s sans retrait
+- [ ] Dissolution de la lame a la fin du siege -> apparition des ancres
+- [ ] Prologue au village (Gateways)
+- [ ] Les 3 ancres : placement, faisceau, rituel, palier par rang d'activation
+- [ ] Sieges via Gateways, 6 factions tirees au sort
+- [ ] Ancres comme points de reapparition
+- [ ] Maree Prismatique
+- [ ] Arc-en-ciel, arene, boss tire parmi les 3
+- [ ] Conditions de victoire et de defaite
+- [ ] Interface : chronometre, titres, barres
+
+### Etape 6 — Meteo et economie
+
+- [ ] Les 6 meteos, globales, avec progression par ancres
+- [ ] Preavis de 15 s, Embellie, abris surs
+- [ ] Resistance des materiaux a la destruction
+- [ ] Butin de tempete (`canSeeSky`), multiplicateurs d'XP
+- [ ] Reduction de la frequence du minerai d'Arcencium
+
+### Etape 7 — Structures et finitions
+
+- [ ] Racine de Prisme sous le vaisseau + tresor
+- [ ] Villages hostiles (pillards vanilla + villageois corrompus)
+- [ ] Peuplement de la cathedrale (Apothic Spawners)
+- [ ] `tools/export_modpack.py` et le pack CurseForge
+
+---
+
+## 15. Questions ouvertes
+
+1. **Artefact amovible ou definitif ?** Recommandation : amovible, mais l'artefact retire est detruit.
+2. **La perte totale de l'Arcencium** en cas d'echec de siege est-elle trop punitive ?
+3. **Maquette du chronometre** et **maquette du sceptre** a valider avant codage.
+4. Duree exacte de la partie (45 ou 50 min) et rayon (750) : **a valider en jouant**.
+
+---
+
+## 16. Decisions actees (ne pas rediscuter)
+
+- Le palier d'ancre depend du **rang d'activation**, pas de l'ancre.
+- La meteo est **globale**.
+- Les artefacts ne tombent qu'**a ciel ouvert**, sous une tempete.
+- Le **Warden est ecarte** comme boss final ; tirage entre Ignis, Ender Guardian, Twilight Lich.
+- **Les objets comiques d'Artifacts sont conserves.**
+- Le **spawn vanilla reste intact**.
+- Les sieges utilisent **Gateways**, pas un systeme maison.
+- Le mode devient un **modpack livrable**.
+- La partie **ne demarre pas au spawn** mais au **retrait de la Lame du Serment**,
+  pour qu'aucun joueur ne rate l'annonce.
+- Au retrait : **buff d'equipe « le Serment vous lie »**, et **rappel a l'ecran
+  apres 60 s** si la lame reste plantee.

@@ -6,6 +6,7 @@ import com.emerald.datagen.ModDataGenerators;
 import com.emerald.entity.KGDeathbotEntity;        // ← ajoute
 import com.emerald.entity.WastelanderEntity;        // ← ajoute
 import com.emerald.init.Jak3Registry;               // ← ajoute
+import com.emerald.item.ModArmorMaterials;
 import com.emerald.item.ModCreativeModeTabs;
 import com.emerald.item.ModItems;
 import net.neoforged.bus.api.IEventBus;
@@ -21,6 +22,7 @@ public class EmeraldWeaponsMod {
 
     public EmeraldWeaponsMod(IEventBus modEventBus) {
         ModItems.ITEMS.register(modEventBus);
+        ModArmorMaterials.register(modEventBus);
         modEventBus.addListener(this::addItemsToCreativeTab);
         com.emerald.effects.ModEffects.EFFECTS.register(modEventBus);
         com.emerald.particles.ModParticles.PARTICLES.register(modEventBus);

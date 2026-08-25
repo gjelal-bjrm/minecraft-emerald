@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "emeraldweapons:prism_leaves"
+    },
+    {
+      "item": "emeraldweapons:prism_leaves"
+    },
+    {
+      "item": "emeraldweapons:prism_leaves"
+    }
+  ],
+  "result": {
+    "count": 1,
+    "id": "emeraldweapons:prism_fiber"
+  }
+}
