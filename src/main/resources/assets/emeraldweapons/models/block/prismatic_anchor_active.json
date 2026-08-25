@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/cube_bottom_top",
+  "textures": {
+    "top": "emeraldweapons:block/arcencium_block",
+    "side": "emeraldweapons:block/arcencium_bricks",
+    "bottom": "emeraldweapons:block/gangue_bricks"
+  }
+}

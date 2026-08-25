@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "active=false": {
+      "model": "emeraldweapons:block/prismatic_anchor"
+    },
+    "active=true": {
+      "model": "emeraldweapons:block/prismatic_anchor_active"
+    }
+  }
+}

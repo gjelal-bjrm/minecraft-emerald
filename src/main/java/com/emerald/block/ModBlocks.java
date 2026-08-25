@@ -47,6 +47,25 @@ public class ModBlocks {
                     .strength(3.5F).requiresCorrectToolForDrops().sound(SoundType.AMETHYST)
                     .noOcclusion()));
 
+    /**
+     * Lame du Serment : le declencheur de partie, plantee au centre du village.
+     *
+     * Enregistree SANS objet de bloc : elle n'est jamais posee a la main, et
+     * l'objet du meme nom existe deja (ModItems.OATH_BLADE), qui est la lame
+     * qu'on emporte apres l'avoir retiree.
+     */
+    public static final DeferredBlock<OathBladeBlock> OATH_BLADE = registerBlockOnly("oath_blade",
+            () -> new OathBladeBlock(BlockBehaviour.Properties.of()
+                    .strength(-1.0F, 3600000.0F).noOcclusion().lightLevel(s -> 10)
+                    .sound(SoundType.AMETHYST)));
+
+    /** Ancre Prismatique : trois par partie, a alimenter en Arcencium. */
+    public static final DeferredBlock<PrismaticAnchorBlock> PRISMATIC_ANCHOR =
+            registerBlock("prismatic_anchor", () -> new PrismaticAnchorBlock(
+                    BlockBehaviour.Properties.of().strength(-1.0F, 3600000.0F)
+                            .lightLevel(s -> s.getValue(PrismaticAnchorBlock.ACTIVE) ? 15 : 7)
+                            .sound(SoundType.AMETHYST)));
+
     /** Etabli de Sertissage : voir SocketBenchBlock. */
     public static final DeferredBlock<SocketBenchBlock> SOCKET_BENCH = registerBlock("socket_bench",
             () -> new SocketBenchBlock(BlockBehaviour.Properties.of()
@@ -162,6 +181,11 @@ public class ModBlocks {
     public static final DeferredBlock<CarpetBlock> ECRU_CARPET = carpet("ecru_carpet", MapColor.TERRACOTTA_WHITE);
 
     // ------------------------------------------------------------- helpers
+
+    /** Enregistre un bloc sans objet associe : pour ceux que seul le jeu pose. */
+    private static <T extends Block> DeferredBlock<T> registerBlockOnly(String name, Supplier<T> block) {
+        return BLOCKS.register(name, block);
+    }
 
     private static BlockBehaviour.Properties stone() {
         return BlockBehaviour.Properties.ofFullCopy(Blocks.STONE_BRICKS).mapColor(MapColor.TERRACOTTA_LIGHT_GRAY);

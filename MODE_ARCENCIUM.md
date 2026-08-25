@@ -479,7 +479,12 @@ Regle de travail : **quand le projet a besoin d'une fonctionnalite, on prend ce
 qui existe dans le modpack plutot que d'ecrire une alternative maison.**
 
 Deja installes : Gateways, Apotheosis (+ Attributes, Enchanting, Spawners),
-Cataclysm (+ LionfishAPI), Iron's Spellbooks, Curios, GeckoLib, Placebo, Jade.
+Cataclysm (+ LionfishAPI), Iron's Spellbooks, Curios, GeckoLib, Placebo, Jade,
+Tombstone, JourneyMap, Waystones, Balm.
+
+**Tombstone** change la penalite de mort pour le mieux : une tombe avec une cle
+plutot que des objets au sol, qui disparaissent au bout de cinq minutes -- fatal
+sur une partie de 45 minutes.
 
 **Apotheosis fait deja les escouades** : ses `apothic_elites` acceptent des
 `supporting_entities`, soit un meneur avec ses gardes -- exactement la structure
@@ -595,16 +600,16 @@ Le temps est compte en **ticks de monde** et non en horloge reelle : la partie
 se fige avec le serveur au lieu d'expirer pendant qu'il est eteint.
 
 - [ ] Preregle de monde « Arcencium », bordure a 750
-- [ ] **Lame du Serment** plantee au centre, villageois autour
-- [ ] Confinement avant declenchement (sortie bloquee, minage bloque)
-- [ ] Retrait de la lame = declencheur de partie
-- [ ] Buff d'equipe « le Serment vous lie » au retrait
-- [ ] Rappel a l'ecran apres 60 s sans retrait
-- [ ] Dissolution de la lame a la fin du siege -> apparition des ancres
-- [ ] Prologue au village (Gateways)
-- [ ] Les 3 ancres : placement, faisceau, rituel, palier par rang d'activation
-- [ ] Sieges via Gateways, 6 factions tirees au sort
-- [ ] Ancres comme points de reapparition
+- [x] **Lame du Serment** plantee au centre, villageois autour
+- [x] Confinement avant declenchement (sortie bloquee, minage bloque)
+- [x] Retrait de la lame = declencheur de partie
+- [x] Buff d'equipe « le Serment vous lie » au retrait
+- [x] Rappel a l'ecran apres 60 s sans retrait
+- [x] Dissolution de la lame a la fin du siege -> apparition des ancres
+- [x] Prologue au village (Gateways)
+- [x] Les 3 ancres : placement, faisceau, rituel, palier par rang d'activation
+- [x] Sieges via Gateways, 6 factions tirees au sort
+- [x] Ancres comme points de reapparition
 - [ ] Maree Prismatique
 - [ ] Arc-en-ciel, arene, boss tire parmi les 3
 - [ ] Conditions de victoire et de defaite

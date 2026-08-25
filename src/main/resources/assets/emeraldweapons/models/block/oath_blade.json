@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:block/cross",
+  "_comment": "Deux plans croises portant la texture de l'epee : une lame plantee se lit ainsi sans modele dedie.",
+  "textures": {
+    "cross": "emeraldweapons:item/emerald_sword"
+  }
+}

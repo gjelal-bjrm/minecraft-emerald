@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "planted=true": {
+      "model": "emeraldweapons:block/oath_blade"
+    },
+    "planted=false": {
+      "model": "emeraldweapons:block/oath_blade"
+    }
+  }
+}

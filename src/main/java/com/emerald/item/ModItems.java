@@ -40,6 +40,18 @@ public class ModItems {
             ITEMS.register("arcencium_scepter", () ->
                     new ArcenciumScepterItem(new Item.Properties().durability(900)));
 
+    /**
+     * La Lame du Serment.
+     *
+     * Une Epee d'Emeraude ceremonielle : elle montre des la premiere minute a
+     * quoi ressemble l'equipement du mode, sans court-circuiter la progression,
+     * puisqu'elle se dissout des le village tenu.
+     */
+    public static final DeferredItem<SwordItem> OATH_BLADE =
+            ITEMS.register("oath_blade", () -> new SwordItem(new EmeraldTier(),
+                    new Item.Properties().rarity(net.minecraft.world.item.Rarity.EPIC)
+                            .attributes(SwordItem.createAttributes(new EmeraldTier(), 3.0F, -2.2F))));
+
     /** Objet artefact : voir com.emerald.artifact.ArtifactItem. */
     public static final DeferredItem<com.emerald.artifact.ArtifactItem> ARTIFACT =
             ITEMS.register("artifact", () ->

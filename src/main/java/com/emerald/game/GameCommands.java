@@ -24,6 +24,15 @@ public class GameCommands {
         LiteralArgumentBuilder<CommandSourceStack> root = Commands.literal("arcencium")
                 .requires(source -> source.hasPermission(2));
 
+        root.then(Commands.literal("setup").executes(ctx -> {
+            ServerLevel level = ctx.getSource().getServer().overworld();
+            GameManager.clear();
+            GameManager.setup(level, level.getSharedSpawnPos());
+            ctx.getSource().sendSuccess(() ->
+                    Component.translatable("command.emeraldweapons.setup"), true);
+            return 1;
+        }));
+
         root.then(Commands.literal("start").executes(ctx -> {
             ServerLevel level = ctx.getSource().getServer().overworld();
             GameState.get(level).begin(level);
@@ -33,6 +42,7 @@ public class GameCommands {
         }));
 
         root.then(Commands.literal("stop").executes(ctx -> {
+            GameManager.clear();
             GameState.get(ctx.getSource().getServer().overworld()).reset();
             ctx.getSource().sendSuccess(() ->
                     Component.translatable("command.emeraldweapons.stopped"), true);

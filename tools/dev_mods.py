@@ -16,6 +16,7 @@ Usage :
     python tools/dev_mods.py --clean         # vide run/mods
 """
 
+import io as _io
 import os
 import re
 import shutil
@@ -36,7 +37,7 @@ _MANDATORY = re.compile(r'^\s*mandatory\s*=\s*(true|false)', re.MULTILINE)
 
 
 def read_toml(path):
-    """Rend (ids fournis, ids requis) pour un jar, ou None si ce n'est pas un mod."""
+    """Rend le mods.toml d'un jar, ou None si ce n'est pas un mod."""
     try:
         with zipfile.ZipFile(path) as z:
             for name in ("META-INF/neoforge.mods.toml", "META-INF/mods.toml"):
@@ -45,6 +46,34 @@ def read_toml(path):
     except Exception:
         pass
     return None
+
+
+def nested_ids(path):
+    """Identifiants fournis par les jars EMBARQUES dans celui-ci.
+
+    NeoForge extrait tout seul les jar-in-jar de META-INF/jarjar : une
+    dependance qui s'y trouve est donc deja satisfaite, et la chercher dans le
+    modpack la ferait passer pour manquante a tort.
+    """
+    found = set()
+    try:
+        with zipfile.ZipFile(path) as z:
+            for inner in z.namelist():
+                if not (inner.startswith("META-INF/jarjar/") and inner.endswith(".jar")):
+                    continue
+                with z.open(inner) as fh:
+                    data = _io.BytesIO(fh.read())
+                try:
+                    with zipfile.ZipFile(data) as iz:
+                        for name in ("META-INF/neoforge.mods.toml", "META-INF/mods.toml"):
+                            if name in iz.namelist():
+                                text = iz.read(name).decode("utf-8", "replace")
+                                found.update(_MODID.findall(text.split("[[dependencies.")[0]))
+                except Exception:
+                    continue
+    except Exception:
+        pass
+    return found
 
 
 def parse(text):
@@ -78,6 +107,7 @@ def index():
         if not text:
             continue
         provides, requires = parse(text)
+        provides |= nested_ids(path)
         meta[path] = requires
         for mod_id in provides:
             by_id.setdefault(mod_id, path)

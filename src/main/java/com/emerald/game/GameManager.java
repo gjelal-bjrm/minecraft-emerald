@@ -1,0 +1,356 @@
+package com.emerald.game;
+
+import com.emerald.block.ModBlocks;
+import com.emerald.block.OathBladeBlock;
+import com.emerald.block.PrismaticAnchorBlock;
+import com.emerald.item.ModItems;
+import com.emerald.main.EmeraldWeaponsMod;
+import net.minecraft.ChatFormatting;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.game.ClientboundSetTitleTextPacket;
+import net.minecraft.network.protocol.game.ClientboundSetSubtitleTextPacket;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.BossEvent;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.levelgen.Heightmap;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.tick.LevelTickEvent;
+
+import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Le chef d'orchestre du Mode Arcencium.
+ *
+ * Il tient les sieges en cours et enchaine les etapes : prologue au village,
+ * rituels d'ancre, puis affrontement final. L'etat durable vit dans
+ * {@link GameState} ; ce qui est ici est volatil et se reconstruit au besoin.
+ */
+@EventBusSubscriber(modid = EmeraldWeaponsMod.MODID)
+public class GameManager {
+
+    /** Arcencium exige par palier de siege. */
+    private static final int[] ANCHOR_COST = {8, 16, 32};
+
+    /** Composition des vagues, par palier. */
+    private static final int[][] WAVES = {
+            {5, 7, 9},
+            {6, 8, 10, 12},
+            {8, 10, 12, 14, 16},
+    };
+
+    private static final int[] PROLOGUE_WAVES = {4, 6, 8};
+
+    @Nullable
+    private static Siege prologue;
+    private static final Map<BlockPos, Siege> anchorSieges = new HashMap<>();
+
+    /** Vrai pendant le siege du village : les regles de lobby s'assouplissent alors. */
+    public static boolean prologueRunning() {
+        return prologue != null;
+    }
+
+    // ------------------------------------------------------------- le tick
+
+    @SubscribeEvent
+    public static void onLevelTick(LevelTickEvent.Post event) {
+        if (!(event.getLevel() instanceof ServerLevel level)
+                || !level.dimension().equals(Level.OVERWORLD)) {
+            return;
+        }
+        if (prologue != null) {
+            prologue.tick();
+            if (prologue.isDone()) {
+                Siege finished = prologue;
+                prologue = null;
+                if (finished.isWon()) {
+                    openTheGame(level, finished.center());
+                } else {
+                    announce(level, "game.emeraldweapons.village_lost",
+                            "game.emeraldweapons.village_lost.sub", 0xFF616B);
+                    GameState.get(level).beginPrologue();       // on remet en attente
+                    replantBlade(level, finished.center());
+                }
+            }
+        }
+        tickAnchorSieges(level);
+    }
+
+    private static void tickAnchorSieges(ServerLevel level) {
+        if (anchorSieges.isEmpty()) {
+            return;
+        }
+        List<BlockPos> finished = new ArrayList<>();
+        for (Map.Entry<BlockPos, Siege> entry : anchorSieges.entrySet()) {
+            Siege siege = entry.getValue();
+            siege.tick();
+            if (siege.isDone()) {
+                finished.add(entry.getKey());
+            }
+        }
+        for (BlockPos pos : finished) {
+            Siege siege = anchorSieges.remove(pos);
+            resolveAnchor(level, pos, siege.isWon());
+        }
+    }
+
+    // -------------------------------------------------------- mise en place
+
+    /**
+     * Prepare une partie : village, Lame du Serment, trois ancres.
+     *
+     * Le village est le point d'apparition du monde plutot qu'un village
+     * genere : c'est le seul endroit dont on soit certain qu'il existe et qu'il
+     * soit accessible, quel que soit le monde tire.
+     */
+    public static void setup(ServerLevel level, BlockPos center) {
+        GameState state = GameState.get(level);
+        state.reset();
+
+        BlockPos ground = surface(level, center);
+        state.setVillage(ground);
+        level.setDefaultSpawnPos(ground, 0.0F);
+        plantBlade(level, ground);
+        surroundWithVillagers(level, ground);
+
+        List<BlockPos> anchors = new ArrayList<>();
+        for (int i = 0; i < 3; i++) {
+            double angle = Math.toRadians(90 + i * 120);
+            int x = ground.getX() + (int) Math.round(Math.cos(angle) * GameState.ANCHOR_DISTANCE);
+            int z = ground.getZ() + (int) Math.round(Math.sin(angle) * GameState.ANCHOR_DISTANCE);
+            anchors.add(surface(level, new BlockPos(x, 0, z)));
+        }
+        state.setAnchors(anchors);
+        state.beginPrologue();
+
+        for (ServerPlayer player : level.players()) {
+            player.teleportTo(ground.getX() + 0.5, ground.getY() + 1, ground.getZ() + 0.5);
+            player.setRespawnPosition(level.dimension(), ground, 0.0F, true, false);
+            equipStarter(player);
+        }
+        announce(level, "game.emeraldweapons.village_intro",
+                "game.emeraldweapons.village_intro.sub", 0x9CE8FF);
+    }
+
+    private static BlockPos surface(ServerLevel level, BlockPos around) {
+        int y = level.getHeight(Heightmap.Types.WORLD_SURFACE, around.getX(), around.getZ());
+        return new BlockPos(around.getX(), y, around.getZ());
+    }
+
+    private static void plantBlade(ServerLevel level, BlockPos ground) {
+        level.setBlockAndUpdate(ground.below(), ModBlocks.ARCENCIUM_BLOCK.get().defaultBlockState());
+        level.setBlockAndUpdate(ground, ModBlocks.OATH_BLADE.get().defaultBlockState()
+                .setValue(OathBladeBlock.PLANTED, true));
+    }
+
+    private static void replantBlade(ServerLevel level, BlockPos ground) {
+        plantBlade(level, ground);
+    }
+
+    /**
+     * Les villageois autour de la lame.
+     *
+     * Ils ne servent aucun objectif : ils sont l'appat. Une place vide
+     * n'attire personne, une place peuplee si.
+     */
+    private static void surroundWithVillagers(ServerLevel level, BlockPos center) {
+        for (int i = 0; i < 8; i++) {
+            double angle = i / 8.0 * Math.PI * 2;
+            int x = center.getX() + (int) Math.round(Math.cos(angle) * 4);
+            int z = center.getZ() + (int) Math.round(Math.sin(angle) * 4);
+            EntityType.VILLAGER.spawn(level, surface(level, new BlockPos(x, 0, z)),
+                    net.minecraft.world.entity.MobSpawnType.EVENT);
+        }
+    }
+
+    /** Fer complet, bouclier, epee : assez pour tenir, pas pour se croire invincible. */
+    private static void equipStarter(ServerPlayer player) {
+        player.getInventory().clearContent();
+        player.setItemSlot(net.minecraft.world.entity.EquipmentSlot.HEAD,
+                new ItemStack(net.minecraft.world.item.Items.IRON_HELMET));
+        player.setItemSlot(net.minecraft.world.entity.EquipmentSlot.CHEST,
+                new ItemStack(net.minecraft.world.item.Items.IRON_CHESTPLATE));
+        player.setItemSlot(net.minecraft.world.entity.EquipmentSlot.LEGS,
+                new ItemStack(net.minecraft.world.item.Items.IRON_LEGGINGS));
+        player.setItemSlot(net.minecraft.world.entity.EquipmentSlot.FEET,
+                new ItemStack(net.minecraft.world.item.Items.IRON_BOOTS));
+        player.getInventory().add(new ItemStack(net.minecraft.world.item.Items.IRON_SWORD));
+        player.getInventory().add(new ItemStack(net.minecraft.world.item.Items.SHIELD));
+        player.getInventory().add(new ItemStack(net.minecraft.world.item.Items.BREAD, 16));
+    }
+
+    // ----------------------------------------------------- la Lame du Serment
+
+    /** Le retrait de la lame : c'est ici, et nulle part ailleurs, que la partie commence. */
+    public static void pullOathBlade(Level world, BlockPos pos, Player player) {
+        if (!(world instanceof ServerLevel level)) {
+            return;
+        }
+        GameState state = GameState.get(level);
+        if (state.status() != GameState.Status.LOBBY
+                && state.status() != GameState.Status.PROLOGUE) {
+            return;
+        }
+        level.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
+        player.getInventory().add(new ItemStack(ModItems.OATH_BLADE.get()));
+
+        // le Serment lie toute l'equipe, pas seulement celui qui a tire la lame
+        for (ServerPlayer other : level.players()) {
+            other.addEffect(new net.minecraft.world.effect.MobEffectInstance(
+                    net.minecraft.world.effect.MobEffects.DAMAGE_BOOST, 40 * 20, 0));
+            other.addEffect(new net.minecraft.world.effect.MobEffectInstance(
+                    net.minecraft.world.effect.MobEffects.MOVEMENT_SPEED, 40 * 20, 0));
+        }
+
+        level.playSound(null, pos, SoundEvents.TOTEM_USE, SoundSource.PLAYERS, 1.2F, 0.8F);
+        level.sendParticles(ParticleTypes.END_ROD, pos.getX() + 0.5, pos.getY() + 1.0,
+                pos.getZ() + 0.5, 60, 0.5, 1.0, 0.5, 0.25);
+        announce(level, "game.emeraldweapons.blade_pulled",
+                "game.emeraldweapons.blade_pulled.sub", 0xFFD36B);
+
+        state.beginPrologue();
+        prologue = new Siege(level, pos, 1, PROLOGUE_WAVES,
+                Component.translatable("game.emeraldweapons.siege.village"),
+                BossEvent.BossBarColor.RED);
+    }
+
+    /**
+     * Le village est tenu : la lame se dissout et devient les trois ancres.
+     *
+     * Enchainer les deux moments plutot que les juxtaposer -- la lame ne
+     * disparait pas, elle donne naissance a l'objectif suivant.
+     */
+    private static void openTheGame(ServerLevel level, BlockPos center) {
+        GameState state = GameState.get(level);
+        for (ServerPlayer player : level.players()) {
+            player.getInventory().clearOrCountMatchingItems(
+                    stack -> stack.is(ModItems.OATH_BLADE.get()), -1, player.inventoryMenu.getCraftSlots());
+        }
+        level.sendParticles(ParticleTypes.END_ROD, center.getX() + 0.5, center.getY() + 1.0,
+                center.getZ() + 0.5, 120, 1.0, 1.5, 1.0, 0.5);
+        level.playSound(null, center, SoundEvents.BEACON_ACTIVATE, SoundSource.PLAYERS, 1.4F, 0.9F);
+
+        for (BlockPos anchor : state.anchors()) {
+            level.setBlockAndUpdate(anchor, ModBlocks.PRISMATIC_ANCHOR.get().defaultBlockState());
+            level.setBlockAndUpdate(anchor.below(),
+                    ModBlocks.ARCENCIUM_BRICKS.get().defaultBlockState());
+        }
+        state.begin(level);
+        announce(level, "game.emeraldweapons.anchors_risen",
+                "game.emeraldweapons.anchors_risen.sub", 0x9CE8FF);
+    }
+
+    // ------------------------------------------------------------ les ancres
+
+    public static void describeAnchor(Level world, BlockPos pos, Player player) {
+        if (!(world instanceof ServerLevel level)) {
+            return;
+        }
+        GameState state = GameState.get(level);
+        if (state.isActivated(pos)) {
+            player.displayClientMessage(Component.translatable(
+                    "game.emeraldweapons.anchor.held").withStyle(ChatFormatting.AQUA), true);
+            return;
+        }
+        int tier = state.nextTier();
+        player.displayClientMessage(Component.translatable(
+                "game.emeraldweapons.anchor.needs", ANCHOR_COST[tier - 1], tier)
+                .withStyle(ChatFormatting.YELLOW), true);
+    }
+
+    /** Alimente une ancre en Arcencium. Vrai si le rituel demarre. */
+    public static boolean feedAnchor(Level world, BlockPos pos, Player player, ItemStack stack) {
+        if (!(world instanceof ServerLevel level)
+                || !stack.is(ModItems.ARCENCIUM_INGOT.get())) {
+            return false;
+        }
+        GameState state = GameState.get(level);
+        if (state.status() != GameState.Status.RUNNING
+                || state.isActivated(pos) || anchorSieges.containsKey(pos)) {
+            return false;
+        }
+        int tier = state.nextTier();
+        int cost = ANCHOR_COST[tier - 1];
+        if (stack.getCount() < cost) {
+            player.displayClientMessage(Component.translatable(
+                    "game.emeraldweapons.anchor.needs", cost, tier)
+                    .withStyle(ChatFormatting.RED), true);
+            return false;
+        }
+        stack.shrink(cost);
+
+        state.anchorStarted();
+        anchorSieges.put(pos, new Siege(level, pos, tier, WAVES[tier - 1],
+                Component.translatable("game.emeraldweapons.siege.anchor", tier),
+                tier >= 3 ? BossEvent.BossBarColor.PURPLE : BossEvent.BossBarColor.BLUE));
+
+        level.playSound(null, pos, SoundEvents.RESPAWN_ANCHOR_CHARGE, SoundSource.PLAYERS, 1.2F, 1.0F);
+        announce(level, "game.emeraldweapons.ritual_begun",
+                "game.emeraldweapons.ritual_begun.sub", 0xFFD36B);
+        return true;
+    }
+
+    private static void resolveAnchor(ServerLevel level, BlockPos pos, boolean won) {
+        GameState state = GameState.get(level);
+        state.anchorFinished(pos, won);
+        if (!won) {
+            // l'Arcencium est perdu : c'est ce qui donne du poids au moment
+            announce(level, "game.emeraldweapons.ritual_lost",
+                    "game.emeraldweapons.ritual_lost.sub", 0xFF616B);
+            return;
+        }
+        BlockState anchor = level.getBlockState(pos);
+        if (anchor.hasProperty(PrismaticAnchorBlock.ACTIVE)) {
+            level.setBlockAndUpdate(pos, anchor.setValue(PrismaticAnchorBlock.ACTIVE, true));
+        }
+        // une ancre tenue devient un point de reapparition
+        for (ServerPlayer player : level.players()) {
+            player.setRespawnPosition(level.dimension(), pos, 0.0F, true, false);
+        }
+        level.playSound(null, pos, SoundEvents.BEACON_POWER_SELECT, SoundSource.PLAYERS, 1.4F, 1.2F);
+        announce(level, "game.emeraldweapons.anchor_held",
+                "game.emeraldweapons.anchor_held.sub", 0x78E8AE);
+
+        if (state.anchorsActive() >= 3) {
+            announce(level, "game.emeraldweapons.rainbow",
+                    "game.emeraldweapons.rainbow.sub", 0xB98CFF);
+        }
+    }
+
+    // ------------------------------------------------------------- annonces
+
+    /** Titre plein ecran : reserve aux bascules, pour qu'il garde son poids. */
+    public static void announce(ServerLevel level, String title, String subtitle, int color) {
+        Component top = Component.translatable(title).withStyle(style -> style.withColor(color));
+        Component bottom = Component.translatable(subtitle).withStyle(ChatFormatting.GRAY);
+        for (ServerPlayer player : level.players()) {
+            player.connection.send(new ClientboundSetTitleTextPacket(top));
+            player.connection.send(new ClientboundSetSubtitleTextPacket(bottom));
+            player.playNotifySound(SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.MASTER, 0.8F, 1.2F);
+        }
+    }
+
+    /** Abandonne tout siege en cours : arret de partie, ou rechargement du monde. */
+    public static void clear() {
+        if (prologue != null) {
+            prologue.cancel();
+            prologue = null;
+        }
+        anchorSieges.values().forEach(Siege::cancel);
+        anchorSieges.clear();
+    }
+}
