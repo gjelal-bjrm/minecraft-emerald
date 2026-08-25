@@ -135,8 +135,14 @@ sans repeuplement la mission serait perdue pour toujours.
 
 - Le village est attaque. Les monstres **entrent dans le village** et attaquent
   joueurs et villageois.
-- Les monstres sont **attaches au village** (rayon 40 blocs) : `restrictTo(centre, 40)`
-  ou, plus simplement, la laisse native de Gateways.
+- Les monstres sont **attaches au village** (rayon 26 blocs) et surtout ils y
+  **convergent** : la laisse empeche de partir mais ne dit pas ou aller, et sans
+  cela ils erraient dans tout le village.
+  Trois moyens : un but de deplacement vers le point d'attache, en priorite
+  faible pour qu'il cede des qu'une cible apparait ; la traque des villageois,
+  eux-memes retenus au centre ; et la **luminescence**, qui les rend visibles a
+  travers les murs -- le compteur de la barre correspond ainsi toujours a
+  quelque chose qu'on peut trouver.
 - **Compteur visible** : barre de boss segmentee, « CORROMPUS RESTANTS · N ».
 - Message clair a l'ecran : defendre le village.
 

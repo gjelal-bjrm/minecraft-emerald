@@ -38,10 +38,10 @@ import java.util.UUID;
 public class Siege {
 
     /** Rayon dans lequel les monstres sont tenus, et au-dela duquel ils ne vont pas. */
-    public static final int LEASH = 40;
+    public static final int LEASH = 26;
 
-    private static final int SPAWN_MIN = 14;
-    private static final int SPAWN_MAX = 26;
+    private static final int SPAWN_MIN = 12;
+    private static final int SPAWN_MAX = 20;
     private static final int WAVE_GAP = 5 * 20;
 
     /**
@@ -214,13 +214,39 @@ public class Siege {
             if (!(entity instanceof PathfinderMob mob)) {
                 continue;
             }
-            // c'est cette contrainte qui garantit que la vague reste trouvable
             mob.restrictTo(this.center, LEASH);
             mob.setPersistenceRequired();
+            converge(mob);
             reinforce(mob);
             this.alive.add(mob.getUUID());
         }
         refreshBar();
+    }
+
+    /**
+     * Fait converger un assaillant vers le centre du siege, et le rend visible.
+     *
+     * La laisse seule ne suffisait pas : elle empeche de partir mais ne dit pas
+     * ou aller, et les monstres erraient dans tout le village. On y ajoute donc
+     * trois choses.
+     *
+     * D'abord un but de deplacement vers le point d'attache, en priorite faible
+     * pour qu'il cede des qu'une cible apparait. Ensuite la traque des
+     * villageois, eux-memes retenus au centre -- c'est ce qui ramene la vague
+     * la ou la defense se joue. Enfin la luminescence : un assaillant reste
+     * visible a travers les murs, si bien que le compteur de la barre
+     * correspond toujours a quelque chose qu'on peut trouver.
+     */
+    private void converge(PathfinderMob mob) {
+        mob.goalSelector.addGoal(7,
+                new net.minecraft.world.entity.ai.goal.MoveTowardsRestrictionGoal(mob, 1.0));
+        mob.targetSelector.addGoal(3,
+                new net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal<>(
+                        mob, net.minecraft.world.entity.npc.Villager.class, false));
+        mob.addEffect(new net.minecraft.world.effect.MobEffectInstance(
+                net.minecraft.world.effect.MobEffects.GLOWING,
+                net.minecraft.world.effect.MobEffectInstance.INFINITE_DURATION,
+                0, false, false, false));
     }
 
     /**
