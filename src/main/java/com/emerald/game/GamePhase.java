@@ -10,10 +10,10 @@ public enum GamePhase {
     LOBBY(0, "lobby", 0x8CFFB0),
     PROLOGUE(0, "prologue", 0xFFD36B),
     EXPLORATION(0, "exploration", 0x78E8AE),
-    MONTEE(15, "montee", 0x9CE8FF),
-    PRESSION(30, "pression", 0xFF9C30),
-    ASSAUT(40, "assaut", 0xFF616B),
-    FIN(50, "fin", 0xB98CFF);
+    MONTEE(18, "montee", 0x9CE8FF),
+    PRESSION(36, "pression", 0xFF9C30),
+    ASSAUT(48, "assaut", 0xFF616B),
+    FIN(60, "fin", 0xB98CFF);
 
     /** Minute a partir de laquelle la phase commence. */
     public final int fromMinute;

@@ -23,7 +23,8 @@ public class GameState extends SavedData {
     public static final String KEY = "emeraldweapons_game";
 
     /** Duree d'une partie, du retrait de la lame a la defaite par le temps. */
-    public static final long GAME_TICKS = 50L * 60L * 20L;
+    public static final long GAME_MINUTES = 60L;
+    public static final long GAME_TICKS = GAME_MINUTES * 60L * 20L;
 
     /** Rayon de la zone de jeu, en blocs. */
     public static final int PLAY_RADIUS = 750;

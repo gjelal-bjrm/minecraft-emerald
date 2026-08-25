@@ -10,7 +10,7 @@ Etat au 2026-08-25. Branche `feat/arcencium-bow`.
 ## 1. Le mode en une phrase
 
 Un mode roguelite jouable en solo ou en multijoueur, sur un monde genere a neuf
-a chaque partie, ou une equipe dispose de **45 a 50 minutes** pour activer trois
+a chaque partie, ou une equipe dispose de **60 minutes** pour activer trois
 ancres, faire apparaitre l'Arc-en-ciel, et tuer le boss a son sommet — avant que
 la Maree Prismatique ne referme la zone de jeu.
 
@@ -28,10 +28,10 @@ Principes directeurs, valides au fil de la discussion :
 | Phase | Minutes | Contenu |
 |---|---|---|
 | **Prologue** | avant le chrono | Defense du village. Le chrono ne demarre qu'a la fin. |
-| **Exploration** | 0-15 | Brume Prismatique, Aurore. Mine, bois, premier equipement. |
-| **Montee** | 15-30 | + Nuit d'Arcencium. Premiere fenetre a artefacts. |
-| **Pression** | 30-40 | + Meteores, Tornade, Orage. La Maree commence a monter. |
-| **Assaut** | 40-50 | Orage permanent. Arc-en-ciel et boss. |
+| **Exploration** | 0-18 | Brume Prismatique, Aurore. Mine, bois, premier equipement. |
+| **Montee** | 18-36 | + Nuit d'Arcencium. Premiere fenetre a artefacts. |
+| **Pression** | 36-48 | + Meteores, Tornade, Orage. La Maree commence a monter. |
+| **Assaut** | 48-60 | Orage permanent. Arc-en-ciel et boss. |
 
 - Monde **genere a neuf** a chaque partie.
 - Zone de jeu : **rayon 750 blocs** (bordure de monde). Ancres a ~450 du centre, a 120 deg.
@@ -497,10 +497,11 @@ soit pas tres moche ».
 
 | Element | Rendu |
 |---|---|
-| **Chronometre** | Haut au centre, cadre prismatique dessine a la main, nom de la phase en dessous. Couleur du vert au rouge a mesure que le temps s'epuise. Visible toute la partie. |
+| **Chronometre** | Haut a GAUCHE (le centre est pris par Jade, les barres de boss et les titres), cadre prismatique dessine a la main, nom de la phase en dessous. Couleur du vert au rouge a mesure que le temps s'epuise. Visible toute la partie. |
 | **Compteur de monstres** | Barre de boss segmentee (natif, fourni par Gateways). |
 | **Maree Prismatique** | Barre de boss. |
 | **Annonces majeures** | Titres plein ecran natifs. |
+| **Les trois ancres** | En permanence sous le chronometre : distance et direction cardinale, vertes une fois tenues. Un titre passe, une position doit rester consultable. |
 
 Maquette du chronometre a produire **avant** de coder l'interface.
 

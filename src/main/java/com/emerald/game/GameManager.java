@@ -436,6 +436,18 @@ public class GameManager {
         state.begin(level);
         announce(level, "game.emeraldweapons.anchors_risen",
                 "game.emeraldweapons.anchors_risen.sub", 0x9CE8FF);
+        // le titre passe ; les coordonnees restent dans le journal du chat, et
+        // l'interface les rappelle en permanence
+        int index = 1;
+        for (BlockPos anchor : state.anchors()) {
+            net.minecraft.network.chat.Component line = net.minecraft.network.chat.Component
+                    .translatable("game.emeraldweapons.anchor.at", index++,
+                            anchor.getX(), anchor.getY(), anchor.getZ())
+                    .withStyle(net.minecraft.ChatFormatting.AQUA);
+            for (ServerPlayer player : level.players()) {
+                player.sendSystemMessage(line);
+            }
+        }
     }
 
     // ------------------------------------------------------------ les ancres

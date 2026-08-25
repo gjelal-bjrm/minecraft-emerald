@@ -14,7 +14,8 @@ import net.minecraft.resources.ResourceLocation;
  * nombre d'ancres. Le client n'a pas a connaitre le reste, et ne peut donc rien
  * en deduire qu'il ne verrait pas deja a l'ecran.
  */
-public record GameSyncPayload(int status, long remaining, int phase, int anchors)
+public record GameSyncPayload(int status, long remaining, int phase, int anchors,
+                              java.util.List<Long> anchorPositions, int heldMask)
         implements CustomPacketPayload {
 
     public static final CustomPacketPayload.Type<GameSyncPayload> TYPE =
@@ -27,6 +28,9 @@ public record GameSyncPayload(int status, long remaining, int phase, int anchors
                     ByteBufCodecs.VAR_LONG, GameSyncPayload::remaining,
                     ByteBufCodecs.VAR_INT, GameSyncPayload::phase,
                     ByteBufCodecs.VAR_INT, GameSyncPayload::anchors,
+                    ByteBufCodecs.VAR_LONG.apply(ByteBufCodecs.list()),
+                    GameSyncPayload::anchorPositions,
+                    ByteBufCodecs.VAR_INT, GameSyncPayload::heldMask,
                     GameSyncPayload::new);
 
     @Override

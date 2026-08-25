@@ -55,12 +55,16 @@ public class GameHudClient {
     private static long remaining;
     private static int phase;
     private static int anchors;
+    private static java.util.List<Long> anchorPositions = java.util.List.of();
+    private static int heldMask;
 
     public static void accept(GameSyncPayload payload) {
         status = payload.status();
         remaining = payload.remaining();
         phase = payload.phase();
         anchors = payload.anchors();
+        anchorPositions = payload.anchorPositions();
+        heldMask = payload.heldMask();
     }
 
     @EventBusSubscriber(modid = EmeraldWeaponsMod.MODID, value = Dist.CLIENT,
@@ -100,6 +104,44 @@ public class GameHudClient {
         graphics.drawCenteredString(mc.font, label, x + PANEL_W / 2, y + 16, 0xFF9AA0A6);
 
         anchorPips(graphics, x + PANEL_W / 2, y + PANEL_H - 5);
+        anchorList(graphics, mc, x, y + PANEL_H + 2);
+    }
+
+    /**
+     * Les trois ancres, en permanence sous le chronometre.
+     *
+     * Distance et direction plutot que coordonnees brutes : on cherche a savoir
+     * ou aller, pas a lire un nombre. Une ancre tenue s'affiche en vert et cesse
+     * d'etre un objectif.
+     */
+    private static void anchorList(GuiGraphics graphics, Minecraft mc, int x, int y) {
+        if (anchorPositions.isEmpty() || mc.player == null) {
+            return;
+        }
+        int rows = Math.min(3, anchorPositions.size());
+        graphics.fill(x, y, x + PANEL_W, y + 2 + rows * 10, 0x8C060608);
+        for (int i = 0; i < rows; i++) {
+            net.minecraft.core.BlockPos pos =
+                    net.minecraft.core.BlockPos.of(anchorPositions.get(i));
+            boolean done = (heldMask & (1 << i)) != 0;
+            double dx = pos.getX() - mc.player.getX();
+            double dz = pos.getZ() - mc.player.getZ();
+            int distance = (int) Math.sqrt(dx * dx + dz * dz);
+            String label = String.format(Locale.ROOT, "%s %s  %dm",
+                    done ? "◆" : "◇", cardinal(dx, dz), distance);
+            graphics.drawString(mc.font, label, x + 4, y + 2 + i * 10,
+                    done ? 0xFF78E8AE : 0xFF9CE8FF, false);
+        }
+    }
+
+    /** Direction cardinale vers un point, du plus lisible au premier coup d'oeil. */
+    private static String cardinal(double dx, double dz) {
+        String[] names = {"S", "SO", "O", "NO", "N", "NE", "E", "SE"};
+        double angle = Math.toDegrees(Math.atan2(dz, dx));
+        // atan2 rend l'angle depuis l'axe +X, qui pointe a l'est ; on ramene sur
+        // les huit secteurs en partant du sud, comme la boussole du jeu
+        int index = (int) Math.round(((angle + 360.0) % 360.0) / 45.0) % 8;
+        return names[(index + 6) % 8];
     }
 
     /** Liseré superieur dont la teinte defile : la signature visuelle du mod. */

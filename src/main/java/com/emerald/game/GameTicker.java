@@ -33,11 +33,21 @@ public class GameTicker {
         if (level.getGameTime() % SYNC_INTERVAL != 0) {
             return;
         }
+        java.util.List<net.minecraft.core.BlockPos> anchors = state.anchors();
+        int held = 0;
+        java.util.List<Long> packed = new java.util.ArrayList<>();
+        for (int i = 0; i < anchors.size(); i++) {
+            packed.add(anchors.get(i).asLong());
+            if (state.isActivated(anchors.get(i))) {
+                held |= 1 << i;
+            }
+        }
         GameSyncPayload payload = new GameSyncPayload(
                 state.status().ordinal(),
                 state.remaining(level),
                 state.phase(level).ordinal(),
-                state.anchorsActive());
+                state.anchorsActive(),
+                packed, held);
         for (ServerPlayer player : level.players()) {
             PacketDistributor.sendToPlayer(player, payload);
         }
