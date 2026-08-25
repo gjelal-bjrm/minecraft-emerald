@@ -31,9 +31,17 @@ import java.util.Locale;
  */
 public class GameHudClient {
 
-    private static final int PANEL_W = 92;
-    private static final int PANEL_H = 30;
-    private static final int TOP = 4;
+    private static final int PANEL_W = 84;
+    private static final int PANEL_H = 28;
+
+    /**
+     * En haut a GAUCHE, et non au centre.
+     *
+     * Le centre est deja pris trois fois : par Jade, qui affiche le bloc ou
+     * l'entite visee, par les barres de boss pendant les sieges, et par les
+     * titres d'annonce. Le coin superieur gauche est le seul reellement libre.
+     */
+    private static final int MARGIN = 4;
 
     private static final int GREEN = 0xFF78E8AE;
     private static final int AMBER = 0xFFFFC24A;
@@ -77,8 +85,8 @@ public class GameHudClient {
             return;                       // hors partie, on n'encombre pas l'ecran
         }
 
-        int x = (graphics.guiWidth() - PANEL_W) / 2;
-        int y = TOP;
+        int x = MARGIN;
+        int y = MARGIN;
 
         graphics.fill(x, y, x + PANEL_W, y + PANEL_H, 0xB4060608);
         prismaticEdge(graphics, x, y, mc.level == null ? 0L : mc.level.getGameTime());
