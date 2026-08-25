@@ -247,6 +247,11 @@ public class ArtifactEvents {
         if (level.isClientSide) {
             return;
         }
+        if (event.getSource().is(net.minecraft.tags.DamageTypeTags.IS_FALL)
+                && ArtifactActions.fallCushioned(entity)) {
+            event.setCanceled(true);
+            return;
+        }
         entity.getPersistentData().putLong(TAG_HURT_AT, level.getGameTime());
 
         ItemStack chest = entity.getItemBySlot(EquipmentSlot.CHEST);

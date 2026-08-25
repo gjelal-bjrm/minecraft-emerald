@@ -39,6 +39,20 @@ public class ArtifactInputClient {
     private static boolean jumpAvailable = true;
     private static boolean jumpWasDown;
 
+    /**
+     * Ticks ecoules depuis le decollage.
+     *
+     * Indispensable : cet evenement s'execute APRES le tick du joueur, donc au
+     * moment ou l'on teste, Minecraft a deja applique le saut initial et
+     * onGround() est deja faux. Sans ce delai, le tout premier appui passait
+     * pour un second saut -- d'ou un unique saut trop haut, et des degats de
+     * chute au lieu d'un double saut.
+     */
+    private static int airTicks;
+
+    /** En dessous, l'appui vient forcement du saut initial. */
+    private static final int AIR_GRACE = 3;
+
     @EventBusSubscriber(modid = EmeraldWeaponsMod.MODID, value = Dist.CLIENT,
             bus = EventBusSubscriber.Bus.MOD)
     public static class Setup {
@@ -71,14 +85,18 @@ public class ArtifactInputClient {
             return;
         }
         if (player.onGround() || player.isInWater() || player.onClimbable()) {
+            airTicks = 0;
             jumpAvailable = true;
-        } else if (jumpDown && !jumpWasDown && jumpAvailable
-                && Artifacts.wearing(player, Artifact.BOTTES_D_ECLAIR)) {
-            // un seul saut supplementaire par passage en l'air : sans ce verrou,
-            // maintenir la touche ferait voler
-            jumpAvailable = false;
-            PacketDistributor.sendToServer(new ArtifactActionPayload(
-                    ArtifactActionPayload.Action.DOUBLE_JUMP));
+        } else {
+            airTicks++;
+            if (jumpDown && !jumpWasDown && jumpAvailable && airTicks > AIR_GRACE
+                    && Artifacts.wearing(player, Artifact.BOTTES_D_ECLAIR)) {
+                // un seul saut supplementaire par passage en l'air : sans ce
+                // verrou, maintenir la touche ferait voler
+                jumpAvailable = false;
+                PacketDistributor.sendToServer(new ArtifactActionPayload(
+                        ArtifactActionPayload.Action.DOUBLE_JUMP));
+            }
         }
         jumpWasDown = jumpDown;
     }

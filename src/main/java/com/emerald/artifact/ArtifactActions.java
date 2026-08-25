@@ -13,6 +13,10 @@ import net.minecraft.world.phys.Vec3;
 public final class ArtifactActions {
 
     private static final String TAG_RETURN_AT = "ArcenciumReturnAt";
+    private static final String TAG_NO_FALL_UNTIL = "ArcenciumNoFallUntil";
+
+    /** Duree pendant laquelle la chute qui suit un second saut est amortie. */
+    public static final int NO_FALL_TICKS = 5 * 20;
     private static final int RETURN_COOLDOWN = 2 * 60 * 20;
     private static final double JUMP_IMPULSE = 0.62;
 
@@ -43,6 +47,10 @@ public final class ArtifactActions {
         player.hurtMarked = true;
         player.connection.send(new ClientboundSetEntityMotionPacket(player));
         player.fallDistance = 0.0F;
+        // Monter plus haut ne doit pas se payer a l'atterrissage : un artefact
+        // de deplacement qui blesse son porteur est un piege, pas un bonus.
+        player.getPersistentData().putLong(TAG_NO_FALL_UNTIL,
+                player.level().getGameTime() + NO_FALL_TICKS);
         player.level().playSound(null, player.blockPosition(), SoundEvents.AMETHYST_BLOCK_CHIME,
                 SoundSource.PLAYERS, 0.7F, 1.8F);
         if (player.level() instanceof ServerLevel server) {
@@ -80,6 +88,12 @@ public final class ArtifactActions {
         player.teleportTo(target, spawn.getX() + 0.5, spawn.getY() + 0.1, spawn.getZ() + 0.5,
                 java.util.Set.of(), player.getYRot(), player.getXRot());
         flash(player);
+    }
+
+    /** Vrai si la chute en cours suit un second saut recent. */
+    public static boolean fallCushioned(net.minecraft.world.entity.LivingEntity entity) {
+        long until = entity.getPersistentData().getLong(TAG_NO_FALL_UNTIL);
+        return until != 0 && entity.level().getGameTime() < until;
     }
 
     private static void flash(ServerPlayer player) {
