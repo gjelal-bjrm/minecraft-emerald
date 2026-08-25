@@ -125,5 +125,15 @@
   "artifact.emeraldweapons.fleche_tracante": "Fleche Tracante",
   "artifact.emeraldweapons.fleche_tracante.desc": "Les fleches inflechissent leur course vers la cible.",
   "block.emeraldweapons.socket_bench": "Etabli de Sertissage",
-  "container.emeraldweapons.socket_bench": "Etabli de Sertissage"
+  "container.emeraldweapons.socket_bench": "Etabli de Sertissage",
+  "game.emeraldweapons.phase.lobby": "En attente",
+  "game.emeraldweapons.phase.prologue": "Défendez le village",
+  "game.emeraldweapons.phase.exploration": "Exploration",
+  "game.emeraldweapons.phase.montee": "Montée",
+  "game.emeraldweapons.phase.pression": "Pression",
+  "game.emeraldweapons.phase.assaut": "Assaut",
+  "game.emeraldweapons.phase.fin": "Fin",
+  "command.emeraldweapons.started": "Mode Arcencium démarré.",
+  "command.emeraldweapons.stopped": "Mode Arcencium arrêté.",
+  "command.emeraldweapons.status": "État : %s | Phase : %s | Restant : %s | Ancres : %s | Prochain palier : %s"
 }

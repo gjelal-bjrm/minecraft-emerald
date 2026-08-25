@@ -23,6 +23,10 @@ public class ModNetwork {
                     }
                 }));
 
+        registrar.playToClient(GameSyncPayload.TYPE, GameSyncPayload.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(
+                        () -> com.emerald.client.GameHudClient.accept(payload)));
+
         registrar.playToServer(ArtifactActionPayload.TYPE, ArtifactActionPayload.STREAM_CODEC,
                 (payload, context) -> context.enqueueWork(() -> {
                     if (context.player() instanceof ServerPlayer player) {

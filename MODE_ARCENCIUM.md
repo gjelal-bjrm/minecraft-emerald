@@ -564,7 +564,15 @@ d'Emeraude, Arc et Sceptre. Aucun equipement vanilla ni d'un autre mod.
 - [ ] Regle particuliere du Diademe d'Echo
 - [ ] Tables de butin (coffres + tempete)
 
-### Etape 5 — La boucle de jeu minimale
+### Etape 5 — La boucle de jeu minimale *(en cours)*
+
+L'ossature est posee : `GameState` (SavedData attachee au surmonde, donc une
+partie survit a un arret du serveur), `GamePhase` avec ses cinq paliers, un
+diffuseur d'etat une fois par seconde, le chronometre a l'ecran, et la commande
+`/arcencium start|stop|status` pour eprouver la boucle sans rejouer le prologue.
+
+Le temps est compte en **ticks de monde** et non en horloge reelle : la partie
+se fige avec le serveur au lieu d'expirer pendant qu'il est eteint.
 
 - [ ] Preregle de monde « Arcencium », bordure a 750
 - [ ] **Lame du Serment** plantee au centre, villageois autour
@@ -580,7 +588,7 @@ d'Emeraude, Arc et Sceptre. Aucun equipement vanilla ni d'un autre mod.
 - [ ] Maree Prismatique
 - [ ] Arc-en-ciel, arene, boss tire parmi les 3
 - [ ] Conditions de victoire et de defaite
-- [ ] Interface : chronometre, titres, barres
+- [x] Interface : chronometre (titres et barres a venir)
 
 ### Etape 6 — Meteo et economie
 

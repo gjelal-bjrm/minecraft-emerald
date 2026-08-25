@@ -125,5 +125,15 @@
   "artifact.emeraldweapons.fleche_tracante": "Tracking Arrow",
   "artifact.emeraldweapons.fleche_tracante.desc": "Arrows bend their course toward the target.",
   "block.emeraldweapons.socket_bench": "Socketing Bench",
-  "container.emeraldweapons.socket_bench": "Socketing Bench"
+  "container.emeraldweapons.socket_bench": "Socketing Bench",
+  "game.emeraldweapons.phase.lobby": "Waiting",
+  "game.emeraldweapons.phase.prologue": "Defend the village",
+  "game.emeraldweapons.phase.exploration": "Exploration",
+  "game.emeraldweapons.phase.montee": "Rising",
+  "game.emeraldweapons.phase.pression": "Pressure",
+  "game.emeraldweapons.phase.assaut": "Assault",
+  "game.emeraldweapons.phase.fin": "The End",
+  "command.emeraldweapons.started": "Arcencium Mode started.",
+  "command.emeraldweapons.stopped": "Arcencium Mode stopped.",
+  "command.emeraldweapons.status": "State: %s | Phase: %s | Remaining: %s | Anchors: %s | Next tier: %s"
 }
