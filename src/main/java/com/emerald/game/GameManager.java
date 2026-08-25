@@ -172,7 +172,7 @@ public class GameManager {
             double angle = Math.toRadians(90 + i * 120);
             int x = ground.getX() + (int) Math.round(Math.cos(angle) * GameState.ANCHOR_DISTANCE);
             int z = ground.getZ() + (int) Math.round(Math.sin(angle) * GameState.ANCHOR_DISTANCE);
-            anchors.add(surface(level, new BlockPos(x, 0, z)));
+            anchors.add(WorldSetup.findOpenGround(level, new BlockPos(x, 0, z), 16));
         }
         state.setAnchors(anchors);
         state.returnToLobby();
@@ -230,9 +230,10 @@ public class GameManager {
         }
     }
 
+    /** Meme piege que pour la lame : sans chargement force, la hauteur vaut -64. */
     private static BlockPos surface(ServerLevel level, BlockPos around) {
-        int y = level.getHeight(Heightmap.Types.WORLD_SURFACE, around.getX(), around.getZ());
-        return new BlockPos(around.getX(), y, around.getZ());
+        return new BlockPos(around.getX(),
+                WorldSetup.surfaceY(level, around.getX(), around.getZ()), around.getZ());
     }
 
     /**

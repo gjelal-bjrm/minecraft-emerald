@@ -126,6 +126,21 @@ public class WorldSetup {
      * dur, deux blocs d'air au-dessus, et le ciel degage -- ce dernier critere
      * ecarte a lui seul les interieurs, les caves et les surplombs.
      */
+    /**
+     * La hauteur du sol, en FORCANT le chargement du chunk.
+     *
+     * Level.getHeight() ne consulte le relief que si le chunk est deja charge ;
+     * sinon il rend getMinBuildHeight(), soit -64. Or findNearestMapStructure
+     * designe une position dans un chunk qui ne l'est pas encore : toutes les
+     * verifications de placement s'appliquaient donc a une hauteur de -64,
+     * aucune ne passait, et la lame finissait plantee au fond du monde.
+     */
+    public static int surfaceY(ServerLevel level, int x, int z) {
+        var chunk = level.getChunk(net.minecraft.core.SectionPos.blockToSectionCoord(x),
+                                   net.minecraft.core.SectionPos.blockToSectionCoord(z));
+        return chunk.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x & 15, z & 15) + 1;
+    }
+
     public static BlockPos findOpenGround(ServerLevel level, BlockPos around, int radius) {
         for (int r = 0; r <= radius; r++) {
             for (int dx = -r; dx <= r; dx++) {
@@ -135,17 +150,15 @@ public class WorldSetup {
                     }
                     int x = around.getX() + dx;
                     int z = around.getZ() + dz;
-                    int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
-                    BlockPos feet = new BlockPos(x, y, z);
+                    BlockPos feet = new BlockPos(x, surfaceY(level, x, z), z);
                     if (isStandable(level, feet)) {
                         return feet;
                     }
                 }
             }
         }
-        int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
-                around.getX(), around.getZ());
-        return new BlockPos(around.getX(), y, around.getZ());
+        return new BlockPos(around.getX(), surfaceY(level, around.getX(), around.getZ()),
+                around.getZ());
     }
 
     private static boolean isStandable(ServerLevel level, BlockPos feet) {
