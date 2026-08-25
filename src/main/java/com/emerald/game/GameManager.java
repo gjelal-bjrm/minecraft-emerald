@@ -136,6 +136,7 @@ public class GameManager {
         }
         state.setAnchors(anchors);
         state.beginPrologue();
+        WorldSetup.clearHostiles(level, ground);
 
         for (ServerPlayer player : level.players()) {
             player.teleportTo(ground.getX() + 0.5, ground.getY() + 1, ground.getZ() + 0.5);
@@ -166,8 +167,17 @@ public class GameManager {
      *
      * Ils ne servent aucun objectif : ils sont l'appat. Une place vide
      * n'attire personne, une place peuplee si.
+     *
+     * On n'en ajoute que si le lieu en manque : dans un vrai village genere, ils
+     * sont deja la, et en rajouter huit donnerait une foule absurde.
      */
     private static void surroundWithVillagers(ServerLevel level, BlockPos center) {
+        long present = level.getEntitiesOfClass(
+                net.minecraft.world.entity.npc.Villager.class,
+                new net.minecraft.world.phys.AABB(center).inflate(24)).size();
+        if (present >= 4) {
+            return;
+        }
         for (int i = 0; i < 8; i++) {
             double angle = i / 8.0 * Math.PI * 2;
             int x = center.getX() + (int) Math.round(Math.cos(angle) * 4);
@@ -178,7 +188,7 @@ public class GameManager {
     }
 
     /** Fer complet, bouclier, epee : assez pour tenir, pas pour se croire invincible. */
-    private static void equipStarter(ServerPlayer player) {
+    public static void equipStarter(ServerPlayer player) {
         player.getInventory().clearContent();
         player.setItemSlot(net.minecraft.world.entity.EquipmentSlot.HEAD,
                 new ItemStack(net.minecraft.world.item.Items.IRON_HELMET));

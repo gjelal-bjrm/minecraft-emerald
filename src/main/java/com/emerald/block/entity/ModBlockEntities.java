@@ -18,6 +18,11 @@ public class ModBlockEntities {
                     () -> BlockEntityType.Builder.of(ArcenciumChestBlockEntity::new,
                             ModBlocks.ARCENCIUM_CHEST.get()).build(null));
 
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<OathBladeBlockEntity>>
+            OATH_BLADE = BLOCK_ENTITIES.register("oath_blade",
+                    () -> BlockEntityType.Builder.of(OathBladeBlockEntity::new,
+                            ModBlocks.OATH_BLADE.get()).build(null));
+
     public static void register(IEventBus eventBus) {
         BLOCK_ENTITIES.register(eventBus);
     }

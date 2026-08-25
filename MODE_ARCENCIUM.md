@@ -54,6 +54,21 @@ Tous les joueurs apparaissent **au meme endroit**, sur la place du village.
 
 ### 3.1 La Lame du Serment — le declencheur
 
+**Mise en place automatique.** Aucune commande n'est necessaire : au premier
+chargement du monde, le mod cherche un **vrai village genere** (tag
+`minecraft:village`, qui couvre le vanilla, les mods du modpack et le notre) dans
+un rayon de 96 chunks, y plante la lame, y fixe le point d'apparition, chasse les
+monstres alentour et met le jour. A defaut de village, repli sur le spawn.
+
+Chercher un village plutot qu'en improviser un : il existe forcement dans un
+biome habitable, avec ses maisons et sa lumiere -- deux choses qu'on ne saurait
+pas improviser aussi bien, et dont l'absence transforme le prologue en survie
+dans le noir.
+
+La lame est dessinee en **trois dimensions par un renderer dedie**, qui rend
+l'objet lui-meme avec sa texture animee. Un modele de bloc ordinaire n'en
+donnerait qu'une decalcomanie.
+
 Au centre du village, **une epee de notre mode est plantee dans le sol**,
 entouree de nombreux villageois. C'est l'appat : elle attire les joueurs vers
 la place avant que quoi que ce soit ne commence.

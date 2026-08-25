@@ -1,7 +1,7 @@
 {
-  "parent": "minecraft:block/cross",
-  "_comment": "Deux plans croises portant la texture de l'epee : une lame plantee se lit ainsi sans modele dedie.",
+  "parent": "minecraft:block/block",
+  "_comment": "Coquille vide : la lame est dessinee par OathBladeRenderer, qui rend l'objet en 3D.",
   "textures": {
-    "cross": "emeraldweapons:item/emerald_sword"
+    "particle": "emeraldweapons:block/arcencium_block"
   }
 }

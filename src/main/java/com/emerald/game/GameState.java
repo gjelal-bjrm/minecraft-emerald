@@ -38,6 +38,8 @@ public class GameState extends SavedData {
     private int anchorsActive;
     private int anchorsInProgress;
     private BlockPos village = BlockPos.ZERO;
+    /** Vrai des que le monde a ete prepare : la mise en place ne se joue qu'une fois. */
+    private boolean prepared;
     private final List<BlockPos> anchors = new ArrayList<>();
     private final List<BlockPos> activated = new ArrayList<>();
 
@@ -53,6 +55,7 @@ public class GameState extends SavedData {
         state.anchorsActive = tag.getInt("AnchorsActive");
         state.anchorsInProgress = tag.getInt("AnchorsInProgress");
         state.village = BlockPos.of(tag.getLong("Village"));
+        state.prepared = tag.getBoolean("Prepared");
         for (long packed : tag.getLongArray("Anchors")) {
             state.anchors.add(BlockPos.of(packed));
         }
@@ -69,6 +72,7 @@ public class GameState extends SavedData {
         tag.putInt("AnchorsActive", this.anchorsActive);
         tag.putInt("AnchorsInProgress", this.anchorsInProgress);
         tag.putLong("Village", this.village.asLong());
+        tag.putBoolean("Prepared", this.prepared);
         tag.putLongArray("Anchors", this.anchors.stream().mapToLong(BlockPos::asLong).toArray());
         tag.putLongArray("Activated", this.activated.stream().mapToLong(BlockPos::asLong).toArray());
         return tag;
@@ -86,6 +90,15 @@ public class GameState extends SavedData {
 
     public BlockPos village() {
         return this.village;
+    }
+
+    public boolean isPrepared() {
+        return this.prepared;
+    }
+
+    public void markPrepared() {
+        this.prepared = true;
+        setDirty();
     }
 
     public List<BlockPos> anchors() {
@@ -191,6 +204,7 @@ public class GameState extends SavedData {
         setDirty();
     }
 
+    /** Remet la partie a zero SANS toucher au village ni aux ancres deja places. */
     public void reset() {
         this.status = Status.LOBBY;
         this.startTick = 0L;

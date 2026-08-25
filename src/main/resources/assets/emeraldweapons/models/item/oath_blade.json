@@ -1,5 +1,6 @@
 {
   "parent": "minecraft:item/handheld",
+  "_comment": "Meme texture que l'Epee d'Emeraude : c'est la meme lame, ceremonielle.",
   "textures": {
     "layer0": "emeraldweapons:item/emerald_sword"
   }

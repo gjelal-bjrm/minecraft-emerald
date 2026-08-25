@@ -23,7 +23,7 @@ import net.minecraft.world.phys.shapes.VoxelShape;
  * qui rejoint en retard trouve donc la partie encore en attente, au lieu d'avoir
  * rate l'annonce. Le declencheur est une action volontaire, jamais un minuteur.
  */
-public class OathBladeBlock extends Block {
+public class OathBladeBlock extends Block implements net.minecraft.world.level.block.EntityBlock {
 
     public static final BooleanProperty PLANTED = BooleanProperty.create("planted");
 
@@ -37,6 +37,12 @@ public class OathBladeBlock extends Block {
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
         builder.add(PLANTED);
+    }
+
+    @org.jetbrains.annotations.Nullable
+    @Override
+    public net.minecraft.world.level.block.entity.BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
+        return new com.emerald.block.entity.OathBladeBlockEntity(pos, state);
     }
 
     @Override

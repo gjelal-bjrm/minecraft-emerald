@@ -106,7 +106,10 @@ public enum Artifact implements StringRepresentable {
         CHEST(stack -> isArcenciumArmor(stack, EquipmentSlot.CHEST)),
         LEGS(stack -> isArcenciumArmor(stack, EquipmentSlot.LEGS)),
         FEET(stack -> isArcenciumArmor(stack, EquipmentSlot.FEET)),
-        SWORD(stack -> stack.getItem() instanceof EmeraldWindblade),
+        // la Lame du Serment est un EmeraldWindblade mais reste exclue : elle se
+        // dissout a la fin du prologue, et y sertir un artefact le detruirait
+        SWORD(stack -> stack.getItem() instanceof EmeraldWindblade
+                && !stack.is(com.emerald.item.ModItems.OATH_BLADE.get())),
         BOW(stack -> stack.getItem() instanceof ArcenciumBowItem),
         SCEPTER(stack -> stack.getItem() instanceof ArcenciumScepterItem);
 
