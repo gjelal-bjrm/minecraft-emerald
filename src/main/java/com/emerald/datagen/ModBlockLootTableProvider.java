@@ -21,8 +21,16 @@ public class ModBlockLootTableProvider extends BlockLootSubProvider {
         super(Set.of(), FeatureFlags.REGISTRY.allFlags(), registries);
     }
 
+    /** Blocs hors palette du village, a traiter a part. */
+    private static final java.util.List<DeferredBlock<? extends Block>> EXTRA =
+            java.util.List.of(ModBlocks.ARCENCIUM_CHEST);
+
     @Override
     protected void generate() {
+        // le coffre se ramasse tel quel ; ChestBlock deverse son contenu tout seul
+        for (DeferredBlock<? extends Block> holder : EXTRA) {
+            dropSelf(holder.get());
+        }
         for (DeferredBlock<? extends Block> holder : ModBlocks.VILLAGE_BLOCKS) {
             Block block = holder.get();
             if (block instanceof SlabBlock) {
@@ -43,6 +51,8 @@ public class ModBlockLootTableProvider extends BlockLootSubProvider {
 
     @Override
     protected Iterable<Block> getKnownBlocks() {
-        return ModBlocks.VILLAGE_BLOCKS.stream().map(h -> (Block) h.get())::iterator;
+        return java.util.stream.Stream.concat(
+                ModBlocks.VILLAGE_BLOCKS.stream(), EXTRA.stream())
+                .map(h -> (Block) h.get())::iterator;
     }
 }

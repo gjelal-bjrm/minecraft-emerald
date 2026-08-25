@@ -23,6 +23,10 @@ public class Jak3ClientEvents {
         event.registerEntityRenderer(Jak3Registry.PRISMATIC_BOLT.get(),
                 net.minecraft.client.renderer.entity.NoopRenderer::new);
 
+        event.registerBlockEntityRenderer(
+                com.emerald.block.entity.ModBlockEntities.ARCENCIUM_CHEST.get(),
+                ArcenciumChestRenderer::new);
+
         event.registerEntityRenderer(Jak3Registry.WASTELANDER.get(),
                 ctx -> new MobRenderer<WastelanderEntity, HumanoidModel<WastelanderEntity>>(ctx,
                         new HumanoidModel<>(ctx.bakeLayer(ModelLayers.PLAYER_INNER_ARMOR)), 0.5f) {

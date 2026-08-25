@@ -318,7 +318,7 @@ Statistiques **legerement au-dessus de la netherite**, sur tous les tableaux :
 protection 22 contre 20, tenacite 3,5 contre 3,0, resistance au recul 0,15
 contre 0,10, durabilite facteur 45 contre 37, enchantement 22 contre 15.
 | **Sceptre d'Arcencium** | **fait**, voir 8.3 |
-| **Coffre d'Arcencium** simple + double | a faire |
+| **Coffre d'Arcencium** simple + double | **fait** |
 | **Etabli de Sertissage** | a faire |
 | **Lame du Serment** (ceremonielle, voir 3.1) | a faire |
 
@@ -528,7 +528,14 @@ rechargement via le predicat de modele `emeraldweapons:charge`.
 
 ### Etape 3 — Le coffre et l'etabli
 
-- [ ] **Coffre d'Arcencium** simple et double : modele, block entity, texture
+Le coffre est pose. Sa texture vient de la planche de matiere plaquee sur le
+gabarit vanilla (`tools/chest_textures.py`), loquet dore conserve pour qu'il
+reste lisible. `Sheets.chooseMaterial` ne connaissant que les coffres vanilla
+et n'etant pas surchargeable, `ArcenciumChestRenderer` reprend le rendu de
+ChestRenderer avec nos materiaux. Aucun fichier d'atlas n'a ete necessaire :
+la source du sheet vanilla balaie `entity/chest` de tous les namespaces.
+
+- [x] **Coffre d'Arcencium** simple et double : modele, block entity, texture
 - [ ] **Etabli de Sertissage** : bloc, interface, logique de sertissage/retrait
 
 ### Etape 4 — Le systeme d'artefacts

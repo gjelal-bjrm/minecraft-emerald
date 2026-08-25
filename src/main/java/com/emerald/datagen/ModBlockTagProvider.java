@@ -28,7 +28,8 @@ public class ModBlockTagProvider extends BlockTagsProvider {
     @Override
     protected void addTags(HolderLookup.Provider provider) {
         tag(BlockTags.NEEDS_DIAMOND_TOOL).add(ModBlocks.ARCENCIUM_ORE.get());
-        tag(BlockTags.MINEABLE_WITH_PICKAXE).add(ModBlocks.ARCENCIUM_ORE.get(), ModBlocks.ARCENCIUM_BLOCK.get());
+        tag(BlockTags.MINEABLE_WITH_PICKAXE).add(ModBlocks.ARCENCIUM_ORE.get(),
+                ModBlocks.ARCENCIUM_BLOCK.get(), ModBlocks.ARCENCIUM_CHEST.get());
 
         // Outils : bois a la hache, terre a la pelle, feuilles a la houe, le reste a la pioche
         Set<Block> axe = Set.of(ModBlocks.CRYSTAL_PLANKS.get(), ModBlocks.CRYSTAL_STAIRS.get(),

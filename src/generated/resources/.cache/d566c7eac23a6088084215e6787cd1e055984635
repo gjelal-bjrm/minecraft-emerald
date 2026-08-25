@@ -1,4 +1,4 @@
-// 1.21.1	2026-08-22T15:35:40.5233171	Tags for minecraft:block mod id emeraldweapons
+// 1.21.1	2026-08-25T17:21:51.3175531	Tags for minecraft:block mod id emeraldweapons
 ff2fe966597288b811ed5744943482a89e49cee6 data/minecraft/tags/block/dirt.json
 e13c12e778f2f778b2f3a318b653c78f9f2161c9 data/minecraft/tags/block/fences.json
 8dae5a8cec61ffe16440c5e4645c4a9c53520a16 data/minecraft/tags/block/flowers.json
@@ -7,7 +7,7 @@ e13c12e778f2f778b2f3a318b653c78f9f2161c9 data/minecraft/tags/block/fences.json
 c57fa0518314a10a2e3538c372b0afc0a8a7d0a3 data/minecraft/tags/block/logs_that_burn.json
 bf2340f47c5426bfe74d297ee0e312d8057dfebd data/minecraft/tags/block/mineable/axe.json
 22a764986b8059f9e2489b3a1b1c1b9558888170 data/minecraft/tags/block/mineable/hoe.json
-d8b68b65fdc0cc7e4260175bab735cedc17aa354 data/minecraft/tags/block/mineable/pickaxe.json
+b03e1feb461be34dee18973d06a6edc009d211f1 data/minecraft/tags/block/mineable/pickaxe.json
 ff2fe966597288b811ed5744943482a89e49cee6 data/minecraft/tags/block/mineable/shovel.json
 dfb0021f1ba3db3f978e86ffefe5e54dd2b524d1 data/minecraft/tags/block/needs_diamond_tool.json
 f6bccb84a2440c4fd12cf1031c99717f8e56627f data/minecraft/tags/block/planks.json

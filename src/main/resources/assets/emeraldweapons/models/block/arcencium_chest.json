@@ -1,0 +1,5 @@
+{
+  "parent": "minecraft:block/block",
+  "_comment": "Coquille vide : la geometrie du coffre vit dans ArcenciumChestRenderer. Seule la texture de particules sert, quand on casse le bloc.",
+  "textures": { "particle": "emeraldweapons:block/arcencium_bricks" }
+}

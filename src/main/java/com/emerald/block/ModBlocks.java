@@ -38,6 +38,15 @@ public class ModBlocks {
     public static final DeferredBlock<Block> ARCENCIUM_ORE = registerBlock("arcencium_ore",
             () -> new DropExperienceBlock(UniformInt.of(2, 4), BlockBehaviour.Properties.of().strength(3F).requiresCorrectToolForDrops().sound(SoundType.STONE)));
 
+    /**
+     * Coffre d'Arcencium. Rendu par ArcenciumChestRenderer, qui lui donne sa
+     * texture propre en simple comme en double.
+     */
+    public static final DeferredBlock<ArcenciumChestBlock> ARCENCIUM_CHEST = registerBlock("arcencium_chest",
+            () -> new ArcenciumChestBlock(BlockBehaviour.Properties.of()
+                    .strength(3.5F).requiresCorrectToolForDrops().sound(SoundType.AMETHYST)
+                    .noOcclusion()));
+
     // --------------------------------------------- Gangue : la masse du village
 
     public static final DeferredBlock<Block> GANGUE_STONE = village("gangue_stone",

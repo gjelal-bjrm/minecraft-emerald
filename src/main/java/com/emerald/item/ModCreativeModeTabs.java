@@ -43,6 +43,7 @@ public class ModCreativeModeTabs {
                     .displayItems((itemDisplayParameters, output) -> {
                         output.accept(ModBlocks.ARCENCIUM_ORE);
                         output.accept(ModBlocks.ARCENCIUM_BLOCK);
+                        output.accept(ModBlocks.ARCENCIUM_CHEST);
                         // toute la palette du village, dans l'ordre de declaration
                         for (var block : ModBlocks.VILLAGE_BLOCKS) {
                             output.accept(block.get());

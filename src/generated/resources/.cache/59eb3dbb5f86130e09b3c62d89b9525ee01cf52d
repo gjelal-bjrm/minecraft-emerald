@@ -1,8 +1,9 @@
-// 1.21.1	2026-08-22T15:35:40.525315	Loot Tables
+// 1.21.1	2026-08-25T17:21:51.3185561	Loot Tables
 eccde64915752926f7ed2b80daa6256a72c6a4b8 data/emeraldweapons/loot_table/blocks/arcencium_bricks.json
 5f1c138502033337e4566d05cfb00e34a1110123 data/emeraldweapons/loot_table/blocks/arcencium_brick_slab.json
 29815017e75e38a4b44c915884cc5afeb72c18d0 data/emeraldweapons/loot_table/blocks/arcencium_brick_stairs.json
 7379ccc9011f4074dbc4706748df54a22eef8ce4 data/emeraldweapons/loot_table/blocks/arcencium_brick_wall.json
+3360a642a1ad82b4af6a83639deb66fc14e84719 data/emeraldweapons/loot_table/blocks/arcencium_chest.json
 332ac577c254f5a57336b522d038cf66312247b5 data/emeraldweapons/loot_table/blocks/arcencium_lantern.json
 872b61f464caf8fc70805ff2ba499f81e452351a data/emeraldweapons/loot_table/blocks/chiseled_arcencium.json
 8459f37872a470a7988f54447368106fa5742a1e data/emeraldweapons/loot_table/blocks/corrupted_bricks.json
