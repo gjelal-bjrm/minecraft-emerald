@@ -58,6 +58,9 @@ public class GameManager {
 
     @Nullable
     private static Siege prologue;
+
+    /** Golems mis de cote le temps du siege, a rendre au village ensuite. */
+    private static int borrowedGolems;
     private static final Map<BlockPos, Siege> anchorSieges = new HashMap<>();
 
     /**
@@ -147,6 +150,38 @@ public class GameManager {
     }
 
     /**
+     * Ecarte les golems de fer le temps du siege.
+     *
+     * Ils abattaient les vagues a la place des joueurs, qui n'avaient plus
+     * qu'a regarder : le prologue est cense apprendre a se battre avec les
+     * armes du mode. Ils sont rendus au village des qu'il est tenu -- les
+     * retirer definitivement priverait la suite de la partie de ses gardiens.
+     */
+    private static void setGolemsAside(ServerLevel level, BlockPos center) {
+        var golems = level.getEntitiesOfClass(
+                net.minecraft.world.entity.animal.IronGolem.class,
+                new net.minecraft.world.phys.AABB(center).inflate(Siege.LEASH * 2));
+        borrowedGolems = Math.max(borrowedGolems, golems.size());
+        golems.forEach(net.minecraft.world.entity.Entity::discard);
+    }
+
+    /** Rend au village autant de golems qu'on lui en avait pris. */
+    private static void returnGolems(ServerLevel level, BlockPos center) {
+        for (int i = 0; i < borrowedGolems; i++) {
+            double angle = i / (double) Math.max(1, borrowedGolems) * Math.PI * 2;
+            BlockPos spot = WorldSetup.findOpenGround(level, center.offset(
+                    (int) Math.round(Math.cos(angle) * 7), 0,
+                    (int) Math.round(Math.sin(angle) * 7)), 8);
+            var golem = net.minecraft.world.entity.EntityType.IRON_GOLEM.spawn(level, spot,
+                    net.minecraft.world.entity.MobSpawnType.EVENT);
+            if (golem != null) {
+                golem.setPlayerCreated(false);
+            }
+        }
+        borrowedGolems = 0;
+    }
+
+    /**
      * Prete aux autres defenseurs un arc ou un sceptre, au hasard.
      *
      * Celui qui tire la lame porte l'epee ; les autres recoivent l'une des deux
@@ -164,11 +199,16 @@ public class GameManager {
                     ? ModItems.ARCENCIUM_BOW.get() : ModItems.ARCENCIUM_SCEPTER.get());
             weapon.set(com.emerald.artifact.ModDataComponents.CEREMONIAL.get(),
                     net.minecraft.util.Unit.INSTANCE);
-            other.getInventory().add(weapon);
             if (bow) {
+                // Infinite, plutot qu'une reserve qui s'epuise au milieu du siege.
+                // Vanilla exige malgre tout une fleche en poche pour que
+                // l'enchantement s'applique : on en laisse quelques-unes.
+                enchant(other, weapon,
+                        net.minecraft.world.item.enchantment.Enchantments.INFINITY, 1);
                 other.getInventory().add(
-                        new ItemStack(net.minecraft.world.item.Items.ARROW, 64));
+                        new ItemStack(net.minecraft.world.item.Items.ARROW, 16));
             }
+            other.getInventory().add(weapon);
         }
     }
 
@@ -403,7 +443,14 @@ public class GameManager {
                                        net.minecraft.resources.ResourceKey<
                                                net.minecraft.world.item.enchantment.Enchantment> key,
                                        int level) {
-        ItemStack stack = new ItemStack(item);
+        return enchant(player, new ItemStack(item), key, level);
+    }
+
+    /** Pose un enchantement sur une pile existante, en resolvant son registre. */
+    private static ItemStack enchant(ServerPlayer player, ItemStack stack,
+                                     net.minecraft.resources.ResourceKey<
+                                             net.minecraft.world.item.enchantment.Enchantment> key,
+                                     int level) {
         player.level().registryAccess()
                 .lookup(net.minecraft.core.registries.Registries.ENCHANTMENT)
                 .flatMap(registry -> registry.get(key))
@@ -444,6 +491,7 @@ public class GameManager {
 
         state.beginPrologue();
         surroundWithVillagers(level, pos);
+        setGolemsAside(level, pos);
         prologue = new Siege(level, pos, 1, PROLOGUE_WAVES,
                 Component.translatable("game.emeraldweapons.siege.village"),
                 BossEvent.BossBarColor.RED, Siege.Failure.VILLAGERS);
@@ -458,6 +506,7 @@ public class GameManager {
     private static void openTheGame(ServerLevel level, BlockPos center) {
         GameState state = GameState.get(level);
         dissolveCeremonial(level);
+        returnGolems(level, center);
         level.sendParticles(ParticleTypes.END_ROD, center.getX() + 0.5, center.getY() + 1.0,
                 center.getZ() + 0.5, 120, 1.0, 1.5, 1.0, 0.5);
         level.playSound(null, center, SoundEvents.BEACON_ACTIVATE, SoundSource.PLAYERS, 1.4F, 0.9F);

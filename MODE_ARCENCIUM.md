@@ -93,8 +93,14 @@ encore en attente, ou deja lancee mais avec les autres au meme endroit.
 
 **Les armes preteees.** Celui qui tire la lame porte l'epee ; chaque autre
 defenseur recoit au hasard l'**Arc d'Arcencium** ou le **Sceptre d'Arcencium**,
-avec des fleches pour l'arc. La composition d'equipe existe donc des le
-prologue, et chacun voit ce que le mode reserve.
+L'arc porte **Infinite**, plutot qu'une reserve qui s'epuiserait au milieu du
+siege ; quelques fleches l'accompagnent, l'enchantement en exigeant une en
+poche. La composition d'equipe existe donc des le prologue, et chacun voit ce
+que le mode reserve.
+
+**Les golems de fer sont ecartes** le temps du siege, et rendus au village des
+qu'il est tenu : ils abattaient les vagues a la place des joueurs, qui n'avaient
+plus qu'a regarder.
 
 Tout est repris a la fin du siege. Un marqueur distingue ces armes preteees de
 celles qu'un joueur aurait fabriquees, qui ne doivent jamais etre effacees, et
