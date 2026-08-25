@@ -58,6 +58,20 @@ public class GameCommands {
             return 1;
         }));
 
+        root.then(Commands.literal("goto").executes(ctx -> {
+            ServerLevel level = ctx.getSource().getServer().overworld();
+            var village = GameState.get(level).village();
+            if (ctx.getSource().getEntity() instanceof net.minecraft.server.level.ServerPlayer player) {
+                var stand = com.emerald.game.WorldSetup.findOpenGround(level,
+                        village.offset(3, 0, 0), 6);
+                player.teleportTo(stand.getX() + 0.5, stand.getY(), stand.getZ() + 0.5);
+            }
+            ctx.getSource().sendSuccess(() -> Component.translatable(
+                    "game.emeraldweapons.locked.where", village.getX(), village.getY(),
+                    village.getZ(), 0), false);
+            return 1;
+        }));
+
         root.then(Commands.literal("status").executes(ctx -> {
             ServerLevel level = ctx.getSource().getServer().overworld();
             GameState state = GameState.get(level);

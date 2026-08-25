@@ -159,6 +159,7 @@ public class GameManager {
      */
     public static void setup(ServerLevel level, BlockPos center) {
         GameState state = GameState.get(level);
+        removePreviousBlade(level, state);
         state.reset();
 
         BlockPos ground = WorldSetup.findOpenGround(level, center, 24);
@@ -186,6 +187,17 @@ public class GameManager {
         }
         announce(level, "game.emeraldweapons.village_intro",
                 "game.emeraldweapons.village_intro.sub", 0x9CE8FF);
+        // les coordonnees en clair : c'est la seule facon d'etre certain de
+        // regarder la bonne lame quand une mise en place en a suivi une autre
+        net.minecraft.network.chat.Component where = net.minecraft.network.chat.Component
+                .translatable("game.emeraldweapons.locked.where", ground.getX(), ground.getY(),
+                        ground.getZ(), 0)
+                .withStyle(net.minecraft.ChatFormatting.AQUA);
+        for (ServerPlayer player : level.players()) {
+            player.sendSystemMessage(where);
+        }
+        org.slf4j.LoggerFactory.getLogger(EmeraldWeaponsMod.MODID).info(
+                "Lame du Serment posee en {}", ground);
     }
 
     /**
@@ -198,6 +210,24 @@ public class GameManager {
     private static BlockPos playerSpot(ServerLevel level, BlockPos blade) {
         // colle au socle : la lame doit etre sous les yeux des la premiere seconde
         return WorldSetup.findOpenGround(level, blade.offset(3, 0, 0), 4);
+    }
+
+    /**
+     * Retire la lame de la mise en place precedente.
+     *
+     * Sans cela, refaire la mise en place en laisse DEUX dans le monde : la
+     * nouvelle en surface, et l'ancienne la ou les regles d'alors l'avaient
+     * posee -- souvent sous terre. Un joueur qui suit d'anciennes coordonnees
+     * tombe sur la mauvaise et croit que rien n'a change.
+     */
+    private static void removePreviousBlade(ServerLevel level, GameState state) {
+        BlockPos old = state.village();
+        if (old.equals(BlockPos.ZERO)) {
+            return;
+        }
+        if (level.getBlockState(old).is(ModBlocks.OATH_BLADE.get())) {
+            level.setBlockAndUpdate(old, Blocks.AIR.defaultBlockState());
+        }
     }
 
     private static BlockPos surface(ServerLevel level, BlockPos around) {
