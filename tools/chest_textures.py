@@ -46,6 +46,16 @@ CRACK_VAL = 0.45
 
 GOLD = ((0x70, 0x4C, 0x10), (0xC9, 0x96, 0x26), (0xF8, 0xD8, 0x70))
 
+NFRAMES = 12
+FRAMETIME = 3
+
+# Le loquet occupe un coin precis du depliage : x 0..5, y 0..4 en resolution
+# vanilla. On le repere par ses COORDONNEES et non par sa couleur -- son gris
+# va de 0x80 a 0xC0, si bien qu'un seuil de clarte n'en attrape que la moitie
+# et dore au passage des reflets du coffre ailleurs dans la texture.
+LATCH_W = 6 * SCALE
+LATCH_H = 5 * SCALE
+
 PARTS = {"arcencium": "normal", "arcencium_left": "normal_left",
          "arcencium_right": "normal_right"}
 
@@ -70,10 +80,9 @@ def split_material():
     return matrix, cracks
 
 
-def is_latch(r, g, b):
-    """Le loquet vanilla est le seul element franchement clair et neutre."""
-    h, s, v = colorsys.rgb_to_hsv(r / 255, g / 255, b / 255)
-    return v > 0.62 and s < 0.30
+def is_latch(x, y):
+    """Le coin haut-gauche du depliage, que seul le loquet occupe."""
+    return x < LATCH_W and y < LATCH_H
 
 
 def build(name, source, matrix, cracks):
@@ -82,41 +91,75 @@ def build(name, source, matrix, cracks):
     w, h = src.size
     spx = src.load()
 
-    lums = [((spx[x, y][0] * 299 + spx[x, y][1] * 587 + spx[x, y][2] * 114) // 1000)
-            for y in range(h) for x in range(w) if spx[x, y][3] > 0 and not is_latch(*spx[x, y][:3])]
-    lo, hi = (min(lums), max(lums)) if lums else (0, 1)
-    span = max(1, hi - lo)
+    # deux plages de luminance separees : le corps du coffre, et le loquet, qui
+    # est bien plus clair et ecraserait l'echelle s'il etait mesure avec
+    body, latch = [], []
+    for y in range(h):
+        for x in range(w):
+            if spx[x, y][3] == 0:
+                continue
+            lum = (spx[x, y][0] * 299 + spx[x, y][1] * 587 + spx[x, y][2] * 114) // 1000
+            (latch if is_latch(x, y) else body).append(lum)
 
-    out = Image.new("RGBA", (w, h), (0, 0, 0, 0))
-    dst = out.load()
-    n_crack = n_latch = 0
+    def span(values):
+        return (min(values), max(values)) if values else (0, 1)
+
+    b_lo, b_hi = span(body)
+    l_lo, l_hi = span(latch)
+    b_span = max(1, b_hi - b_lo)
+    l_span = max(1, l_hi - l_lo)
+
+    base = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    dst = base.load()
+    crack_cells = {}
+    n_latch = 0
     for y in range(h):
         for x in range(w):
             r, g, b, a = spx[x, y]
             if a == 0:
                 continue
-            if is_latch(r, g, b):
-                lum = (r * 299 + g * 587 + b * 114) // 1000
-                dst[x, y] = GOLD[min(2, lum * 3 // 256)] + (255,)
+            lum = (r * 299 + g * 587 + b * 114) // 1000
+            if is_latch(x, y):
+                t = (lum - l_lo) / l_span
+                dst[x, y] = GOLD[0 if t < 0.34 else (1 if t < 0.72 else 2)] + (255,)
                 n_latch += 1
                 continue
             key = ((x // CELL) % MATERIAL_SIZE, (y // CELL) % MATERIAL_SIZE)
             if key in cracks:
-                dst[x, y] = cracks[key] + (255,)
-                n_crack += 1
-                continue
+                crack_cells[(x, y)] = cracks[key]
             mr, mg, mb = matrix.get(key, (18, 18, 21))
-            lum = (r * 299 + g * 587 + b * 114) // 1000
-            t = (lum - lo) / span
+            t = (lum - b_lo) / b_span
             v = 14 + 46 * t
             m = max(1, (mr + mg + mb) / 3.0)
             dst[x, y] = (min(255, int(mr / m * v)), min(255, int(mg / m * v)),
                          min(255, int(mb / m * v)), 255)
 
+    # Le sheet des coffres EST un atlas : contrairement aux calques d'armure,
+    # il accepte l'animation par .mcmeta. Les fissures y defilent donc comme
+    # sur les icones d'objet.
+    frames = []
+    for f in range(NFRAMES):
+        shift = f / NFRAMES
+        frame = base.copy()
+        fpx = frame.load()
+        for (x, y), (r, g, b) in crack_cells.items():
+            hh, sa, va = colorsys.rgb_to_hsv(r / 255, g / 255, b / 255)
+            rr, gg, bb = colorsys.hsv_to_rgb((hh + shift) % 1.0, sa, va)
+            fpx[x, y] = (int(rr * 255), int(gg * 255), int(bb * 255), 255)
+        frames.append(frame)
+
     os.makedirs(CHEST_DIR, exist_ok=True)
-    out.save(os.path.join(CHEST_DIR, name + ".png"))
-    print("  %-20s %dx%d, %d fissures, %d pixels de loquet" % (name, w, h, n_crack, n_latch))
-    return out
+    dest = os.path.join(CHEST_DIR, name + ".png")
+    sheet = Image.new("RGBA", (w, h * NFRAMES), (0, 0, 0, 0))
+    for i, fr in enumerate(frames):
+        sheet.paste(fr, (0, i * h))
+    sheet.save(dest)
+    with open(dest + ".mcmeta", "w") as fh:
+        fh.write('{"animation": {"frametime": %d, "interpolate": true}}\n' % FRAMETIME)
+
+    print("  %-20s %dx%d, %d images, %d fissures, %d pixels de loquet"
+          % (name, w, h, NFRAMES, len(crack_cells), n_latch))
+    return frames[0]
 
 
 def main():
