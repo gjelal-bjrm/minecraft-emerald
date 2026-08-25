@@ -123,6 +123,12 @@ public class WorldSetup {
     }
 
     private static boolean isStandable(ServerLevel level, BlockPos feet) {
+        // jamais sous le niveau de la mer : une grotte peut voir le ciel par un
+        // puits et satisferait les autres criteres, mais y planter la lame la
+        // rendrait introuvable
+        if (feet.getY() < level.getSeaLevel()) {
+            return false;
+        }
         if (!level.canSeeSky(feet)) {
             return false;
         }

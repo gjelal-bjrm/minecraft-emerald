@@ -55,13 +55,13 @@ public class OathBladeRenderer implements BlockEntityRenderer<OathBladeBlockEnti
                        MultiBufferSource buffer, int packedLight, int packedOverlay) {
         renderBeam(entity, partialTick, pose, buffer);
         pose.pushPose();
-        // la garde repose un peu au-dessus du sol, la lame s'enfonce dedans
-        pose.translate(0.5, 0.62, 0.5);
-        // une inclinaison legere, pour qu'elle paraisse fichee et non posee
+        // la garde domine le socle, la pointe s'enfonce dedans : c'est ce
+        // chevauchement qui fait lire « plantee » plutot que « posee »
+        pose.translate(0.5, 0.95, 0.5);
         pose.mulPose(Axis.YP.rotationDegrees(35.0F));
-        pose.mulPose(Axis.ZP.rotationDegrees(45.0F));
-        pose.mulPose(Axis.XP.rotationDegrees(6.0F));
-        pose.scale(1.55F, 1.55F, 1.55F);
+        pose.mulPose(Axis.ZP.rotationDegrees(-45.0F));
+        pose.mulPose(Axis.XP.rotationDegrees(4.0F));
+        pose.scale(1.7F, 1.7F, 1.7F);
 
         Minecraft.getInstance().getItemRenderer().renderStatic(
                 this.blade, ItemDisplayContext.FIXED, 0xF000F0, packedOverlay,
