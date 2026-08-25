@@ -701,6 +701,43 @@ se fige avec le serveur au lieu d'expirer pendant qu'il est eteint.
 
 ---
 
+## 14 bis. A FAIRE EN PRIORITE — le placement des ancres
+
+**Constat.** Les ancres sont posees a 450 blocs du village, sur trois directions
+a 120 degres, en cherchant un sol degage dans un rayon de 16 blocs. Rien ne
+garantit qu'elles tombent dans une region ACCESSIBLE : elles peuvent echouer au
+fond d'un ravin, sur un pic, en pleine mer, ou dans un biome infranchissable a
+pied. Une ancre qu'on ne peut pas atteindre bloque toute la partie.
+
+**Direction retenue.** Ne plus poser un bloc nu sur le terrain, mais **au sommet
+d'une construction** -- pyramide, temple, socle a degres -- qui garantit a la
+fois la visibilite de loin et un chemin pour monter. Les marches font l'acces,
+la hauteur fait le repere.
+
+**Candidats reperes dans le modpack** (structures deja taillees pour cela) :
+
+| Mod | Structure | Interet |
+|---|---|---|
+| L_Ender's Cataclysm | `cataclysm:cursed_pyramid` | pyramide franche, sommet plat |
+| AllTheModium | `allthemodium:ancient_pyramid` | tres grande, escaliers exterieurs |
+| Explorify | `explorify:badlands_pyramid`, `desert_shrine` | petites, faciles a reskiner |
+| Structory Towers | `structory_towers:ancient_temple`, `sacred_relic_temple` | soignees, echelle moyenne |
+| Yung's | `betterdeserttemples:desert_temple`, `betterjungletemples:jungle_temple` | acces amenages, tres lisibles |
+| Dungeons Arise | `dungeons_arise:abandoned_temple`, `infested_temple` | les plus spectaculaires |
+
+**Pistes de travail.**
+1. Extraire une de ces structures au format .nbt (`tools/nbt_structure.py` sait
+   deja lire les jars du modpack) et la reskiner a la palette d'Arcencium
+   (`tools/reskin.py`).
+2. La poser sous chaque ancre, l'ancre au sommet, via le `CenteredTemplateStructure`
+   ecrit pour la cathedrale -- il pose deja un template entier sans jigsaw.
+3. Valider l'accessibilite : pas d'ancre en mer, pas d'ancre dans un ravin, et
+   un chemin praticable depuis le sol.
+4. A defaut de structure, batir un socle a degres a la main, comme celui de la
+   Lame du Serment mais plus haut.
+
+---
+
 ## 15. Questions ouvertes
 
 1. **Artefact amovible ou definitif ?** Recommandation : amovible, mais l'artefact retire est detruit.
