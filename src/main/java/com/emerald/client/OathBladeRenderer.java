@@ -7,6 +7,7 @@ import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
+import net.minecraft.client.renderer.blockentity.BeaconRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
@@ -24,14 +25,35 @@ import net.minecraft.world.item.ItemStack;
  */
 public class OathBladeRenderer implements BlockEntityRenderer<OathBladeBlockEntity> {
 
+    /** Hauteur du faisceau, en blocs. De quoi le voir depuis n'importe ou dans le village. */
+    private static final int BEAM_HEIGHT = 320;
+
+    /** Au-dela, le faisceau cesserait d'etre dessine : il doit porter tres loin. */
+    private static final int VIEW_DISTANCE = 512;
+
     private final ItemStack blade = new ItemStack(ModItems.OATH_BLADE.get());
 
     public OathBladeRenderer(BlockEntityRendererProvider.Context context) {
     }
 
+    /**
+     * Le faisceau doit rester visible meme quand le bloc sort du champ, sinon il
+     * disparaitrait des qu'on regarde ailleurs qu'a ses pieds.
+     */
+    @Override
+    public boolean shouldRenderOffScreen(OathBladeBlockEntity entity) {
+        return true;
+    }
+
+    @Override
+    public int getViewDistance() {
+        return VIEW_DISTANCE;
+    }
+
     @Override
     public void render(OathBladeBlockEntity entity, float partialTick, PoseStack pose,
                        MultiBufferSource buffer, int packedLight, int packedOverlay) {
+        renderBeam(entity, partialTick, pose, buffer);
         pose.pushPose();
         // la garde repose un peu au-dessus du sol, la lame s'enfonce dedans
         pose.translate(0.5, 0.62, 0.5);
@@ -45,5 +67,26 @@ public class OathBladeRenderer implements BlockEntityRenderer<OathBladeBlockEnti
                 this.blade, ItemDisplayContext.FIXED, 0xF000F0, packedOverlay,
                 pose, buffer, entity.getLevel(), 0);
         pose.popPose();
+    }
+
+    /**
+     * Le faisceau qui signale la lame.
+     *
+     * On reutilise le rendu de la balise vanilla : c'est le seul element du jeu
+     * qui porte a plusieurs centaines de blocs, la ou les particules s'arretent
+     * a trente. Sans lui, la lame reste introuvable des qu'on s'ecarte de la
+     * place -- et le declencheur de la partie ne doit jamais se chercher.
+     *
+     * Sa teinte suit le cycle prismatique, comme les fissures de l'armure.
+     */
+    private void renderBeam(OathBladeBlockEntity entity, float partialTick,
+                            PoseStack pose, MultiBufferSource buffer) {
+        if (entity.getLevel() == null) {
+            return;
+        }
+        long time = entity.getLevel().getGameTime();
+        int color = java.awt.Color.HSBtoRGB((time % 200L) / 200.0F, 0.55F, 1.0F) & 0xFFFFFF;
+        BeaconRenderer.renderBeaconBeam(pose, buffer, BeaconRenderer.BEAM_LOCATION,
+                partialTick, 1.0F, time, 0, BEAM_HEIGHT, color, 0.16F, 0.24F);
     }
 }

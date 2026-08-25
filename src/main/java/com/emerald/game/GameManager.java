@@ -82,7 +82,7 @@ public class GameManager {
                 } else {
                     announce(level, "game.emeraldweapons.village_lost",
                             "game.emeraldweapons.village_lost.sub", 0xFF616B);
-                    GameState.get(level).beginPrologue();       // on remet en attente
+                    GameState.get(level).returnToLobby();
                     replantBlade(level, finished.center());
                 }
             }
@@ -134,7 +134,7 @@ public class GameManager {
             anchors.add(surface(level, new BlockPos(x, 0, z)));
         }
         state.setAnchors(anchors);
-        state.beginPrologue();
+        state.returnToLobby();
         WorldSetup.clearHostiles(level, ground);
 
         BlockPos stand = playerSpot(level, ground);

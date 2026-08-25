@@ -41,15 +41,27 @@ public class GlowingPlantBlock extends BushBlock {
         return SHAPE.move(offset.x, offset.y, offset.z);
     }
 
+    /**
+     * Les motes de nuit.
+     *
+     * Le jeu ne choisit qu'une poignee de positions au hasard par tick pour
+     * appeler animateTick : une plante isolee n'est retenue que rarement. Y
+     * ajouter un tirage a un sixieme, comme le faisait une premiere version,
+     * rendait l'effet quasi invisible. On emet donc a chaque appel, et deux
+     * motes plutot qu'une.
+     */
     @Override
     public void animateTick(BlockState state, Level level, BlockPos pos, RandomSource random) {
-        if (!level.isNight() || random.nextInt(6) != 0) return;
-        // mote qui s'eleve doucement depuis la plante, teinte choisie cote particule
-        double x = pos.getX() + 0.3 + random.nextDouble() * 0.4;
-        double y = pos.getY() + 0.3 + random.nextDouble() * 0.5;
-        double z = pos.getZ() + 0.3 + random.nextDouble() * 0.4;
-        level.addParticle(ModParticles.PRISM_MOTE.get(), x, y, z,
-                (random.nextDouble() - 0.5) * 0.01, 0.012 + random.nextDouble() * 0.01,
-                (random.nextDouble() - 0.5) * 0.01);
+        if (!level.isNight()) {
+            return;
+        }
+        for (int i = 0; i < 2; i++) {
+            double x = pos.getX() + 0.25 + random.nextDouble() * 0.5;
+            double y = pos.getY() + 0.25 + random.nextDouble() * 0.6;
+            double z = pos.getZ() + 0.25 + random.nextDouble() * 0.5;
+            level.addParticle(ModParticles.PRISM_MOTE.get(), x, y, z,
+                    (random.nextDouble() - 0.5) * 0.01, 0.012 + random.nextDouble() * 0.01,
+                    (random.nextDouble() - 0.5) * 0.01);
+        }
     }
 }

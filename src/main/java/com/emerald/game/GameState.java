@@ -159,8 +159,20 @@ public class GameState extends SavedData {
 
     // ------------------------------------------------------------ ecriture
 
+    /**
+     * Le prologue commence au RETRAIT de la lame, pas a la mise en place.
+     *
+     * Tant que la lame est plantee, l'etat reste LOBBY : sinon l'interface
+     * annonce « Defendez le village » alors que rien n'a encore commence.
+     */
     public void beginPrologue() {
         this.status = Status.PROLOGUE;
+        setDirty();
+    }
+
+    /** Retour a l'attente, sans toucher au village ni aux ancres deja poses. */
+    public void returnToLobby() {
+        this.status = Status.LOBBY;
         setDirty();
     }
 

@@ -143,9 +143,9 @@ public class ModBlocks {
     public static final DeferredBlock<Block> PRISMATIC_GRASS_BLOCK = village("prismatic_grass_block",
             () -> new Block(BlockBehaviour.Properties.ofFullCopy(Blocks.DIRT).sound(SoundType.GRASS)));
     public static final DeferredBlock<GlowingPlantBlock> PRISM_BLOOM = village("prism_bloom",
-            () -> new GlowingPlantBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.POPPY).lightLevel(s -> 7)));
+            () -> new GlowingPlantBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.POPPY).lightLevel(s -> 10)));
     public static final DeferredBlock<GlowingPlantBlock> PRISM_TUFT = village("prism_tuft",
-            () -> new GlowingPlantBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.SHORT_GRASS).lightLevel(s -> 4)));
+            () -> new GlowingPlantBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.SHORT_GRASS).lightLevel(s -> 6)));
 
     public static final DeferredBlock<PrismLogBlock> PRISM_LOG = village("prism_log",
             () -> new PrismLogBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.OAK_LOG).lightLevel(s -> 5)));

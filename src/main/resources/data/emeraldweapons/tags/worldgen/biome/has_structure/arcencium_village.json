@@ -1,4 +1,5 @@
 {
+  "_comment": "Uniquement des biomes plats et ouverts. Les reliefs escarpes (windswept, plateaux) et les forets denses (jungle, dark_forest) posent tres mal un village jigsaw, malgre beard_thin.",
   "replace": false,
   "values": [
     "minecraft:taiga",
@@ -11,16 +12,7 @@
     "minecraft:forest",
     "minecraft:flower_forest",
     "minecraft:birch_forest",
-    "minecraft:old_growth_birch_forest",
-    "minecraft:dark_forest",
-    "minecraft:savanna",
-    "minecraft:savanna_plateau",
     "minecraft:snowy_plains",
-    "minecraft:grove",
-    "minecraft:cherry_grove",
-    "minecraft:windswept_hills",
-    "minecraft:windswept_forest",
-    "minecraft:jungle",
-    "minecraft:sparse_jungle"
+    "minecraft:cherry_grove"
   ]
 }
