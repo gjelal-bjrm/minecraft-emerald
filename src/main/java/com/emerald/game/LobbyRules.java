@@ -93,8 +93,12 @@ public class LobbyRules {
             return;
         }
         BlockPos home = state.respawnFor(player.blockPosition());
-        if (!home.equals(BlockPos.ZERO)) {
-            player.teleportTo(home.getX() + 0.5, home.getY() + 1, home.getZ() + 0.5);
+        if (home.equals(BlockPos.ZERO)) {
+            return;
         }
+        // l'ancre comme la lame sont des blocs pleins : on reapparait a cote,
+        // sur un appui verifie, sinon on ressuscite dans la pierre
+        BlockPos stand = WorldSetup.findOpenGround(level, home.offset(2, 0, 2), 12);
+        player.teleportTo(stand.getX() + 0.5, stand.getY(), stand.getZ() + 0.5);
     }
 }

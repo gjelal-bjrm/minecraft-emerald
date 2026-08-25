@@ -67,11 +67,50 @@ public class WorldSetup {
         BlockPos from = level.getSharedSpawnPos();
         BlockPos found = level.findNearestMapStructure(StructureTags.VILLAGE, from,
                 SEARCH_CHUNKS, false);
-        if (found == null) {
-            return null;
+        return found == null ? null : findOpenGround(level, found, 24);
+    }
+
+    /**
+     * Un emplacement REELLEMENT degage, en spirale autour d'un point.
+     *
+     * Le centre d'un village tombe le plus souvent dans une maison : y poser le
+     * socle et y faire apparaitre les joueurs les emmurait. On exige donc un sol
+     * dur, deux blocs d'air au-dessus, et le ciel degage -- ce dernier critere
+     * ecarte a lui seul les interieurs, les caves et les surplombs.
+     */
+    public static BlockPos findOpenGround(ServerLevel level, BlockPos around, int radius) {
+        for (int r = 0; r <= radius; r++) {
+            for (int dx = -r; dx <= r; dx++) {
+                for (int dz = -r; dz <= r; dz++) {
+                    if (Math.max(Math.abs(dx), Math.abs(dz)) != r) {
+                        continue;                  // on ne teste que le bord de l'anneau
+                    }
+                    int x = around.getX() + dx;
+                    int z = around.getZ() + dz;
+                    int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+                    BlockPos feet = new BlockPos(x, y, z);
+                    if (isStandable(level, feet)) {
+                        return feet;
+                    }
+                }
+            }
         }
-        int y = level.getHeight(Heightmap.Types.WORLD_SURFACE, found.getX(), found.getZ());
-        return new BlockPos(found.getX(), y, found.getZ());
+        int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                around.getX(), around.getZ());
+        return new BlockPos(around.getX(), y, around.getZ());
+    }
+
+    private static boolean isStandable(ServerLevel level, BlockPos feet) {
+        if (!level.canSeeSky(feet)) {
+            return false;
+        }
+        if (!level.getBlockState(feet.below()).isSolidRender(level, feet.below())) {
+            return false;
+        }
+        if (!level.getFluidState(feet.below()).isEmpty()) {
+            return false;               // ni eau ni lave sous les pieds
+        }
+        return level.getBlockState(feet).isAir() && level.getBlockState(feet.above()).isAir();
     }
 
     /**
@@ -112,8 +151,10 @@ public class WorldSetup {
         if (village.equals(BlockPos.ZERO)) {
             return;
         }
-        player.teleportTo(village.getX() + 0.5, village.getY() + 1, village.getZ() + 0.5);
-        player.setRespawnPosition(level.dimension(), village, 0.0F, true, false);
+        // a cote du socle, jamais dessus : le bloc de la lame emmurerait le joueur
+        BlockPos stand = findOpenGround(level, village.offset(4, 0, 4), 12);
+        player.teleportTo(stand.getX() + 0.5, stand.getY(), stand.getZ() + 0.5);
+        player.setRespawnPosition(level.dimension(), stand, 0.0F, true, false);
         GameManager.equipStarter(player);
     }
 }

@@ -121,9 +121,8 @@ public class GameManager {
         GameState state = GameState.get(level);
         state.reset();
 
-        BlockPos ground = surface(level, center);
+        BlockPos ground = WorldSetup.findOpenGround(level, center, 24);
         state.setVillage(ground);
-        level.setDefaultSpawnPos(ground, 0.0F);
         plantBlade(level, ground);
         surroundWithVillagers(level, ground);
 
@@ -138,13 +137,26 @@ public class GameManager {
         state.beginPrologue();
         WorldSetup.clearHostiles(level, ground);
 
+        BlockPos stand = playerSpot(level, ground);
+        level.setDefaultSpawnPos(stand, 0.0F);
         for (ServerPlayer player : level.players()) {
-            player.teleportTo(ground.getX() + 0.5, ground.getY() + 1, ground.getZ() + 0.5);
-            player.setRespawnPosition(level.dimension(), ground, 0.0F, true, false);
+            player.teleportTo(stand.getX() + 0.5, stand.getY(), stand.getZ() + 0.5);
+            player.setRespawnPosition(level.dimension(), stand, 0.0F, true, false);
             equipStarter(player);
         }
         announce(level, "game.emeraldweapons.village_intro",
                 "game.emeraldweapons.village_intro.sub", 0x9CE8FF);
+    }
+
+    /**
+     * Ou poser les joueurs : a cote du socle, jamais dessus.
+     *
+     * Le bloc de la lame a une boite de collision : y teleporter un joueur
+     * l'emmure. On cherche donc un appui degage a quelques pas, ce qui a aussi
+     * l'avantage de lui faire voir le monument en arrivant.
+     */
+    private static BlockPos playerSpot(ServerLevel level, BlockPos blade) {
+        return WorldSetup.findOpenGround(level, blade.offset(4, 0, 4), 12);
     }
 
     private static BlockPos surface(ServerLevel level, BlockPos around) {
@@ -176,6 +188,19 @@ public class GameManager {
                 if (ring == 2 && Math.abs(dx) == 2 && Math.abs(dz) == 2) {
                     level.setBlockAndUpdate(base.above(),
                             ModBlocks.ARCENCIUM_LANTERN.get().defaultBlockState());
+                }
+            }
+        }
+        // on degage la colonne au-dessus du socle : plante sous un plafond, la
+        // lame serait invisible et les joueurs coinces
+        for (int dx = -2; dx <= 2; dx++) {
+            for (int dz = -2; dz <= 2; dz++) {
+                for (int dy = 0; dy < 5; dy++) {
+                    BlockPos above = ground.offset(dx, dy, dz);
+                    if (!level.getBlockState(above).isAir()) {
+                        level.setBlockAndUpdate(above,
+                                net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+                    }
                 }
             }
         }
