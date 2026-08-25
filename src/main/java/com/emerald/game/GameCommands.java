@@ -49,6 +49,15 @@ public class GameCommands {
             return 1;
         }));
 
+        root.then(Commands.literal("find").requires(source -> true).executes(ctx -> {
+            ServerLevel level = ctx.getSource().getServer().overworld();
+            var village = GameState.get(level).village();
+            ctx.getSource().sendSuccess(() -> Component.translatable(
+                    "game.emeraldweapons.locked.where", village.getX(), village.getY(),
+                    village.getZ(), 0), false);
+            return 1;
+        }));
+
         root.then(Commands.literal("status").executes(ctx -> {
             ServerLevel level = ctx.getSource().getServer().overworld();
             GameState state = GameState.get(level);

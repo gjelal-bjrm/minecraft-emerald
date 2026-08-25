@@ -55,6 +55,11 @@ public class LobbyRules {
         if (!(event.getLevel() instanceof ServerLevel level) || !confined(level)) {
             return;
         }
+        // l'echafaudage qu'on a pose reste recuperable : autrement une erreur de
+        // placement serait definitive, et le village finirait couvert de poteaux
+        if (event.getState().is(net.minecraft.world.level.block.Blocks.SCAFFOLDING)) {
+            return;
+        }
         event.setCanceled(true);
         if (event.getPlayer() instanceof ServerPlayer player) {
             player.displayClientMessage(Component.translatable(
@@ -100,8 +105,12 @@ public class LobbyRules {
                     "game.emeraldweapons.locked.leave").withStyle(ChatFormatting.RED), true);
         }
         if (level.getGameTime() % REMINDER == 0) {
+            // les coordonnees des la premiere relance : un joueur qui cherche
+            // depuis une minute a besoin d'une direction, pas d'un rappel
             player.displayClientMessage(Component.translatable(
-                    "game.emeraldweapons.locked.hint").withStyle(ChatFormatting.YELLOW), true);
+                    "game.emeraldweapons.locked.where", village.getX(), village.getY(),
+                    village.getZ(), (int) Math.sqrt(player.blockPosition().distSqr(village)))
+                    .withStyle(ChatFormatting.YELLOW), false);
         }
     }
 

@@ -156,7 +156,8 @@ public class GameManager {
      * l'avantage de lui faire voir le monument en arrivant.
      */
     private static BlockPos playerSpot(ServerLevel level, BlockPos blade) {
-        return WorldSetup.findOpenGround(level, blade.offset(4, 0, 4), 12);
+        // colle au socle : la lame doit etre sous les yeux des la premiere seconde
+        return WorldSetup.findOpenGround(level, blade.offset(3, 0, 0), 4);
     }
 
     private static BlockPos surface(ServerLevel level, BlockPos around) {
@@ -251,6 +252,10 @@ public class GameManager {
         player.getInventory().add(new ItemStack(net.minecraft.world.item.Items.IRON_SWORD));
         player.getInventory().add(new ItemStack(net.minecraft.world.item.Items.SHIELD));
         player.getInventory().add(new ItemStack(net.minecraft.world.item.Items.BREAD, 16));
+        // Rien ne peut etre casse avant le depart : sans de quoi monter, un
+        // joueur au pied d'une falaise reste bloque. L'echafaudage sert a ca et
+        // a rien d'autre -- il ne se transforme en aucune ressource.
+        player.getInventory().add(new ItemStack(net.minecraft.world.item.Items.SCAFFOLDING, 32));
     }
 
     // ----------------------------------------------------- la Lame du Serment

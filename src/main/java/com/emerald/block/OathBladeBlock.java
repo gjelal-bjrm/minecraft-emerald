@@ -70,12 +70,22 @@ public class OathBladeBlock extends Block implements net.minecraft.world.level.b
         if (!state.getValue(PLANTED)) {
             return;
         }
+        // halo au ras du socle
         for (int i = 0; i < 2; i++) {
             level.addParticle(ParticleTypes.END_ROD,
                     pos.getX() + 0.5 + (random.nextDouble() - 0.5) * 0.6,
                     pos.getY() + 0.4 + random.nextDouble() * 1.2,
                     pos.getZ() + 0.5 + (random.nextDouble() - 0.5) * 0.6,
                     0.0, 0.01, 0.0);
+        }
+        // et une colonne montante, qui ne depend d'aucun renderer : si le
+        // faisceau de balise venait a manquer, elle suffit a reperer la place
+        for (int i = 0; i < 6; i++) {
+            level.addParticle(ParticleTypes.END_ROD,
+                    pos.getX() + 0.5 + (random.nextDouble() - 0.5) * 0.35,
+                    pos.getY() + 1.0 + random.nextDouble() * 24.0,
+                    pos.getZ() + 0.5 + (random.nextDouble() - 0.5) * 0.35,
+                    0.0, 0.02, 0.0);
         }
     }
 }
