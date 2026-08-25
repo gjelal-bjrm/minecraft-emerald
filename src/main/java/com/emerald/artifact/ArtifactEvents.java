@@ -375,6 +375,12 @@ public class ArtifactEvents {
     @SubscribeEvent
     public static void onTooltip(ItemTooltipEvent event) {
         ItemStack stack = event.getItemStack();
+        // une arme preteee doit s'annoncer : sa disparition a la fin du siege
+        // passerait sinon pour une perte
+        if (stack.has(ModDataComponents.CEREMONIAL.get())) {
+            event.getToolTip().add(Component.translatable(
+                    "item.emeraldweapons.ceremonial").withStyle(ChatFormatting.GOLD));
+        }
         Artifact artifact = Artifacts.of(stack);
         // l'objet artefact affiche deja son nom et sa description lui-meme
         if (artifact == null || stack.getItem() instanceof ArtifactItem) {

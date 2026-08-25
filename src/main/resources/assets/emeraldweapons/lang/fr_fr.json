@@ -165,5 +165,6 @@
   "game.emeraldweapons.locked.hint": "La Lame du Serment est plantée sur la place. Retirez-la pour commencer.",
   "command.emeraldweapons.setup": "Village, Lame du Serment et ancres placés.",
   "game.emeraldweapons.locked.where": "La Lame du Serment est en %s, %s, %s — à %s blocs.",
-  "game.emeraldweapons.anchor.at": "Ancre %s — %s, %s, %s"
+  "game.emeraldweapons.anchor.at": "Ancre %s — %s, %s, %s",
+  "item.emeraldweapons.ceremonial": "Prêtée pour la défense — rendue quand le village tient"
 }

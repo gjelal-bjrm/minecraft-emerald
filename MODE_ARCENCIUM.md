@@ -91,6 +91,15 @@ la place avant que quoi que ce soit ne commence.
 ne peut rater l'annonce : un joueur qui rejoint en retard trouve la partie
 encore en attente, ou deja lancee mais avec les autres au meme endroit.
 
+**Les armes preteees.** Celui qui tire la lame porte l'epee ; chaque autre
+defenseur recoit au hasard l'**Arc d'Arcencium** ou le **Sceptre d'Arcencium**,
+avec des fleches pour l'arc. La composition d'equipe existe donc des le
+prologue, et chacun voit ce que le mode reserve.
+
+Tout est repris a la fin du siege. Un marqueur distingue ces armes preteees de
+celles qu'un joueur aurait fabriquees, qui ne doivent jamais etre effacees, et
+leur infobulle annonce le pret pour que la reprise ne passe pas pour une perte.
+
 **La lame elle-meme** : une Epee d'Emeraude ceremonielle, aux cristaux de
 Fureur **eteints**. Elle montre des la premiere minute a quoi ressemble
 l'equipement du mode, sans court-circuiter la progression.

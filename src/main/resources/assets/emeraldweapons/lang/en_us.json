@@ -165,5 +165,6 @@
   "game.emeraldweapons.locked.hint": "The Oath Blade is planted at the square. Pull it to begin.",
   "command.emeraldweapons.setup": "Village, Oath Blade and anchors placed.",
   "game.emeraldweapons.locked.where": "The Oath Blade stands at %s, %s, %s — %s blocks away.",
-  "game.emeraldweapons.anchor.at": "Anchor %s — %s, %s, %s"
+  "game.emeraldweapons.anchor.at": "Anchor %s — %s, %s, %s",
+  "item.emeraldweapons.ceremonial": "Lent for the defence — returns when the village holds"
 }

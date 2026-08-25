@@ -24,6 +24,19 @@ public class ModDataComponents {
                     .persistent(Artifact.CODEC)
                     .networkSynchronized(Artifact.STREAM_CODEC));
 
+    /**
+     * Marque une arme preteee pour le prologue.
+     *
+     * Un marqueur plutot qu'un test sur le type d'objet : sans lui, la
+     * dissolution effacerait aussi l'arc ou le sceptre qu'un joueur aurait
+     * legitimement fabrique.
+     */
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<net.minecraft.util.Unit>>
+            CEREMONIAL = COMPONENTS.registerComponentType("ceremonial", builder -> builder
+                    .persistent(net.minecraft.util.Unit.CODEC)
+                    .networkSynchronized(net.minecraft.network.codec.StreamCodec.unit(
+                            net.minecraft.util.Unit.INSTANCE)));
+
     public static void register(IEventBus eventBus) {
         COMPONENTS.register(eventBus);
     }

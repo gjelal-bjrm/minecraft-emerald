@@ -95,14 +95,14 @@ public class GameManager {
                 || !level.dimension().equals(Level.OVERWORLD)) {
             return;
         }
-        // La Lame du Serment n'existe QUE pendant le prologue. Un balayage
+        // Les armes ceremonielles n'existent QUE pendant le prologue. Un balayage
         // periodique vaut mieux qu'un nettoyage a chaque bascule : il rattrape
         // aussi les cas qu'on n'a pas prevus -- lame rangee dans un coffre,
         // laissee au sol, ou recuperee apres un echec, qui permettait sinon
         // d'en accumuler autant qu'on ratait de sieges.
         if (level.getGameTime() % 20 == 0
                 && GameState.get(level).status() != GameState.Status.PROLOGUE) {
-            dissolveBlades(level);
+            dissolveCeremonial(level);
         }
         if (prologue != null) {
             sustainOath(level);
@@ -116,7 +116,7 @@ public class GameManager {
                     announce(level, "game.emeraldweapons.village_lost",
                             "game.emeraldweapons.village_lost.sub", 0xFF616B);
                     GameState.get(level).returnToLobby();
-                    dissolveBlades(level);
+                    dissolveCeremonial(level);
                     replantBlade(level, finished.center());
                     // sans repeuplement, la mission serait perdue pour toujours :
                     // sa condition d'echec est justement l'absence de villageois
@@ -146,12 +146,44 @@ public class GameManager {
         }
     }
 
-    /** Efface toute Lame du Serment du monde : inventaires et objets au sol. */
-    private static void dissolveBlades(ServerLevel level) {
+    /**
+     * Prete aux autres defenseurs un arc ou un sceptre, au hasard.
+     *
+     * Celui qui tire la lame porte l'epee ; les autres recoivent l'une des deux
+     * autres armes du mode. La composition d'equipe existe donc des le prologue,
+     * et chacun voit ce que le mode reserve sans qu'on court-circuite la
+     * progression -- tout est repris a la fin du siege.
+     */
+    private static void lendCeremonialArms(ServerLevel level, Player puller) {
+        for (ServerPlayer other : level.players()) {
+            if (other == puller) {
+                continue;
+            }
+            boolean bow = level.random.nextBoolean();
+            ItemStack weapon = new ItemStack(bow
+                    ? ModItems.ARCENCIUM_BOW.get() : ModItems.ARCENCIUM_SCEPTER.get());
+            weapon.set(com.emerald.artifact.ModDataComponents.CEREMONIAL.get(),
+                    net.minecraft.util.Unit.INSTANCE);
+            other.getInventory().add(weapon);
+            if (bow) {
+                other.getInventory().add(
+                        new ItemStack(net.minecraft.world.item.Items.ARROW, 64));
+            }
+        }
+    }
+
+    /** Vrai pour tout ce qui n'a ete prete que le temps du prologue. */
+    private static boolean isCeremonial(ItemStack stack) {
+        return stack.is(ModItems.OATH_BLADE.get())
+                || stack.has(com.emerald.artifact.ModDataComponents.CEREMONIAL.get());
+    }
+
+    /** Efface toute arme ceremonielle du monde : inventaires et objets au sol. */
+    private static void dissolveCeremonial(ServerLevel level) {
         for (ServerPlayer player : level.players()) {
             var inventory = player.getInventory();
             for (int slot = 0; slot < inventory.getContainerSize(); slot++) {
-                if (inventory.getItem(slot).is(ModItems.OATH_BLADE.get())) {
+                if (isCeremonial(inventory.getItem(slot))) {
                     inventory.setItem(slot, ItemStack.EMPTY);
                     sparkle(level, player.blockPosition());
                 }
@@ -161,7 +193,7 @@ public class GameManager {
                 : level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class,
                         new net.minecraft.world.phys.AABB(level.getSharedSpawnPos())
                                 .inflate(GameState.PLAY_RADIUS),
-                        e -> e.getItem().is(ModItems.OATH_BLADE.get()))) {
+                        e -> isCeremonial(e.getItem()))) {
             sparkle(level, dropped.blockPosition());
             dropped.discard();
         }
@@ -394,6 +426,8 @@ public class GameManager {
         level.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
         player.getInventory().add(new ItemStack(ModItems.OATH_BLADE.get()));
 
+        lendCeremonialArms(level, player);
+
         // le Serment lie toute l'equipe, pas seulement celui qui a tire la lame
         for (ServerPlayer other : level.players()) {
             other.addEffect(new net.minecraft.world.effect.MobEffectInstance(
@@ -423,7 +457,7 @@ public class GameManager {
      */
     private static void openTheGame(ServerLevel level, BlockPos center) {
         GameState state = GameState.get(level);
-        dissolveBlades(level);
+        dissolveCeremonial(level);
         level.sendParticles(ParticleTypes.END_ROD, center.getX() + 0.5, center.getY() + 1.0,
                 center.getZ() + 0.5, 120, 1.0, 1.5, 1.0, 0.5);
         level.playSound(null, center, SoundEvents.BEACON_ACTIVATE, SoundSource.PLAYERS, 1.4F, 0.9F);
