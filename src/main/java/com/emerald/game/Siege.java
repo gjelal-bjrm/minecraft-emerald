@@ -238,7 +238,9 @@ public class Siege {
         double radius = SPAWN_MIN + this.level.random.nextDouble() * (SPAWN_MAX - SPAWN_MIN);
         int x = this.center.getX() + (int) Math.round(Math.cos(angle) * radius);
         int z = this.center.getZ() + (int) Math.round(Math.sin(angle) * radius);
-        return new BlockPos(x, this.level.getHeight(Heightmap.Types.WORLD_SURFACE, x, z), z);
+        // hauteur prise sur le chunk lui-meme : getHeight rend -64 tant qu'il
+        // n'est pas charge, et les monstres apparaitraient au fond du monde
+        return new BlockPos(x, com.emerald.game.WorldSetup.surfaceY(this.level, x, z), z);
     }
 
     /**

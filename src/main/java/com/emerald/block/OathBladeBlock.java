@@ -27,7 +27,8 @@ public class OathBladeBlock extends Block implements net.minecraft.world.level.b
 
     public static final BooleanProperty PLANTED = BooleanProperty.create("planted");
 
-    private static final VoxelShape SHAPE = Block.box(6.0, 0.0, 6.0, 10.0, 16.0, 10.0);
+    /** Large : c'est la zone que le joueur doit pouvoir viser pour retirer la lame. */
+    private static final VoxelShape SHAPE = Block.box(2.0, 0.0, 2.0, 14.0, 16.0, 14.0);
 
     public OathBladeBlock(Properties properties) {
         super(properties);
