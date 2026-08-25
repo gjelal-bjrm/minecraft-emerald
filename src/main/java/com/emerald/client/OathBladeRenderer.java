@@ -57,9 +57,11 @@ public class OathBladeRenderer implements BlockEntityRenderer<OathBladeBlockEnti
         pose.pushPose();
         // la garde domine le socle, la pointe s'enfonce dedans : c'est ce
         // chevauchement qui fait lire « plantee » plutot que « posee »
-        pose.translate(0.5, 0.95, 0.5);
+        pose.translate(0.5, 1.05, 0.5);
         pose.mulPose(Axis.YP.rotationDegrees(35.0F));
-        pose.mulPose(Axis.ZP.rotationDegrees(-45.0F));
+        // 135 et non -45 : a -45 la lame se dresse bien, mais pointe en l'air.
+        // Un demi-tour de plus retourne la garde en haut et la pointe en terre.
+        pose.mulPose(Axis.ZP.rotationDegrees(135.0F));
         pose.mulPose(Axis.XP.rotationDegrees(4.0F));
         pose.scale(1.7F, 1.7F, 1.7F);
 

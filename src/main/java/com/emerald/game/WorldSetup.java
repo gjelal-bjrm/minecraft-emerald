@@ -54,8 +54,12 @@ public class WorldSetup {
     public static void onServerStarted(ServerStartedEvent event) {
         ServerLevel level = event.getServer().overworld();
         GameState state = GameState.get(level);
-        if (state.isPrepared()) {
+        if (state.isPrepared() && isVillageValid(level, state)) {
             return;
+        }
+        if (state.isPrepared()) {
+            org.slf4j.LoggerFactory.getLogger(EmeraldWeaponsMod.MODID).info(
+                    "Village invalide en {}, nouvelle mise en place", state.village());
         }
         BlockPos village = findVillage(level);
         if (village == null) {
@@ -68,6 +72,28 @@ public class WorldSetup {
         }
         GameManager.setup(level, village);
         state.markPrepared();
+    }
+
+    /**
+     * Une mise en place anterieure tient-elle encore debout ?
+     *
+     * Les regles de placement se sont durcies au fil des versions : un monde
+     * prepare avant elles peut porter sa lame sous terre, ou sans son socle. On
+     * la refait dans ce cas, plutot que d'obliger a taper une commande dont
+     * personne ne devine l'existence.
+     */
+    private static boolean isVillageValid(ServerLevel level, GameState state) {
+        BlockPos village = state.village();
+        if (village.equals(BlockPos.ZERO) || village.getY() < level.getSeaLevel()) {
+            return false;
+        }
+        // la lame doit encore etre la, ou la partie doit avoir depasse le prologue
+        if (state.status() == GameState.Status.LOBBY
+                && !level.getBlockState(village).is(
+                        com.emerald.block.ModBlocks.OATH_BLADE.get())) {
+            return false;
+        }
+        return true;
     }
 
     /**
@@ -132,8 +158,14 @@ public class WorldSetup {
         if (!level.canSeeSky(feet)) {
             return false;
         }
-        if (!level.getBlockState(feet.below()).isSolidRender(level, feet.below())) {
-            return false;
+        // Trois blocs pleins sous les pieds, et pas un seul.
+        // Un toit de maison offre un sol dur et le ciel degage : il satisfaisait
+        // les deux autres criteres, et les joueurs apparaissaient dessus.
+        for (int depth = 1; depth <= 3; depth++) {
+            BlockPos under = feet.below(depth);
+            if (!level.getBlockState(under).isSolidRender(level, under)) {
+                return false;
+            }
         }
         if (!level.getFluidState(feet.below()).isEmpty()) {
             return false;               // ni eau ni lave sous les pieds
