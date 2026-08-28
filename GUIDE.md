@@ -223,8 +223,11 @@ Des **gardiens** tiennent les lieux avant vous : deux par tour d'angle, d'autres
 sur le chemin de ronde et autour de la pyramide. Ils ne quittent pas le
 sanctuaire. Comptez-les avant d'entrer.
 
-L'escalier plein sud monte du seuil au sommet : l'ancre est toujours
-atteignable.
+**Où est l'ancre :** au sommet de la pyramide, sur un parvis à quatre
+obélisques. On y monte par la **tour d'escalier au sud de la pyramide** — on y
+entre par la cour, l'escalier en vis mène tout en haut, et une passerelle
+éclairée rejoint le parvis. C'est long, et c'est voulu : on doit sentir qu'on
+monte à quelque chose.
 
 Si tout le monde meurt dans la zone, l'ancre se désactive et l'arcencium est
 perdu. Une ancre tenue devient votre **point de réapparition**.
@@ -265,6 +268,8 @@ Toutes commencent par `/arcencium` et demandent le niveau opérateur.
 | `skip <minutes>` | Avance le chronomètre — pour voir la Marée sans jouer 36 minutes |
 | `find` | Donne les coordonnées de la Lame du Serment |
 | `sanctuary` | Bâtit un Sanctuaire d'Ancre là où vous êtes — pour le regarder en monde plat |
+| `mode off` | **Éteint le mode** : plus de confinement, ni météo, ni Marée, ni chronomètre. Le monde redevient un Minecraft ordinaire, nos blocs compris — pour explorer et bâtir tranquillement |
+| `mode on` | Le rallume |
 
 Les noms de météo : `brume`, `aurore`, `nuit`, `meteores`, `dechirure`, `orage`,
 `embellie`. L'autocomplétion les propose toutes.

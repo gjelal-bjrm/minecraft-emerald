@@ -151,7 +151,9 @@ public final class Sanctuary {
         // est posee par la commande du jeu, qui assemble ses onze morceaux comme
         // elle l'entend. Se fier a une hauteur ecrite en dur, c'etait risquer un
         // parvis flottant en l'air ou noye dans la maconnerie.
-        BlockPos anchor = crown(level, cx, summitOf(level, cx, y, cz), cz);
+        int summit = summitOf(level, cx, y, cz);
+        BlockPos anchor = crown(level, cx, summit, cz);
+        ascent(level, cx, y, cz, summit);
         SanctuaryGarrison.populate(level, new BlockPos(cx, y, cz), HALF);
         SanctuaryMist.register(new BlockPos(cx, y, cz), HALF);
         return anchor;
@@ -283,6 +285,91 @@ public final class Sanctuary {
         return anchor;
     }
 
+    /**
+     * La montee vers l'ancre : une tour d'escalier et sa passerelle.
+     *
+     * C'est le point qui a bloque deux fois -- « je ne trouve pas l'ancre ».
+     * Elle est au sommet, a quatre-vingt-huit blocs, et la Pyramide Maudite n'a
+     * jamais ete concue pour qu'on l'escalade par l'exterieur. Tailler un
+     * escalier dans sa face aurait suppose de connaitre sa forme, qu'on ne
+     * connait pas puisque c'est la commande du jeu qui la pose.
+     *
+     * On batit donc a cote, ce qu'on maitrise entierement : une tour creuse au
+     * pied de la face sud, un escalier en vis dedans, une passerelle au sommet.
+     * La montee est longue et c'est tant mieux -- on doit sentir qu'on monte a
+     * quelque chose.
+     */
+    private static void ascent(ServerLevel level, int cx, int y, int cz, int summit) {
+        int tx = cx;
+        int tz = cz + 34;
+        int top = summit + 2;
+        int r = 4;
+
+        for (int dx = -r; dx <= r; dx++) {
+            for (int dz = -r; dz <= r; dz++) {
+                double dist = Math.sqrt(dx * dx + dz * dz);
+                if (dist > r + 0.5) {
+                    continue;
+                }
+                boolean shell = dist > r - 1.0;
+                for (int wy = y + 1; wy <= top; wy++) {
+                    if (!shell) {
+                        set(level, tx + dx, wy, tz + dz, Blocks.AIR.defaultBlockState());
+                        continue;
+                    }
+                    int h = wy - y;
+                    set(level, tx + dx, wy, tz + dz,
+                            h <= 2 ? base() : h % 8 == 0 ? shrineTrim() : tower());
+                }
+                set(level, tx + dx, y, tz + dz, floor());
+                // les fenetres, pour qu'on voie ou l'on en est
+                if (shell && (dx == 0 || dz == 0) && Math.floorMod(top - y, 1) == 0) {
+                    for (int wy = y + 6; wy < top; wy += 7) {
+                        set(level, tx + dx, wy, tz + dz, glow());
+                    }
+                }
+            }
+        }
+        // l'entree, cote cour
+        for (int dy = 1; dy <= 3; dy++) {
+            set(level, tx, y + dy, tz + r, Blocks.AIR.defaultBlockState());
+            set(level, tx, y + dy, tz + r - 1, Blocks.AIR.defaultBlockState());
+        }
+        // l'escalier en vis
+        for (int step = 0; step + y < top - 1; step++) {
+            double angle = step * 0.55;
+            int sx = tx + (int) Math.round(Math.cos(angle) * (r - 1.5));
+            int sz = tz + (int) Math.round(Math.sin(angle) * (r - 1.5));
+            set(level, sx, y + step, sz, trim());
+            for (int clear = 1; clear <= 3; clear++) {
+                set(level, sx, y + step + clear, sz, Blocks.AIR.defaultBlockState());
+            }
+            if (step % 12 == 0) {
+                set(level, tx, y + step + 2, tz, lantern());   // le fut eclaire
+            }
+        }
+        // la sortie et la passerelle vers le parvis
+        for (int dz = 0; dz <= tz - cz - 4; dz++) {
+            int bz = tz - dz;
+            for (int dx = -1; dx <= 1; dx++) {
+                set(level, tx + dx, top, bz, trim());
+                for (int clear = 1; clear <= 3; clear++) {
+                    set(level, tx + dx, top + clear, bz, Blocks.AIR.defaultBlockState());
+                }
+            }
+            // un garde-corps : la passerelle est haute
+            set(level, tx - 2, top + 1, bz, merlon());
+            set(level, tx + 2, top + 1, bz, merlon());
+            if (Math.floorMod(dz, 8) == 0) {
+                set(level, tx - 2, top + 2, bz, lantern());
+                set(level, tx + 2, top + 2, bz, lantern());
+            }
+        }
+        for (int dy = 1; dy <= 3; dy++) {
+            set(level, tx, top + dy, tz - r + 1, Blocks.AIR.defaultBlockState());
+        }
+    }
+
     // ------------------------------------------------------------- l'enceinte
 
     private static void clearSite(ServerLevel level, int cx, int y, int cz) {
@@ -343,28 +430,24 @@ public final class Sanctuary {
                     }
                     set(level, xz[0], y + WALK, xz[1], floor());     // on marche ici
 
-                    if (t == 0) {              // le parapet, cote exterieur
-                        set(level, xz[0], y + WALK + 1, xz[1],
-                                Math.floorMod(d, 2) == 0 ? merlon() : glow());
-                        if (Math.floorMod(d, 2) == 0) {
-                            set(level, xz[0], y + WALK + 2, xz[1], merlon());
-                        }
-                    }
-                    if (t == THICK - 1 && Math.floorMod(d, 2) == 0) {
-                        set(level, xz[0], y + WALK + 1, xz[1], merlon());  // garde-corps
-                    }
-                    // les meurtrieres, percees dans la masse
-                    if (t == 0 && Math.floorMod(d, 7) == 0) {
-                        set(level, xz[0], y + 5, xz[1], glow());
-                        set(level, xz[0], y + 6, xz[1], glow());
+                    // Les deux bords portent un mur PLEIN, sans trou.
+                    //
+                    // La premiere version alternait merlon, vide, verre, vide.
+                    // Vu de loin cela ne faisait ni un creneau ni un mur, juste
+                    // un pointille -- et le verre prismatique intercale jurait
+                    // avec la pierre. Un parapet continu se lit comme une
+                    // fortification ; l'eclairage se pose PAR-DESSUS.
+                    if (t == 0 || t == THICK - 1) {
+                        set(level, xz[0], y + WALK + 1, xz[1], merlon());
                     }
                 }
             }
-            // les lanternes du chemin de ronde
-            if (Math.floorMod(d, 11) == 0) {
+            // les lanternes, POSEES SUR le parapet interieur : elles eclairent
+            // le chemin de ronde sans y creuser de breche
+            if (Math.floorMod(d, 9) == 0) {
                 for (int side = 0; side < 4; side++) {
                     int[] xz = wallPoint(side, d, THICK - 1, cx, cz);
-                    set(level, xz[0], y + WALK + 1, xz[1], lantern());
+                    set(level, xz[0], y + WALK + 2, xz[1], lantern());
                 }
             }
         }

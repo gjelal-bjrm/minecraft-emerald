@@ -194,5 +194,8 @@
   "game.emeraldweapons.tier_unlocked": "Apotheosis world tier reached: %s",
   "command.emeraldweapons.sanctuary": "Sanctuary built -- anchor at %s %s %s",
   "game.emeraldweapons.gate.opening": "The portcullis rises",
-  "game.emeraldweapons.gate.closing": "The portcullis drops"
+  "game.emeraldweapons.gate.closing": "The portcullis drops",
+  "command.emeraldweapons.mode.on": "Arcencium mode ON",
+  "command.emeraldweapons.mode.off": "Arcencium mode OFF -- free exploration",
+  "command.emeraldweapons.sanctuary.hint": "The anchor is at the summit. Climb the stair tower south of the pyramid."
 }

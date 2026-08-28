@@ -95,7 +95,8 @@ public class GameManager {
     @SubscribeEvent
     public static void onLevelTick(LevelTickEvent.Post event) {
         if (!(event.getLevel() instanceof ServerLevel level)
-                || !level.dimension().equals(Level.OVERWORLD)) {
+                || !level.dimension().equals(Level.OVERWORLD)
+                || ModeSwitch.off()) {
             return;
         }
         // Les armes ceremonielles n'existent QUE pendant le prologue. Un balayage

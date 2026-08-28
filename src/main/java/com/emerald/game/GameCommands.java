@@ -94,6 +94,12 @@ public class GameCommands {
                             return 1;
                         })));
 
+        // L'interrupteur du mode : c'est ce qui permet d'aller EXPLORER sans
+        // avoir a gagner le prologue d'abord.
+        root.then(Commands.literal("mode")
+                .then(Commands.literal("on").executes(ctx -> switchMode(ctx.getSource(), true)))
+                .then(Commands.literal("off").executes(ctx -> switchMode(ctx.getSource(), false))));
+
         // Le sanctuaire, bati sur place : c'est l'outil pour le regarder en
         // monde plat sans jouer une partie entiere pour l'atteindre.
         root.then(Commands.literal("sanctuary").executes(ctx -> {
@@ -105,6 +111,8 @@ public class GameCommands {
             ctx.getSource().sendSuccess(() -> Component.translatable(
                     "command.emeraldweapons.sanctuary",
                     anchor.getX(), anchor.getY(), anchor.getZ()), true);
+            ctx.getSource().sendSuccess(() -> Component.translatable(
+                    "command.emeraldweapons.sanctuary.hint"), false);
             return 1;
         }));
 
@@ -137,6 +145,14 @@ public class GameCommands {
         }));
 
         event.getDispatcher().register(root);
+    }
+
+    private static int switchMode(CommandSourceStack source, boolean on) {
+        ServerLevel level = source.getServer().overworld();
+        ModeSwitch.set(level, on);
+        source.sendSuccess(() -> Component.translatable(
+                on ? "command.emeraldweapons.mode.on" : "command.emeraldweapons.mode.off"), true);
+        return 1;
     }
 
     private static int forceWeather(CommandSourceStack source,

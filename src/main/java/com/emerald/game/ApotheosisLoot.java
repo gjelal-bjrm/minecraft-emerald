@@ -187,7 +187,8 @@ public final class ApotheosisLoot {
     public static void onLevelTick(LevelTickEvent.Post event) {
         if (!(event.getLevel() instanceof ServerLevel level)
                 || !level.dimension().equals(Level.OVERWORLD)
-                || level.getGameTime() % 40 != 0) {
+                || level.getGameTime() % 40 != 0
+                || ModeSwitch.off()) {
             return;
         }
         GameState state = GameState.get(level);

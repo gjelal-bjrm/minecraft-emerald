@@ -82,7 +82,7 @@ public final class PrismaticTide {
     /** Le rayon vivable a cet instant, ou -1 tant que la Maree dort. */
     public static int radius(ServerLevel level) {
         GameState state = GameState.get(level);
-        if (state.status() != GameState.Status.RUNNING) {
+        if (ModeSwitch.off() || state.status() != GameState.Status.RUNNING) {
             return -1;
         }
         long elapsed = state.elapsed(level);

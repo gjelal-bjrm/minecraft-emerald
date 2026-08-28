@@ -46,7 +46,7 @@ public class LobbyRules {
      * poursuivent : enfermer les defenseurs les empecherait de se battre.
      */
     private static boolean confined(ServerLevel level) {
-        return waiting(level) && !GameManager.prologueRunning();
+        return ModeSwitch.enabled() && waiting(level) && !GameManager.prologueRunning();
     }
 
     /** Aucun minage avant le depart : le village doit rester intact pour le siege. */

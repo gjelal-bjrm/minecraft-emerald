@@ -194,5 +194,8 @@
   "game.emeraldweapons.tier_unlocked": "Palier d'Apotheose atteint : %s",
   "command.emeraldweapons.sanctuary": "Sanctuaire bati -- ancre en %s %s %s",
   "game.emeraldweapons.gate.opening": "La herse se leve",
-  "game.emeraldweapons.gate.closing": "La herse retombe"
+  "game.emeraldweapons.gate.closing": "La herse retombe",
+  "command.emeraldweapons.mode.on": "Mode Arcencium ALLUME",
+  "command.emeraldweapons.mode.off": "Mode Arcencium ETEINT -- exploration libre",
+  "command.emeraldweapons.sanctuary.hint": "L'ancre est au sommet. On y monte par la tour d'escalier, au sud de la pyramide."
 }

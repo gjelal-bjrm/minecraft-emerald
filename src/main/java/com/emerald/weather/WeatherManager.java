@@ -71,7 +71,8 @@ public final class WeatherManager {
     @SubscribeEvent
     public static void onLevelTick(LevelTickEvent.Post event) {
         if (!(event.getLevel() instanceof ServerLevel level)
-                || !level.dimension().equals(Level.OVERWORLD)) {
+                || !level.dimension().equals(Level.OVERWORLD)
+                || com.emerald.game.ModeSwitch.off()) {
             return;
         }
         if (current.real()) {
