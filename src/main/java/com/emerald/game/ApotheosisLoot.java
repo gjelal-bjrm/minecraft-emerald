@@ -2,7 +2,9 @@ package com.emerald.game;
 
 import com.emerald.main.EmeraldWeaponsMod;
 import com.emerald.weather.WeatherEffects;
+import net.minecraft.advancements.AdvancementHolder;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -76,7 +78,82 @@ public final class ApotheosisLoot {
             "apotheosis:gem_fused_slate",
     };
 
+    /**
+     * Les paliers de monde d'Apotheosis, dans l'ordre.
+     *
+     * C'est LE systeme de progression du mod : il gouverne la rarete du butin,
+     * la force des monstres, et surtout l'apparition des Envahisseurs -- ces
+     * « boss » qui sont des monstres ordinaires nommes, rares et equipes. Au
+     * palier Haven, leur chance d'apparition vaut zero : tant qu'on y reste,
+     * il n'en sort aucun.
+     *
+     * Chaque palier s'ouvre par un avancement, normalement gagne en portant un
+     * jeu complet d'objets a affixes. En soixante minutes personne n'y arrive,
+     * alors on les accorde au rythme des phases.
+     */
+    private static final String[] TIERS = {
+            "haven", "frontier", "ascent", "summit", "pinnacle",
+    };
+
     private ApotheosisLoot() {
+    }
+
+    // ------------------------------------------------------- les paliers
+
+    /** Le palier vise par la phase courante. */
+    private static int tierFor(GamePhase phase) {
+        return switch (phase) {
+            case EXPLORATION -> 1;             // Frontier : les Envahisseurs commencent
+            case MONTEE -> 2;                  // Ascent
+            case PRESSION -> 3;                // Summit
+            case ASSAUT -> 4;                  // Pinnacle
+            default -> 0;
+        };
+    }
+
+    /**
+     * Ouvre les paliers jusqu'a celui de la phase.
+     *
+     * On accorde l'avancement plutot que d'ecrire le palier actif : ce dernier
+     * vit dans les donnees d'Apotheosis, qu'on ne peut pas toucher sans en
+     * faire une dependance de compilation. L'avancement, lui, est du vanilla.
+     * Le joueur garde donc le dernier geste -- CTRL+T pour activer -- et on le
+     * lui dit, une fois, au moment ou le palier s'ouvre.
+     */
+    private static void unlockTiers(ServerLevel level, ServerPlayer player, GamePhase phase) {
+        int target = tierFor(phase);
+        boolean opened = false;
+        for (int i = 0; i <= target && i < TIERS.length; i++) {
+            if (grant(level, player, "apotheosis:progression/" + TIERS[i])) {
+                opened = true;
+            }
+        }
+        if (opened) {
+            grant(level, player, "apotheosis:progression/root");
+            player.displayClientMessage(Component
+                    .translatable("game.emeraldweapons.tier_unlocked")
+                    .withStyle(net.minecraft.ChatFormatting.GOLD), false);
+        }
+    }
+
+    /** Vrai si l'avancement vient d'etre accorde -- faux s'il l'etait deja. */
+    private static boolean grant(ServerLevel level, ServerPlayer player, String id) {
+        ResourceLocation key = ResourceLocation.tryParse(id);
+        if (key == null) {
+            return false;
+        }
+        AdvancementHolder holder = level.getServer().getAdvancements().get(key);
+        if (holder == null) {
+            return false;                      // Apotheosis absent : rien a faire
+        }
+        var progress = player.getAdvancements().getOrStartProgress(holder);
+        if (progress.isDone()) {
+            return false;
+        }
+        for (String criterion : progress.getRemainingCriteria()) {
+            player.getAdvancements().award(holder, criterion);
+        }
+        return true;
     }
 
     // ------------------------------------------------------------ la Chance
@@ -112,9 +189,11 @@ public final class ApotheosisLoot {
             clearLuck(level);
             return;
         }
-        double luck = luckFor(state.phase(level));
+        GamePhase phase = state.phase(level);
+        double luck = luckFor(phase);
         for (ServerPlayer player : level.players()) {
             applyLuck(player, luck);
+            unlockTiers(level, player, phase);
         }
     }
 

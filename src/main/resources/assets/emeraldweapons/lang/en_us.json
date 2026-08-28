@@ -190,5 +190,6 @@
   "command.emeraldweapons.weather.stopped": "Weather stopped.",
   "command.emeraldweapons.skip": "Clock advanced by %s minutes.",
   "game.emeraldweapons.rift.hint": "Prismatic rift -- step in to travel",
-  "game.emeraldweapons.tide.warlord": "%s rises from the Tide"
+  "game.emeraldweapons.tide.warlord": "%s rises from the Tide",
+  "game.emeraldweapons.tier_unlocked": "Apotheosis world tier unlocked -- press CTRL+T to activate"
 }
