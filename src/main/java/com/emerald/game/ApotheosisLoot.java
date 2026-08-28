@@ -1,5 +1,6 @@
 package com.emerald.game;
 
+import com.emerald.compat.ApotheosisTiers;
 import com.emerald.main.EmeraldWeaponsMod;
 import com.emerald.weather.WeatherEffects;
 import net.minecraft.advancements.AdvancementHolder;
@@ -91,10 +92,6 @@ public final class ApotheosisLoot {
      * jeu complet d'objets a affixes. En soixante minutes personne n'y arrive,
      * alors on les accorde au rythme des phases.
      */
-    private static final String[] TIERS = {
-            "haven", "frontier", "ascent", "summit", "pinnacle",
-    };
-
     private ApotheosisLoot() {
     }
 
@@ -111,49 +108,60 @@ public final class ApotheosisLoot {
         };
     }
 
+    /** Vrai si Apotheosis est la : sans quoi on ne touche pas a la classe de pont. */
+    private static boolean present() {
+        return net.neoforged.fml.ModList.get().isLoaded("apotheosis");
+    }
+
     /**
-     * Ouvre les paliers jusqu'a celui de la phase.
+     * Porte le joueur au palier de sa phase, sans rien lui demander.
      *
-     * On accorde l'avancement plutot que d'ecrire le palier actif : ce dernier
-     * vit dans les donnees d'Apotheosis, qu'on ne peut pas toucher sans en
-     * faire une dependance de compilation. L'avancement, lui, est du vanilla.
-     * Le joueur garde donc le dernier geste -- CTRL+T pour activer -- et on le
-     * lui dit, une fois, au moment ou le palier s'ouvre.
+     * Deux gestes, et les deux comptent. On ECRIT le palier actif, ce qui est
+     * le seul moyen de ne rien exiger du joueur : accorder l'avancement se
+     * contente d'ouvrir la porte, et laissait un CTRL+T que personne ne devine.
+     * Et on accorde quand meme les avancements, faute de quoi l'ecran de
+     * selection d'Apotheosis afficherait comme verrouille le palier ou le
+     * joueur se trouve deja.
      */
     private static void unlockTiers(ServerLevel level, ServerPlayer player, GamePhase phase) {
-        int target = tierFor(phase);
-        boolean opened = false;
-        for (int i = 0; i <= target && i < TIERS.length; i++) {
-            if (grant(level, player, "apotheosis:progression/" + TIERS[i])) {
-                opened = true;
+        if (!present()) {
+            return;
+        }
+        int target = Math.min(tierFor(phase), ApotheosisTiers.count() - 1);
+        for (int i = 0; i <= target; i++) {
+            AdvancementHolder holder = advancement(level, ApotheosisTiers.unlockAdvancement(i));
+            if (holder != null) {
+                grant(player, holder);
             }
         }
-        if (opened) {
-            grant(level, player, "apotheosis:progression/root");
+        if (ApotheosisTiers.raiseTo(player, target)) {
             player.displayClientMessage(Component
-                    .translatable("game.emeraldweapons.tier_unlocked")
+                    .translatable("game.emeraldweapons.tier_unlocked",
+                            Component.translatable(
+                                    "text.apotheosis.world_tier." + ApotheosisTiers.name(target)))
                     .withStyle(net.minecraft.ChatFormatting.GOLD), false);
+            player.playNotifySound(net.minecraft.sounds.SoundEvents.PLAYER_LEVELUP,
+                    net.minecraft.sounds.SoundSource.PLAYERS, 0.8F, 1.4F);
         }
     }
 
-    /** Vrai si l'avancement vient d'etre accorde -- faux s'il l'etait deja. */
-    private static boolean grant(ServerLevel level, ServerPlayer player, String id) {
-        ResourceLocation key = ResourceLocation.tryParse(id);
-        if (key == null) {
-            return false;
-        }
-        AdvancementHolder holder = level.getServer().getAdvancements().get(key);
-        if (holder == null) {
-            return false;                      // Apotheosis absent : rien a faire
-        }
+    @Nullable
+    private static AdvancementHolder advancement(ServerLevel level, @Nullable ResourceLocation key) {
+        return key == null ? null : level.getServer().getAdvancements().get(key);
+    }
+
+    private static void grant(ServerPlayer player, AdvancementHolder holder) {
         var progress = player.getAdvancements().getOrStartProgress(holder);
         if (progress.isDone()) {
-            return false;
+            return;
         }
-        for (String criterion : progress.getRemainingCriteria()) {
+        // une copie : award() modifie la progression pendant qu'on la parcourt,
+        // et getRemainingCriteria n'est qu'un Iterable, pas une collection
+        List<String> remaining = new ArrayList<>();
+        progress.getRemainingCriteria().forEach(remaining::add);
+        for (String criterion : remaining) {
             player.getAdvancements().award(holder, criterion);
         }
-        return true;
     }
 
     // ------------------------------------------------------------ la Chance

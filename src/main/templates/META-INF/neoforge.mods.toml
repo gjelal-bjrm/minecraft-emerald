@@ -24,3 +24,14 @@ type="required"
 versionRange="[1.21.1,1.22)"
 ordering="NONE"
 side="BOTH"
+
+# Apotheosis est FACULTATIF : le mode se charge sans lui, com.emerald.compat
+# verifiant sa presence avant tout appel. L'ordre, lui, ne l'est pas -- nos
+# regles d'apparition des Envahisseurs remplacent les siennes, ce qui suppose
+# que notre pack de donnees soit lu APRES le sien.
+[[dependencies.emeraldweapons]]
+modId="apotheosis"
+type="optional"
+versionRange="[8.0.0,)"
+ordering="AFTER"
+side="BOTH"

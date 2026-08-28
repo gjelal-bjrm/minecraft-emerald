@@ -111,8 +111,23 @@ configurations {
     runtimeClasspath.extendsFrom localRuntime
 }
 
+// Les jars du modpack servent aussi a la COMPILATION.
+//
+// Le mode s'appuie sur les paliers de monde d'Apotheosis, dont l'API est la
+// seule facon d'ecrire le palier ACTIF d'un joueur -- accorder l'avancement
+// l'ouvre, mais laisse au joueur un CTRL+T que le mode ne doit pas exiger.
+//
+// Ils restent en `compileOnly` : le mod se charge sans eux, com.emerald.compat
+// verifiant leur presence avant tout appel. Ils vivent dans run/mods, ou
+// tools/dev_mods.py les depose -- on ne duplique pas trois megaoctets de jars
+// tiers dans le depot pour une dependance qui n'existe qu'a la compilation.
+def modpackJars = fileTree(dir: "$projectDir/run/mods",
+                           include: ['Apotheosis-*.jar', 'Placebo-*.jar'])
+
 dependencies {
     implementation "net.neoforged:neoforge:${neo_version}"
+
+    compileOnly modpackJars
     // Example optional mod dependency with JEI
     // The JEI API is declared for compile time use, while the full JEI artifact is used at runtime
     // compileOnly "mezz.jei:jei-${mc_version}-common-api:${jei_version}"
@@ -134,6 +149,19 @@ dependencies {
     // For more info:
     // http://www.gradle.org/docs/current/userguide/artifact_dependencies_tutorial.html
     // http://www.gradle.org/docs/current/userguide/dependency_management.html
+}
+
+// Une dependance manquante doit se DIRE, pas se deviner : sans ce controle, un
+// depot fraichement clone rendait une pluie de « symbole introuvable » sur des
+// classes dont rien n'indiquait d'ou elles auraient du venir.
+tasks.named('compileJava').configure {
+    doFirst {
+        if (modpackJars.isEmpty()) {
+            throw new GradleException(
+                "Apotheosis et Placebo sont absents de run/mods. " +
+                "Lancez d'abord :  python tools/dev_mods.py apotheosis placebo")
+        }
+    }
 }
 
 // This block of code expands all declared replace properties in the specified resource targets.

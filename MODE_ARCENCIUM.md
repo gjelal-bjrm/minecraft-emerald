@@ -406,11 +406,22 @@ c'est pourquoi on n'en voyait aucun. Ils s'ouvrent maintenant au rythme des
 phases (Frontier des l'Exploration, Pinnacle a l'Assaut) par leurs avancements,
 qui sont du vanilla et ne demandent aucune dependance.
 
-> **Reste un geste au joueur.** Apotheosis stocke le palier ACTIF dans ses
-> propres donnees, qu'on ne peut pas ecrire sans en faire une dependance de
-> compilation. On ouvre le palier et on l'annonce ; le joueur l'active au
-> CTRL+T. Si ce geste gene, la solution est d'ajouter Apotheosis en
-> `compileOnly` -- c'est une decision a prendre, pas un obstacle.
+**Rien a activer.** Le palier ACTIF vit dans un attachement d'Apotheosis :
+accorder l'avancement ouvre la porte mais laisse un CTRL+T que le mode ne doit
+pas exiger. Apotheosis est donc une dependance de COMPILATION (`compileOnly`,
+prise dans `run/mods`, jamais embarquee dans le jar), et le mode ecrit le
+palier lui-meme par `WorldTier.setTier` -- qui pose l'attachement, previent le
+client et remplace les augments du palier precedent.
+
+Les avancements restent accordes en plus : sans eux, l'ecran de selection
+d'Apotheosis afficherait comme verrouille le palier ou le joueur se trouve
+deja. Et le palier ne DESCEND jamais : un joueur qui en a active un plus haut
+de lui-meme le garde.
+
+Toutes les citations de classes d'Apotheosis vivent dans
+`com.emerald.compat.ApotheosisTiers`, et l'appelant verifie `ModList` avant d'y
+toucher : tant qu'il n'y touche pas, la classe n'est pas chargee, et l'absence
+du mod ne coute rien.
 
 **Nos propres regles d'apparition** relevent la chance a tous les paliers, Haven
 compris, pour qu'il en sorte des le debut ; le delai entre deux Envahisseurs
