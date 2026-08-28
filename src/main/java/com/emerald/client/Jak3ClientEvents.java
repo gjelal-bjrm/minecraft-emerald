@@ -36,6 +36,9 @@ public class Jak3ClientEvents {
                 com.emerald.block.entity.ModBlockEntities.OATH_BLADE.get(),
                 OathBladeRenderer::new);
 
+        event.registerEntityRenderer(Jak3Registry.ARCENCIUM_BOLT.get(),
+                ArcenciumBoltRenderer::new);
+
         event.registerEntityRenderer(Jak3Registry.WASTELANDER.get(),
                 ctx -> new MobRenderer<WastelanderEntity, HumanoidModel<WastelanderEntity>>(ctx,
                         new HumanoidModel<>(ctx.bakeLayer(ModelLayers.PLAYER_INNER_ARMOR)), 0.5f) {

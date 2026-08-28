@@ -615,8 +615,13 @@ public class GameManager {
 
     /** Titre plein ecran : reserve aux bascules, pour qu'il garde son poids. */
     public static void announce(ServerLevel level, String title, String subtitle, int color) {
-        Component top = Component.translatable(title).withStyle(style -> style.withColor(color));
-        Component bottom = Component.translatable(subtitle).withStyle(ChatFormatting.GRAY);
+        announce(level,
+                Component.translatable(title).withStyle(style -> style.withColor(color)),
+                Component.translatable(subtitle).withStyle(ChatFormatting.GRAY));
+    }
+
+    /** Variante a composants deja construits, pour les titres parametres (meteo). */
+    public static void announce(ServerLevel level, Component top, Component bottom) {
         for (ServerPlayer player : level.players()) {
             player.connection.send(new ClientboundSetTitleTextPacket(top));
             player.connection.send(new ClientboundSetSubtitleTextPacket(bottom));

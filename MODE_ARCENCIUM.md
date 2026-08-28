@@ -258,44 +258,88 @@ Mauvais boss d'arene.
 
 ---
 
-## 6. La meteo
+## 6. La meteo *(implementee)*
 
-**Globale** : elle touche toute la zone en meme temps, pour rendre les parties
-imprevisibles. Ciel global, effets locaux instancies pres des joueurs.
+**Globale** : elle touche toute la zone en meme temps. **Progressive** : le
+tirage suit la phase -- Exploration {Brume, Aurore}, Montee +Nuit, Pression
+tout, Assaut {Meteores, Dechirure, Orage} avec des pauses tres courtes (c'est
+l'« orage permanent »). Jamais deux fois la meme de suite.
 
-**Progressive** : les meteos douces d'abord, les agressives arrivent avec la
-progression des ancres (voir le tableau de la section 2).
+Regles communes, toutes implementees :
+- **Preavis de 15 s** (titre + compte a rebours) avant toute meteo tiree au sort.
+- Un abri en **materiaux du mod est toujours sur** : les meteores ne brisent
+  jamais un bloc de notre espace de noms.
+- Duree **2 a 4 minutes** ; toute agressive finie naturellement est suivie de
+  **l'Embellie** (60-90 s), pendant laquelle aucune apparition naturelle de
+  monstre (les sieges, en EVENT, continuent).
+- Le **Filtre de Brume** immunise aux degats de toutes les meteos agressives ;
+  la Surcharge de l'Orage lui reste acquise -- s'exposer aux frappes devient un
+  style de jeu.
 
-Regles communes a toutes les meteos agressives :
-- Elles **s'annoncent ~15 secondes a l'avance**.
-- Un abri construit en **materiaux du mod est toujours sur**.
-- Duree **2 a 4 minutes**.
-- Chaque tempete agressive est suivie de **l'Embellie** : une accalmie sans monstres.
+### Brume Prismatique *(douce)*
+Brouillard dense a teinte derivante, vue reduite a ~56 blocs -- et la vue des
+monstres reduite d'autant (portee de detection -70 %). La fenetre pour
+traverser ou contourner sans se battre.
 
-### Douces
+### Aurore *(douce)*
+Rubans colores hauts dans le ciel. Les plantes prismatiques brillent aussi de
+jour, et les **veines d'Arcencium proches scintillent et carillonnent** : sous
+terre, c'est un detecteur. Le moment de descendre miner.
 
-- **Brume Prismatique** — validee.
-- **Aurore** — validee.
+### Nuit d'Arcencium *(charniere, agressive)*
+La nuit tombe en plein jour (horloge deplacee puis rendue), **pluie et
+tonnerre**, et des **eclairs d'Arcencium** : de vrais eclairs, dont la couleur
+annonce l'effet -- on apprend a lire le ciel.
 
-### Nuit d'Arcencium
+| Couleur | A l'impact |
+|---|---|
+| **Rouge** | met le feu |
+| **Bleu** | gele l'eau en glace, frigorifie et ralentit |
+| **Jaune** | **onde electrique** au ras du sol (rayon 10), frappe monstres ET joueurs -- un eclair sur cinq au plus, jamais deux ondes a la fois |
+| **Rose** | pose la **Marque Prismatique** |
+| **Vert** | laisse une **cicatrice luisante**, minable 30 s -> arcencium brut |
 
-Fusion des idees « Vents d'Arcencium » et « Gresil Cristallin », qui etaient
-punitives sans ouvrir de gameplay. Un grand nuage provoque **la nuit** sur une region.
-Les monstres apparaissent en plein jour. Le repli naturel est la grotte —
-mais c'est aussi la meilleure fenetre a artefacts (section 9.3).
+Le repli naturel est la grotte -- mais c'est dehors que tombent les artefacts.
 
-### Agressives — principe : « une fenetre d'opportunite qui fait mal »
+### Pluie de Meteores d'Arcencium *(agressive)*
+Cercle d'avertissement ~3 s avant chaque impact. Les impacts blessent, brisent
+les blocs fragiles vanilla, **livrent de l'arcencium brut** et percent parfois
+jusqu'aux grottes -- un raccourci vers le minage.
 
-- **Pluie de Meteores d'Arcencium** — les crateres livrent des fragments d'Arcencium et ouvrent des grottes.
-- **Tornade Prismatique** — emporte le butin, aspire les monstres, projette le joueur tres loin (voyage rapide).
-- **Orage Prismatique** — points d'impact marques au sol : gros degats, mais un buff **Surcharge** de 30 s a qui encaisse.
+### Dechirure Prismatique *(agressive -- remplace la tornade)*
+Le lieu se defait, en trois symptomes qui se justifient l'un l'autre :
+- **l'apesanteur** : gravite -65 % pour tout le monde, bonds de cinq blocs,
+  chutes amorties pendant la tempete ;
+- **les eclats en suspension** : des grappes d'arcancium flottent a 12-20
+  blocs du sol, atteignables SEULEMENT pendant l'apesanteur -- c'est ce qui la
+  justifie ; les eclats non cueillis retombent a la fin ;
+- **les failles** : y entrer depose pres d'une **ancre non tenue** (a defaut,
+  un point lointain). On sait qu'on arrive quelque part d'utile, pas lequel,
+  ni avec qui.
+Le danger : tout s'arrete d'un coup. Etre en l'air a cet instant coute cher.
+
+### Orage Prismatique *(agressive)*
+Frappes annoncees par une pulsation au sol (~2,5 s), 10 degats dans un rayon
+de 3,5 -- et la **Surcharge** (Force II, Vitesse II, 30 s) a tout joueur dans le
+rayon. La seule meteo ou l'on cherche a etre touche.
+
+### La Maree Prismatique *(implementee)*
+A partir de la **36e minute**, le rayon vivable descend de **750 a 120 blocs**
+(60e minute), centre sur le village. Dehors on **survit, mais mal** : une
+corrosion magique graduee par la profondeur (~1 coeur pres du bord, jusqu'a 4
+loin dedans, toutes les 2 s) et la Faiblesse. Sortir de deux blocs reste
+anodin ; s'enfoncer de deux cents devient une expedition. Les **Jambieres de
+Maree** annulent tout. Barre de boss violette avec le rayon courant, mur de
+brume prismatique visible pres du bord.
+
+### Commandes d'essai
+`/arcencium weather <brume|aurore|nuit|meteores|dechirure|orage|embellie> [secondes]`,
+`/arcencium weather stop`, `/arcencium skip <minutes>` (avance l'horloge :
+phases et Maree).
 
 ### Destruction de decor
-
-Systeme de **resistance par materiau**. Les meteos agressives abiment le decor,
-sans detruire la carte :
-- blocs vanilla fragiles : destructibles,
-- **materiaux du mod : tres resistants voire indestructibles.**
+Les meteores appliquent la regle de resistance : blocs vanilla fragiles
+destructibles, **materiaux du mod intouchables**.
 
 ---
 
@@ -679,16 +723,16 @@ se fige avec le serveur au lieu d'expirer pendant qu'il est eteint.
 - [x] Les 3 ancres : placement, faisceau, rituel, palier par rang d'activation
 - [x] Sieges via Gateways, 6 factions tirees au sort
 - [x] Ancres comme points de reapparition
-- [ ] Maree Prismatique
+- [x] Maree Prismatique
 - [ ] Arc-en-ciel, arene, boss tire parmi les 3
 - [ ] Conditions de victoire et de defaite
 - [x] Interface : chronometre (titres et barres a venir)
 
 ### Etape 6 — Meteo et economie
 
-- [ ] Les 6 meteos, globales, avec progression par ancres
-- [ ] Preavis de 15 s, Embellie, abris surs
-- [ ] Resistance des materiaux a la destruction
+- [x] Les 6 meteos, globales, avec progression par ancres
+- [x] Preavis de 15 s, Embellie, abris surs
+- [x] Resistance des materiaux a la destruction
 - [ ] Butin de tempete (`canSeeSky`), multiplicateurs d'XP
 - [ ] Reduction de la frequence du minerai d'Arcencium
 

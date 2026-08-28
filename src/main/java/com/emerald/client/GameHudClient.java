@@ -86,7 +86,11 @@ public class GameHudClient {
         GameState.Status current = GameState.Status.values()[
                 Math.floorMod(status, GameState.Status.values().length)];
         if (current == GameState.Status.LOBBY) {
-            return;                       // hors partie, on n'encombre pas l'ecran
+            // hors partie on n'encombre pas l'ecran -- mais la meteo, elle, se
+            // declenche aussi en lobby (/arcencium weather) et se voit deja par
+            // son brouillard : la laisser sans etiquette n'aurait pas de sens
+            weatherPanel(graphics, mc, MARGIN, MARGIN);
+            return;
         }
 
         int x = MARGIN;
@@ -105,6 +109,37 @@ public class GameHudClient {
 
         anchorPips(graphics, x + PANEL_W / 2, y + PANEL_H - 5);
         anchorList(graphics, mc, x, y + PANEL_H + 2);
+        int rows = anchorPositions.isEmpty() ? 0 : Math.min(3, anchorPositions.size());
+        weatherPanel(graphics, mc, x,
+                y + PANEL_H + 2 + (rows > 0 ? rows * 10 + 4 : 0));
+    }
+
+    /**
+     * La meteo, sous les ancres : le nom dans sa couleur et le temps restant,
+     * ou l'avertissement quand une tempete approche. Une meteo qui change la
+     * facon de jouer doit rester lisible sans ouvrir quoi que ce soit.
+     */
+    private static void weatherPanel(GuiGraphics graphics, Minecraft mc, int x, int y) {
+        int pendingOrdinal = com.emerald.client.WeatherClient.pendingOrdinal();
+        com.emerald.weather.Weather weather = com.emerald.client.WeatherClient.current();
+
+        if (pendingOrdinal >= 0) {
+            com.emerald.weather.Weather incoming = com.emerald.weather.Weather.values()[
+                    Math.floorMod(pendingOrdinal, com.emerald.weather.Weather.values().length)];
+            graphics.fill(x, y, x + PANEL_W, y + 12, 0x8C060608);
+            Component label = Component.literal("⚠ ")
+                    .append(Component.translatable(incoming.translationKey()))
+                    .append(" " + (com.emerald.client.WeatherClient.warningTicks() / 20) + "s");
+            graphics.drawString(mc.font, label, x + 3, y + 2, 0xFFFFC24A, false);
+            return;
+        }
+        if (weather == com.emerald.weather.Weather.CLEAR) {
+            return;
+        }
+        graphics.fill(x, y, x + PANEL_W, y + 12, 0x8C060608);
+        Component label = Component.translatable(weather.translationKey())
+                .append(" " + formatTime(com.emerald.client.WeatherClient.remainingTicks()));
+        graphics.drawString(mc.font, label, x + 3, y + 2, 0xFF000000 | weather.color, false);
     }
 
     /**

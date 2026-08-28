@@ -58,6 +58,42 @@ public class GameCommands {
             return 1;
         }));
 
+        // ------------------------------------------------------------- meteo
+        var weatherNode = Commands.literal("weather");
+        weatherNode.then(Commands.literal("stop").executes(ctx -> {
+            com.emerald.weather.WeatherManager.stop(ctx.getSource().getServer().overworld());
+            ctx.getSource().sendSuccess(() ->
+                    Component.translatable("command.emeraldweapons.weather.stopped"), true);
+            return 1;
+        }));
+        for (com.emerald.weather.Weather weather : com.emerald.weather.Weather.values()) {
+            if (weather == com.emerald.weather.Weather.CLEAR) {
+                continue;
+            }
+            final com.emerald.weather.Weather target = weather;
+            weatherNode.then(Commands.literal(weather.id())
+                    .executes(ctx -> forceWeather(ctx.getSource(), target, 0))
+                    .then(Commands.argument("secondes",
+                                    com.mojang.brigadier.arguments.IntegerArgumentType.integer(5, 3600))
+                            .executes(ctx -> forceWeather(ctx.getSource(), target,
+                                    com.mojang.brigadier.arguments.IntegerArgumentType
+                                            .getInteger(ctx, "secondes")))));
+        }
+        root.then(weatherNode);
+
+        root.then(Commands.literal("skip")
+                .then(Commands.argument("minutes",
+                                com.mojang.brigadier.arguments.IntegerArgumentType.integer(1, 60))
+                        .executes(ctx -> {
+                            int minutes = com.mojang.brigadier.arguments.IntegerArgumentType
+                                    .getInteger(ctx, "minutes");
+                            ServerLevel level = ctx.getSource().getServer().overworld();
+                            GameState.get(level).skip(minutes * 60L * 20L);
+                            ctx.getSource().sendSuccess(() -> Component.translatable(
+                                    "command.emeraldweapons.skip", minutes), true);
+                            return 1;
+                        })));
+
         root.then(Commands.literal("goto").executes(ctx -> {
             ServerLevel level = ctx.getSource().getServer().overworld();
             var village = GameState.get(level).village();
@@ -87,5 +123,14 @@ public class GameCommands {
         }));
 
         event.getDispatcher().register(root);
+    }
+
+    private static int forceWeather(CommandSourceStack source,
+                                    com.emerald.weather.Weather weather, int seconds) {
+        com.emerald.weather.WeatherManager.force(source.getServer().overworld(),
+                weather, seconds * 20);
+        source.sendSuccess(() -> Component.translatable("command.emeraldweapons.weather.set",
+                Component.translatable(weather.translationKey())), true);
+        return 1;
     }
 }

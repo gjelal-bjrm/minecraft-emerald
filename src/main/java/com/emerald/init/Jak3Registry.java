@@ -50,6 +50,17 @@ public class Jak3Registry {
                             .updateInterval(10)
                             .build("prismatic_bolt"));
 
+    /** Eclair d'Arcencium. Purement visuel : jamais sauvegarde, vie 10 ticks. */
+    public static final DeferredHolder<EntityType<?>, EntityType<com.emerald.weather.ArcenciumBoltEntity>> ARCENCIUM_BOLT =
+            ENTITIES.register("arcencium_bolt", () ->
+                    EntityType.Builder.<com.emerald.weather.ArcenciumBoltEntity>of(
+                                    com.emerald.weather.ArcenciumBoltEntity::new, MobCategory.MISC)
+                            .noSave()
+                            .sized(0.0f, 0.0f)
+                            .clientTrackingRange(16)
+                            .updateInterval(Integer.MAX_VALUE)
+                            .build("arcencium_bolt"));
+
     // -------------------------------------------------------------------------
     // Structure types
     // -------------------------------------------------------------------------

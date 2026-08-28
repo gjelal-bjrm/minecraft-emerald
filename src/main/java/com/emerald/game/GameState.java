@@ -212,6 +212,12 @@ public class GameState extends SavedData {
         setDirty();
     }
 
+    /** Avance l'horloge de la partie : l'outil de test des phases et de la Maree. */
+    public void skip(long ticks) {
+        this.startTick -= ticks;
+        setDirty();
+    }
+
     public void finish(boolean won) {
         this.status = won ? Status.WON : Status.LOST;
         setDirty();

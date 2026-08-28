@@ -52,10 +52,14 @@ public class GlowingPlantBlock extends BushBlock {
      */
     @Override
     public void animateTick(BlockState state, Level level, BlockPos pos, RandomSource random) {
-        if (!level.isNight()) {
+        // pendant l'Aurore, les plantes brillent aussi de jour, et davantage --
+        // lu via un relais commun, animateTick ne tournant que cote client
+        boolean aurora = com.emerald.weather.ClientWeatherHolder.isAurora();
+        if (!level.isNight() && !aurora) {
             return;
         }
-        for (int i = 0; i < 2; i++) {
+        int count = aurora ? 4 : 2;
+        for (int i = 0; i < count; i++) {
             double x = pos.getX() + 0.25 + random.nextDouble() * 0.5;
             double y = pos.getY() + 0.25 + random.nextDouble() * 0.6;
             double z = pos.getZ() + 0.25 + random.nextDouble() * 0.5;
