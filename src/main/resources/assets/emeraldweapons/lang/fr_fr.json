@@ -189,5 +189,6 @@
   "command.emeraldweapons.weather.set": "%s déclenchée.",
   "command.emeraldweapons.weather.stopped": "Météo arrêtée.",
   "command.emeraldweapons.skip": "Horloge avancée de %s minutes.",
-  "game.emeraldweapons.rift.hint": "Faille prismatique -- entrez pour voyager"
+  "game.emeraldweapons.rift.hint": "Faille prismatique -- entrez pour voyager",
+  "game.emeraldweapons.tide.warlord": "%s emerge de la Maree"
 }

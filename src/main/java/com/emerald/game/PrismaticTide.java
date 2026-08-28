@@ -12,6 +12,12 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.BossEvent;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.MobSpawnType;
+import net.minecraft.world.entity.monster.Enemy;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -44,6 +50,31 @@ public final class PrismaticTide {
     private static final long START_TICKS = 36L * 60L * 20L;
 
     private static ServerBossEvent bar;
+
+    /** Marque les monstres nes de la Maree : ce sont eux qui paient le mieux. */
+    public static final String TAG_TIDE = "emeraldweapons_tide_born";
+
+    /**
+     * Les seigneurs de la Maree.
+     *
+     * Ce ne sont PAS les trois boss de fin -- Ignis, l'Ender Guardian et le
+     * Liche du Crepuscule restent pour le sommet de l'Arc-en-ciel, et les voir
+     * avant leur heure userait l'evenement. Ceux-la sont des seigneurs de
+     * passage : durs, rares, et surtout une raison de croire que la zone morte
+     * garde quelque chose.
+     */
+    private static final String[] WARLORDS = {
+            "cataclysm:netherite_monstrosity",
+            "cataclysm:the_harbinger",
+            "cataclysm:coralssus",
+            "cataclysm:maledictus",
+            "cataclysm:ancient_remnant",
+            "cataclysm:the_prowler",
+            "cataclysm:wadjet",
+    };
+
+    /** Au-dela, on cesse d'en ajouter autour d'un joueur. */
+    private static final int TIDE_CAP = 14;
 
     private PrismaticTide() {
     }
@@ -85,6 +116,101 @@ public final class PrismaticTide {
         }
         if (level.getGameTime() % 10 == 0) {
             drawWall(level, center, radius);
+        }
+        if (level.getGameTime() % 80 == 0) {
+            haunt(level, center, radius);
+        }
+    }
+
+    /**
+     * La zone morte est HABITEE.
+     *
+     * Une zone qui se contente de faire mal se contourne : on n'y va pas, et
+     * elle ne raconte rien. Peuplee, elle devient un endroit dont on revient
+     * avec quelque chose -- et le seul endroit ou tombent les materiaux rares,
+     * ce qui donne une raison d'y entrer volontairement au lieu de la subir.
+     */
+    private static void haunt(ServerLevel level, BlockPos center, int radius) {
+        for (ServerPlayer player : level.players()) {
+            double dx = player.getX() - (center.getX() + 0.5);
+            double dz = player.getZ() - (center.getZ() + 0.5);
+            if (Math.sqrt(dx * dx + dz * dz) <= radius) {
+                continue;                      // au chaud : la Maree l'ignore
+            }
+            long nearby = level.getEntitiesOfClass(LivingEntity.class,
+                    player.getBoundingBox().inflate(40.0), e -> e instanceof Enemy).size();
+            if (nearby >= TIDE_CAP) {
+                continue;
+            }
+            // un seigneur de loin en loin : assez rare pour rester un evenement
+            if (level.random.nextInt(14) == 0) {
+                spawnTide(level, player, warlord(level), true);
+                continue;
+            }
+            int wanted = 2 + level.random.nextInt(3);
+            for (int i = 0; i < wanted; i++) {
+                EntityType<?> type = commonType(level);
+                if (type != null) {
+                    spawnTide(level, player, type, false);
+                }
+            }
+        }
+    }
+
+    @javax.annotation.Nullable
+    private static EntityType<?> warlord(ServerLevel level) {
+        java.util.List<EntityType<?>> pool = new java.util.ArrayList<>();
+        for (String id : WARLORDS) {
+            EntityType.byString(id).ifPresent(pool::add);
+        }
+        // sans Cataclysm, un Ravager tient le role : dur, lent, impressionnant
+        return pool.isEmpty() ? EntityType.RAVAGER : pool.get(level.random.nextInt(pool.size()));
+    }
+
+    @javax.annotation.Nullable
+    private static EntityType<?> commonType(ServerLevel level) {
+        java.util.List<EntityType<?>> pool = new java.util.ArrayList<>();
+        for (String id : SiegeRoster.forTier(3)) {
+            EntityType.byString(id).ifPresent(pool::add);
+        }
+        if (pool.isEmpty()) {
+            EntityType<?>[] fallback = SiegeRoster.vanillaFallback(3);
+            return fallback.length == 0 ? null : fallback[level.random.nextInt(fallback.length)];
+        }
+        return pool.get(level.random.nextInt(pool.size()));
+    }
+
+    private static void spawnTide(ServerLevel level, ServerPlayer player,
+                                  @javax.annotation.Nullable EntityType<?> type, boolean lord) {
+        if (type == null) {
+            return;
+        }
+        double angle = level.random.nextDouble() * Math.PI * 2;
+        double dist = 20 + level.random.nextDouble() * 16;
+        int x = (int) Math.round(player.getX() + Math.cos(angle) * dist);
+        int z = (int) Math.round(player.getZ() + Math.sin(angle) * dist);
+        BlockPos spot = new BlockPos(x, WorldSetup.surfaceY(level, x, z), z);
+        if (!level.isLoaded(spot)) {
+            return;                            // jamais de generation forcee
+        }
+        Entity mob = type.spawn(level, spot, MobSpawnType.EVENT);
+        if (mob == null) {
+            return;
+        }
+        mob.addTag(TAG_TIDE);
+        level.sendParticles(new DustParticleOptions(new Vector3f(0.85F, 0.4F, 1.0F), 1.6F),
+                mob.getX(), mob.getY() + 1.0, mob.getZ(), 24, 0.5, 1.0, 0.5, 0.05);
+        if (lord) {
+            level.playSound(null, spot, net.minecraft.sounds.SoundEvents.WITHER_SPAWN,
+                    net.minecraft.sounds.SoundSource.HOSTILE, 2.0F, 0.6F);
+            for (ServerPlayer nearby : level.players()) {
+                if (nearby.distanceToSqr(mob) < 4096.0) {
+                    nearby.displayClientMessage(Component
+                            .translatable("game.emeraldweapons.tide.warlord",
+                                    mob.getDisplayName())
+                            .withStyle(net.minecraft.ChatFormatting.DARK_PURPLE), false);
+                }
+            }
         }
     }
 
