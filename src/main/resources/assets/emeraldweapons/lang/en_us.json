@@ -191,5 +191,8 @@
   "command.emeraldweapons.skip": "Clock advanced by %s minutes.",
   "game.emeraldweapons.rift.hint": "Prismatic rift -- step in to travel",
   "game.emeraldweapons.tide.warlord": "%s rises from the Tide",
-  "game.emeraldweapons.tier_unlocked": "Apotheosis world tier reached: %s"
+  "game.emeraldweapons.tier_unlocked": "Apotheosis world tier reached: %s",
+  "command.emeraldweapons.sanctuary": "Sanctuary built -- anchor at %s %s %s",
+  "game.emeraldweapons.gate.opening": "The portcullis rises",
+  "game.emeraldweapons.gate.closing": "The portcullis drops"
 }

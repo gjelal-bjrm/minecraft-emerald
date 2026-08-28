@@ -592,6 +592,9 @@ public class GameManager {
         stack.shrink(cost);
 
         state.anchorStarted();
+        // la herse tombe : on est enferme avec ce qui arrive, ce qui est tout
+        // le propos d'un siege
+        SanctuaryGate.closeNearest(level, pos);
         anchorSieges.put(pos, new Siege(level, pos, tier, WAVES[tier - 1],
                 Component.translatable("game.emeraldweapons.siege.anchor", tier),
                 tier >= 3 ? BossEvent.BossBarColor.PURPLE : BossEvent.BossBarColor.BLUE,
@@ -604,6 +607,7 @@ public class GameManager {
     }
 
     private static void resolveAnchor(ServerLevel level, BlockPos pos, boolean won) {
+        SanctuaryGate.openNearest(level, pos);      // gagne ou perdu, on ressort
         GameState state = GameState.get(level);
         state.anchorFinished(pos, won);
         if (!won) {

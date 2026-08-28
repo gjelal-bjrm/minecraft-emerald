@@ -208,6 +208,24 @@ La difficulté suit **l'ordre d'activation**, pas la position : la première anc
 activée est toujours la plus facile, quelle que soit celle que vous choisissez.
 Vous pouvez donc vous répartir sur la carte.
 
+### Le Sanctuaire
+
+Chaque ancre est au **sommet d'une pyramide**, dans une place forte : muraille
+de 67 blocs de côté avec chemin de ronde et créneaux, quatre tours d'angle, et
+un corps de garde au sud fermé par une **herse**.
+
+La herse est baissée à l'arrivée. On l'ouvre en tournant la **manivelle** sur le
+rempart, à droite de la porte (à défaut, un levier fait l'affaire). Elle
+**retombe toute seule quand vous activez l'ancre** — vous êtes enfermé avec ce
+qui arrive — et se rouvre quand le siège est fini, gagné ou perdu.
+
+Des **gardiens** tiennent les lieux avant vous : deux par tour d'angle, d'autres
+sur le chemin de ronde et autour de la pyramide. Ils ne quittent pas le
+sanctuaire. Comptez-les avant d'entrer.
+
+L'escalier plein sud monte du seuil au sommet : l'ancre est toujours
+atteignable.
+
 Si tout le monde meurt dans la zone, l'ancre se désactive et l'arcencium est
 perdu. Une ancre tenue devient votre **point de réapparition**.
 
@@ -246,6 +264,7 @@ Toutes commencent par `/arcencium` et demandent le niveau opérateur.
 | `weather stop` | Arrête la météo en cours |
 | `skip <minutes>` | Avance le chronomètre — pour voir la Marée sans jouer 36 minutes |
 | `find` | Donne les coordonnées de la Lame du Serment |
+| `sanctuary` | Bâtit un Sanctuaire d'Ancre là où vous êtes — pour le regarder en monde plat |
 
 Les noms de météo : `brume`, `aurore`, `nuit`, `meteores`, `dechirure`, `orage`,
 `embellie`. L'autocomplétion les propose toutes.

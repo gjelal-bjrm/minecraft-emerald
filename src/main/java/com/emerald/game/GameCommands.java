@@ -94,6 +94,20 @@ public class GameCommands {
                             return 1;
                         })));
 
+        // Le sanctuaire, bati sur place : c'est l'outil pour le regarder en
+        // monde plat sans jouer une partie entiere pour l'atteindre.
+        root.then(Commands.literal("sanctuary").executes(ctx -> {
+            ServerLevel level = ctx.getSource().getServer().overworld();
+            var pos = net.minecraft.core.BlockPos.containing(ctx.getSource().getPosition());
+            var ground = new net.minecraft.core.BlockPos(pos.getX(),
+                    WorldSetup.surfaceY(level, pos.getX(), pos.getZ()) - 1, pos.getZ());
+            var anchor = Sanctuary.build(level, ground);
+            ctx.getSource().sendSuccess(() -> Component.translatable(
+                    "command.emeraldweapons.sanctuary",
+                    anchor.getX(), anchor.getY(), anchor.getZ()), true);
+            return 1;
+        }));
+
         root.then(Commands.literal("goto").executes(ctx -> {
             ServerLevel level = ctx.getSource().getServer().overworld();
             var village = GameState.get(level).village();

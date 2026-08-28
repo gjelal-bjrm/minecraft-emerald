@@ -866,6 +866,39 @@ se fige avec le serveur au lieu d'expirer pendant qu'il est eteint.
 
 ---
 
+## 14 ter. Le Sanctuaire d'Ancre *(bati, pas encore branche)*
+
+Reponse au probleme du 14 bis. L'ancre est au sommet d'une pyramide de six
+gradins, dans une place forte batie en blocs du mode :
+
+- **muraille** 67 x 67, epaisse de 2, haute de 8, chemin de ronde a 6, merlons
+  un bloc sur deux, meurtrieres vitrees tous les six blocs, deux rampes
+  d'acces ;
+- **quatre tours d'angle** octogonales et creuses, hautes de 13 -- octogonales
+  parce qu'une tour carree se confond avec le coin du mur ;
+- **corps de garde** au sud : deux tours qui encadrent une voute, une herse de
+  barreaux, et la poulie, la corde et la manivelle de Supplementaries pour en
+  montrer le mecanisme ;
+- **pyramide** 25 x 25, six gradins de 2, escalier plein sud du seuil au
+  sommet -- c'est lui qui repond au probleme d'origine ;
+- **garnison** postee a la construction, pas apparue a l'approche : on compte
+  les silhouettes avant d'entrer et on decide par ou passer. Attachee au lieu
+  par `restrictTo`.
+
+**La herse obeit au jeu**, et c'est pourquoi elle n'utilise pas la poulie de
+Supplementaries pour de vrai : elle retombe quand le siege d'ancre commence --
+on est enferme avec ce qui arrive -- et se rouvre quand il est fini. Un
+mecanisme a redstone n'aurait pas su faire les deux. A la main, on tourne la
+manivelle ; le levier vanilla est accepte en repli, faute de quoi un
+Supplementaries manquant rendrait la porte inouvrable.
+
+**Pas encore branche sur la generation reelle.** `/arcencium sanctuary` le batit
+sur place pour l'examiner. La raison de ne pas l'avoir cable tout de suite est
+chiffree : l'emprise fait pres de cent mille blocs, trois sanctuaires en font
+trois cent mille, et les poser tous au demarrage du monde coutera plusieurs
+secondes de gel. Il faudra les batir paresseusement -- au premier chargement de
+leur zone -- avant de remplacer le placement actuel.
+
 ## 14 bis. A FAIRE EN PRIORITE — le placement des ancres
 
 **Constat.** Les ancres sont posees a 450 blocs du village, sur trois directions
