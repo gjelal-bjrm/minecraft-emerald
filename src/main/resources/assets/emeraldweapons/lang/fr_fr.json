@@ -188,5 +188,6 @@
   "game.emeraldweapons.tide.gnaw": "La Marée vous ronge.",
   "command.emeraldweapons.weather.set": "%s déclenchée.",
   "command.emeraldweapons.weather.stopped": "Météo arrêtée.",
-  "command.emeraldweapons.skip": "Horloge avancée de %s minutes."
+  "command.emeraldweapons.skip": "Horloge avancée de %s minutes.",
+  "game.emeraldweapons.rift.hint": "Faille prismatique -- entrez pour voyager"
 }

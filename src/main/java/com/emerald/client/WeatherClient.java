@@ -75,6 +75,15 @@ public final class WeatherClient {
                 || w == Weather.ORAGE || w == Weather.DECHIRURE
                 || w == Weather.METEORES;
         intensity = clamp(intensity + (foggy ? 0.015F : -0.015F));
+        // le tremblement de fond des tempetes : imperceptible a l'arret, mais
+        // c'est lui qui empeche l'image d'etre tout a fait stable, et donc
+        // tout a fait rassurante
+        WeatherAtmosphere.setRumble(switch (w) {
+            case ORAGE -> 0.055F * intensity;
+            case METEORES -> 0.035F * intensity;
+            case DECHIRURE -> 0.025F * intensity;
+            default -> 0.0F;
+        });
         ambience(w);
     }
 
@@ -109,7 +118,7 @@ public final class WeatherClient {
                         ((rgb >> 8) & 0xFF) / 255F, (rgb & 0xFF) / 255F};
             }
             case NUIT -> new float[]{0.03F, 0.02F, 0.08F};
-            case ORAGE -> new float[]{0.13F, 0.09F, 0.18F};
+            case ORAGE -> new float[]{0.20F, 0.10F, 0.30F};
             case DECHIRURE -> new float[]{0.30F, 0.18F, 0.38F};
             case METEORES -> new float[]{0.32F, 0.16F, 0.10F};
             default -> null;
@@ -125,7 +134,7 @@ public final class WeatherClient {
         float far = switch (current()) {
             case BRUME -> 56.0F;
             case NUIT -> 96.0F;
-            case ORAGE -> 120.0F;
+            case ORAGE -> 84.0F;
             case DECHIRURE -> 140.0F;
             case METEORES -> 180.0F;       // une brume de cendre, legere
             default -> -1.0F;
@@ -216,12 +225,32 @@ public final class WeatherClient {
                 }
             }
             case DECHIRURE -> {
-                if (random.nextInt(2) == 0) {
+                // tout MONTE : poussiere, eclats, brins d'herbe. C'est le seul
+                // moyen de faire sentir que la gravite a lache, puisqu'on ne
+                // voit pas sa propre legerete tant qu'on ne saute pas
+                for (int i = 0; i < 4; i++) {
                     level.addParticle(ParticleTypes.END_ROD,
+                            player.getX() + (random.nextDouble() - 0.5) * 20,
+                            player.getY() + random.nextDouble() * 5 - 2,
+                            player.getZ() + (random.nextDouble() - 0.5) * 20,
+                            0.0, 0.05 + random.nextDouble() * 0.05, 0.0);
+                }
+                for (int i = 0; i < 3; i++) {
+                    float hue = (float) ((level.getGameTime() * 0.002 + i * 0.3) % 1.0);
+                    int rgb = Color.HSBtoRGB(hue * 0.35F + 0.62F, 0.5F, 1.0F);
+                    level.addParticle(new DustParticleOptions(new Vector3f(
+                                    ((rgb >> 16) & 0xFF) / 255F, ((rgb >> 8) & 0xFF) / 255F,
+                                    (rgb & 0xFF) / 255F), 1.1F),
                             player.getX() + (random.nextDouble() - 0.5) * 16,
-                            player.getY() + random.nextDouble() * 4 - 1,
+                            player.getY() + random.nextDouble() * 4 - 2,
                             player.getZ() + (random.nextDouble() - 0.5) * 16,
-                            0.0, 0.06, 0.0);
+                            0.0, 0.08, 0.0);
+                }
+                // le bourdonnement de l'air : l'oreille comprend avant l'oeil
+                if (level.getGameTime() % 70 == 0) {
+                    level.playLocalSound(player.getX(), player.getY(), player.getZ(),
+                            net.minecraft.sounds.SoundEvents.PORTAL_AMBIENT,
+                            net.minecraft.sounds.SoundSource.AMBIENT, 0.5F, 0.45F, false);
                 }
             }
             case NUIT -> prismaticRain(level, player, random);
@@ -245,6 +274,19 @@ public final class WeatherClient {
                 }
             }
             case ORAGE -> {
+                if (level.getGameTime() % 90 == 0) {
+                    level.playLocalSound(player.getX(), player.getY(), player.getZ(),
+                            net.minecraft.sounds.SoundEvents.AMBIENT_CAVE.value(),
+                            net.minecraft.sounds.SoundSource.AMBIENT, 0.7F, 0.35F, false);
+                }
+                for (int i = 0; i < 3; i++) {
+                    level.addParticle(new DustParticleOptions(
+                                    new Vector3f(0.62F, 0.30F, 0.90F), 1.8F),
+                            player.getX() + (random.nextDouble() - 0.5) * 26,
+                            player.getY() + random.nextDouble() * 7 - 2,
+                            player.getZ() + (random.nextDouble() - 0.5) * 26,
+                            0.0, 0.01, 0.0);
+                }
                 if (random.nextInt(8) == 0) {
                     level.addParticle(ParticleTypes.ELECTRIC_SPARK,
                             player.getX() + (random.nextDouble() - 0.5) * 20,

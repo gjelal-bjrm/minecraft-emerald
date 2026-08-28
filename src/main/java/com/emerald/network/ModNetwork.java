@@ -31,6 +31,10 @@ public class ModNetwork {
                 (payload, context) -> context.enqueueWork(
                         () -> com.emerald.client.WeatherClient.accept(payload)));
 
+        registrar.playToClient(WeatherPulsePayload.TYPE, WeatherPulsePayload.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(
+                        () -> com.emerald.client.WeatherAtmosphere.accept(payload)));
+
         registrar.playToServer(ArtifactActionPayload.TYPE, ArtifactActionPayload.STREAM_CODEC,
                 (payload, context) -> context.enqueueWork(() -> {
                     if (context.player() instanceof ServerPlayer player) {

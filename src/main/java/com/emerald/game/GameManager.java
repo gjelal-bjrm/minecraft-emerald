@@ -253,6 +253,24 @@ public class GameManager {
      * genere : c'est le seul endroit dont on soit certain qu'il existe et qu'il
      * soit accessible, quel que soit le monde tire.
      */
+    /**
+     * Le ciel appartient au mode, pas au cycle vanilla.
+     *
+     * Deux raisons. La premiere est de conception : une averse tiree par le jeu
+     * pendant une Aurore ou une Brume brouille une meteo qu'on vient
+     * d'annoncer, et le joueur n'a aucun moyen de savoir laquelle des deux il
+     * regarde. La seconde est technique : la pluie du jeu est dessinee en blanc
+     * pur, sans point d'entree pour la teinter, si bien que la seule facon
+     * d'obtenir une VRAIE pluie d'Arcencium est de remplacer sa texture -- ce
+     * qui n'est acceptable que si nous sommes seuls a declencher la pluie.
+     */
+    private static void seizeTheSky(ServerLevel level) {
+        level.getServer().getGameRules()
+                .getRule(net.minecraft.world.level.GameRules.RULE_WEATHER_CYCLE)
+                .set(false, level.getServer());
+        level.setWeatherParameters(6000, 0, false, false);
+    }
+
     public static void setup(ServerLevel level, BlockPos center) {
         GameState state = GameState.get(level);
         removePreviousBlade(level, state);
@@ -273,6 +291,7 @@ public class GameManager {
         state.setAnchors(anchors);
         state.returnToLobby();
         WorldSetup.clearHostiles(level, ground);
+        seizeTheSky(level);
 
         BlockPos stand = playerSpot(level, ground);
         level.setDefaultSpawnPos(stand, 0.0F);

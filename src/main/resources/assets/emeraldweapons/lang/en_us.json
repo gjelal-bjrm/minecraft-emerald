@@ -188,5 +188,6 @@
   "game.emeraldweapons.tide.gnaw": "The Tide gnaws at you.",
   "command.emeraldweapons.weather.set": "%s triggered.",
   "command.emeraldweapons.weather.stopped": "Weather stopped.",
-  "command.emeraldweapons.skip": "Clock advanced by %s minutes."
+  "command.emeraldweapons.skip": "Clock advanced by %s minutes.",
+  "game.emeraldweapons.rift.hint": "Prismatic rift -- step in to travel"
 }

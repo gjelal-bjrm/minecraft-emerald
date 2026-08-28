@@ -4,7 +4,10 @@ import com.emerald.artifact.Artifact;
 import com.emerald.artifact.Artifacts;
 import com.emerald.block.ModBlocks;
 import com.emerald.effects.ModEffects;
+import com.emerald.game.GamePhase;
 import com.emerald.game.GameState;
+import com.emerald.game.SiegeRoster;
+import com.emerald.network.WeatherPulsePayload;
 import com.emerald.game.WorldSetup;
 import com.emerald.item.ModItems;
 import com.emerald.main.EmeraldWeaponsMod;
@@ -22,6 +25,8 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
@@ -36,6 +41,7 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.network.PacketDistributor;
 import org.joml.Vector3f;
 
 import java.util.ArrayList;
@@ -198,6 +204,7 @@ public final class WeatherEffects {
     }
 
     static void tick(ServerLevel level, Weather weather) {
+        stormPressure(level, weather);
         switch (weather) {
             case BRUME -> tickBrume(level);
             case AURORE -> tickAurore(level);
@@ -208,6 +215,109 @@ public final class WeatherEffects {
             default -> {
             }
         }
+    }
+
+    // ------------------------------------------------------- le coup ressenti
+
+    /**
+     * Un coup de tempete : eclat d'ecran et secousse, chez ceux qui sont assez
+     * pres pour l'avoir vecu.
+     *
+     * La force decroit avec la distance, ce qui suffit a situer l'evenement :
+     * un impact a dix blocs lave l'ecran, le meme a soixante n'est qu'un
+     * frisson. Sans cela, une tempete reste un decor qu'on regarde.
+     */
+    private static void pulse(ServerLevel level, BlockPos pos, int color,
+                              float flash, float shake, double radius) {
+        for (ServerPlayer player : level.players()) {
+            double dist = Math.sqrt(player.distanceToSqr(
+                    pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5));
+            if (dist > radius) {
+                continue;
+            }
+            float falloff = (float) (1.0 - dist / radius);
+            falloff *= falloff;                 // la chute est plus raide que lineaire
+            PacketDistributor.sendToPlayer(player, new WeatherPulsePayload(color,
+                    Math.round(flash * falloff * 100.0F),
+                    Math.round(shake * falloff * 100.0F)));
+        }
+    }
+
+    // --------------------------------------------------- la pression de monstres
+
+    /** Au-dela, on cesse d'en ajouter : la tempete presse, elle ne submerge pas. */
+    private static final int PRESSURE_CAP = 12;
+
+    /** Marque les monstres nes de la tempete -- ce sont eux qui paieront. */
+    public static final String TAG_STORM = "emeraldweapons_storm_born";
+
+    /**
+     * Une tempete agressive PEUPLE le monde.
+     *
+     * C'etait le manque le plus cite a l'essai : « on voit quelques monstres,
+     * mais au final c'est une nuit normale ». Les apparitions naturelles ne
+     * suffisent pas -- elles sont plafonnees par la lumiere et par le nombre de
+     * mobs deja charges, si bien qu'une tempete ne changeait rien a ce qu'on
+     * croisait. On ajoute donc notre propre pression, par apparition d'EVENEMENT
+     * pour qu'elle echappe aux regles de lumiere, plafonnee par joueur.
+     */
+    private static void stormPressure(ServerLevel level, Weather weather) {
+        if (!weather.aggressive || level.getGameTime() % 60 != 0) {
+            return;
+        }
+        int tier = switch (GameState.get(level).phase(level)) {
+            case PRESSION -> 2;
+            case ASSAUT -> 3;
+            default -> 1;
+        };
+        for (ServerPlayer player : level.players()) {
+            AABB around = player.getBoundingBox().inflate(44.0);
+            long nearby = level.getEntitiesOfClass(LivingEntity.class, around,
+                    e -> e instanceof Enemy).size();
+            if (nearby >= PRESSURE_CAP) {
+                continue;
+            }
+            int wanted = 1 + level.random.nextInt(3);
+            for (int i = 0; i < wanted && nearby + i < PRESSURE_CAP; i++) {
+                spawnStormMob(level, player, tier);
+            }
+        }
+    }
+
+    private static void spawnStormMob(ServerLevel level, ServerPlayer player, int tier) {
+        double angle = level.random.nextDouble() * Math.PI * 2;
+        double dist = 22 + level.random.nextDouble() * 14;
+        int x = (int) Math.round(player.getX() + Math.cos(angle) * dist);
+        int z = (int) Math.round(player.getZ() + Math.sin(angle) * dist);
+        BlockPos spot = new BlockPos(x, WorldSetup.surfaceY(level, x, z), z);
+        if (!level.isLoaded(spot)) {
+            return;                            // jamais de generation forcee
+        }
+        EntityType<?> type = pickStormType(level, tier);
+        if (type == null) {
+            return;
+        }
+        Entity mob = type.spawn(level, spot, MobSpawnType.EVENT);
+        if (mob == null) {
+            return;
+        }
+        mob.addTag(TAG_STORM);
+        // l'arrivee se voit : sans cela les monstres semblent surgir de nulle part
+        level.sendParticles(ModParticles.PRISM_MOTE.get(),
+                mob.getX(), mob.getY() + 1.0, mob.getZ(), 12, 0.3, 0.6, 0.3, 0.06);
+    }
+
+    @javax.annotation.Nullable
+    private static EntityType<?> pickStormType(ServerLevel level, int tier) {
+        List<EntityType<?>> pool = new ArrayList<>();
+        for (String id : SiegeRoster.forTier(tier)) {
+            EntityType.byString(id).ifPresent(pool::add);
+        }
+        if (pool.isEmpty()) {
+            EntityType<?>[] fallback = SiegeRoster.vanillaFallback(tier);
+            return fallback.length == 0 ? null : fallback[level.random.nextInt(fallback.length)];
+        }
+        return pool.get(level.random.nextInt(pool.size()));
     }
 
     // ------------------------------------------------------------ garde-fous
@@ -342,11 +452,14 @@ public final class WeatherEffects {
     private static void tickNuit(ServerLevel level) {
         tickWaves(level);
         tickScars(level);
-        if (level.getGameTime() % 20 != 0) {
+        distantFlash(level);
+        // un eclair toutes les six secondes se lisait comme un ciel calme : la
+        // Nuit doit gronder sans repit, c'est ce qui la distingue d'une nuit
+        if (level.getGameTime() % 10 != 0) {
             return;
         }
         for (ServerPlayer player : level.players()) {
-            if (level.random.nextInt(6) != 0) {
+            if (level.random.nextInt(2) != 0) {
                 continue;
             }
             double angle = level.random.nextDouble() * Math.PI * 2;
@@ -357,6 +470,31 @@ public final class WeatherEffects {
 
             ArcenciumBoltEntity.Variant variant = pickBoltVariant(level);
             strikeBolt(level, pos, variant);
+        }
+    }
+
+    /**
+     * Les eclairs de l'horizon : de la lumiere, pas d'evenement.
+     *
+     * Une tempete n'est pas faite que de ce qui vous tombe dessus. Ces eclats
+     * lointains n'ont ni degats ni entite -- juste un ciel qui blanchit et un
+     * grondement, ce qui remplit les silences entre deux vraies frappes.
+     */
+    private static void distantFlash(ServerLevel level) {
+        if (level.getGameTime() % 35 != 0 || level.random.nextInt(3) != 0) {
+            return;
+        }
+        int color = switch (level.random.nextInt(4)) {
+            case 0 -> 0xFF8C6B;
+            case 1 -> 0x8CC4FF;
+            case 2 -> 0xFF9CE8;
+            default -> 0xC9A0FF;
+        };
+        for (ServerPlayer player : level.players()) {
+            PacketDistributor.sendToPlayer(player,
+                    new WeatherPulsePayload(color, 22 + level.random.nextInt(16), 0));
+            level.playSound(null, player.blockPosition(), SoundEvents.LIGHTNING_BOLT_THUNDER,
+                    SoundSource.WEATHER, 0.55F, 0.45F + level.random.nextFloat() * 0.2F);
         }
     }
 
@@ -378,6 +516,7 @@ public final class WeatherEffects {
                 2.0F, 0.9F + level.random.nextFloat() * 0.3F);
         level.playSound(null, pos, SoundEvents.LIGHTNING_BOLT_IMPACT, SoundSource.WEATHER,
                 1.2F, 1.0F);
+        pulse(level, pos, variant.color, 0.95F, 0.55F, 46.0);
 
         DamageSource source = level.damageSources().lightningBolt();
         for (LivingEntity entity : level.getEntitiesOfClass(LivingEntity.class,
@@ -592,6 +731,9 @@ public final class WeatherEffects {
     private static void meteorImpact(ServerLevel level, BlockPos target) {
         level.playSound(null, target, SoundEvents.GENERIC_EXPLODE.value(), SoundSource.WEATHER,
                 1.4F, 0.8F);
+        // le grondement long qui suit : c'est lui qui donne l'echelle
+        level.playSound(null, target, SoundEvents.WITHER_SPAWN, SoundSource.WEATHER, 0.6F, 0.4F);
+        pulse(level, target, 0xFF7A2E, 0.85F, 1.6F, 60.0);
         level.sendParticles(ParticleTypes.EXPLOSION_EMITTER,
                 target.getX() + 0.5, target.getY() + 0.5, target.getZ() + 0.5, 1, 0, 0, 0, 0);
         level.sendParticles(ModParticles.PRISM_MOTE.get(),
@@ -646,10 +788,10 @@ public final class WeatherEffects {
         // la gravite allegee, joueurs et monstres proches
         if (level.getGameTime() % 20 == 0) {
             for (ServerPlayer player : level.players()) {
-                ensureModifier(player, Attributes.GRAVITY, GRAVITY_ID, -0.65);
+                ensureModifier(player, Attributes.GRAVITY, GRAVITY_ID, -0.78);
                 for (Mob mob : level.getEntitiesOfClass(Mob.class,
                         player.getBoundingBox().inflate(48))) {
-                    ensureModifier(mob, Attributes.GRAVITY, GRAVITY_ID, -0.65);
+                    ensureModifier(mob, Attributes.GRAVITY, GRAVITY_ID, -0.78);
                 }
             }
         }
@@ -677,7 +819,11 @@ public final class WeatherEffects {
             double dist = 10 + level.random.nextDouble() * 20;
             int x = (int) Math.round(player.getX() + Math.cos(angle) * dist);
             int z = (int) Math.round(player.getZ() + Math.sin(angle) * dist);
-            int y = WorldSetup.surfaceY(level, x, z) + 12 + level.random.nextInt(8);
+            // Douze a vingt blocs etaient hors de portee meme en apesanteur : un
+            // bond allege culmine vers quatre blocs, pas vingt. On les pose
+            // juste au-dessus de ce qu'un saut normal atteint -- inaccessibles
+            // sans la tempete, accessibles avec, ce qui est tout leur interet.
+            int y = WorldSetup.surfaceY(level, x, z) + 4 + level.random.nextInt(4);
             int count = 2 + level.random.nextInt(2);
             for (int i = 0; i < count; i++) {
                 ItemEntity shard = new ItemEntity(level,
@@ -713,8 +859,18 @@ public final class WeatherEffects {
                 it.remove();   // cueilli ou detruit : celui-la ne reviendra pas
                 continue;
             }
+            // un halo et une colonne jusqu'au sol : un objet de trente
+            // centimetres a huit blocs de haut ne se remarque pas tout seul,
+            // et c'est pour cela qu'on ne les trouvait pas
             level.sendParticles(ModParticles.PRISM_MOTE.get(),
-                    entity.getX(), entity.getY() + 0.3, entity.getZ(), 1, 0.2, 0.2, 0.2, 0.01);
+                    entity.getX(), entity.getY() + 0.3, entity.getZ(), 6, 0.5, 0.5, 0.5, 0.02);
+            level.sendParticles(ParticleTypes.END_ROD,
+                    entity.getX(), entity.getY() + 0.3, entity.getZ(), 2, 0.35, 0.35, 0.35, 0.0);
+            for (int h = 1; h <= 6; h++) {
+                level.sendParticles(ParticleTypes.ELECTRIC_SPARK,
+                        entity.getX(), entity.getY() - h * 0.8, entity.getZ(),
+                        1, 0.05, 0.05, 0.05, 0.0);
+            }
         }
     }
 
@@ -736,20 +892,71 @@ public final class WeatherEffects {
                 continue;
             }
             BlockPos pos = rift.pos;
-            if (level.getGameTime() % 2 == 0) {
-                level.sendParticles(ParticleTypes.PORTAL,
-                        pos.getX() + 0.5, pos.getY() + 1.2, pos.getZ() + 0.5,
-                        6, 0.4, 1.0, 0.4, 0.05);
-                level.sendParticles(ParticleTypes.END_ROD,
-                        pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5,
-                        1, 0.2, 0.8, 0.2, 0.01);
-            }
+            drawRift(level, pos, rift.life);
             if (level.getGameTime() % 10 != 0) {
                 continue;
             }
             for (LivingEntity entity : level.getEntitiesOfClass(LivingEntity.class,
                     new AABB(pos).inflate(1.2, 2.0, 1.2))) {
                 travelRift(level, entity);
+            }
+        }
+    }
+
+    /**
+     * Une faille qui RESSEMBLE a une faille.
+     *
+     * Trois particules de portail par tick ne disaient rien : « j'ai devine
+     * parce qu'on l'a fait ensemble, sinon je ne l'aurais jamais su ». On
+     * dessine donc une porte -- un ovale vertical de deux blocs de large et
+     * trois de haut, un tourbillon dedans, une colonne qui monte pour la
+     * reperer de loin -- et on l'annonce a qui s'en approche.
+     */
+    private static void drawRift(ServerLevel level, BlockPos pos, int life) {
+        double cx = pos.getX() + 0.5;
+        double cy = pos.getY() + 1.6;
+        double cz = pos.getZ() + 0.5;
+        double spin = level.getGameTime() * 0.08;
+
+        // le contour de la porte, dessine plein pour qu'il se lise comme un bord
+        for (int i = 0; i < 22; i++) {
+            double a = i / 22.0 * Math.PI * 2;
+            level.sendParticles(new DustParticleOptions(
+                            new Vector3f(0.85F, 0.45F, 1.0F), 1.5F),
+                    cx + Math.cos(a) * 1.15, cy + Math.sin(a) * 1.6, cz,
+                    1, 0.02, 0.02, 0.02, 0.0);
+            level.sendParticles(new DustParticleOptions(
+                            new Vector3f(0.55F, 0.85F, 1.0F), 1.5F),
+                    cx, cy + Math.sin(a) * 1.6, cz + Math.cos(a) * 1.15,
+                    1, 0.02, 0.02, 0.02, 0.0);
+        }
+        // le tourbillon interieur : c'est lui qui donne l'impression du gouffre
+        for (int i = 0; i < 6; i++) {
+            double a = spin + i / 6.0 * Math.PI * 2;
+            double r = 0.25 + (i % 3) * 0.3;
+            level.sendParticles(ParticleTypes.PORTAL,
+                    cx + Math.cos(a) * r, cy + Math.sin(a * 1.7) * 0.8, cz + Math.sin(a) * r,
+                    1, 0.0, 0.0, 0.0, 0.0);
+        }
+        // la colonne : on doit pouvoir la reperer d'un versant a l'autre
+        if (level.getGameTime() % 4 == 0) {
+            for (int h = 0; h < 22; h += 2) {
+                level.sendParticles(ParticleTypes.END_ROD,
+                        cx, pos.getY() + h, cz, 1, 0.08, 0.1, 0.08, 0.0);
+            }
+        }
+        if (level.getGameTime() % 60 == 0) {
+            level.playSound(null, pos, SoundEvents.PORTAL_AMBIENT, SoundSource.AMBIENT,
+                    0.9F, 0.7F);
+        }
+        // l'invitation, a qui est assez pres pour la lire
+        if (level.getGameTime() % 20 == 0) {
+            for (ServerPlayer player : level.players()) {
+                if (player.distanceToSqr(cx, cy, cz) < 64.0) {
+                    player.displayClientMessage(net.minecraft.network.chat.Component
+                            .translatable("game.emeraldweapons.rift.hint")
+                            .withStyle(net.minecraft.ChatFormatting.LIGHT_PURPLE), true);
+                }
             }
         }
     }
@@ -844,13 +1051,33 @@ public final class WeatherEffects {
             Strike strike = it.next();
             strike.ticks--;
             BlockPos pos = strike.pos;
-            if (strike.ticks % 4 == 0) {
-                double pulse = 3.0 * (strike.ticks / 50.0);
-                for (int i = 0; i < 8; i++) {
-                    double a = i / 8.0 * Math.PI * 2;
-                    level.sendParticles(new DustParticleOptions(new Vector3f(0.73F, 0.55F, 1.0F), 1.2F),
-                            pos.getX() + 0.5 + Math.cos(a) * pulse, pos.getY() + 0.2,
-                            pos.getZ() + 0.5 + Math.sin(a) * pulse, 1, 0.0, 0.05, 0.0, 0.0);
+            if (strike.ticks == 50) {
+                // le signal de depart : sans lui, le cercle passait pour un
+                // decor de plus et personne ne comprenait qu'il annoncait
+                level.playSound(null, pos, SoundEvents.BEACON_ACTIVATE,
+                        SoundSource.WEATHER, 1.6F, 1.8F);
+            }
+            if (strike.ticks % 2 == 0) {
+                double ring = 4.0 * (strike.ticks / 50.0);
+                int points = 20;
+                for (int i = 0; i < points; i++) {
+                    double a = i / (double) points * Math.PI * 2;
+                    level.sendParticles(new DustParticleOptions(
+                                    new Vector3f(0.85F, 0.45F, 1.0F), 1.6F),
+                            pos.getX() + 0.5 + Math.cos(a) * ring, pos.getY() + 0.2,
+                            pos.getZ() + 0.5 + Math.sin(a) * ring, 1, 0.0, 0.03, 0.0, 0.0);
+                }
+                // la colonne qui monte : elle designe la cible depuis loin
+                for (int h = 0; h < 10; h += 2) {
+                    level.sendParticles(ParticleTypes.ELECTRIC_SPARK,
+                            pos.getX() + 0.5, pos.getY() + h, pos.getZ() + 0.5,
+                            1, 0.15, 0.3, 0.15, 0.0);
+                }
+                // le tic-tac s'accelere a mesure que le cercle se referme
+                if (strike.ticks % Math.max(2, strike.ticks / 6) == 0) {
+                    level.playSound(null, pos, SoundEvents.NOTE_BLOCK_CHIME.value(),
+                            SoundSource.WEATHER, 0.7F,
+                            1.2F + (50 - strike.ticks) / 50.0F);
                 }
             }
             if (strike.ticks <= 0) {
@@ -866,6 +1093,7 @@ public final class WeatherEffects {
                 ArcenciumBoltEntity.Variant.ORAGE));
         level.playSound(null, pos, SoundEvents.LIGHTNING_BOLT_THUNDER, SoundSource.WEATHER,
                 2.5F, 0.7F);
+        pulse(level, pos, 0xE0B0FF, 1.0F, 1.2F, 55.0);
 
         DamageSource source = level.damageSources().lightningBolt();
         for (LivingEntity entity : level.getEntitiesOfClass(LivingEntity.class,
