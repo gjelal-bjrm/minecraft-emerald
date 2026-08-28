@@ -224,10 +224,17 @@ sur le chemin de ronde et autour de la pyramide. Ils ne quittent pas le
 sanctuaire. Comptez-les avant d'entrer.
 
 **Où est l'ancre :** au sommet de la pyramide, sur un parvis à quatre
-obélisques. On y monte par la **tour d'escalier au sud de la pyramide** — on y
-entre par la cour, l'escalier en vis mène tout en haut, et une passerelle
-éclairée rejoint le parvis. C'est long, et c'est voulu : on doit sentir qu'on
-monte à quelque chose.
+obélisques. Deux façons de la trouver :
+
+- **la pulsation.** Dès que vous êtes dans l'enceinte, une colonne de lumière
+  jaillit de l'ancre toutes les 30 secondes, pendant 10 secondes. Elle se voit
+  **à travers les murs** ;
+- **la tour d'escalier**, au sud de la pyramide : on y entre par la cour,
+  l'escalier en vis monte tout en haut, et une passerelle éclairée rejoint le
+  parvis.
+
+Il y a **quatre portes**, une par côté, donc une tombe toujours en face de
+l'entrée de la pyramide.
 
 Si tout le monde meurt dans la zone, l'ancre se désactive et l'arcencium est
 perdu. Une ancre tenue devient votre **point de réapparition**.

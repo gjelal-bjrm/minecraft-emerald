@@ -36,7 +36,7 @@ import java.util.Map;
 @EventBusSubscriber(modid = EmeraldWeaponsMod.MODID)
 public final class SanctuaryGate {
 
-    private record Gate(int half, int height, boolean open) {
+    private record Gate(int half, int height, int ax, int az, boolean open) {
     }
 
     /** Volatil, comme les sieges : une porte se retrouve, elle ne se sauve pas. */
@@ -48,8 +48,8 @@ public final class SanctuaryGate {
     private SanctuaryGate() {
     }
 
-    public static void register(BlockPos centre, int half, int height) {
-        gates.put(centre.immutable(), new Gate(half, height, true));
+    public static void register(BlockPos centre, int half, int height, int ax, int az) {
+        gates.put(centre.immutable(), new Gate(half, height, ax, az, true));
     }
 
     public static void clearAll() {
@@ -101,13 +101,16 @@ public final class SanctuaryGate {
         if (gate == null || gate.open() == open) {
             return;
         }
-        gates.put(centre, new Gate(gate.half(), gate.height(), open));
+        gates.put(centre, new Gate(gate.half(), gate.height(), gate.ax(), gate.az(), open));
 
-        for (int dx = -gate.half(); dx <= gate.half(); dx++) {
+        // la herse suit l'AXE de son mur : les quatre portes n'ont pas toutes
+        // la meme orientation, et une herse posee sur l'axe des x en boucherait
+        // une sur deux de travers
+        for (int a = -gate.half(); a <= gate.half(); a++) {
             for (int dy = 1; dy <= gate.height(); dy++) {
-                BlockPos pos = centre.offset(dx, dy, 0);
+                BlockPos pos = centre.offset(gate.ax() * a, dy, gate.az() * a);
                 level.setBlock(pos, open ? Blocks.AIR.defaultBlockState()
-                        : latticeAt(dx, dy), 3);
+                        : latticeAt(a, dy), 3);
             }
         }
         level.playSound(null, centre, SoundEvents.CHAIN_PLACE, SoundSource.BLOCKS, 2.0F,

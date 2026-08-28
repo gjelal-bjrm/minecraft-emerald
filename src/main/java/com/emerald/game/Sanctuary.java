@@ -144,7 +144,16 @@ public final class Sanctuary {
                 cornerTower(level, cx + sx * HALF, y, cz + sz * HALF);
             }
         }
-        gatehouse(level, cx, y, cz);
+        // QUATRE portes, une par cote.
+        //
+        // La pyramide est posee par la commande du jeu, qui choisit elle-meme
+        // sa rotation : impossible de savoir a l'avance vers ou son entree
+        // regarde, et une porte unique tombait donc de travers une fois sur
+        // quatre... ou trois. Quatre portes reglent la question par
+        // construction, et une forteresse a quatre portes n'a rien d'absurde.
+        for (int side = 0; side < 4; side++) {
+            gatehouse(level, cx, y, cz, side);
+        }
 
         greatPyramid(level, source, cx, y, cz);
         // On MESURE le sommet au lieu de le supposer : la pyramide de Cataclysm
@@ -155,7 +164,7 @@ public final class Sanctuary {
         BlockPos anchor = crown(level, cx, summit, cz);
         ascent(level, cx, y, cz, summit);
         SanctuaryGarrison.populate(level, new BlockPos(cx, y, cz), HALF);
-        SanctuaryMist.register(new BlockPos(cx, y, cz), HALF);
+        SanctuaryMist.register(new BlockPos(cx, y, cz), HALF, anchor);
         return anchor;
     }
 
@@ -396,7 +405,7 @@ public final class Sanctuary {
     private static void courtyard(ServerLevel level, int cx, int y, int cz) {
         for (int dx = -HALF; dx <= HALF; dx++) {
             for (int dz = -HALF; dz <= HALF; dz++) {
-                boolean road = Math.abs(dx) <= GATE_HALF && dz > 0;
+                boolean road = Math.abs(dx) <= GATE_HALF || Math.abs(dz) <= GATE_HALF;
                 // un damier discret : une cour d'un seul bloc fait dalle de beton
                 boolean checker = Math.floorMod(dx + dz, 8) == 0;
                 set(level, cx + dx, y, cz + dz,
@@ -419,8 +428,8 @@ public final class Sanctuary {
             for (int t = 0; t < THICK; t++) {
                 for (int side = 0; side < 4; side++) {
                     int[] xz = wallPoint(side, d, t, cx, cz);
-                    if (side == 1 && Math.abs(d) <= GATE_HALF) {
-                        continue;              // le passage de la porte
+                    if (Math.abs(d) <= GATE_HALF) {
+                        continue;              // le passage des quatre portes
                     }
                     for (int dy = 1; dy <= WALL_TOP; dy++) {
                         BlockState mat = dy <= 2 ? base()
@@ -477,8 +486,13 @@ public final class Sanctuary {
     private static void stairToWalk(ServerLevel level, int x, int y, int z,
                                     Direction facing, int dx, int dz) {
         for (int step = 0; step < WALK; step++) {
-            int sx = x - dx * (step + 1);
-            int sz = z - dz * (step + 1);
+            // PLUS, et non moins. Avec un moins, la volee partait du mur vers
+            // l'exterieur : elle traversait la courtine et debouchait dans le
+            // vide au-dela. (dx, dz) pointe deja vers la cour, il faut la
+            // suivre. Le sens de MONTEE, lui, etait bon -- on gravit toujours
+            // en allant vers le mur.
+            int sx = x + dx * (step + 1);
+            int sz = z + dz * (step + 1);
             for (int w = -1; w <= 1; w++) {
                 int px = sx + (dx == 0 ? w : 0);
                 int pz = sz + (dz == 0 ? w : 0);
@@ -494,16 +508,30 @@ public final class Sanctuary {
         }
     }
 
+
+
+
     /**
-     * Une tour d'angle CREUSE, avec son escalier et sa porte.
+     * Une tour d'angle QU'ON PEUT VRAIMENT VISITER.
      *
-     * C'etait le reproche le plus net du premier essai : des tours pleines,
-     * qu'on ne pouvait pas visiter. Celle-ci a un rez-de-chaussee ouvert sur la
-     * cour, un escalier en vis contre sa paroi, une sortie a hauteur du chemin
-     * de ronde, et une plateforme sommitale creneleee.
+     * Trois defauts corriges d'un coup, tous constates a l'essai.
+     *
+     * L'entree etait decalee : on ne percait la paroi que sur l'axe exact de la
+     * tour, alors que le chemin de ronde est LARGE de trois blocs. On perce
+     * desormais sur toute son epaisseur, par les deux courtines qui aboutissent
+     * a la tour.
+     *
+     * L'escalier n'en etait pas un : les marches, calculees tous les 0,62
+     * radian sur un rayon de 3,4, tombaient a plus de deux blocs l'une de
+     * l'autre. On tourne maintenant en seize marches par tour sur un rayon de
+     * 3, ce qui les rend jointives.
+     *
+     * Et il n'y avait aucun plancher : meme entre, on tombait de dix-huit
+     * blocs. Chaque palier a le sien, perce du seul puits de l'escalier.
      */
     private static void cornerTower(ServerLevel level, int tx, int y, int tz) {
         int r = TOWER_RADIUS;
+
         for (int dx = -r; dx <= r; dx++) {
             for (int dz = -r; dz <= r; dz++) {
                 double dist = Math.sqrt(dx * dx + dz * dz);
@@ -511,156 +539,215 @@ public final class Sanctuary {
                     continue;
                 }
                 boolean shell = dist > r - 1.0;
-                for (int dy = 1; dy <= TOWER_TOP; dy++) {
-                    if (!shell) {
-                        set(level, tx + dx, y + dy, tz + dz, Blocks.AIR.defaultBlockState());
-                        continue;              // le creux : c'est la qu'on entre
-                    }
-                    BlockState mat = dy <= 2 ? base()
-                            : dy % 6 == 0 ? shrineTrim() : tower();
-                    set(level, tx + dx, y + dy, tz + dz, mat);
-                }
-                // le plancher et la plateforme
                 set(level, tx + dx, y, tz + dz, floor());
-                if (!shell) {
-                    set(level, tx + dx, y + TOWER_TOP, tz + dz, floor());
+                for (int dy = 1; dy <= TOWER_TOP; dy++) {
+                    set(level, tx + dx, y + dy, tz + dz, shell
+                            ? (dy <= 2 ? base() : dy % 6 == 0 ? shrineTrim() : tower())
+                            : Blocks.AIR.defaultBlockState());
                 }
-                // les creneaux du sommet
                 if (shell && Math.floorMod(dx + dz, 2) == 0) {
                     set(level, tx + dx, y + TOWER_TOP + 1, tz + dz, merlon());
                 }
-                // les fenetres, en croix
                 if (shell && (dx == 0 || dz == 0)) {
                     set(level, tx + dx, y + 5, tz + dz, glow());
-                    set(level, tx + dx, y + 12, tz + dz, glow());
+                    set(level, tx + dx, y + 13, tz + dz, glow());
                 }
             }
         }
-        // l'escalier en vis, contre la paroi
-        int steps = TOWER_TOP - 1;
-        for (int step = 0; step < steps; step++) {
-            double angle = step * 0.62;        // un tour complet tous les dix pas
-            int sx = tx + (int) Math.round(Math.cos(angle) * (r - 1.6));
-            int sz = tz + (int) Math.round(Math.sin(angle) * (r - 1.6));
-            set(level, sx, y + step, sz, trim());
-            set(level, sx, y + step + 1, sz, Blocks.AIR.defaultBlockState());
-            set(level, sx, y + step + 2, sz, Blocks.AIR.defaultBlockState());
+
+        // le fut central : il porte les paliers et guide la vis
+        for (int dy = 1; dy <= TOWER_TOP; dy++) {
+            set(level, tx, y + dy, tz, dy % 6 == 0 ? shrineTrim() : tower());
         }
-        // la trappe du sommet, et la porte vers le chemin de ronde
-        for (int dx = -1; dx <= 1; dx++) {
-            for (int dz = -1; dz <= 1; dz++) {
-                set(level, tx + dx, y + TOWER_TOP, tz + dz, Blocks.AIR.defaultBlockState());
-            }
+
+        // les planchers, perces du puits de l'escalier
+        for (int landing = 6; landing < TOWER_TOP; landing += 6) {
+            floorDisc(level, tx, y + landing, tz, r - 1, 1.8);
         }
-        for (int dy = WALK; dy <= WALK + 2; dy++) {
-            for (int d = -r; d <= r; d++) {
-                // deux ouvertures, vers les deux courtines qui rejoignent la tour
-                set(level, tx + d, y + dy, tz, Math.abs(d) > r - 2
-                        ? Blocks.AIR.defaultBlockState() : level.getBlockState(
-                                new BlockPos(tx + d, y + dy, tz)));
-                set(level, tx, y + dy, tz + d, Math.abs(d) > r - 2
-                        ? Blocks.AIR.defaultBlockState() : level.getBlockState(
-                                new BlockPos(tx, y + dy, tz + d)));
-            }
-        }
+        // et celui du niveau d'entree : sans lui, on entre et on tombe
+        floorDisc(level, tx, y + WALK - 1, tz, r - 1, 1.8);
+
+        spiral(level, tx, y, tz, TOWER_TOP - 1, 3.0);
+
+        // le sommet
+        floorDisc(level, tx, y + TOWER_TOP, tz, r - 1, 2.6);
         set(level, tx, y + TOWER_TOP + 1, tz, lantern());
+
+        // Les deux entrees, a hauteur du chemin de ronde et sur TOUTE son
+        // epaisseur : c'est le decalage d'un bloc qui interdisait d'entrer.
+        for (int dy = WALK; dy <= WALK + 2; dy++) {
+            for (int d = -r - 1; d <= r + 1; d++) {
+                for (int w = -1; w <= 1; w++) {
+                    if (Math.abs(d) <= r + 1 && Math.abs(d) > 1) {
+                        set(level, tx + d, y + dy, tz + w, Blocks.AIR.defaultBlockState());
+                        set(level, tx + w, y + dy, tz + d, Blocks.AIR.defaultBlockState());
+                    }
+                }
+            }
+        }
     }
 
     /**
-     * Le corps de garde et sa herse.
+     * Un plancher rond, perce en son centre.
      *
-     * La herse n'est plus une grille de barreaux -- « on dirait une prison ».
-     * C'est un treillis de metal noir monte dans un cadre de pierre taillee,
-     * suspendu a deux chaines qui remontent a la poulie. Le passage est
-     * voute, flanque de braseros, et perce d'assommoirs au-dessus.
+     * Le trou laisse passer l'escalier ; sans lui, la vis buterait sous chaque
+     * palier. Le rayon interieur decide de la largeur du puits.
      */
-    private static void gatehouse(ServerLevel level, int cx, int y, int cz) {
-        int gz = cz + HALF;
+    private static void floorDisc(ServerLevel level, int tx, int y, int tz,
+                                  double outer, double inner) {
+        int r = (int) Math.ceil(outer);
+        for (int dx = -r; dx <= r; dx++) {
+            for (int dz = -r; dz <= r; dz++) {
+                double dist = Math.sqrt(dx * dx + dz * dz);
+                if (dist > outer) {
+                    continue;
+                }
+                set(level, tx + dx, y, tz + dz,
+                        dist > inner ? floor() : Blocks.AIR.defaultBlockState());
+            }
+        }
+    }
 
-        // les deux tours du corps de garde, plus hautes que la courtine
-        for (int side = -1; side <= 1; side += 2) {
-            int bx = cx + side * (GATE_HALF + 4);
-            for (int dx = -3; dx <= 3; dx++) {
-                for (int dz = -3; dz <= 3; dz++) {
-                    if (Math.abs(dx) + Math.abs(dz) > 4) {
+    /**
+     * Un escalier en vis JOINTIF.
+     *
+     * Seize marches par tour : l'arc entre deux marches vaut 2 pi r / 16, soit
+     * un peu plus d'un bloc pour un rayon de 3 -- elles se touchent une fois
+     * arrondies. La version precedente tournait de 0,62 radian par marche, ce
+     * qui les espacait de plus de deux blocs : on ne montait pas, on sautait de
+     * piquet en piquet quand on ne tombait pas.
+     */
+    private static void spiral(ServerLevel level, int tx, int y, int tz,
+                               int height, double radius) {
+        double perStep = Math.PI * 2 / 16.0;
+        for (int step = 1; step <= height; step++) {
+            double angle = step * perStep;
+            for (double rad : new double[]{radius, radius - 1.2}) {
+                int sx = tx + (int) Math.round(Math.cos(angle) * rad);
+                int sz = tz + (int) Math.round(Math.sin(angle) * rad);
+                set(level, sx, y + step, sz, trim());
+                for (int clear = 1; clear <= 3; clear++) {
+                    set(level, sx, y + step + clear, sz, Blocks.AIR.defaultBlockState());
+                }
+            }
+        }
+    }
+
+    /** Le repere d'une porte : son axe le long du mur, et sa normale sortante. */
+    private record Gate(int ax, int az, int nx, int nz, int ox, int oz) {
+
+        /** Le repere du cote demande : 0 nord, 1 sud, 2 ouest, 3 est. */
+        static Gate of(int cx, int cz, int side) {
+            return switch (side) {
+                case 0 -> new Gate(1, 0, 0, -1, cx, cz - HALF);
+                case 1 -> new Gate(1, 0, 0, 1, cx, cz + HALF);
+                case 2 -> new Gate(0, 1, -1, 0, cx - HALF, cz);
+                default -> new Gate(0, 1, 1, 0, cx + HALF, cz);
+            };
+        }
+
+        int x(int along, int depth) {
+            return this.ox + this.ax * along + this.nx * depth;
+        }
+
+        int z(int along, int depth) {
+            return this.oz + this.az * along + this.nz * depth;
+        }
+
+        BlockPos centre(int y) {
+            return new BlockPos(this.ox, y, this.oz);
+        }
+    }
+
+    /**
+     * Un corps de garde, sur le cote demande.
+     *
+     * Il y en a QUATRE, un par cote. La pyramide est posee par la commande du
+     * jeu, qui choisit elle-meme sa rotation : impossible de savoir vers ou son
+     * entree regarde, et une porte unique tombait de travers trois fois sur
+     * quatre. Quatre portes reglent la question par construction, et une
+     * forteresse a quatre portes n'a rien d'absurde.
+     */
+    private static void gatehouse(ServerLevel level, int cx, int y, int cz, int side) {
+        Gate g = Gate.of(cx, cz, side);
+
+        for (int flank = -1; flank <= 1; flank += 2) {
+            int seat = flank * (GATE_HALF + 4);
+            for (int a = -3; a <= 3; a++) {
+                for (int d = -3; d <= 3; d++) {
+                    if (Math.abs(a) + Math.abs(d) > 4) {
                         continue;
                     }
-                    boolean shell = Math.abs(dx) == 3 || Math.abs(dz) == 3
-                            || Math.abs(dx) + Math.abs(dz) == 4;
+                    boolean shell = Math.abs(a) == 3 || Math.abs(d) == 3
+                            || Math.abs(a) + Math.abs(d) == 4;
+                    int px = g.x(seat + a, d);
+                    int pz = g.z(seat + a, d);
                     for (int dy = 1; dy <= TOWER_TOP - 2; dy++) {
-                        if (!shell) {
-                            set(level, bx + dx, y + dy, gz + dz, Blocks.AIR.defaultBlockState());
-                            continue;
-                        }
-                        set(level, bx + dx, y + dy, gz + dz,
-                                dy <= 2 ? base() : dy % 5 == 0 ? shrineTrim() : tower());
+                        set(level, px, y + dy, pz, shell
+                                ? (dy <= 2 ? base() : dy % 5 == 0 ? shrineTrim() : tower())
+                                : Blocks.AIR.defaultBlockState());
                     }
-                    if (shell && Math.floorMod(dx + dz, 2) == 0) {
-                        set(level, bx + dx, y + TOWER_TOP - 1, gz + dz, merlon());
+                    if (shell && Math.floorMod(a + d, 2) == 0) {
+                        set(level, px, y + TOWER_TOP - 1, pz, merlon());
                     }
                 }
             }
-            set(level, bx, y + TOWER_TOP - 1, gz, lantern());
+            set(level, g.x(seat, 0), y + TOWER_TOP - 1, g.z(seat, 0), lantern());
         }
 
-        // la voute du passage : un arc, pas un linteau plat
-        for (int dz = -2; dz <= 2; dz++) {
-            for (int dx = -GATE_HALF - 1; dx <= GATE_HALF + 1; dx++) {
-                int arch = GATE_HEIGHT + 1 + (GATE_HALF + 1 - Math.abs(dx)) / 2;
+        // la voute : un arc, pas un linteau plat
+        for (int d = -2; d <= 2; d++) {
+            for (int a = -GATE_HALF - 1; a <= GATE_HALF + 1; a++) {
+                int px = g.x(a, d);
+                int pz = g.z(a, d);
+                int arch = GATE_HEIGHT + 1 + (GATE_HALF + 1 - Math.abs(a)) / 2;
                 for (int dy = GATE_HEIGHT + 1; dy <= arch; dy++) {
-                    set(level, cx + dx, y + dy, gz + dz, trim());
+                    set(level, px, y + dy, pz, trim());
                 }
                 for (int dy = arch + 1; dy <= arch + 3; dy++) {
-                    set(level, cx + dx, y + dy, gz + dz, body());
+                    set(level, px, y + dy, pz, body());
                 }
             }
-            // les jambages tailles
             for (int dy = 1; dy <= GATE_HEIGHT; dy++) {
-                set(level, cx - GATE_HALF - 1, y + dy, gz + dz,
+                set(level, g.x(-GATE_HALF - 1, d), y + dy, g.z(-GATE_HALF - 1, d),
                         dy % 3 == 0 ? shrineTrim() : trim());
-                set(level, cx + GATE_HALF + 1, y + dy, gz + dz,
+                set(level, g.x(GATE_HALF + 1, d), y + dy, g.z(GATE_HALF + 1, d),
                         dy % 3 == 0 ? shrineTrim() : trim());
             }
-            for (int dx = -GATE_HALF; dx <= GATE_HALF; dx++) {
-                set(level, cx + dx, y, gz + dz, trim());
+            for (int a = -GATE_HALF; a <= GATE_HALF; a++) {
+                set(level, g.x(a, d), y, g.z(a, d), trim());
                 for (int dy = 1; dy <= GATE_HEIGHT; dy++) {
-                    set(level, cx + dx, y + dy, gz + dz, Blocks.AIR.defaultBlockState());
+                    set(level, g.x(a, d), y + dy, g.z(a, d), Blocks.AIR.defaultBlockState());
                 }
             }
         }
-        // les assommoirs : des trous dans la voute, par ou l'on recoit les visiteurs
-        for (int dx = -GATE_HALF + 1; dx <= GATE_HALF - 1; dx += 2) {
-            set(level, cx + dx, y + GATE_HEIGHT + 1, gz, Blocks.AIR.defaultBlockState());
+        for (int a = -GATE_HALF + 1; a <= GATE_HALF - 1; a += 2) {
+            set(level, g.x(a, 0), y + GATE_HEIGHT + 1, g.z(a, 0),
+                    Blocks.AIR.defaultBlockState());
         }
-        // les braseros du seuil
-        for (int side = -1; side <= 1; side += 2) {
-            int bx = cx + side * (GATE_HALF + 2);
-            set(level, bx, y + 1, gz + 3, shrineTrim());
-            set(level, bx, y + 2, gz + 3, first(lantern(),
-                    "supplementaries:fire_pit", "minecraft:campfire"));
+        for (int flank = -1; flank <= 1; flank += 2) {
+            int a = flank * (GATE_HALF + 2);
+            set(level, g.x(a, 3), y + 1, g.z(a, 3), shrineTrim());
+            set(level, g.x(a, 3), y + 2, g.z(a, 3),
+                    first(lantern(), "supplementaries:fire_pit", "minecraft:campfire"));
         }
 
-        // le mecanisme : poulie, cordes, manivelle, et les chaines de la herse
         BlockState pulley = optional("supplementaries:pulley_block");
         BlockState rope = optional("supplementaries:rope");
         BlockState crank = optional("supplementaries:crank");
         if (pulley != null) {
-            set(level, cx, y + GATE_HEIGHT + 6, gz, pulley);
+            set(level, g.x(0, 0), y + GATE_HEIGHT + 6, g.z(0, 0), pulley);
         }
         if (rope != null) {
             for (int dy = GATE_HEIGHT + 4; dy <= GATE_HEIGHT + 5; dy++) {
-                set(level, cx, y + dy, gz, rope);
+                set(level, g.x(0, 0), y + dy, g.z(0, 0), rope);
             }
         }
-        if (crank != null) {
-            set(level, cx + GATE_HALF + 2, y + WALK, gz - 1, crank);
-        } else {
-            set(level, cx + GATE_HALF + 2, y + WALK, gz - 1,
-                    Blocks.LEVER.defaultBlockState());
-        }
+        BlockState handle = crank != null ? crank : Blocks.LEVER.defaultBlockState();
+        set(level, g.x(GATE_HALF + 2, -1), y + WALK, g.z(GATE_HALF + 2, -1), handle);
 
-        SanctuaryGate.register(new BlockPos(cx, y, gz), GATE_HALF, GATE_HEIGHT);
-        SanctuaryGate.close(level, new BlockPos(cx, y, gz));
+        SanctuaryGate.register(g.centre(y), GATE_HALF, GATE_HEIGHT, g.ax(), g.az());
+        SanctuaryGate.close(level, g.centre(y));
     }
 
     // ----------------------------------------------------------- outillage

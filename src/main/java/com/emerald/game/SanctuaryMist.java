@@ -32,7 +32,7 @@ import java.util.List;
 @EventBusSubscriber(modid = EmeraldWeaponsMod.MODID)
 public final class SanctuaryMist {
 
-    private record Site(BlockPos centre, int radius) {
+    private record Site(BlockPos centre, int radius, BlockPos anchor) {
     }
 
     /** Volatil : une brume se retrouve avec son sanctuaire, elle ne se sauve pas. */
@@ -41,9 +41,13 @@ public final class SanctuaryMist {
     private SanctuaryMist() {
     }
 
-    public static void register(BlockPos centre, int radius) {
-        sites.add(new Site(centre.immutable(), radius));
+    public static void register(BlockPos centre, int radius, BlockPos anchor) {
+        sites.add(new Site(centre.immutable(), radius, anchor.immutable()));
     }
+
+    /** Duree d'une pulsation, et intervalle entre deux. */
+    private static final int PULSE_TICKS = 200;
+    private static final int PULSE_EVERY = 600;
 
     public static void clearAll() {
         sites.clear();
@@ -66,6 +70,19 @@ public final class SanctuaryMist {
                     continue;
                 }
                 breathe(level, player, site);
+                // La pulsation ne part QUE dans l'enceinte : dehors, elle
+                // reviendrait a poser un panneau sur la carte, ce qui oterait
+                // tout interet a chercher l'entree.
+                boolean inside = dx * dx + dz * dz <= Math.pow(site.radius(), 2);
+                if (inside && level.getGameTime() % PULSE_EVERY == 0) {
+                    net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player,
+                            new com.emerald.network.AnchorPulsePayload(
+                                    site.anchor().getX(), site.anchor().getY(),
+                                    site.anchor().getZ(), PULSE_TICKS));
+                    level.playSound(null, player.blockPosition(),
+                            net.minecraft.sounds.SoundEvents.BEACON_ACTIVATE,
+                            net.minecraft.sounds.SoundSource.AMBIENT, 0.6F, 1.6F);
+                }
                 break;
             }
         }
