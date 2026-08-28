@@ -81,11 +81,16 @@ public final class WeatherEffects {
 
     private static final class Meteor {
         final BlockPos target;
+        /** L'oblique de la chute : un meteore tombe de biais, pas a la verticale. */
+        final double driftX;
+        final double driftZ;
         int ticks;
 
-        Meteor(BlockPos target, int ticks) {
+        Meteor(BlockPos target, int ticks, double driftX, double driftZ) {
             this.target = target;
             this.ticks = ticks;
+            this.driftX = driftX;
+            this.driftZ = driftZ;
         }
     }
 
@@ -501,8 +506,11 @@ public final class WeatherEffects {
                 double dist = 12 + level.random.nextDouble() * 36;
                 int x = (int) Math.round(player.getX() + Math.cos(angle) * dist);
                 int z = (int) Math.round(player.getZ() + Math.sin(angle) * dist);
+                double entry = level.random.nextDouble() * Math.PI * 2;
+                double reach = 28 + level.random.nextDouble() * 22;
                 meteors.add(new Meteor(
-                        new BlockPos(x, WorldSetup.surfaceY(level, x, z), z), 60));
+                        new BlockPos(x, WorldSetup.surfaceY(level, x, z), z), 60,
+                        Math.cos(entry) * reach, Math.sin(entry) * reach));
             }
         }
         Iterator<Meteor> it = meteors.iterator();
@@ -519,16 +527,64 @@ public final class WeatherEffects {
                             t.getZ() + 0.5 + Math.sin(a) * 2.5, 1, 0.0, 0.02, 0.0, 0.0);
                 }
             }
-            // la traine descendante
-            if (meteor.ticks < 40) {
-                double k = meteor.ticks;
-                level.sendParticles(ParticleTypes.LAVA,
-                        t.getX() + 0.5 + k * 0.5, t.getY() + k * 1.6, t.getZ() + 0.5 + k * 0.3,
-                        2, 0.2, 0.2, 0.2, 0.0);
+            // le sifflement de l'approche : on leve les yeux avant de chercher
+            // ou se mettre, ce qui n'a de sens que si la chute se voit
+            if (meteor.ticks == FALL_TICKS) {
+                level.playSound(null, t, SoundEvents.FIREWORK_ROCKET_LARGE_BLAST_FAR,
+                        SoundSource.WEATHER, 3.0F, 0.5F);
+            }
+            if (meteor.ticks <= FALL_TICKS) {
+                drawFall(level, meteor);
             }
             if (meteor.ticks <= 0) {
                 it.remove();
                 meteorImpact(level, t);
+            }
+        }
+    }
+
+    /** Duree de la chute visible, en ticks. Deux secondes et demie de ciel. */
+    private static final int FALL_TICKS = 50;
+
+    /** Hauteur d'entree : assez haut pour barrer le ciel, assez bas pour rester charge. */
+    private static final double FALL_HEIGHT = 90.0;
+
+    /**
+     * Le meteore lui-meme, dans sa descente.
+     *
+     * Une simple traine de deux particules ne se voyait pas : on decouvrait le
+     * cratere sans avoir rien vu tomber. On dessine donc une tete brillante et
+     * une queue derriere elle, le long d'une oblique qui vise le point marque
+     * au sol -- le cercle d'avertissement dit OU, la chute dit QUAND.
+     */
+    private static void drawFall(ServerLevel level, Meteor meteor) {
+        BlockPos t = meteor.target;
+        // 1 au depart, 0 a l'impact : la position se lit directement dessus
+        double k = meteor.ticks / (double) FALL_TICKS;
+        double hx = t.getX() + 0.5 + meteor.driftX * k;
+        double hy = t.getY() + FALL_HEIGHT * k;
+        double hz = t.getZ() + 0.5 + meteor.driftZ * k;
+
+        // la tete : un noyau dense, visible de loin
+        level.sendParticles(ParticleTypes.FLAME, hx, hy, hz, 12, 0.5, 0.5, 0.5, 0.02);
+        level.sendParticles(ModParticles.CRYSTAL_ORANGE.get(), hx, hy, hz, 6, 0.6, 0.6, 0.6, 0.0);
+        level.sendParticles(ParticleTypes.LAVA, hx, hy, hz, 2, 0.3, 0.3, 0.3, 0.0);
+
+        // la queue : huit points echelonnes vers le haut, qui s'effilent
+        for (int i = 1; i <= 8; i++) {
+            double back = i / (double) FALL_TICKS * 1.4;
+            double bk = Math.min(1.0, k + back);
+            level.sendParticles(ParticleTypes.SMALL_FLAME,
+                    t.getX() + 0.5 + meteor.driftX * bk,
+                    t.getY() + FALL_HEIGHT * bk,
+                    t.getZ() + 0.5 + meteor.driftZ * bk,
+                    1, 0.25, 0.25, 0.25, 0.0);
+            if (i % 3 == 0) {
+                level.sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE,
+                        t.getX() + 0.5 + meteor.driftX * bk,
+                        t.getY() + FALL_HEIGHT * bk,
+                        t.getZ() + 0.5 + meteor.driftZ * bk,
+                        1, 0.3, 0.3, 0.3, 0.0);
             }
         }
     }

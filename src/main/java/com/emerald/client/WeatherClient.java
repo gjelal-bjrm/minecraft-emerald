@@ -72,7 +72,8 @@ public final class WeatherClient {
     public static void onClientTick(ClientTickEvent.Post event) {
         Weather w = current();
         boolean foggy = w == Weather.BRUME || w == Weather.NUIT
-                || w == Weather.ORAGE || w == Weather.DECHIRURE;
+                || w == Weather.ORAGE || w == Weather.DECHIRURE
+                || w == Weather.METEORES;
         intensity = clamp(intensity + (foggy ? 0.015F : -0.015F));
         ambience(w);
     }
@@ -110,6 +111,7 @@ public final class WeatherClient {
             case NUIT -> new float[]{0.03F, 0.02F, 0.08F};
             case ORAGE -> new float[]{0.13F, 0.09F, 0.18F};
             case DECHIRURE -> new float[]{0.30F, 0.18F, 0.38F};
+            case METEORES -> new float[]{0.32F, 0.16F, 0.10F};
             default -> null;
         };
     }
@@ -125,6 +127,7 @@ public final class WeatherClient {
             case NUIT -> 96.0F;
             case ORAGE -> 120.0F;
             case DECHIRURE -> 140.0F;
+            case METEORES -> 180.0F;       // une brume de cendre, legere
             default -> -1.0F;
         };
         if (far < 0.0F) {
@@ -140,6 +143,41 @@ public final class WeatherClient {
 
     private static float lerp(float from, float to, float t) {
         return from + (to - from) * t;
+    }
+
+    /**
+     * La pluie d'Arcencium : des filets de couleur dans l'averse.
+     *
+     * La pluie du jeu est dessinee en blanc pur sur sa propre texture, sans
+     * aucun point d'entree pour la teinter -- la repeindre voudrait dire
+     * remplacer l'image pour TOUTES les pluies du monde, y compris celles qui
+     * n'ont rien a voir avec la Nuit. On superpose donc nos propres gouttes :
+     * l'averse grise reste dessous et donne le bruit, la couleur passe devant.
+     *
+     * La teinte suit la HAUTEUR de la goutte, pas le hasard : chaque filet
+     * garde donc sa couleur en tombant au lieu de scintiller.
+     */
+    private static void prismaticRain(ClientLevel level, LocalPlayer player,
+                                      RandomSource random) {
+        for (int i = 0; i < 14; i++) {
+            double x = player.getX() + (random.nextDouble() - 0.5) * 30;
+            double z = player.getZ() + (random.nextDouble() - 0.5) * 30;
+            double y = player.getY() + 3 + random.nextDouble() * 14;
+            float hue = (float) (((x + z) * 0.02 + level.getGameTime() * 0.004) % 1.0);
+            int rgb = Color.HSBtoRGB(hue < 0 ? hue + 1 : hue, 0.75F, 1.0F);
+            level.addParticle(new DustParticleOptions(new Vector3f(
+                            ((rgb >> 16) & 0xFF) / 255F, ((rgb >> 8) & 0xFF) / 255F,
+                            (rgb & 0xFF) / 255F), 0.9F),
+                    x, y, z, 0.0, -0.9, 0.0);
+        }
+        // de rares gouttes lourdes, qui eclatent au sol
+        if (random.nextInt(4) == 0) {
+            level.addParticle(ModParticles.PRISM_MOTE.get(),
+                    player.getX() + (random.nextDouble() - 0.5) * 20,
+                    player.getY() + 2 + random.nextDouble() * 10,
+                    player.getZ() + (random.nextDouble() - 0.5) * 20,
+                    0.0, -0.5, 0.0);
+        }
     }
 
     // -------------------------------------------------------------- ambiance
@@ -184,6 +222,26 @@ public final class WeatherClient {
                             player.getY() + random.nextDouble() * 4 - 1,
                             player.getZ() + (random.nextDouble() - 0.5) * 16,
                             0.0, 0.06, 0.0);
+                }
+            }
+            case NUIT -> prismaticRain(level, player, random);
+            case METEORES -> {
+                // des braises qui montent et de la cendre qui descend : le ciel
+                // brule quelque part au-dessus, et ca doit se sentir au sol
+                for (int i = 0; i < 2; i++) {
+                    level.addParticle(ParticleTypes.SMALL_FLAME,
+                            player.getX() + (random.nextDouble() - 0.5) * 26,
+                            player.getY() + random.nextDouble() * 5 - 1,
+                            player.getZ() + (random.nextDouble() - 0.5) * 26,
+                            0.0, 0.03, 0.0);
+                }
+                if (random.nextInt(3) == 0) {
+                    level.addParticle(new DustParticleOptions(
+                                    new Vector3f(0.35F, 0.30F, 0.28F), 1.4F),
+                            player.getX() + (random.nextDouble() - 0.5) * 30,
+                            player.getY() + 10 + random.nextDouble() * 8,
+                            player.getZ() + (random.nextDouble() - 0.5) * 30,
+                            0.0, -0.12, 0.0);
                 }
             }
             case ORAGE -> {
