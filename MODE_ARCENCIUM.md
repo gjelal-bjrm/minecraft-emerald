@@ -343,6 +343,103 @@ destructibles, **materiaux du mod intouchables**.
 
 ---
 
+## 6 bis. L'ambiance des meteos *(implementee)*
+
+Le premier essai a rate sur un point unique : on voyait qu'il se passait
+quelque chose, on ne le RESSENTAIT pas. Trois regles en sont sorties, valables
+pour toute meteo qu'on ajoutera ensuite.
+
+**Une tempete peuple le monde.** Les apparitions naturelles sont plafonnees par
+la lumiere et par le nombre de mobs deja charges : sans pression propre, une
+tempete ne change rien a ce qu'on croise, et « au final c'est une nuit
+normale ». Chaque agressive pose donc la sienne, par apparition d'EVENEMENT
+(qui echappe aux regles de lumiere), plafonnee a douze par joueur, au palier de
+la phase. Ces monstres portent une etiquette : ce sont eux qui paient.
+
+**Un coup doit toucher le joueur, pas le decor.** Eclat d'ecran et secousse de
+camera, avec une force qui decroit sur la distance -- ce qui suffit a situer
+l'evenement sans rien afficher. Un eclair a vingt blocs lave l'ecran, le meme a
+soixante n'est qu'un frisson.
+
+**Chaque meteo doit avoir sa couleur d'air.** Brouillard et particules propres a
+chacune, y compris pour celles qui n'en avaient pas.
+
+| Meteo | Brouillard | Ambiance |
+|---|---|---|
+| Brume | pastel derivant, 6-56 | motes de prisme |
+| Aurore | aucun, volontairement | rubans de GEOMETRIE (voir plus bas) |
+| Nuit | bleu nuit, 96 | pluie prismatique, eclairs, eclats a l'horizon |
+| Meteores | cendre chaude, 180 | braises qui montent, cendre qui descend |
+| Dechirure | violet, 140 | tout monte : poussiere, eclats, bourdonnement |
+| Orage | pourpre, 84 | etincelles, souffle grave, tremblement de fond |
+
+**L'Aurore est en geometrie, pas en particules.** Une premiere version en posait
+trois par tick dans un volume de quatre-vingts blocs de cote, soit une pour
+mille metres cubes : invisible par construction. Et meme en multipliant, des
+points epars ne font pas un rideau. Cinq rubans continus sont donc dessines en
+melange additif, lumineux en bas et evanescents en haut. C'est le seul effet du
+mode qui ne soit pas fait de particules, et c'est voulu.
+
+**La pluie de la Nuit est VRAIMENT coloree.** Le moteur la dessine en blanc pur
+sans point d'entree pour la teinter : la seule facon d'y arriver est de fournir
+notre propre texture, ce qui vaut alors pour toute pluie du monde. Acceptable
+parce que le mode COUPE le cycle meteo vanilla a la mise en place -- il ne pleut
+plus que quand la Nuit le decide. Ce choix vaut aussi par lui-meme : une averse
+tiree par le jeu pendant une Aurore brouillait une meteo qu'on venait
+d'annoncer.
+
+**Les eclats de la Dechirure sont a quatre-huit blocs, pas douze-vingt.** Un
+bond en apesanteur culmine vers quatre blocs : au-dela, la recompense etait
+decorative. La gravite descend a -78 % pour tenir la promesse des « bonds de
+cinq blocs », et chaque eclat se signale par un halo et une colonne jusqu'au
+sol.
+
+## 6 ter. Apotheosis : paliers et butin *(implemente)*
+
+Apotheosis se joue sur des heures et son pack de quetes ouvre ses paliers un a
+un ; une partie en dure une. Tout est donc deverrouille a la main.
+
+**Les paliers de monde.** C'est LE systeme de progression du mod, et il gouverne
+l'apparition des Envahisseurs -- ces « boss » qui sont des monstres ordinaires
+nommes, rares et equipes. Au palier de depart, Haven, leur chance vaut ZERO :
+c'est pourquoi on n'en voyait aucun. Ils s'ouvrent maintenant au rythme des
+phases (Frontier des l'Exploration, Pinnacle a l'Assaut) par leurs avancements,
+qui sont du vanilla et ne demandent aucune dependance.
+
+> **Reste un geste au joueur.** Apotheosis stocke le palier ACTIF dans ses
+> propres donnees, qu'on ne peut pas ecrire sans en faire une dependance de
+> compilation. On ouvre le palier et on l'annonce ; le joueur l'active au
+> CTRL+T. Si ce geste gene, la solution est d'ajouter Apotheosis en
+> `compileOnly` -- c'est une decision a prendre, pas un obstacle.
+
+**Nos propres regles d'apparition** relevent la chance a tous les paliers, Haven
+compris, pour qu'il en sorte des le debut ; le delai entre deux Envahisseurs
+passe de trois minutes a trente secondes.
+
+**La Chance** monte de deux a dix points selon la phase : c'est le levier
+documente pour la rarete du butin.
+
+**Les materiaux** tombent des monstres de tempete (un sur quatre) et de ceux de
+la Maree (un sur deux), a une rarete centree sur la phase. Les sigils et vials
+suivent, plus rarement. Sans quoi le systeme resterait un decor qu'on n'a jamais
+les moyens d'utiliser.
+
+## 6 quater. La Maree est habitee *(implementee)*
+
+Une zone qui se contente de faire mal se contourne : on n'y va pas, et elle ne
+raconte rien. Hors du rayon vivable apparaissent donc des monstres du dernier
+palier, et de loin en loin (une fois sur quatorze) un **seigneur de passage**,
+annonce a cent blocs a la ronde.
+
+Ce ne sont **pas** les trois boss de fin : Ignis, l'Ender Guardian et le Liche
+du Crepuscule restent pour le sommet de l'Arc-en-ciel, et les voir avant leur
+heure userait l'evenement. Les seigneurs sont pris chez Cataclysm --
+Monstruosite de netherite, Harbinger, Coralssus, Maledictus, Remnant ancien,
+Prowler, Wadjet -- avec repli sur le Ravageur si le mod manque.
+
+C'est aussi le seul endroit ou les materiaux rares tombent le mieux : la Maree
+devient un endroit ou l'on ENTRE, pas seulement une zone qu'on subit.
+
 ## 7. Les artefacts
 
 ### 7.1 Notre systeme — un artefact par emplacement
