@@ -101,7 +101,7 @@ public class GameCommands {
             var pos = net.minecraft.core.BlockPos.containing(ctx.getSource().getPosition());
             var ground = new net.minecraft.core.BlockPos(pos.getX(),
                     WorldSetup.surfaceY(level, pos.getX(), pos.getZ()) - 1, pos.getZ());
-            var anchor = Sanctuary.build(level, ground);
+            var anchor = Sanctuary.build(level, ctx.getSource(), ground);
             ctx.getSource().sendSuccess(() -> Component.translatable(
                     "command.emeraldweapons.sanctuary",
                     anchor.getX(), anchor.getY(), anchor.getZ()), true);

@@ -48,7 +48,7 @@ public final class SanctuaryGate {
     private SanctuaryGate() {
     }
 
-    public static void register(ServerLevel level, BlockPos centre, int half, int height) {
+    public static void register(BlockPos centre, int half, int height) {
         gates.put(centre.immutable(), new Gate(half, height, true));
     }
 
@@ -103,17 +103,55 @@ public final class SanctuaryGate {
         }
         gates.put(centre, new Gate(gate.half(), gate.height(), open));
 
-        BlockState bars = Blocks.IRON_BARS.defaultBlockState();
         for (int dx = -gate.half(); dx <= gate.half(); dx++) {
             for (int dy = 1; dy <= gate.height(); dy++) {
                 BlockPos pos = centre.offset(dx, dy, 0);
-                level.setBlock(pos, open ? Blocks.AIR.defaultBlockState() : bars, 3);
+                level.setBlock(pos, open ? Blocks.AIR.defaultBlockState()
+                        : latticeAt(dx, dy), 3);
             }
         }
         level.playSound(null, centre, SoundEvents.CHAIN_PLACE, SoundSource.BLOCKS, 2.0F,
                 open ? 1.2F : 0.7F);
         level.playSound(null, centre, SoundEvents.IRON_DOOR_CLOSE, SoundSource.BLOCKS, 1.5F,
                 open ? 1.1F : 0.6F);
+    }
+
+    /**
+     * Le treillis de la herse, maille par maille.
+     *
+     * Des barreaux de fer sur toute la surface donnaient une grille de prison.
+     * Une vraie herse est un TREILLIS : des montants qui pendent, des traverses
+     * horizontales qui les tiennent, et des noeuds massifs a leurs croisements.
+     * Le bas se termine en pointes -- c'est ce qui la rend menacante quand elle
+     * retombe.
+     */
+    private static BlockState latticeAt(int dx, int dy) {
+        BlockState beam = dark("cataclysm:black_steel_wall",
+                "minecraft:polished_deepslate_wall");
+        boolean crossbar = dy % 3 == 1;        // les traverses, tous les trois blocs
+        boolean upright = Math.floorMod(dx, 2) == 0;   // un montant sur deux
+        if (crossbar && upright) {
+            return dark("cataclysm:chiseled_obsidian_bricks",
+                    "minecraft:polished_deepslate");   // le noeud
+        }
+        if (crossbar) {
+            return beam;
+        }
+        if (upright) {
+            return Blocks.CHAIN.defaultBlockState();
+        }
+        return Blocks.AIR.defaultBlockState();  // les vides du treillis
+    }
+
+    /** Le premier bloc sombre disponible : on s'enrichit du modpack sans en dependre. */
+    private static BlockState dark(String... ids) {
+        for (String id : ids) {
+            var key = net.minecraft.resources.ResourceLocation.tryParse(id);
+            if (key != null && BuiltInRegistries.BLOCK.containsKey(key)) {
+                return BuiltInRegistries.BLOCK.get(key).defaultBlockState();
+            }
+        }
+        return Blocks.POLISHED_DEEPSLATE.defaultBlockState();
     }
 
     // ------------------------------------------------------ la manivelle

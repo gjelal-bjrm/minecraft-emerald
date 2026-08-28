@@ -1,6 +1,8 @@
 package com.emerald.game;
 
 import com.emerald.block.ModBlocks;
+import com.emerald.main.EmeraldWeaponsMod;
+import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -18,47 +20,42 @@ import javax.annotation.Nullable;
 /**
  * Le Sanctuaire d'Ancre : une place forte batie autour de son ancre.
  *
- * Le probleme qu'il resout d'abord est bete mais bloquant : posee sur le
- * terrain nu, une ancre tombait dans un ravin, en pleine mer ou sur un pic, et
- * bloquait toute la partie. Elle est desormais au sommet d'une pyramide dont
- * l'escalier fait l'acces -- on la voit de loin, on sait comment y monter.
+ * Trois lecons d'un premier essai rate, ecrites ici pour ne pas les reperdre.
  *
- * Le reste suit de cette idee. Une chose qu'on doit defendre merite d'etre
- * defendue par quelqu'un : une muraille, ses tours, une porte a herse, et des
- * gardiens dedans. Prendre l'ancre devient un ASSAUT plutot qu'une visite.
+ * 1. NE PAS REBATIR CE QUI EXISTE. La premiere version empilait six gradins de
+ *    briques et appelait cela une pyramide ; a cote, la Pyramide Maudite de
+ *    Cataclysm fait quatre-vingt-huit blocs de haut, avec ses salles, ses
+ *    pieges et ses obelisques. On pose donc la VRAIE, par la commande de
+ *    placement du jeu qui sait assembler ses onze morceaux, et on batit autour.
  *
- * Tout est bati en blocs du mode -- gangue, arcencium, verre prismatique -- ce
- * qui donne au sanctuaire l'air d'appartenir a la meme main que l'ancre qu'il
- * protege, et non d'etre un donjon emprunte ailleurs.
+ * 2. UNE TOUR SE VISITE. Les tours pleines de la premiere version n'etaient que
+ *    des colonnes decoratives. Celles-ci sont creuses, avec un escalier interne
+ *    et une porte qui donne sur le chemin de ronde.
  *
- * Les mesures, une fois pour toutes :
- * <pre>
- *   muraille    67 x 67, epaisse de 2, haute de 8, chemin de ronde a 6
- *   tours       7 x 7 aux quatre angles, hautes de 13
- *   porte       au sud, ouverture de 5 sur 5, herse de barreaux
- *   pyramide    base 25 x 25, six gradins de 2, sommet a 13
- *   ancre       au sommet, sur son parvis
- * </pre>
+ * 3. UN ESCALIER MENE QUELQUE PART. La rampe montait a la hauteur six, dans la
+ *    masse pleine du mur -- on grimpait dans le vide. Le chemin de ronde est
+ *    desormais une vraie surface, a une hauteur unique, et tout ce qui monte y
+ *    aboutit.
  */
 public final class Sanctuary {
 
-    /** Demi-cote de la muraille. L'emprise totale fait donc 67 blocs. */
-    private static final int HALF = 33;
+    /** Demi-cote de la muraille. Large : elle doit contenir la pyramide. */
+    private static final int HALF = 62;
 
-    private static final int WALL_HEIGHT = 8;
-    private static final int WALK_Y = 6;
-    private static final int TOWER_HEIGHT = 13;
+    /** Epaisseur de la courtine. */
+    private static final int THICK = 3;
 
-    /** Demi-cote de la base de la pyramide. */
-    private static final int PYRAMID_HALF = 12;
+    /** Hauteur de la masse pleine ; on marche sur le bloc du dessus. */
+    private static final int WALL_TOP = 8;
 
-    /** Nombre de gradins, chacun de deux blocs. */
-    private static final int TIERS = 6;
+    /** Le chemin de ronde, seule hauteur ou l'on marche sur le mur. */
+    private static final int WALK = WALL_TOP + 1;
 
-    /** Demi-largeur de l'ouverture de la porte. */
-    private static final int GATE_HALF = 2;
+    private static final int TOWER_RADIUS = 5;
+    private static final int TOWER_TOP = 18;
 
-    private static final int GATE_HEIGHT = 5;
+    private static final int GATE_HALF = 3;
+    private static final int GATE_HEIGHT = 7;
 
     private Sanctuary() {
     }
@@ -77,7 +74,7 @@ public final class Sanctuary {
         return ModBlocks.POLISHED_GANGUE.get().defaultBlockState();
     }
 
-    private static BlockState walk() {
+    private static BlockState floor() {
         return ModBlocks.VEINED_STONE.get().defaultBlockState();
     }
 
@@ -106,13 +103,6 @@ public final class Sanctuary {
                 .setValue(LanternBlock.HANGING, false);
     }
 
-    /**
-     * Un bloc d'un autre mod, s'il est la.
-     *
-     * La poulie, la corde et la manivelle de Supplementaries donnent a la herse
-     * son mecanisme visible. Ils sont facultatifs : sans eux la porte fonctionne
-     * pareil, elle est seulement moins racontee.
-     */
     @Nullable
     private static BlockState optional(String id) {
         ResourceLocation key = ResourceLocation.tryParse(id);
@@ -123,15 +113,25 @@ public final class Sanctuary {
         return block == Blocks.AIR ? null : block.defaultBlockState();
     }
 
+    /** Le premier de ces blocs qui existe : on s'enrichit du modpack sans en dependre. */
+    private static BlockState first(BlockState fallback, String... ids) {
+        for (String id : ids) {
+            BlockState found = optional(id);
+            if (found != null) {
+                return found;
+            }
+        }
+        return fallback;
+    }
+
     // --------------------------------------------------------- construction
 
     /**
-     * Bâtit le sanctuaire, l'ancre a son sommet.
+     * Bâtit le sanctuaire. La pyramide vient de Cataclysm, le reste est a nous.
      *
-     * @param ground le sol au centre : la pyramide y prend appui
-     * @return la position de l'ancre, au sommet
+     * @return la position de l'ancre
      */
-    public static BlockPos build(ServerLevel level, BlockPos ground) {
+    public static BlockPos build(ServerLevel level, CommandSourceStack source, BlockPos ground) {
         int y = ground.getY();
         int cx = ground.getX();
         int cz = ground.getZ();
@@ -139,31 +139,166 @@ public final class Sanctuary {
         clearSite(level, cx, y, cz);
         courtyard(level, cx, y, cz);
         curtainWall(level, cx, y, cz);
-        corners(level, cx, y, cz);
+        for (int sx = -1; sx <= 1; sx += 2) {
+            for (int sz = -1; sz <= 1; sz += 2) {
+                cornerTower(level, cx + sx * HALF, y, cz + sz * HALF);
+            }
+        }
         gatehouse(level, cx, y, cz);
-        BlockPos anchor = pyramid(level, cx, y, cz);
+
+        greatPyramid(level, source, cx, y, cz);
+        // On MESURE le sommet au lieu de le supposer : la pyramide de Cataclysm
+        // est posee par la commande du jeu, qui assemble ses onze morceaux comme
+        // elle l'entend. Se fier a une hauteur ecrite en dur, c'etait risquer un
+        // parvis flottant en l'air ou noye dans la maconnerie.
+        BlockPos anchor = crown(level, cx, summitOf(level, cx, y, cz), cz);
         SanctuaryGarrison.populate(level, new BlockPos(cx, y, cz), HALF);
+        SanctuaryMist.register(new BlockPos(cx, y, cz), HALF);
         return anchor;
     }
 
     /**
-     * Aplanit l'emprise avant de batir.
+     * La hauteur du point le plus haut au centre, la ou l'ancre doit se poser.
      *
-     * On ne cherche pas un terrain parfait -- ce serait long et laid -- mais on
-     * refuse qu'une colline traverse la muraille : une porte a moitie enterree
-     * ne s'ouvre sur rien.
+     * On sonde une petite zone plutot que la seule colonne centrale : un sommet
+     * de pyramide porte souvent une pointe ou un creux, et n'en prendre qu'un
+     * bloc donnerait un parvis de travers.
      */
-    private static void clearSite(ServerLevel level, int cx, int y, int cz) {
-        for (int dx = -HALF - 1; dx <= HALF + 1; dx++) {
-            for (int dz = -HALF - 1; dz <= HALF + 1; dz++) {
-                for (int dy = 1; dy <= TOWER_HEIGHT + 4; dy++) {
+    private static int summitOf(ServerLevel level, int cx, int y, int cz) {
+        int best = y;
+        for (int dx = -3; dx <= 3; dx++) {
+            for (int dz = -3; dz <= 3; dz++) {
+                int top = level.getHeight(
+                        net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                        cx + dx, cz + dz);
+                best = Math.max(best, top);
+            }
+        }
+        return best;
+    }
+
+    /**
+     * La Pyramide Maudite, posee par la commande de placement du jeu.
+     *
+     * C'est elle qui sait assembler les onze morceaux du modele -- quatre
+     * inferieurs, quatre superieurs, deux obelisques et le sommet -- et les
+     * poser dans le bon ordre. Le reconstituer a la main, c'etait s'exposer a
+     * en deviner le decoupage de travers.
+     *
+     */
+    private static void greatPyramid(ServerLevel level, CommandSourceStack source,
+                                    int cx, int y, int cz) {
+        if (BuiltInRegistries.BLOCK.containsKey(
+                ResourceLocation.fromNamespaceAndPath("cataclysm", "door_of_seal"))) {
+            String command = String.format("place structure cataclysm:cursed_pyramid %d %d %d",
+                    cx - 44, y, cz - 47);
+            try {
+                level.getServer().getCommands().performPrefixedCommand(
+                        source.withSuppressedOutput().withPermission(4), command);
+                return;
+            } catch (RuntimeException e) {
+                org.slf4j.LoggerFactory.getLogger(EmeraldWeaponsMod.MODID)
+                        .warn("Pyramide de Cataclysm non posee, repli sur la notre", e);
+            }
+        }
+        steppedPyramid(level, cx, y, cz);
+    }
+
+    /**
+     * Notre pyramide, gardee comme REPLI seulement.
+     *
+     * Elle sert quand Cataclysm manque. Elle reste modeste, et c'est assume :
+     * ce n'est pas la peine de rivaliser avec un batiment fait a la main quand
+     * on peut poser celui-la.
+     */
+    private static void steppedPyramid(ServerLevel level, int cx, int y, int cz) {
+        int tiers = 10;
+        for (int tier = 0; tier < tiers; tier++) {
+            int half = 22 - tier * 2;
+            int top = y + 1 + tier * 3;
+            for (int dx = -half; dx <= half; dx++) {
+                for (int dz = -half; dz <= half; dz++) {
+                    boolean rim = Math.abs(dx) == half || Math.abs(dz) == half;
+                    for (int dy = 0; dy < 3; dy++) {
+                        set(level, cx + dx, top + dy, cz + dz,
+                                rim && dy == 2 ? shrineTrim() : shrine());
+                    }
+                }
+            }
+            for (int side = -1; side <= 1; side += 2) {
+                set(level, cx + side * half, top + 2, cz, glow());
+                set(level, cx, top + 2, cz + side * half, glow());
+            }
+            // l'escalier, gradin par gradin : il DOIT mener au sommet
+            for (int dx = -1; dx <= 1; dx++) {
+                for (int step = 0; step < 3; step++) {
+                    set(level, cx + dx, top + step, cz + half - step, trim());
+                    for (int clear = 1; clear <= 3; clear++) {
+                        set(level, cx + dx, top + step + clear, cz + half - step,
+                                Blocks.AIR.defaultBlockState());
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Le parvis de l'ancre, au sommet.
+     *
+     * Il est POSE PAR-DESSUS ce qui se trouve la : le sommet de la pyramide de
+     * Cataclysm n'est pas plat, et l'ancre doit se voir de la cour. Quatre
+     * obelisques d'arcencium l'encadrent, et une colonne de verre prismatique
+     * descend jusqu'a la maconnerie -- de loin, c'est elle qu'on repere.
+     */
+    private static BlockPos crown(ServerLevel level, int cx, int y, int cz) {
+        for (int dx = -4; dx <= 4; dx++) {
+            for (int dz = -4; dz <= 4; dz++) {
+                for (int dy = 1; dy <= 8; dy++) {
                     set(level, cx + dx, y + dy, cz + dz, Blocks.AIR.defaultBlockState());
                 }
-                // et on comble ce qui manque dessous, pour ne pas batir sur le vide
+                boolean rim = Math.abs(dx) == 4 || Math.abs(dz) == 4;
+                set(level, cx + dx, y, cz + dz, rim ? shrineTrim() : shrine());
+            }
+        }
+        // les quatre obelisques
+        for (int sx = -1; sx <= 1; sx += 2) {
+            for (int sz = -1; sz <= 1; sz += 2) {
+                int ox = cx + sx * 4;
+                int oz = cz + sz * 4;
+                for (int dy = 1; dy <= 5; dy++) {
+                    set(level, ox, y + dy, oz, dy % 2 == 0 ? shrineTrim() : shrine());
+                }
+                set(level, ox, y + 6, oz, glow());
+                set(level, ox, y + 7, oz, lantern());
+            }
+        }
+        // le socle, un cran plus haut que le parvis
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dz = -1; dz <= 1; dz++) {
+                set(level, cx + dx, y + 1, cz + dz, shrineTrim());
+            }
+        }
+        BlockPos anchor = new BlockPos(cx, y + 2, cz);
+        level.setBlockAndUpdate(anchor, ModBlocks.PRISMATIC_ANCHOR.get().defaultBlockState());
+        return anchor;
+    }
+
+    // ------------------------------------------------------------- l'enceinte
+
+    private static void clearSite(ServerLevel level, int cx, int y, int cz) {
+        for (int dx = -HALF - TOWER_RADIUS; dx <= HALF + TOWER_RADIUS; dx++) {
+            for (int dz = -HALF - TOWER_RADIUS; dz <= HALF + TOWER_RADIUS; dz++) {
+                // on ne degage que la BANDE de l'enceinte et la cour au sol :
+                // vider tout le volume jusqu'au ciel couterait des centaines de
+                // milliers de blocs pour rien, la pyramide se posant apres
+                boolean band = Math.abs(dx) > HALF - THICK - 2 || Math.abs(dz) > HALF - THICK - 2;
+                int top = band ? TOWER_TOP + 3 : 2;
+                for (int dy = 1; dy <= top; dy++) {
+                    set(level, cx + dx, y + dy, cz + dz, Blocks.AIR.defaultBlockState());
+                }
                 for (int dy = 0; dy >= -3; dy--) {
                     BlockPos pos = new BlockPos(cx + dx, y + dy, cz + dz);
-                    if (level.getBlockState(pos).isAir()
-                            || !level.getFluidState(pos).isEmpty()) {
+                    if (level.getBlockState(pos).isAir() || !level.getFluidState(pos).isEmpty()) {
                         level.setBlock(pos, base(), 2);
                     }
                 }
@@ -171,257 +306,278 @@ public final class Sanctuary {
         }
     }
 
-    /** Le sol de la cour : dalles de gangue, avec des allees vers la porte. */
     private static void courtyard(ServerLevel level, int cx, int y, int cz) {
         for (int dx = -HALF; dx <= HALF; dx++) {
             for (int dz = -HALF; dz <= HALF; dz++) {
-                boolean path = Math.abs(dx) <= 2 && dz > 0;
-                set(level, cx + dx, y, cz + dz, path ? trim() : walk());
+                boolean road = Math.abs(dx) <= GATE_HALF && dz > 0;
+                // un damier discret : une cour d'un seul bloc fait dalle de beton
+                boolean checker = Math.floorMod(dx + dz, 8) == 0;
+                set(level, cx + dx, y, cz + dz,
+                        road ? trim() : checker ? shrineTrim() : floor());
             }
         }
     }
 
     /**
-     * La muraille : deux blocs d'epaisseur, un chemin de ronde, des merlons.
+     * La courtine : trois blocs d'epaisseur, un chemin de ronde praticable.
      *
-     * Le parapet est cree en laissant UN bloc sur deux : c'est ce qui fait lire
-     * une fortification plutot qu'un mur. Les meurtrieres sont percees a hauteur
-     * d'homme depuis le chemin de ronde.
+     * Le detail qui change tout est le CHEMIN DE RONDE : la masse est pleine
+     * jusqu'a huit, on marche donc a neuf, et c'est la seule hauteur ou l'on
+     * marche. Tout ce qui monte -- rampes, tours -- debouche a neuf. Le parapet
+     * se dresse a dix et onze, cote exterieur seulement, pour ne pas gener la
+     * circulation cote cour.
      */
     private static void curtainWall(ServerLevel level, int cx, int y, int cz) {
         for (int d = -HALF; d <= HALF; d++) {
-            for (int side = 0; side < 4; side++) {
-                for (int thick = 0; thick < 2; thick++) {
-                    int[] xz = wallPoint(side, d, thick, cx, cz);
-                    if (isGateOpening(side, d)) {
-                        continue;              // la porte se traite a part
+            for (int t = 0; t < THICK; t++) {
+                for (int side = 0; side < 4; side++) {
+                    int[] xz = wallPoint(side, d, t, cx, cz);
+                    if (side == 1 && Math.abs(d) <= GATE_HALF) {
+                        continue;              // le passage de la porte
                     }
-                    for (int dy = 1; dy <= WALL_HEIGHT; dy++) {
-                        BlockState material = dy == 1 ? base()
-                                : dy == WALK_Y ? trim() : body();
-                        set(level, xz[0], y + dy, xz[1], material);
+                    for (int dy = 1; dy <= WALL_TOP; dy++) {
+                        BlockState mat = dy <= 2 ? base()
+                                : dy == WALL_TOP ? trim()
+                                : (Math.floorMod(d, 9) == 0 ? shrine() : body());
+                        set(level, xz[0], y + dy, xz[1], mat);
                     }
-                    // le parapet : un merlon sur deux
-                    if (thick == 0 && Math.floorMod(d, 2) == 0) {
-                        set(level, xz[0], y + WALL_HEIGHT + 1, xz[1], merlon());
+                    set(level, xz[0], y + WALK, xz[1], floor());     // on marche ici
+
+                    if (t == 0) {              // le parapet, cote exterieur
+                        set(level, xz[0], y + WALK + 1, xz[1],
+                                Math.floorMod(d, 2) == 0 ? merlon() : glow());
+                        if (Math.floorMod(d, 2) == 0) {
+                            set(level, xz[0], y + WALK + 2, xz[1], merlon());
+                        }
                     }
-                    // les meurtrieres, une tous les six blocs
-                    if (thick == 1 && Math.floorMod(d, 6) == 0 && Math.abs(d) < HALF - 3) {
-                        set(level, xz[0], y + WALK_Y + 2, xz[1], Blocks.AIR.defaultBlockState());
-                        set(level, xz[0], y + WALK_Y + 3, xz[1], glow());
+                    if (t == THICK - 1 && Math.floorMod(d, 2) == 0) {
+                        set(level, xz[0], y + WALK + 1, xz[1], merlon());  // garde-corps
+                    }
+                    // les meurtrieres, percees dans la masse
+                    if (t == 0 && Math.floorMod(d, 7) == 0) {
+                        set(level, xz[0], y + 5, xz[1], glow());
+                        set(level, xz[0], y + 6, xz[1], glow());
                     }
                 }
             }
+            // les lanternes du chemin de ronde
+            if (Math.floorMod(d, 11) == 0) {
+                for (int side = 0; side < 4; side++) {
+                    int[] xz = wallPoint(side, d, THICK - 1, cx, cz);
+                    set(level, xz[0], y + WALK + 1, xz[1], lantern());
+                }
+            }
         }
-        // les escaliers d'acces au chemin de ronde, dans deux angles opposes
-        rampToWalk(level, cx - HALF + 3, y, cz - HALF + 3, 1);
-        rampToWalk(level, cx + HALF - 3, y, cz + HALF - 3, -1);
+        // quatre volees d'escalier, une par cote, qui aboutissent VRAIMENT a neuf
+        stairToWalk(level, cx - 20, y, cz - HALF + THICK, Direction.NORTH, 0, 1);
+        stairToWalk(level, cx + 20, y, cz + HALF - THICK, Direction.SOUTH, 0, -1);
+        stairToWalk(level, cx - HALF + THICK, y, cz + 20, Direction.WEST, 1, 0);
+        stairToWalk(level, cx + HALF - THICK, y, cz - 20, Direction.EAST, -1, 0);
     }
 
-    /** Les coordonnees d'un point de muraille, par cote et par distance. */
-    private static int[] wallPoint(int side, int d, int thick, int cx, int cz) {
+    private static int[] wallPoint(int side, int d, int t, int cx, int cz) {
         return switch (side) {
-            case 0 -> new int[]{cx + d, cz - HALF + thick};        // nord
-            case 1 -> new int[]{cx + d, cz + HALF - thick};        // sud
-            case 2 -> new int[]{cx - HALF + thick, cz + d};        // ouest
-            default -> new int[]{cx + HALF - thick, cz + d};       // est
+            case 0 -> new int[]{cx + d, cz - HALF + t};
+            case 1 -> new int[]{cx + d, cz + HALF - t};
+            case 2 -> new int[]{cx - HALF + t, cz + d};
+            default -> new int[]{cx + HALF - t, cz + d};
         };
     }
 
-    /** L'ouverture de la porte, au milieu du cote sud. */
-    private static boolean isGateOpening(int side, int d) {
-        return side == 1 && Math.abs(d) <= GATE_HALF;
-    }
-
-    /** Un escalier droit qui monte de la cour au chemin de ronde. */
-    private static void rampToWalk(ServerLevel level, int x, int y, int z, int dir) {
-        for (int step = 0; step < WALK_Y; step++) {
-            int sz = z + step * dir;
-            set(level, x, y + step, sz, trim());
-            set(level, x, y + step + 1, sz,
-                    stair(ModBlocks.POLISHED_GANGUE_STAIRS.get(),
-                            dir > 0 ? Direction.SOUTH : Direction.NORTH));
+    /**
+     * Une volee d'escalier de la cour au chemin de ronde.
+     *
+     * Elle part du pied du mur vers l'interieur et monte marche par marche
+     * jusqu'a la hauteur exacte du chemin de ronde. Un palier de deux blocs la
+     * termine, faute de quoi on arrive nez au parapet.
+     */
+    private static void stairToWalk(ServerLevel level, int x, int y, int z,
+                                    Direction facing, int dx, int dz) {
+        for (int step = 0; step < WALK; step++) {
+            int sx = x - dx * (step + 1);
+            int sz = z - dz * (step + 1);
+            for (int w = -1; w <= 1; w++) {
+                int px = sx + (dx == 0 ? w : 0);
+                int pz = sz + (dz == 0 ? w : 0);
+                for (int fill = 0; fill <= step; fill++) {
+                    set(level, px, y + fill, pz, body());
+                }
+                set(level, px, y + step + 1, pz, stair(
+                        ModBlocks.POLISHED_GANGUE_STAIRS.get(), facing.getOpposite()));
+                for (int clear = 2; clear <= 4; clear++) {
+                    set(level, px, y + step + clear, pz, Blocks.AIR.defaultBlockState());
+                }
+            }
         }
     }
 
     /**
-     * Les quatre tours d'angle.
+     * Une tour d'angle CREUSE, avec son escalier et sa porte.
      *
-     * Elles sont octogonales plutot que carrees : une tour carree se confond
-     * avec le coin de la muraille, une tour ronde signale de loin qu'il y a
-     * quelqu'un dedans.
+     * C'etait le reproche le plus net du premier essai : des tours pleines,
+     * qu'on ne pouvait pas visiter. Celle-ci a un rez-de-chaussee ouvert sur la
+     * cour, un escalier en vis contre sa paroi, une sortie a hauteur du chemin
+     * de ronde, et une plateforme sommitale creneleee.
      */
-    private static void corners(ServerLevel level, int cx, int y, int cz) {
-        int[][] spots = {
-                {cx - HALF, cz - HALF}, {cx + HALF, cz - HALF},
-                {cx - HALF, cz + HALF}, {cx + HALF, cz + HALF},
-        };
-        for (int[] spot : spots) {
-            for (int dx = -3; dx <= 3; dx++) {
-                for (int dz = -3; dz <= 3; dz++) {
-                    // l'octogone : on rabote les angles du carre
-                    if (Math.abs(dx) + Math.abs(dz) > 4) {
-                        continue;
+    private static void cornerTower(ServerLevel level, int tx, int y, int tz) {
+        int r = TOWER_RADIUS;
+        for (int dx = -r; dx <= r; dx++) {
+            for (int dz = -r; dz <= r; dz++) {
+                double dist = Math.sqrt(dx * dx + dz * dz);
+                if (dist > r + 0.5) {
+                    continue;
+                }
+                boolean shell = dist > r - 1.0;
+                for (int dy = 1; dy <= TOWER_TOP; dy++) {
+                    if (!shell) {
+                        set(level, tx + dx, y + dy, tz + dz, Blocks.AIR.defaultBlockState());
+                        continue;              // le creux : c'est la qu'on entre
                     }
-                    boolean edge = Math.abs(dx) == 3 || Math.abs(dz) == 3
-                            || Math.abs(dx) + Math.abs(dz) == 4;
-                    for (int dy = 1; dy <= TOWER_HEIGHT; dy++) {
-                        if (!edge && dy > 1 && dy < TOWER_HEIGHT) {
-                            set(level, spot[0] + dx, y + dy, spot[1] + dz,
-                                    Blocks.AIR.defaultBlockState());
-                            continue;          // creuse : on peut y monter
-                        }
-                        BlockState material = dy == 1 ? base()
-                                : dy % 6 == 0 ? shrine() : tower();
-                        set(level, spot[0] + dx, y + dy, spot[1] + dz, material);
-                    }
-                    if (edge && Math.floorMod(dx + dz, 2) == 0) {
-                        set(level, spot[0] + dx, y + TOWER_HEIGHT + 1, spot[1] + dz, merlon());
-                    }
+                    BlockState mat = dy <= 2 ? base()
+                            : dy % 6 == 0 ? shrineTrim() : tower();
+                    set(level, tx + dx, y + dy, tz + dz, mat);
+                }
+                // le plancher et la plateforme
+                set(level, tx + dx, y, tz + dz, floor());
+                if (!shell) {
+                    set(level, tx + dx, y + TOWER_TOP, tz + dz, floor());
+                }
+                // les creneaux du sommet
+                if (shell && Math.floorMod(dx + dz, 2) == 0) {
+                    set(level, tx + dx, y + TOWER_TOP + 1, tz + dz, merlon());
+                }
+                // les fenetres, en croix
+                if (shell && (dx == 0 || dz == 0)) {
+                    set(level, tx + dx, y + 5, tz + dz, glow());
+                    set(level, tx + dx, y + 12, tz + dz, glow());
                 }
             }
-            set(level, spot[0], y + TOWER_HEIGHT + 1, spot[1], lantern());
         }
+        // l'escalier en vis, contre la paroi
+        int steps = TOWER_TOP - 1;
+        for (int step = 0; step < steps; step++) {
+            double angle = step * 0.62;        // un tour complet tous les dix pas
+            int sx = tx + (int) Math.round(Math.cos(angle) * (r - 1.6));
+            int sz = tz + (int) Math.round(Math.sin(angle) * (r - 1.6));
+            set(level, sx, y + step, sz, trim());
+            set(level, sx, y + step + 1, sz, Blocks.AIR.defaultBlockState());
+            set(level, sx, y + step + 2, sz, Blocks.AIR.defaultBlockState());
+        }
+        // la trappe du sommet, et la porte vers le chemin de ronde
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dz = -1; dz <= 1; dz++) {
+                set(level, tx + dx, y + TOWER_TOP, tz + dz, Blocks.AIR.defaultBlockState());
+            }
+        }
+        for (int dy = WALK; dy <= WALK + 2; dy++) {
+            for (int d = -r; d <= r; d++) {
+                // deux ouvertures, vers les deux courtines qui rejoignent la tour
+                set(level, tx + d, y + dy, tz, Math.abs(d) > r - 2
+                        ? Blocks.AIR.defaultBlockState() : level.getBlockState(
+                                new BlockPos(tx + d, y + dy, tz)));
+                set(level, tx, y + dy, tz + d, Math.abs(d) > r - 2
+                        ? Blocks.AIR.defaultBlockState() : level.getBlockState(
+                                new BlockPos(tx, y + dy, tz + d)));
+            }
+        }
+        set(level, tx, y + TOWER_TOP + 1, tz, lantern());
     }
 
     /**
      * Le corps de garde et sa herse.
      *
-     * La herse est une grille de barreaux qui coulisse dans la voute. Elle est
-     * BAISSEE a la construction : le sanctuaire est ferme, et l'ouvrir est le
-     * premier geste de l'assaut. La poulie, la corde et la manivelle au-dessus
-     * en montrent le mecanisme -- c'est par elles qu'on l'actionne.
+     * La herse n'est plus une grille de barreaux -- « on dirait une prison ».
+     * C'est un treillis de metal noir monte dans un cadre de pierre taillee,
+     * suspendu a deux chaines qui remontent a la poulie. Le passage est
+     * voute, flanque de braseros, et perce d'assommoirs au-dessus.
      */
     private static void gatehouse(ServerLevel level, int cx, int y, int cz) {
         int gz = cz + HALF;
 
-        // les deux tours qui encadrent le passage
+        // les deux tours du corps de garde, plus hautes que la courtine
         for (int side = -1; side <= 1; side += 2) {
-            int bx = cx + side * (GATE_HALF + 3);
-            for (int dx = -2; dx <= 2; dx++) {
-                for (int dz = -2; dz <= 2; dz++) {
-                    for (int dy = 1; dy <= TOWER_HEIGHT - 1; dy++) {
-                        boolean edge = Math.abs(dx) == 2 || Math.abs(dz) == 2;
-                        if (!edge && dy > 1 && dy < TOWER_HEIGHT - 1) {
+            int bx = cx + side * (GATE_HALF + 4);
+            for (int dx = -3; dx <= 3; dx++) {
+                for (int dz = -3; dz <= 3; dz++) {
+                    if (Math.abs(dx) + Math.abs(dz) > 4) {
+                        continue;
+                    }
+                    boolean shell = Math.abs(dx) == 3 || Math.abs(dz) == 3
+                            || Math.abs(dx) + Math.abs(dz) == 4;
+                    for (int dy = 1; dy <= TOWER_TOP - 2; dy++) {
+                        if (!shell) {
+                            set(level, bx + dx, y + dy, gz + dz, Blocks.AIR.defaultBlockState());
                             continue;
                         }
                         set(level, bx + dx, y + dy, gz + dz,
-                                dy == 1 ? base() : dy % 5 == 0 ? shrine() : tower());
+                                dy <= 2 ? base() : dy % 5 == 0 ? shrineTrim() : tower());
                     }
-                    if (Math.floorMod(dx + dz, 2) == 0) {
-                        set(level, bx + dx, y + TOWER_HEIGHT, gz + dz, merlon());
+                    if (shell && Math.floorMod(dx + dz, 2) == 0) {
+                        set(level, bx + dx, y + TOWER_TOP - 1, gz + dz, merlon());
                     }
                 }
             }
-            set(level, bx, y + TOWER_HEIGHT, gz, lantern());
+            set(level, bx, y + TOWER_TOP - 1, gz, lantern());
         }
 
-        // la voute au-dessus du passage
-        for (int dx = -GATE_HALF - 1; dx <= GATE_HALF + 1; dx++) {
-            for (int dz = -1; dz <= 1; dz++) {
-                for (int dy = GATE_HEIGHT + 1; dy <= GATE_HEIGHT + 3; dy++) {
-                    set(level, cx + dx, y + dy, gz + dz,
-                            dy == GATE_HEIGHT + 1 ? shrineTrim() : body());
+        // la voute du passage : un arc, pas un linteau plat
+        for (int dz = -2; dz <= 2; dz++) {
+            for (int dx = -GATE_HALF - 1; dx <= GATE_HALF + 1; dx++) {
+                int arch = GATE_HEIGHT + 1 + (GATE_HALF + 1 - Math.abs(dx)) / 2;
+                for (int dy = GATE_HEIGHT + 1; dy <= arch; dy++) {
+                    set(level, cx + dx, y + dy, gz + dz, trim());
+                }
+                for (int dy = arch + 1; dy <= arch + 3; dy++) {
+                    set(level, cx + dx, y + dy, gz + dz, body());
                 }
             }
-        }
-        // les jambages, pour que le passage ne soit pas un simple trou
-        for (int dz = -1; dz <= 1; dz++) {
+            // les jambages tailles
             for (int dy = 1; dy <= GATE_HEIGHT; dy++) {
-                set(level, cx - GATE_HALF - 1, y + dy, gz + dz, body());
-                set(level, cx + GATE_HALF + 1, y + dy, gz + dz, body());
+                set(level, cx - GATE_HALF - 1, y + dy, gz + dz,
+                        dy % 3 == 0 ? shrineTrim() : trim());
+                set(level, cx + GATE_HALF + 1, y + dy, gz + dz,
+                        dy % 3 == 0 ? shrineTrim() : trim());
+            }
+            for (int dx = -GATE_HALF; dx <= GATE_HALF; dx++) {
+                set(level, cx + dx, y, gz + dz, trim());
+                for (int dy = 1; dy <= GATE_HEIGHT; dy++) {
+                    set(level, cx + dx, y + dy, gz + dz, Blocks.AIR.defaultBlockState());
+                }
             }
         }
-        for (int dx = -GATE_HALF; dx <= GATE_HALF; dx++) {
-            set(level, cx + dx, y, gz, trim());
-            set(level, cx + dx, y, gz + 1, trim());
-            set(level, cx + dx, y, gz - 1, trim());
+        // les assommoirs : des trous dans la voute, par ou l'on recoit les visiteurs
+        for (int dx = -GATE_HALF + 1; dx <= GATE_HALF - 1; dx += 2) {
+            set(level, cx + dx, y + GATE_HEIGHT + 1, gz, Blocks.AIR.defaultBlockState());
+        }
+        // les braseros du seuil
+        for (int side = -1; side <= 1; side += 2) {
+            int bx = cx + side * (GATE_HALF + 2);
+            set(level, bx, y + 1, gz + 3, shrineTrim());
+            set(level, bx, y + 2, gz + 3, first(lantern(),
+                    "supplementaries:fire_pit", "minecraft:campfire"));
         }
 
-        // le mecanisme, au-dessus de la voute : poulie, corde, manivelle
+        // le mecanisme : poulie, cordes, manivelle, et les chaines de la herse
         BlockState pulley = optional("supplementaries:pulley_block");
         BlockState rope = optional("supplementaries:rope");
         BlockState crank = optional("supplementaries:crank");
         if (pulley != null) {
-            set(level, cx, y + GATE_HEIGHT + 4, gz, pulley);
+            set(level, cx, y + GATE_HEIGHT + 6, gz, pulley);
         }
         if (rope != null) {
-            for (int dx = -GATE_HALF; dx <= GATE_HALF; dx += GATE_HALF) {
-                set(level, cx + dx, y + GATE_HEIGHT + 3, gz, rope);
+            for (int dy = GATE_HEIGHT + 4; dy <= GATE_HEIGHT + 5; dy++) {
+                set(level, cx, y + dy, gz, rope);
             }
         }
         if (crank != null) {
-            set(level, cx + GATE_HALF + 2, y + WALK_Y + 1, gz, crank);
+            set(level, cx + GATE_HALF + 2, y + WALK, gz - 1, crank);
+        } else {
+            set(level, cx + GATE_HALF + 2, y + WALK, gz - 1,
+                    Blocks.LEVER.defaultBlockState());
         }
 
-        SanctuaryGate.register(level, new BlockPos(cx, y, gz), GATE_HALF, GATE_HEIGHT);
+        SanctuaryGate.register(new BlockPos(cx, y, gz), GATE_HALF, GATE_HEIGHT);
         SanctuaryGate.close(level, new BlockPos(cx, y, gz));
-    }
-
-    /**
-     * La pyramide et son ancre.
-     *
-     * Six gradins de deux blocs, un escalier plein sud qui monte du seuil au
-     * sommet -- c'est lui qui repond au probleme d'origine, l'ancre qu'on ne
-     * pouvait pas atteindre. Chaque gradin porte une bande d'arcencium cisele
-     * et deux lanternes, si bien que la montee se lit meme de nuit.
-     *
-     * @return la position de l'ancre
-     */
-    private static BlockPos pyramid(ServerLevel level, int cx, int y, int cz) {
-        for (int tier = 0; tier < TIERS; tier++) {
-            int half = PYRAMID_HALF - tier * 2;
-            int top = y + 1 + tier * 2;
-            for (int dx = -half; dx <= half; dx++) {
-                for (int dz = -half; dz <= half; dz++) {
-                    boolean rim = Math.abs(dx) == half || Math.abs(dz) == half;
-                    for (int dy = 0; dy < 2; dy++) {
-                        BlockState material = rim && dy == 1 ? shrineTrim() : shrine();
-                        set(level, cx + dx, top + dy, cz + dz, material);
-                    }
-                }
-            }
-            // les insets lumineux, aux quatre faces de chaque gradin
-            for (int side = -1; side <= 1; side += 2) {
-                set(level, cx + side * half, top + 1, cz, glow());
-                set(level, cx, top + 1, cz + side * half, glow());
-            }
-            // deux lanternes par gradin, de part et d'autre de l'escalier
-            set(level, cx - 3, top + 2, cz + half - 1, lantern());
-            set(level, cx + 3, top + 2, cz + half - 1, lantern());
-        }
-
-        int summit = y + 1 + TIERS * 2;
-
-        // l'escalier sud, du seuil au sommet
-        for (int tier = 0; tier < TIERS; tier++) {
-            int half = PYRAMID_HALF - tier * 2;
-            int stepY = y + 1 + tier * 2;
-            for (int dx = -1; dx <= 1; dx++) {
-                set(level, cx + dx, stepY, cz + half, trim());
-                set(level, cx + dx, stepY + 1, cz + half,
-                        stair(ModBlocks.ARCENCIUM_BRICK_STAIRS.get(), Direction.SOUTH));
-                set(level, cx + dx, stepY + 2, cz + half, Blocks.AIR.defaultBlockState());
-                set(level, cx + dx, stepY + 3, cz + half, Blocks.AIR.defaultBlockState());
-            }
-        }
-
-        // le parvis du sommet
-        for (int dx = -2; dx <= 2; dx++) {
-            for (int dz = -2; dz <= 2; dz++) {
-                set(level, cx + dx, summit, cz + dz, shrineTrim());
-                set(level, cx + dx, summit + 1, cz + dz, Blocks.AIR.defaultBlockState());
-            }
-        }
-        for (int side = -2; side <= 2; side += 4) {
-            for (int other = -2; other <= 2; other += 4) {
-                set(level, cx + side, summit + 1, cz + other, lantern());
-            }
-        }
-
-        BlockPos anchor = new BlockPos(cx, summit + 1, cz);
-        level.setBlockAndUpdate(anchor, ModBlocks.PRISMATIC_ANCHOR.get().defaultBlockState());
-        return anchor;
     }
 
     // ----------------------------------------------------------- outillage
@@ -433,9 +589,9 @@ public final class Sanctuary {
     }
 
     private static void set(ServerLevel level, int x, int y, int z, BlockState state) {
-        // le drapeau 2 : on previent le client, mais on n'enclenche aucune mise
-        // a jour de voisinage -- sur cent mille blocs, les cascades de mises a
-        // jour couteraient bien plus cher que la pose elle-meme
+        // drapeau 2 : on previent le client sans declencher de mise a jour de
+        // voisinage -- sur cent mille blocs, les cascades couteraient bien plus
+        // cher que la pose elle-meme
         level.setBlock(new BlockPos(x, y, z), state, 2);
     }
 }
