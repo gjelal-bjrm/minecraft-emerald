@@ -73,7 +73,7 @@ public final class WeatherClient {
         Weather w = current();
         boolean foggy = w == Weather.BRUME || w == Weather.NUIT
                 || w == Weather.ORAGE || w == Weather.DECHIRURE
-                || w == Weather.METEORES;
+                || w == Weather.METEORES || w == Weather.AURORE;
         intensity = clamp(intensity + (foggy ? 0.015F : -0.015F));
         // le tremblement de fond des tempetes : imperceptible a l'arret, mais
         // c'est lui qui empeche l'image d'etre tout a fait stable, et donc
@@ -117,6 +117,10 @@ public final class WeatherClient {
                 yield new float[]{((rgb >> 16) & 0xFF) / 255F,
                         ((rgb >> 8) & 0xFF) / 255F, (rgb & 0xFF) / 255F};
             }
+            // un indigo leger : il assombrit juste assez pour que les rideaux
+            // ressortent, y compris en plein jour ou un melange additif se
+            // noierait dans un ciel clair
+            case AURORE -> new float[]{0.07F, 0.10F, 0.20F};
             case NUIT -> new float[]{0.03F, 0.02F, 0.08F};
             case ORAGE -> new float[]{0.20F, 0.10F, 0.30F};
             case DECHIRURE -> new float[]{0.30F, 0.18F, 0.38F};
@@ -133,6 +137,7 @@ public final class WeatherClient {
         }
         float far = switch (current()) {
             case BRUME -> 56.0F;
+            case AURORE -> 210.0F;        // a peine une brume : on voit loin
             case NUIT -> 96.0F;
             case ORAGE -> 84.0F;
             case DECHIRURE -> 140.0F;
@@ -210,18 +215,36 @@ public final class WeatherClient {
                 }
             }
             case AURORE -> {
-                // des rubans hauts : la couleur suit la position, le rideau ondule
-                for (int i = 0; i < 3; i++) {
-                    double x = player.getX() + (random.nextDouble() - 0.5) * 80;
-                    double z = player.getZ() + (random.nextDouble() - 0.5) * 80;
-                    double y = player.getY() + 28 + Math.sin(x * 0.05 + level.getGameTime() * 0.01) * 6
-                            + random.nextDouble() * 8;
-                    float hue = (float) (((x + z) * 0.004 + level.getGameTime() * 0.0015) % 1.0);
-                    int rgb = Color.HSBtoRGB(hue < 0 ? hue + 1 : hue, 0.55F, 1.0F);
+                // Les rideaux sont maintenant de la geometrie (AuroraRenderer) :
+                // les anciennes particules hautes faisaient double emploi et ne
+                // se voyaient pas. Ce qui reste ici travaille AU SOL, pour que
+                // l'aurore ne soit pas seulement un plafond -- une lueur qui
+                // monte du paysage, comme si le sol lui repondait.
+                for (int i = 0; i < 6; i++) {
+                    double x = player.getX() + (random.nextDouble() - 0.5) * 30;
+                    double z = player.getZ() + (random.nextDouble() - 0.5) * 30;
+                    double y = player.getY() + random.nextDouble() * 6 - 2;
+                    float hue = (float) ((((x + z) * 0.01 + level.getGameTime() * 0.002)
+                            % 1.0 + 1.0) % 1.0);
+                    int rgb = Color.HSBtoRGB(hue * 0.5F + 0.25F, 0.65F, 1.0F);
                     level.addParticle(new DustParticleOptions(new Vector3f(
                                     ((rgb >> 16) & 0xFF) / 255F, ((rgb >> 8) & 0xFF) / 255F,
-                                    (rgb & 0xFF) / 255F), 2.2F),
-                            x, y, z, 0.0, 0.01, 0.0);
+                                    (rgb & 0xFF) / 255F), 1.3F),
+                            x, y, z, 0.0, 0.06, 0.0);
+                }
+                if (random.nextInt(3) == 0) {
+                    level.addParticle(ModParticles.PRISM_MOTE.get(),
+                            player.getX() + (random.nextDouble() - 0.5) * 24,
+                            player.getY() + random.nextDouble() * 8 - 2,
+                            player.getZ() + (random.nextDouble() - 0.5) * 24,
+                            0.0, 0.04, 0.0);
+                }
+                // le carillon de fond : discret, mais il signe la meteo a
+                // l'oreille comme le tonnerre signe la Nuit
+                if (level.getGameTime() % 110 == 0) {
+                    level.playLocalSound(player.getX(), player.getY(), player.getZ(),
+                            net.minecraft.sounds.SoundEvents.AMETHYST_BLOCK_CHIME,
+                            net.minecraft.sounds.SoundSource.AMBIENT, 0.35F, 0.6F, false);
                 }
             }
             case DECHIRURE -> {

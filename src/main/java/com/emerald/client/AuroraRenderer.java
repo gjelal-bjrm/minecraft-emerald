@@ -18,39 +18,56 @@ import org.joml.Matrix4f;
 import java.awt.Color;
 
 /**
- * L'Aurore, dessinee comme une VRAIE aurore : de la geometrie dans le ciel.
+ * L'Aurore : des rideaux de lumiere qui prennent tout le ciel.
  *
- * La premiere version la faisait en particules, comme les cinq autres meteos.
- * Elle en posait trois par tick dans un volume de quatre-vingts blocs de cote,
- * soit environ une particule pour mille metres cubes : invisible par
- * construction. Et meme en multipliant le nombre, des points epars ne font pas
- * un rideau -- il y manque la continuite, qui est justement ce qu'on reconnait
- * dans une aurore.
+ * Deux erreurs successives valent d'etre notees, parce qu'elles se ressemblent
+ * de loin et ne se soignent pas pareil.
  *
- * On dessine donc des rubans continus, en melange additif comme les eclairs :
- * quelques bandes qui ondulent d'un horizon a l'autre, lumineuses en bas et
- * evanescentes en haut. C'est le seul effet du mode qui ne soit pas fait de
- * particules, et c'est voulu -- l'Aurore ne doit ressembler a aucune autre.
+ * La premiere version la faisait en particules -- trois par tick dans un volume
+ * de quatre-vingts blocs de cote, une pour mille metres cubes. Invisible par
+ * arithmetique. Et meme en multipliant le nombre, des points epars ne font pas
+ * un rideau : il y manque la continuite, qui est ce qu'on reconnait dans une
+ * aurore. D'ou la geometrie.
+ *
+ * La seconde etait un bug de REPERE. Dans RenderLevelStageEvent, la pile de
+ * transformations est relative a la CAMERA : un sommet en (x, y, z) atterrit a
+ * (camX + x, camY + y, camZ + z). En y passant des coordonnees du monde, on
+ * dessinait a peu pres au double de la position du joueur -- des centaines de
+ * blocs plus loin, et a l'altitude 62 plutot qu'au-dessus de lui. Il en restait
+ * un lisere lointain, ce qui ressemblait a un probleme d'echelle alors que
+ * c'etait un probleme de place.
+ *
+ * Tout est donc en coordonnees RELATIVES A LA CAMERA ici, et rien d'autre. Le
+ * monde n'intervient que dans la phase des ondulations, pour que les rideaux
+ * derivent au-dessus du paysage au lieu de coller au joueur.
  */
 @EventBusSubscriber(modid = EmeraldWeaponsMod.MODID, value = Dist.CLIENT)
 public final class AuroraRenderer {
 
-    /** Nombre de rubans. Au-dela, le ciel se remplit et l'effet se banalise. */
-    private static final int RIBBONS = 5;
+    /** Assez pour couvrir le ciel d'un bord a l'autre du champ de vision. */
+    private static final int RIBBONS = 9;
 
     /** Segments par ruban : c'est ce qui rend l'ondulation lisse. */
-    private static final int SEGMENTS = 48;
+    private static final int SEGMENTS = 44;
 
-    /** Longueur d'un ruban, en blocs. Il doit sortir du champ des deux cotes. */
-    private static final double LENGTH = 460.0;
+    /** Longueur d'un ruban. Il doit sortir du champ des deux cotes. */
+    private static final double LENGTH = 420.0;
 
-    /** Hauteur du bord inferieur, au-dessus de la camera. */
-    private static final double BASE = 62.0;
+    /** Ecart entre deux rubans, perpendiculairement. */
+    private static final double SPACING = 34.0;
+
+    /** Hauteur du bord inferieur AU-DESSUS DE LA CAMERA. */
+    private static final double BASE = 42.0;
 
     /** 0 -> 1 : l'aurore s'allume et s'eteint, elle ne claque pas. */
     private static float intensity;
 
     private AuroraRenderer() {
+    }
+
+    /** Pour l'ambiance sonore et lumineuse, qui suit le meme fondu. */
+    public static float intensity() {
+        return intensity;
     }
 
     @SubscribeEvent
@@ -59,7 +76,7 @@ public final class AuroraRenderer {
             return;
         }
         boolean on = WeatherClient.current() == Weather.AURORE;
-        intensity = Math.max(0.0F, Math.min(1.0F, intensity + (on ? 0.008F : -0.012F)));
+        intensity = Math.max(0.0F, Math.min(1.0F, intensity + (on ? 0.010F : -0.014F)));
         if (intensity <= 0.01F) {
             return;
         }
@@ -81,10 +98,8 @@ public final class AuroraRenderer {
         VertexConsumer consumer = buffer.getBuffer(RenderType.lightning());
 
         pose.pushPose();
-        // l'aurore est un objet du ciel : elle suit la camera a l'horizontale,
-        // comme un phenomene assez lointain pour n'avoir pas de parallaxe, mais
-        // son ondulation reste calee sur les coordonnees du monde
-        pose.translate(0.0, -eye.y, 0.0);
+        // AUCUNE translation : on est deja dans le repere de la camera, et
+        // c'est precisement ce que la version precedente avait manque
         Matrix4f matrix = pose.last().pose();
 
         for (int r = 0; r < RIBBONS; r++) {
@@ -96,50 +111,72 @@ public final class AuroraRenderer {
     }
 
     /**
-     * Un ruban : une bande verticale qui serpente le long de l'axe X.
+     * Un rideau : une bande verticale qui serpente au-dessus de la tete.
      *
-     * Chaque segment est un quadrilatere dont le bas est vif et le haut
-     * transparent. On l'emet dans les deux sens d'enroulement, faute de quoi il
-     * disparait des qu'on le regarde par derriere.
+     * Les rubans sont legerement EVENTES plutot que paralleles. Parallelles,
+     * ils se voyaient de face comme un ciel raye et, vus dans l'axe, comme une
+     * seule ligne -- on tombait sur l'un ou l'autre selon l'orientation. Evente,
+     * l'ensemble se lit de partout.
      */
     private static void drawRibbon(Matrix4f matrix, VertexConsumer consumer,
                                    Vec3 eye, double time, int index) {
-        // chaque ruban a sa distance, sa vitesse et sa phase : sans cela les
-        // cinq bandes ondulent ensemble et l'oeil y voit un motif, pas un ciel
-        double offset = (index - (RIBBONS - 1) / 2.0) * 46.0;
+        double centered = index - (RIBBONS - 1) / 2.0;
+        // l'eventail : douze degres d'ecart d'un ruban au suivant
+        double heading = Math.toRadians(centered * 12.0);
+        double dirX = Math.cos(heading);
+        double dirZ = Math.sin(heading);
+        // la perpendiculaire, qui porte l'ecartement des rubans
+        double perpX = -dirZ;
+        double perpZ = dirX;
+
         double phase = index * 2.1;
-        double speed = 0.00042 + index * 0.00009;
-        double height = 34.0 + index * 5.0;
+        double speed = 0.00045 + index * 0.00007;
+        double height = 44.0 + (index % 4) * 9.0;
         double step = LENGTH / SEGMENTS;
+        double spread = centered * SPACING;
 
         for (int i = 0; i < SEGMENTS; i++) {
-            double x0 = eye.x - LENGTH / 2 + i * step;
-            double x1 = x0 + step;
+            double t0 = -LENGTH / 2 + i * step;
+            double t1 = t0 + step;
 
-            double z0 = eye.z + offset + wave(x0, time, phase, speed);
-            double z1 = eye.z + offset + wave(x1, time, phase, speed);
-            double b0 = BASE + Math.sin(x0 * 0.008 + phase) * 7.0;
-            double b1 = BASE + Math.sin(x1 * 0.008 + phase) * 7.0;
+            double[] a = point(eye, t0, spread, dirX, dirZ, perpX, perpZ, time, phase, speed);
+            double[] b = point(eye, t1, spread, dirX, dirZ, perpX, perpZ, time, phase, speed);
 
-            // les extremites s'effacent : un ruban qui s'arrete net se voit
+            // les extremites s'effacent : un rideau qui s'arrete net se voit
             float fade0 = edgeFade(i) * intensity;
             float fade1 = edgeFade(i + 1) * intensity;
 
-            float[] c0 = hue(x0, time, phase);
-            float[] c1 = hue(x1, time, phase);
+            float[] c0 = hue(eye.x + a[0], time, phase);
+            float[] c1 = hue(eye.x + b[0], time, phase);
 
-            quad(matrix, consumer, x0, b0, z0, x1, b1, z1, height, c0, c1, fade0, fade1);
-            quad(matrix, consumer, x1, b1, z1, x0, b0, z0, height, c1, c0, fade1, fade0);
+            quad(matrix, consumer, a, b, height, c0, c1, fade0, fade1);
+            quad(matrix, consumer, b, a, height, c1, c0, fade1, fade0);
         }
     }
 
-    /** L'ondulation horizontale : deux sinus de periodes differentes. */
-    private static double wave(double x, double time, double phase, double speed) {
-        return Math.sin(x * 0.012 + time * speed * 20 + phase) * 16.0
-                + Math.sin(x * 0.031 - time * speed * 11 + phase) * 6.0;
+    /**
+     * Un point du bord inferieur, en coordonnees relatives a la camera.
+     *
+     * La position du monde n'entre que dans la PHASE : c'est ce qui fait
+     * deriver les rideaux au-dessus du paysage au lieu de les coller au joueur,
+     * sans les eloigner de lui.
+     */
+    private static double[] point(Vec3 eye, double along, double spread,
+                                  double dirX, double dirZ, double perpX, double perpZ,
+                                  double time, double phase, double speed) {
+        double worldAlong = eye.x * dirX + eye.z * dirZ + along;
+        double swing = Math.sin(worldAlong * 0.012 + time * speed * 20 + phase) * 15.0
+                + Math.sin(worldAlong * 0.031 - time * speed * 11 + phase) * 6.0;
+        double lift = Math.sin(worldAlong * 0.008 + phase) * 8.0;
+        double offset = spread + swing;
+        return new double[]{
+                along * dirX + offset * perpX,
+                BASE + lift,
+                along * dirZ + offset * perpZ,
+        };
     }
 
-    /** Le fondu aux deux bouts du ruban, en cloche. */
+    /** Le fondu aux deux bouts du rideau, en cloche. */
     private static float edgeFade(int i) {
         float t = i / (float) SEGMENTS;
         return (float) Math.sin(t * Math.PI);
@@ -148,33 +185,31 @@ public final class AuroraRenderer {
     /**
      * La couleur, prise sur la position et le temps.
      *
-     * La teinte derive lentement le long du ruban : on retrouve la signature
-     * prismatique du mode sans tomber dans le degrade arc-en-ciel complet, qui
-     * ferait sapin de Noel. Une demi-roue suffit.
+     * La teinte derive le long du rideau sur une DEMI-roue seulement, du vert
+     * au violet en passant par le cyan -- les couleurs d'une vraie aurore, et
+     * la signature prismatique du mode. La roue entiere ferait sapin de Noel.
      */
-    private static float[] hue(double x, double time, double phase) {
-        float h = (float) (((x * 0.0016 + time * 0.00035 + phase * 0.1) % 1.0 + 1.0) % 1.0);
-        int rgb = Color.HSBtoRGB(h * 0.5F + 0.25F, 0.72F, 1.0F);
+    private static float[] hue(double along, double time, double phase) {
+        float h = (float) (((along * 0.0016 + time * 0.00035 + phase * 0.1) % 1.0 + 1.0) % 1.0);
+        int rgb = Color.HSBtoRGB(h * 0.5F + 0.25F, 0.70F, 1.0F);
         return new float[]{((rgb >> 16) & 0xFF) / 255F,
                 ((rgb >> 8) & 0xFF) / 255F, (rgb & 0xFF) / 255F};
     }
 
     private static void quad(Matrix4f matrix, VertexConsumer consumer,
-                             double xa, double ya, double za,
-                             double xb, double yb, double zb,
-                             double height, float[] ca, float[] cb,
-                             float alphaA, float alphaB) {
+                             double[] a, double[] b, double height,
+                             float[] ca, float[] cb, float alphaA, float alphaB) {
         // le bas porte la lumiere, le haut s'evanouit : c'est ce contraste qui
         // fait lire une aurore plutot qu'un simple voile colore
-        float lowA = 0.42F * alphaA;
-        float lowB = 0.42F * alphaB;
-        consumer.addVertex(matrix, (float) xa, (float) ya, (float) za)
+        float lowA = 0.62F * alphaA;
+        float lowB = 0.62F * alphaB;
+        consumer.addVertex(matrix, (float) a[0], (float) a[1], (float) a[2])
                 .setColor(ca[0], ca[1], ca[2], lowA);
-        consumer.addVertex(matrix, (float) xb, (float) yb, (float) zb)
+        consumer.addVertex(matrix, (float) b[0], (float) b[1], (float) b[2])
                 .setColor(cb[0], cb[1], cb[2], lowB);
-        consumer.addVertex(matrix, (float) xb, (float) (yb + height), (float) zb)
+        consumer.addVertex(matrix, (float) b[0], (float) (b[1] + height), (float) b[2])
                 .setColor(cb[0], cb[1], cb[2], 0.0F);
-        consumer.addVertex(matrix, (float) xa, (float) (ya + height), (float) za)
+        consumer.addVertex(matrix, (float) a[0], (float) (a[1] + height), (float) a[2])
                 .setColor(ca[0], ca[1], ca[2], 0.0F);
     }
 }

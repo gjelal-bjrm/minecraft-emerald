@@ -373,12 +373,25 @@ chacune, y compris pour celles qui n'en avaient pas.
 | Dechirure | violet, 140 | tout monte : poussiere, eclats, bourdonnement |
 | Orage | pourpre, 84 | etincelles, souffle grave, tremblement de fond |
 
+**Le repere de RenderLevelStageEvent est relatif a la CAMERA.** Un sommet en
+(x, y, z) atterrit a (camX + x, camY + y, camZ + z). Y passer des coordonnees du
+monde dessinait l'aurore a peu pres au DOUBLE de la position du joueur -- des
+centaines de blocs plus loin, et a l'altitude 62 plutot qu'au-dessus de lui. Il
+n'en restait qu'un lisere lointain, ce qui ressemblait a un probleme d'echelle
+alors que c'etait un probleme de place. A retenir pour tout rendu a venir.
+
 **L'Aurore est en geometrie, pas en particules.** Une premiere version en posait
 trois par tick dans un volume de quatre-vingts blocs de cote, soit une pour
 mille metres cubes : invisible par construction. Et meme en multipliant, des
-points epars ne font pas un rideau. Cinq rubans continus sont donc dessines en
+points epars ne font pas un rideau. Neuf rideaux continus sont donc dessines en
 melange additif, lumineux en bas et evanescents en haut. C'est le seul effet du
 mode qui ne soit pas fait de particules, et c'est voulu.
+
+Ils sont EVENTES, pas paralleles : paralleles, on tombait selon l'orientation
+soit sur un ciel raye, soit sur une seule ligne vue dans l'axe. Et l'Aurore
+teinte l'air d'un indigo leger -- sans quoi un melange additif se noie dans un
+ciel de plein jour -- avec une lueur qui monte du sol et un carillon de fond,
+pour qu'elle se remarque meme en regardant ses pieds.
 
 **La pluie de la Nuit est VRAIMENT coloree.** Le moteur la dessine en blanc pur
 sans point d'entree pour la teinter : la seule facon d'y arriver est de fournir
