@@ -191,10 +191,22 @@ public class GameCommands {
             BlockPos at = block.getBlockPos();
             String id = net.minecraft.core.registries.BuiltInRegistries.BLOCK
                     .getKey(level.getBlockState(at).getBlock()).toString();
+            // Le registre des sanctuaires est VOLATIL : il se vide au
+            // rechargement du monde, et la commande repondait alors « aucun
+            // sanctuaire », c'est-a-dire rien. On se rabat donc sur ce qui,
+            // lui, est ecrit dans les blocs : l'ancre. Elle se trouve en
+            // (cx, sommet, cz-3), ce qui suffit a reconstituer le repere.
             BlockPos centre = com.emerald.game.SanctuaryMist.nearestCentre(at);
             String where;
             if (centre == null) {
-                where = "aucun sanctuaire enregistre";
+                BlockPos anchor = findAnchor(level, at);
+                if (anchor == null) {
+                    where = "sanctuaire introuvable (ni registre, ni ancre a 120 blocs)";
+                } else {
+                    where = String.format("cx%+d | z%+d de l'ancre | ancre en %d,%d,%d",
+                            at.getX() - anchor.getX(), at.getZ() - (anchor.getZ() + 3),
+                            anchor.getX(), anchor.getY(), anchor.getZ());
+                }
             } else {
                 int fromZ = centre.getZ() + 47;
                 where = String.format("cx%+d | y%+d | cz%+d  (fromZ%+d)",
@@ -267,5 +279,33 @@ public class GameCommands {
         source.sendSuccess(() -> Component.translatable("command.emeraldweapons.weather.set",
                 Component.translatable(weather.translationKey())), true);
         return 1;
+    }
+
+    /**
+     * Cherche l'ancre prismatique autour d'un point.
+     *
+     * On balaie du plus proche au plus lointain et l'on s'arrete au premier
+     * trouve : une ancre est a moins de cent vingt blocs de tout ce que le
+     * sanctuaire a bati, et cette recherche ne sert qu'au diagnostic, ou une
+     * demi-seconde ne coute rien.
+     */
+    private static BlockPos findAnchor(ServerLevel level, BlockPos near) {
+        var anchor = com.emerald.block.ModBlocks.PRISMATIC_ANCHOR.get();
+        for (int ring = 0; ring <= 120; ring += 2) {
+            for (int dx = -ring; dx <= ring; dx += 2) {
+                for (int dz = -ring; dz <= ring; dz += 2) {
+                    if (Math.max(Math.abs(dx), Math.abs(dz)) != ring) {
+                        continue;                       // on ne teste que le bord
+                    }
+                    for (int dy = -20; dy <= 60; dy++) {
+                        BlockPos probe = near.offset(dx, dy, dz);
+                        if (level.getBlockState(probe).is(anchor)) {
+                            return probe;
+                        }
+                    }
+                }
+            }
+        }
+        return null;
     }
 }
