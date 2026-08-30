@@ -247,7 +247,15 @@ public final class Sanctuary {
         // recours, quand on a du se rabattre sur notre propre pyramide.
         int summit = apex >= 0 ? apex : summitOf(level, cx, y, apexZ);
         BlockPos anchor = crown(level, cx, summit, apexZ, rank);
-        summitStair(level, cx, y, cz, apexZ, summit);
+        // DEUX volees, de part et d'autre du porche.
+        //
+        // Une seule, centree, tenait exactement la meme ligne que le couloir du
+        // tombeau, et comme elle se batit avant lui, le percement effacait ses
+        // premieres marches : on arrivait devant la porte sans pouvoir monter
+        // plus haut. Les ecarter de six blocs rend les deux acces simultanes,
+        // et l'escalier encadre l'entree au lieu de se battre avec elle.
+        summitStair(level, cx - 6, y, cz, apexZ, summit);
+        summitStair(level, cx + 6, y, cz, apexZ, summit);
         tombEntrance(level, cx, y, cz, rank, anchor);
         SanctuaryMist.register(new BlockPos(cx, y, cz), HALF, anchor);
 
@@ -1409,12 +1417,12 @@ public final class Sanctuary {
      * epouse donc la pente reelle, gradins compris, quelle que soit la pyramide
      * qu'on a fini par batir.
      */
-    private static void summitStair(ServerLevel level, int cx, int y, int cz,
+    private static void summitStair(ServerLevel level, int sx, int y, int cz,
                                     int apexZ, int summit) {
         int fromZ = cz + PYRAMID_D - PYRAMID_CZ;       // le pied de la face sud
         int last = y;
         for (int z = fromZ; z >= apexZ + 3; z--) {
-            int here = probeTop(level, cx, y, z);
+            int here = probeTop(level, sx, y, z);
             // rien sur le PLAT : l'escalier partait de la cour et y semait des
             // marches inutiles avant meme d'avoir touche la pyramide
             if (here <= y && last <= y) {
@@ -1424,20 +1432,20 @@ public final class Sanctuary {
             int step = Math.max(last, Math.min(here + 1, last + 1));
             for (int w = -1; w <= 1; w++) {
                 // on monte vers le nord, du pied de la face sud vers le faite
-                set(level, cx + w, step, z, riser(0, -1));
+                set(level, sx + w, step, z, riser(0, -1));
                 for (int clear = 1; clear <= 3; clear++) {
-                    set(level, cx + w, step + clear, z, Blocks.AIR.defaultBlockState());
+                    set(level, sx + w, step + clear, z, Blocks.AIR.defaultBlockState());
                 }
                 // le remblai sous la marche, pour qu'elle ne flotte pas
                 for (int fill = 1; fill <= 2; fill++) {
-                    if (level.getBlockState(new BlockPos(cx + w, step - fill, z)).isAir()) {
-                        set(level, cx + w, step - fill, z, shrine());
+                    if (level.getBlockState(new BlockPos(sx + w, step - fill, z)).isAir()) {
+                        set(level, sx + w, step - fill, z, shrine());
                     }
                 }
             }
             if (Math.floorMod(z, 9) == 0) {
-                set(level, cx - 2, step + 1, z, lantern());
-                set(level, cx + 2, step + 1, z, lantern());
+                set(level, sx - 2, step + 1, z, lantern());
+                set(level, sx + 2, step + 1, z, lantern());
             }
             last = step;
         }
@@ -1451,6 +1459,28 @@ public final class Sanctuary {
      * salle -- ou, s'il n'y en a pas, sur une douzaine de blocs, ce qui fait au
      * moins un porche.
      */
+    /**
+     * Habille une paroi du couloir, mais SEULEMENT s'il y avait de la pierre.
+     *
+     * Le couloir traverse la masse, puis debouche : au-dela du mur qu'il perce,
+     * poser un plafond revient a suspendre un bloc dans le vide, et c'est ce
+     * bloc qui depassait d'une case au bout du chemin. On ne remplace donc que
+     * ce qui existe -- le tunnel se chemise dans le roc et s'arrete de lui-meme
+     * en debouchant, sans qu'on ait a deviner ou est la piece.
+     */
+    /** Une lanterne au sol, si tant est qu'il y ait un sol. */
+    private static void standLantern(ServerLevel level, int x, int y, int z) {
+        if (!level.getBlockState(new BlockPos(x, y - 1, z)).isAir()) {
+            set(level, x, y, z, lantern());
+        }
+    }
+
+    private static void lineIfSolid(ServerLevel level, int x, int y, int z, BlockState state) {
+        if (!level.getBlockState(new BlockPos(x, y, z)).isAir()) {
+            set(level, x, y, z, state);
+        }
+    }
+
     private static void tombEntrance(ServerLevel level, int cx, int y, int cz, int rank,
                                      BlockPos anchor) {
         int fromZ = cz + PYRAMID_D - PYRAMID_CZ;
@@ -1470,8 +1500,8 @@ public final class Sanctuary {
                 for (int dy = 1; dy <= 3; dy++) {
                     set(level, cx + w, y + dy, z, Blocks.AIR.defaultBlockState());
                 }
-                set(level, cx + w, y, z, trim());
-                set(level, cx + w, y + 4, z, shrineTrim());
+                lineIfSolid(level, cx + w, y, z, trim());
+                lineIfSolid(level, cx + w, y + 4, z, shrineTrim());
             }
             // Les lanternes AU SOL, et des deux cotes.
             //
@@ -1479,9 +1509,11 @@ public final class Sanctuary {
             // paraissaient suspendues ; et d'un seul cote, elles donnaient un
             // couloir bancal. Au sol, contre les jambages, elles bordent le
             // chemin sans gener la voie centrale.
+            // ... et seulement si elles ont un sol sous elles : la ou le
+            // couloir debouche, il n'y a plus rien pour les porter.
             if (Math.floorMod(depth, 5) == 0) {
-                set(level, cx - 1, y + 1, z, lantern());
-                set(level, cx + 1, y + 1, z, lantern());
+                standLantern(level, cx - 1, y + 1, z);
+                standLantern(level, cx + 1, y + 1, z);
             }
             end = z;
         }
@@ -1499,11 +1531,15 @@ public final class Sanctuary {
             for (int dy = 1; dy <= 3; dy++) {
                 set(level, cx, y + dy, z, Blocks.AIR.defaultBlockState());
             }
-            set(level, cx, y, z, trim());
-            set(level, cx, y + 4, z, shrineTrim());
+            lineIfSolid(level, cx, y, z, trim());
+            lineIfSolid(level, cx, y + 4, z, shrineTrim());
             // Ici le couloir n'a qu'une case de large : une lanterne posee au
             // milieu le boucherait. On lui creuse donc une niche de cote.
-            if (depth % 4 == 0) {
+            // On ne creuse la niche que s'il y a de la matiere a creuser :
+            // au-dela du mur perce, elle n'aurait rien a mordre et sa lanterne
+            // se retrouverait posee sur un bloc invente en plein vide.
+            if (depth % 4 == 0
+                    && !level.getBlockState(new BlockPos(cx - 1, y + 1, z)).isAir()) {
                 set(level, cx - 1, y + 1, z, Blocks.AIR.defaultBlockState());
                 set(level, cx - 1, y + 2, z, Blocks.AIR.defaultBlockState());
                 set(level, cx - 1, y, z, trim());
