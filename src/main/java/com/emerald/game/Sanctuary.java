@@ -247,6 +247,8 @@ public final class Sanctuary {
         // recours, quand on a du se rabattre sur notre propre pyramide.
         int summit = apex >= 0 ? apex : summitOf(level, cx, y, apexZ);
         BlockPos anchor = crown(level, cx, summit, apexZ, rank);
+        summitStair(level, cx, y, cz, apexZ, summit);
+        tombEntrance(level, cx, y, cz);
         SanctuaryGarrison.populate(level, new BlockPos(cx, y, cz), HALF);
         SanctuaryMist.register(new BlockPos(cx, y, cz), HALF, anchor);
 
@@ -467,16 +469,21 @@ public final class Sanctuary {
                 }
             }
         }
-        // les quatre obelisques
+        // Les quatre obelisques, poses SUR leur gradin.
+        //
+        // Ils partaient tous de la hauteur du sommet, alors que le parvis
+        // descend d'un cran par anneau : au rayon quatre, ils flottaient donc a
+        // deux blocs au-dessus du sol. Meme chose pour les coffres.
         for (int sx = -1; sx <= 1; sx += 2) {
             for (int sz = -1; sz <= 1; sz += 2) {
                 int ox = cx + sx * 4;
                 int oz = cz + sz * 4;
+                int foot = y - Math.max(0, 4 - 2);
                 for (int dy = 1; dy <= 5; dy++) {
-                    set(level, ox, y + dy, oz, dy % 2 == 0 ? shrineTrim() : shrine());
+                    set(level, ox, foot + dy, oz, dy % 2 == 0 ? shrineTrim() : shrine());
                 }
-                set(level, ox, y + 6, oz, glow());
-                set(level, ox, y + 7, oz, lantern());
+                set(level, ox, foot + 6, oz, glow());
+                set(level, ox, foot + 7, oz, lantern());
             }
         }
         // le socle, un cran plus haut que le parvis
@@ -486,8 +493,9 @@ public final class Sanctuary {
             }
         }
         // deux coffres encadrent l'ancre : le sommet doit payer la montee
-        lootChest(level, cx - 3, y + 1, cz, sanctuaryTable(rank));
-        lootChest(level, cx + 3, y + 1, cz, sanctuaryTable(rank));
+        int chestFoot = y - Math.max(0, 3 - 2);
+        lootChest(level, cx - 3, chestFoot + 1, cz, sanctuaryTable(rank));
+        lootChest(level, cx + 3, chestFoot + 1, cz, sanctuaryTable(rank));
 
         BlockPos anchor = new BlockPos(cx, y + 2, cz);
         level.setBlockAndUpdate(anchor, ModBlocks.PRISMATIC_ANCHOR.get().defaultBlockState());
@@ -1379,6 +1387,76 @@ public final class Sanctuary {
     private static String sanctuaryTable(int rank) {
         return "%s:chests/sanctuary_tier%d".formatted(EmeraldWeaponsMod.MODID,
                 Math.max(1, Math.min(3, rank)));
+    }
+
+
+    /**
+     * Un escalier de la cour au sommet, taille dans le flanc sud.
+     *
+     * La pyramide a bien son propre escalier, mais il ne mene qu'a ses salles :
+     * rien ne monte jusqu'au parvis de l'ancre, et il fallait creuser a cote
+     * d'elle pour l'atteindre -- au risque de la casser.
+     *
+     * On ne suppose RIEN de la forme du batiment : a chaque pas vers le centre,
+     * on sonde ce qui se trouve la et on pose la marche dessus. L'escalier
+     * epouse donc la pente reelle, gradins compris, quelle que soit la pyramide
+     * qu'on a fini par batir.
+     */
+    private static void summitStair(ServerLevel level, int cx, int y, int cz,
+                                    int apexZ, int summit) {
+        int fromZ = cz + PYRAMID_D - PYRAMID_CZ + 1;   // le pied de la face sud
+        int last = y;
+        for (int z = fromZ; z >= apexZ + 3; z--) {
+            int here = probeTop(level, cx, y, z);
+            // on ne redescend jamais : un escalier qui plonge n'en est plus un
+            int step = Math.max(last, Math.min(here + 1, last + 1));
+            for (int w = -1; w <= 1; w++) {
+                set(level, cx + w, step, z, trim());
+                for (int clear = 1; clear <= 3; clear++) {
+                    set(level, cx + w, step + clear, z, Blocks.AIR.defaultBlockState());
+                }
+                // le remblai sous la marche, pour qu'elle ne flotte pas
+                for (int fill = 1; fill <= 2; fill++) {
+                    if (level.getBlockState(new BlockPos(cx + w, step - fill, z)).isAir()) {
+                        set(level, cx + w, step - fill, z, shrine());
+                    }
+                }
+            }
+            if (Math.floorMod(z, 9) == 0) {
+                set(level, cx - 2, step + 1, z, lantern());
+                set(level, cx + 2, step + 1, z, lantern());
+            }
+            last = step;
+        }
+    }
+
+    /**
+     * L'entree du tombeau, au pied de la face sud.
+     *
+     * Le modele n'en a pas : sa porte se trouvait dans la moitie enterree, que
+     * l'on ne pose plus. On perce donc un couloir droit jusqu'a la premiere
+     * salle -- ou, s'il n'y en a pas, sur une douzaine de blocs, ce qui fait au
+     * moins un porche.
+     */
+    private static void tombEntrance(ServerLevel level, int cx, int y, int cz) {
+        int fromZ = cz + PYRAMID_D - PYRAMID_CZ;
+        boolean broke = false;
+        for (int depth = 0; depth < 26 && !broke; depth++) {
+            int z = fromZ - depth;
+            for (int w = -1; w <= 1; w++) {
+                for (int dy = 1; dy <= 3; dy++) {
+                    set(level, cx + w, y + dy, z, Blocks.AIR.defaultBlockState());
+                }
+                set(level, cx + w, y, z, trim());
+                set(level, cx + w, y + 4, z, shrineTrim());
+            }
+            if (depth > 3 && level.getBlockState(new BlockPos(cx, y + 2, z - 2)).isAir()) {
+                broke = true;                  // on a debouche dans une salle
+            }
+            if (Math.floorMod(depth, 5) == 0) {
+                set(level, cx - 1, y + 3, z, lantern());
+            }
+        }
     }
 
     // ----------------------------------------------------------- outillage
