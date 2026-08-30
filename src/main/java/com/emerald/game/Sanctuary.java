@@ -1616,7 +1616,7 @@ public final class Sanctuary {
             }
         }
 
-        seals(level, cx, y, fromZ, end, anchor, cz - (PYRAMID_CZ - 44));
+        seals(level, cx, y, fromZ, end, anchor, rank);
     }
 
     /**
@@ -1669,40 +1669,31 @@ public final class Sanctuary {
     private static String sealReport = "";
 
     private static void seals(ServerLevel level, int cx, int y, int fromZ, int endZ,
-                              BlockPos anchor, int apexZ) {
-        // TROIS NIVEAUX : le tresor, l'etage, le sous-sol.
+                              BlockPos anchor, int rank) {
+        // TROIS FOIS LE MEME GESTE : un coffre, un sceau a cote, dans un couloir.
         //
-        // On cherchait les salles du modele pour y glisser les sceaux. Or ses
-        // pieces sont dans la moitie ENTERREE, celle qu'on ne pose pas : la
-        // sonde ne trouvait presque jamais rien et les trois basculaient sur le
-        // repli, c'est-a-dire trois niches dans le meme couloir. La repartition
-        // demandee n'existait que dans l'intention.
+        // Les emplacements « intelligents » ont tous echoue de la meme facon.
+        // La sonde cherchait des salles qui n'existent pas ; la chambre haute
+        // se murait dans l'epaisseur ; la cave demandait une profondeur que le
+        // monde plat n'a pas. Chacun avait un repli, et les replis retombaient
+        // au meme endroit -- d'ou deux sceaux a l'entree, construction apres
+        // construction, sans que rien ne l'annonce.
         //
-        // On ne cherche donc plus une salle : on en batit une. C'est la meme
-        // lecon que pour la profondeur du couloir et le sommet de la pyramide
-        // -- ce qu'on ne peut pas mesurer, on le calcule.
+        // On abandonne donc l'ambition. Trois alcoves sur le trajet qu'on
+        // emprunte de toute facon, chacune avec son coffre : le butin dit ou
+        // regarder, et l'on ne peut pas prendre l'un sans voir l'autre. Ce
+        // n'est pas la mise en scene la plus riche, mais c'est la seule qui
+        // tombe juste a tous les coups -- et une enigme trouvable vaut mieux
+        // qu'une enigme elegante et introuvable.
         java.util.List<BlockPos> placed = new java.util.ArrayList<>();
         sealReport = "";
 
-        // 1. A L'ENTREE, une alcove ouverte sur le couloir, pres du porche.
-        placed.add(alcove(level, cx, y + 1, fromZ - 6, 1));
+        placed.add(alcove(level, cx, y + 1, fromZ - 6, 1, rank));       // l'entree
+        placed.add(alcove(level, cx, y + 1, fromZ - 17, -1, rank));     // a mi-chemin
+        placed.add(freeSeal(level, cx - 1, y + 1, endZ - 2));           // le tresor
 
-        // 2. A L'ETAGE, dans la chambre centrale, A GAUCHE.
-        placed.add(upperChamber(level, cx, y, endZ + 3));
-
-        // 3. DANS LES SALLES, contre un coffre du tresor.
-        placed.add(freeSeal(level, cx - 1, y + 1, endZ - 2));
-
-        // Et l'on DIT ou ils sont partis.
-        //
-        // Deux sceaux se retrouvaient contre les coffres sans que rien ne le
-        // signale : les replis des deux autres emplacements tombaient tous
-        // deux au bord de la salle du tresor, et il n'y avait aucun moyen de
-        // le savoir autrement qu'en fouillant tout le monument. Le compte rendu
-        // tranche la question en une ligne -- la meme lecon que pour la
-        // pyramide absente.
         StringBuilder report = new StringBuilder();
-        String[] labels = {"entree", "etage", "salle"};
+        String[] labels = {"entree", "couloir", "tresor"};
         for (int i = 0; i < placed.size(); i++) {
             BlockPos p = placed.get(i);
             report.append(i == 0 ? "" : " | ").append(labels[i]).append(' ')
@@ -1735,7 +1726,8 @@ public final class Sanctuary {
      * un sol et deux lanternes. Il s'ouvre sur le passage : on le voit en
      * marchant, et il a l'air d'avoir ete voulu.
      */
-    private static BlockPos alcove(ServerLevel level, int cx, int y, int z, int dir) {
+    private static BlockPos alcove(ServerLevel level, int cx, int y, int z, int dir,
+                                   int rank) {
         int wx = cx + dir * 2;                      // la paroi du couloir
         for (int dz = -1; dz <= 1; dz++) {
             set(level, wx, y - 1, z + dz, trim());
@@ -1746,88 +1738,15 @@ public final class Sanctuary {
             }
             set(level, wx, y + 3, z + dz, shrineTrim());
         }
-        set(level, wx, y + 1, z - 1, lantern());
-        set(level, wx, y + 1, z + 1, lantern());
+        // Le coffre PARTAGE l'alcove avec le sceau.
+        //
+        // Un sceau seul dans un renfoncement se longe sans le voir ; un coffre,
+        // on s'arrete devant. C'est le butin qui fait tourner la tete, et le
+        // sceau se trouve dans le meme regard.
+        lootChest(level, wx, y, z - 1, sanctuaryTable(rank));
+        set(level, wx, y + 2, z + 1, lantern());
         return freeSeal(level, wx, y, z);
     }
-    /**
-     * La salle haute, et le puits qui y mene.
-     *
-     * C'est le seul des trois qui demande un effort : un puits a echelons monte
-     * du couloir jusqu'a une chambre laterale creusee dans la masse. On la bat
-     * nous-memes plutot que d'esperer en trouver une, et le puits garantit
-     * qu'elle communique -- une salle qu'on ne peut pas atteindre ne serait pas
-     * une enigme difficile, elle serait une enigme fausse.
-     *
-     * La hauteur s'adapte : on se loge quatre blocs sous la surface reelle du
-     * monument a cet endroit, faute de quoi la chambre percerait le flanc.
-     */
-    private static BlockPos upperChamber(ServerLevel level, int cx, int y, int z) {
-        // A GAUCHE, comme demande : le puits contre la paroi ouest du couloir,
-        // et la chambre plus loin dans la meme direction.
-        int sx = cx - 2;                            // le puits, contre la paroi
-        int hx = sx - 2;                            // le centre de la chambre
-
-        // L'EPAISSEUR SE MESURE SUR TOUTE L'EMPRISE, pas sur le puits.
-        //
-        // On ne sondait que la colonne du puits, et la chambre debordait de
-        // cinq blocs vers le flanc, la ou la pyramide est deja plus mince :
-        // elle perforait la paroi et ouvrait une baie beante dans le monument.
-        // C'est le point le plus mince qui commande, pas le plus commode.
-        int cover = Integer.MAX_VALUE;
-        for (int x = hx - 1; x <= sx; x++) {
-            for (int dz = -2; dz <= 2; dz++) {
-                cover = Math.min(cover, probeTop(level, x, y, z + dz));
-            }
-        }
-        // Une chambre de trois de large tient sous une epaisseur moindre qu'une
-        // de cinq, qui exigeait une couverture qu'on n'a pas toujours.
-        //
-        // Mais on ne la FORCE pas : la tasser sous une couverture insuffisante
-        // percerait le flanc, et l'y loger de travers reviendrait a cacher le
-        // sceau dans un interstice. Faute de place, on prend une alcove de
-        // couloir -- moins ambitieux, mais ouvert et trouvable.
-        int top = Math.min(y + 16, cover - 4);
-        if (top < y + 6) {
-            return alcove(level, cx, y + 1, z, -1);
-        }
-
-        // le puits : une case d'air, une echelle, et de quoi la porter
-        for (int h = y + 1; h <= top; h++) {
-            set(level, sx, h, z, Blocks.AIR.defaultBlockState());
-            if (level.getBlockState(new BlockPos(sx, h, z - 1)).isAir()) {
-                set(level, sx, h, z - 1, shrine());
-            }
-            set(level, sx, h, z, Blocks.LADDER.defaultBlockState()
-                    .setValue(net.minecraft.world.level.block.LadderBlock.FACING,
-                            Direction.SOUTH));
-        }
-
-        // la chambre, ecartee du puits pour qu'on y debouche de plain-pied
-        for (int dx = -1; dx <= 1; dx++) {
-            for (int dz = -1; dz <= 1; dz++) {
-                for (int dy = 0; dy <= 3; dy++) {
-                    set(level, hx + dx, top + dy, z + dz,
-                            dy == 0 ? trim() : Blocks.AIR.defaultBlockState());
-                }
-                set(level, hx + dx, top + 4, z + dz, shrineTrim());
-            }
-        }
-        // le palier qui relie le puits a la chambre
-        for (int x = hx; x <= sx; x++) {
-            set(level, x, top, z, trim());
-            for (int dy = 1; dy <= 3; dy++) {
-                set(level, x, top + dy, z, Blocks.AIR.defaultBlockState());
-            }
-        }
-        set(level, hx - 1, top + 1, z - 1, lantern());
-        set(level, hx + 1, top + 1, z + 1, lantern());
-
-        BlockPos pos = new BlockPos(hx, top + 1, z);
-        level.setBlock(pos, ModBlocks.TOMB_SEAL.get().defaultBlockState(), 3);
-        return pos;
-    }
-
     /**
      * L'escalier qui monte dans cette direction.
      *
