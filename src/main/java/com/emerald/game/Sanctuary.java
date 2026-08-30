@@ -87,6 +87,9 @@ public final class Sanctuary {
     private static final int PYRAMID_W = 89;
     private static final int PYRAMID_D = 94;
 
+    /** Hauteur des quatre morceaux hauts : c'est ce qui donne le faite. */
+    private static final int PYRAMID_H = 40;
+
     /** Le centre du modele : c'est la que ses quatre quadrants se rejoignent. */
     private static final int PYRAMID_CX = 44;
     private static final int PYRAMID_CZ = 47;
@@ -210,7 +213,7 @@ public final class Sanctuary {
         // remplace ce qu'elle recouvre, sans laisser de trou autour.
         clearSite(level, cx, y, cz, bounds);
         courtyard(level, cx, y, cz);
-        greatPyramid(level, source, cx, y, cz);
+        int apex = greatPyramid(level, source, cx, y, cz);
         reskin(level, bounds, y);
         curtainWall(level, cx, y, cz);
         for (int sx = -1; sx <= 1; sx += 2) {
@@ -234,7 +237,15 @@ public final class Sanctuary {
         // (44, 47). L'ancre etait donc bien au centre de la PLACE, mais trois
         // blocs a cote du faite de la pyramide.
         int apexZ = cz - (PYRAMID_CZ - 44);
-        int summit = summitOf(level, cx, y, apexZ);
+        // Le faite est CONNU, on ne le cherche plus.
+        //
+        // Le sondage a echoue de trois facons differentes -- carte des hauteurs
+        // pas encore a jour, sanctuaire voisin accroche, pyramide absente sans
+        // le dire -- et chaque fois l'ancre finissait ailleurs. Or les quatre
+        // morceaux hauts font quarante blocs et sont poses a y+1 : leur sommet
+        // est donc a y+40, sans rien a mesurer. On ne sonde plus qu'en dernier
+        // recours, quand on a du se rabattre sur notre propre pyramide.
+        int summit = apex >= 0 ? apex : summitOf(level, cx, y, apexZ);
         BlockPos anchor = crown(level, cx, summit, apexZ, rank);
         SanctuaryGarrison.populate(level, new BlockPos(cx, y, cz), HALF);
         SanctuaryMist.register(new BlockPos(cx, y, cz), HALF, anchor);
@@ -291,7 +302,10 @@ public final class Sanctuary {
      * en deviner le decoupage de travers.
      *
      */
-    private static void greatPyramid(ServerLevel level, CommandSourceStack source,
+    /**
+     * @return la hauteur du faite, ou -1 si l'on s'est rabattu sur la notre
+     */
+    private static int greatPyramid(ServerLevel level, CommandSourceStack source,
                                     int cx, int y, int cz) {
         if (BuiltInRegistries.BLOCK.containsKey(
                 ResourceLocation.fromNamespaceAndPath("cataclysm", "door_of_seal"))) {
@@ -316,33 +330,26 @@ public final class Sanctuary {
                 // On ne le pose plus du tout. La pyramide s'arrete a ce qui se
                 // voit, et elle s'assoit franchement sur la cour. Perdre les
                 // salles enterrees coute moins que ce socle qui gachait tout.
-                // La moitie basse est ENTERREE, et c'est ce qui manquait.
-                //
-                // Les quatre morceaux inferieurs ne sont pas un socle : ce sont
-                // les salles du tombeau, un pave de quarante-huit blocs de haut
-                // que le generateur enfouit. Poses au niveau du sol, ils
-                // sortaient de terre en un enorme bloc rectangulaire sous la
-                // pyramide -- « je ne comprends pas pourquoi tu l'as mise sur
-                // un pilier ». On les descend, en laissant affleurer quatre
-                // blocs qui font un parvis naturel.
+                // Un bloc AU-DESSUS de la cour, et non dedans : posee a la
+                // hauteur du pavage, sa premiere assise se confondait avec lui
+                // et la pyramide paraissait enfoncee d'un cran.
                 ok &= template(level, source, "cursed_pyramid_upper" + q[0],
-                        ox + q[1], y, oz + q[2]);
+                        ox + q[1], y + 1, oz + q[2]);
             }
             // On VERIFIE qu'une masse se dresse la ou le faite devrait etre :
             // « place template » ne leve rien quand il echoue, si bien qu'une
             // pose ratee passait inapercue.
             boolean standing = probeTop(level, cx, y, cz - (PYRAMID_CZ - 44)) > y + 12;
             if (ok && standing) {
-                scrubMarkers(level, ox, y, oz);
-                return;
+                scrubMarkers(level, ox, y + 1, oz);
+                return y + 1 + PYRAMID_H - 1;
             }
             org.slf4j.LoggerFactory.getLogger(EmeraldWeaponsMod.MODID).warn(
                     "Pyramide de Cataclysm non posee (commandes={}, dressee={}) "
                             + "a y={} : repli sur la notre", ok, standing, y);
-            org.slf4j.LoggerFactory.getLogger(EmeraldWeaponsMod.MODID)
-                    .warn("Pyramide de Cataclysm incomplete, repli sur la notre");
         }
         steppedPyramid(level, cx, y, cz);
+        return -1;
     }
 
     /**
