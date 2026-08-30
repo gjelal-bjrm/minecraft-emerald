@@ -1719,9 +1719,51 @@ public final class Sanctuary {
      * coffre : on ne s'arrete pas devant un sceau, on s'arrete devant un
      * coffre, et le sceau se trouve dans le meme regard.
      */
+    /**
+     * Y a-t-il de la matiere PARTOUT dans cette boite ?
+     *
+     * C'est la question qu'on aurait du poser avant de creuser quoi que ce
+     * soit dans un batiment qu'on n'a pas dessine. Une seule case d'air dans
+     * l'emprise, et la salle debouche dehors.
+     */
+    private static boolean solidBox(ServerLevel level, int cx, int y, int cz, int half) {
+        for (int dx = -half; dx <= half; dx++) {
+            for (int dz = -half; dz <= half; dz++) {
+                for (int dy = 1; dy <= 5; dy++) {
+                    if (level.getBlockState(new BlockPos(cx + dx, y + dy, cz + dz)).isAir()) {
+                        return false;
+                    }
+                }
+            }
+        }
+        return true;
+    }
+
     private static BlockPos branchRoom(ServerLevel level, int cx, int y, int z,
                                        int dir, int rank) {
-        int reach = 10;
+        // ON SONDE AVANT DE CREUSER.
+        //
+        // La galerie partait a dix blocs sans rien verifier, et la salle qui la
+        // termine en occupe cinq de plus : a treize blocs du couloir, pres du
+        // bord sud, on n'est plus dans la masse mais dehors -- la salle est
+        // ressortie du flanc et l'a defigure. Je m'etais dit « au ras du sol,
+        // sur le cote, il y a toujours de la matiere ». C'etait encore un pari,
+        // et il etait faux.
+        //
+        // On cherche donc la plus longue galerie dont l'emprise de salle est
+        // ENTIEREMENT dans le plein, en interrogeant le monde tel qu'il est.
+        int reach = 0;
+        for (int candidate = 10; candidate >= 4; candidate--) {
+            if (solidBox(level, cx + dir * (candidate + 3), y, z, 3)) {
+                reach = candidate;
+                break;
+            }
+        }
+        if (reach == 0) {
+            // pas de place ici : mieux vaut une alcove de couloir qu'une
+            // salle qui creve le monument
+            return alcove(level, cx, y + 1, z, dir, rank);
+        }
         for (int step = 2; step <= reach; step++) {
             int x = cx + dir * step;
             set(level, x, y, z, trim());
