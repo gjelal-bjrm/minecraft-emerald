@@ -1806,14 +1806,29 @@ public final class Sanctuary {
                             Direction.SOUTH));
         }
 
-        // le palier du quinzieme niveau, jusqu'au pied du montant
-        for (int z = cz - 3; z >= cz - 6; z--) {
+        // Le palier, en EPARGNANT la colonne de l'echelle.
+        //
+        // Le premier jet posait son plancher de z cz-3 a cz-6 : cz-3 EST le
+        // puits, si bien qu'un bloc plein atterrissait au milieu des echelons
+        // et arretait la montee net. Le plancher commence donc un bloc plus
+        // loin, et le puits reste creux jusqu'en haut -- on grimpe, puis on
+        // enjambe vers le nord.
+        for (int z = cz - 4; z >= cz - 6; z--) {
             for (int w = 0; w <= 1; w++) {
                 set(level, cx + w, y + 15, z, trim());
+            }
+        }
+        for (int z = cz - 3; z >= cz - 6; z--) {
+            for (int w = 0; w <= 1; w++) {
                 for (int dy = 16; dy <= 18; dy++) {
                     set(level, cx + w, y + dy, z, Blocks.AIR.defaultBlockState());
                 }
             }
+        }
+        // et l'on degage au-dessus du dernier echelon, faute de quoi on
+        // arriverait la tete dans la pierre
+        for (int dy = 17; dy <= 18; dy++) {
+            set(level, cx, y + dy, cz - 3, Blocks.AIR.defaultBlockState());
         }
         set(level, cx, y + 17, cz - 5, lantern());
         return freeSeal(level, cx + 1, y + 16, cz - 6);
