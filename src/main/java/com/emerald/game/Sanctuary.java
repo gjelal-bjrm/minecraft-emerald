@@ -257,6 +257,8 @@ public final class Sanctuary {
         // faits qui separent les hypotheses : la pyramide s'est-elle dressee,
         // a quelle hauteur le sommet a ete trouve, et quel bloc occupe
         // reellement la case de l'ancre.
+        linkWalls(level);
+
         BlockState found = level.getBlockState(anchor);
         String occupant = BuiltInRegistries.BLOCK.getKey(found.getBlock()).toString();
         source.sendSuccess(() -> Component.literal(String.format(
@@ -440,13 +442,29 @@ public final class Sanctuary {
      * descend jusqu'a la maconnerie -- de loin, c'est elle qu'on repere.
      */
     private static BlockPos crown(ServerLevel level, int cx, int y, int cz, int rank) {
-        for (int dx = -4; dx <= 4; dx++) {
-            for (int dz = -4; dz <= 4; dz++) {
-                for (int dy = 1; dy <= 8; dy++) {
-                    set(level, cx + dx, y + dy, cz + dz, Blocks.AIR.defaultBlockState());
+        // Le parvis est EN GRADINS, pas en plateau.
+        //
+        // Une dalle de neuf sur neuf posee a plat sur la pointe de la pyramide
+        // avait des flancs a pic : on n'y montait pas, et il fallait casser des
+        // blocs a cote de l'ancre pour l'atteindre. Chaque anneau descend d'un
+        // cran vers l'exterieur, ce qui fait un escalier sur les quatre faces.
+        for (int dx = -6; dx <= 6; dx++) {
+            for (int dz = -6; dz <= 6; dz++) {
+                int ring = Math.max(Math.abs(dx), Math.abs(dz));
+                if (ring > 6) {
+                    continue;
                 }
-                boolean rim = Math.abs(dx) == 4 || Math.abs(dz) == 4;
-                set(level, cx + dx, y, cz + dz, rim ? shrineTrim() : shrine());
+                int step = Math.max(0, ring - 2);   // plat jusqu'au rayon deux
+                for (int dy = 1; dy <= 8; dy++) {
+                    set(level, cx + dx, y - step + dy, cz + dz,
+                            Blocks.AIR.defaultBlockState());
+                }
+                set(level, cx + dx, y - step, cz + dz,
+                        ring == 2 || ring == 6 ? shrineTrim() : shrine());
+                // le flanc de chaque gradin, pour qu'il ne flotte pas
+                for (int fill = 1; fill <= 2; fill++) {
+                    set(level, cx + dx, y - step - fill, cz + dz, shrine());
+                }
             }
         }
         // les quatre obelisques
@@ -904,11 +922,17 @@ public final class Sanctuary {
                 : id.endsWith("_wall") ? "wall" : "block";
 
         Block target;
+        // La masse est SOMBRE, et ne s'eclaircit qu'au sommet.
+        //
+        // Un partage a moitie-moitie donnait une pyramide claire vue de loin,
+        // alors qu'on la veut de pierre noire. Les deux tiers du bas sont donc
+        // en briques corrompues, presque noires ; la gangue ne vient qu'au
+        // dernier quart, et l'arcencium qu'au faite, la ou se trouve l'ancre.
         if (ridge) {
-            target = pick(shape, height > 0.75 ? "polished_gangue" : "polished_gangue");
-        } else if (height > 0.82) {
+            target = pick(shape, "polished_gangue");
+        } else if (height > 0.90) {
             target = pick(shape, "arcencium_brick");
-        } else if (height > 0.45) {
+        } else if (height > 0.68) {
             target = pick(shape, "gangue_brick");
         } else {
             target = pick(shape, "corrupted_brick");
@@ -922,20 +946,22 @@ public final class Sanctuary {
     /** Le bloc de notre famille qui a cette forme, ou rien. */
     @Nullable
     private static Block pick(String shape, String family) {
+        // Le pluriel ne va QU'AU bloc plein.
+        //
+        // Nos blocs derives s'appellent « corrupted_brick_stairs », au
+        // singulier ; je fabriquais « corrupted_bricks_stairs ». Aucun escalier
+        // ni aucune dalle n'existait donc sous ce nom, le rhabillage les
+        // laissait tous, et comme la surface d'une pyramide est presque
+        // entierement faite d'escaliers, elle restait en gres. Seuls ses rares
+        // blocs pleins changeaient -- « j'ai remarque que tu as pose des blocs
+        // d'arcencium corrompu ».
+        boolean plural = !family.startsWith("polished");
         String path = switch (shape) {
-            case "stairs" -> family + "s_stairs";
-            case "slab" -> family + "s_slab";
-            case "wall" -> family + "s_wall";
-            default -> family + "s";
+            case "stairs" -> family + "_stairs";
+            case "slab" -> family + "_slab";
+            case "wall" -> family + "_wall";
+            default -> plural ? family + "s" : family;
         };
-        // « polished_gangue » ne prend pas de S, contrairement aux briques
-        if (family.startsWith("polished")) {
-            path = switch (shape) {
-                case "stairs" -> family + "_stairs";
-                case "slab" -> family + "_slab";
-                default -> family;
-            };
-        }
         ResourceLocation key = ResourceLocation.fromNamespaceAndPath(
                 EmeraldWeaponsMod.MODID, path);
         return BuiltInRegistries.BLOCK.containsKey(key)
@@ -1376,8 +1402,36 @@ public final class Sanctuary {
      * Ils sont assez peu nombreux -- le parapet et les mains courantes -- pour
      * qu'on puisse leur payer le drapeau 3.
      */
+    /**
+     * Les murets poses pendant la construction, a relier a la fin.
+     *
+     * Le drapeau 3 ne suffisait pas, et c'est logique : un muret calcule sa
+     * forme au moment ou on le pose, d'apres les voisins qui existent DEJA. Le
+     * suivant n'est pas encore la. Prevenir les voisins ne les fait pas
+     * recalculer leur propre forme -- seule une nouvelle pose le fait.
+     *
+     * On les note donc au passage, et on repasse une fois tout bati pour
+     * demander a chacun sa forme definitive, quand tous ses voisins sont en
+     * place.
+     */
+    private static final java.util.List<BlockPos> walls = new java.util.ArrayList<>();
+
     private static void setWall(ServerLevel level, int x, int y, int z) {
-        level.setBlock(new BlockPos(x, y, z), merlon(), 3);
+        BlockPos pos = new BlockPos(x, y, z);
+        level.setBlock(pos, merlon(), 2);
+        walls.add(pos);
+    }
+
+    /** Le second passage : chaque muret prend sa forme, voisins connus. */
+    private static void linkWalls(ServerLevel level) {
+        for (BlockPos pos : walls) {
+            BlockState state = level.getBlockState(pos);
+            if (!state.is(ModBlocks.GANGUE_BRICK_WALL.get())) {
+                continue;                      // casse ou recouvert depuis
+            }
+            level.setBlock(pos, Block.updateFromNeighbourShapes(state, level, pos), 2);
+        }
+        walls.clear();
     }
 
     private static void set(ServerLevel level, int x, int y, int z, BlockState state) {
