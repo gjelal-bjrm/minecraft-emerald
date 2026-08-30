@@ -1421,6 +1421,23 @@ public final class Sanctuary {
      * Quatre marches suffisent : le toit est a quatre blocs, et une volee plus
      * longue mangerait la cour sans rien ajouter.
      */
+    /**
+     * Ou finit le parvis : la premiere case ou la pyramide le recouvre.
+     *
+     * Les deux routines qui bordent le parvis en ont besoin, et elles doivent
+     * s'accorder au bloc pres -- sans quoi l'une borde ce que l'autre a deja
+     * enseveli. On part du seuil et l'on remonte tant que le ciel est libre
+     * au-dessus du toit.
+     */
+    private static int parvisEnd(ServerLevel level, int cx, int y, int fromZ) {
+        int stop = fromZ;
+        while (stop > fromZ - 20
+                && level.getBlockState(new BlockPos(cx, y + 5, stop)).isAir()) {
+            stop--;
+        }
+        return stop;
+    }
+
     private static void causewayRamps(ServerLevel level, int cx, int y, int cz) {
         int fromZ = cz + PYRAMID_D - PYRAMID_CZ;
         int roof = y + 4;
@@ -1437,11 +1454,7 @@ public final class Sanctuary {
         // On cherche donc une bonne fois la longueur du parvis decouvert, en
         // partant du seuil et en remontant tant que le ciel est libre, puis
         // l'on batit cette portee d'un seul tenant.
-        int stop = fromZ;
-        while (stop > fromZ - 14
-                && level.getBlockState(new BlockPos(cx, roof + 1, stop)).isAir()) {
-            stop--;
-        }
+        int stop = parvisEnd(level, cx, y, fromZ);
         for (int dir = -1; dir <= 1; dir += 2) {
             for (int i = 0; i <= 3; i++) {
                 int x = cx + dir * (2 + i);        // 2 au sommet, 5 au pied
@@ -1497,7 +1510,22 @@ public final class Sanctuary {
         // descendre plus bas reviendrait a rouvrir le tombeau par le plafond.
         int roof = y + 4;
         int last = roof;
-        for (int z = fromZ; z >= apexZ + 3; z--) {
+
+        // LA VOLEE COMMENCE OU LE PARVIS FINIT.
+        //
+        // Elle partait du bord sud de l'emprise. Or a cet endroit la premiere
+        // terrasse depasse deja le toit du couloir : la clause « rien tant
+        // qu'on est sur le plat » ne se declenchait donc jamais, et la volee
+        // batissait par-dessus le parvis sur toute sa longueur -- une rangee
+        // de marches posee sur un chemin qui est plat par construction, et qui
+        // n'avait rien a faire la.
+        //
+        // Le parvis se traverse de plain-pied, les rampes laterales y donnent
+        // acces, et l'escalier ne prend qu'ensuite. Les deux routines lisent
+        // la meme limite, faute de quoi l'une borderait ce que l'autre a
+        // enseveli.
+        int start = parvisEnd(level, sx, y, fromZ);
+        for (int z = start; z >= apexZ + 3; z--) {
             int here = probeTop(level, sx, y, z);
             // RIEN TANT QU'ON EST SUR LE PLAT.
             //
