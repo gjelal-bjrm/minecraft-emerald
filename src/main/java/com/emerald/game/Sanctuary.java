@@ -1067,6 +1067,16 @@ public final class Sanctuary {
         for (int a = from + WALK; a <= from + WALK + 3; a++) {
             set(level, g.x(a, -THICK - 3), y + WALK + 1, g.z(a, -THICK - 3), merlon());
         }
+        // Et le RETOUR d'equerre, qui rejoint le parapet du rempart.
+        //
+        // La main courante longeait la rampe puis s'arretait net a trois blocs
+        // du garde-corps interieur : il restait un trou d'angle par lequel on
+        // tombait dans la cour. On ferme la travee en ramenant les murets
+        // perpendiculairement jusqu'au parapet, ou ils se lient a lui.
+        for (int d = THICK + 3; d >= THICK - 1; d--) {
+            set(level, g.x(from + WALK + 3, -d), y + WALK + 1,
+                    g.z(from + WALK + 3, -d), merlon());
+        }
     }
 
     /** La pierre du dallage secondaire : le damier a besoin de deux teintes. */
