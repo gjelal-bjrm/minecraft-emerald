@@ -12,6 +12,9 @@ Options utiles :
             utiliser pour les murs : un generateur d'images produit rarement
             un motif periodique.
   --static  pas d'animation (une seule frame).
+  --blur    moyenne les cases au lieu de lire leur centre. Pour une source qui
+            n'est PAS du pixel art (photo, rendu) ; sur du pixel art la moyenne
+            delave les traits fins.
   --check   ecrit un apercu tuile 3x3 dans tools/preview/blocks/ pour juger
             le raccord d'un coup d'oeil.
 
@@ -158,6 +161,31 @@ def install(name, frames, check=False):
              "s" if len(frames) > 1 else ""))
 
 
+def cell_centres(img, n):
+    """
+    Reechantillonne en prenant la couleur au CENTRE de chaque case.
+
+    La moyenne (BOX) est le bon choix pour une photo ou un rendu, mais elle
+    est destructrice sur du pixel art dont la grille ne divise pas la largeur :
+    1254 / 64 = 19,59, donc chaque case de sortie mord sur sa voisine et une
+    veine d'un pixel de large se dilue dans la pierre noire qui l'entoure. On
+    perdait ainsi la moitie des pixels vifs.
+
+    Au centre, on relit la couleur d'origine telle qu'elle a ete posee.
+    """
+    src = img.convert("RGBA")
+    w, h = src.size
+    px = src.load()
+    out = Image.new("RGBA", (n, n))
+    dst = out.load()
+    for j in range(n):
+        y = min(h - 1, int((j + 0.5) * h / n))
+        for i in range(n):
+            x = min(w - 1, int((i + 0.5) * w / n))
+            dst[i, j] = px[x, y]
+    return out
+
+
 def main():
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     if len(args) < 2:
@@ -174,7 +202,10 @@ def main():
     img = Image.open(src).convert("RGBA")
     n = size or detect_grid(img)
     print("reference %s -> grille %d cellules" % (str(img.size), n))
-    small = img.resize((n, n), Image.BOX)
+    if "--blur" in sys.argv:
+        small = img.resize((n, n), Image.BOX)
+    else:
+        small = cell_centres(img, n)
     if "--wrap" in sys.argv:
         small = wrap_edges(small, max(2, n // 16))
     frames = [small] if "--static" in sys.argv else hue_rotate_frames(small)
