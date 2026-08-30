@@ -52,8 +52,15 @@ public final class Sanctuary {
     /** Epaisseur de la courtine. */
     private static final int THICK = 6;
 
-    /** Hauteur de la masse pleine ; on marche sur le bloc du dessus. */
-    private static final int WALL_TOP = 22;
+    /**
+     * Hauteur de la masse pleine ; on marche sur le bloc du dessus.
+     *
+     * Vingt-quatre, et non vingt-deux, pour une raison d'ajustement : les
+     * tours ont un plancher tous les six blocs, et la porte du chemin de ronde
+     * doit s'ouvrir SUR l'un d'eux. A vingt-deux, on debouchait a un metre du
+     * sol et l'on tombait de cinq blocs a l'interieur de la tour.
+     */
+    private static final int WALL_TOP = 24;
 
     /** Le chemin de ronde, seule hauteur ou l'on marche sur le mur. */
     private static final int WALK = WALL_TOP + 1;
@@ -250,12 +257,22 @@ public final class Sanctuary {
             int[][] quads = {{1, 0, 0}, {2, 0, 47}, {3, 47, 0}, {4, 47, 47}};
             boolean ok = true;
             for (int[] q : quads) {
+                // La moitie basse est ENTERREE, et c'est ce qui manquait.
+                //
+                // Les quatre morceaux inferieurs ne sont pas un socle : ce sont
+                // les salles du tombeau, un pave de quarante-huit blocs de haut
+                // que le generateur enfouit. Poses au niveau du sol, ils
+                // sortaient de terre en un enorme bloc rectangulaire sous la
+                // pyramide -- « je ne comprends pas pourquoi tu l'as mise sur
+                // un pilier ». On les descend, en laissant affleurer quatre
+                // blocs qui font un parvis naturel.
                 ok &= template(level, source, "cursed_pyramid_lower" + q[0],
-                        ox + q[1], y, oz + q[2]);
+                        ox + q[1], y - BURIED, oz + q[2]);
                 ok &= template(level, source, "cursed_pyramid_upper" + q[0],
-                        ox + q[1], y + 48, oz + q[2]);
+                        ox + q[1], y - BURIED + 48, oz + q[2]);
             }
             if (ok) {
+                scrubMarkers(level, ox, y - BURIED, oz);
                 return;
             }
             org.slf4j.LoggerFactory.getLogger(EmeraldWeaponsMod.MODID)
@@ -565,152 +582,20 @@ public final class Sanctuary {
 
 
     /**
-     * Une tour d'angle QU'ON PEUT VRAIMENT VISITER.
+     * Une tour d'angle : coque ronde, planchers pleins, escalier droit.
      *
-     * Trois defauts corriges d'un coup, tous constates a l'essai.
-     *
-     * L'entree etait decalee : on ne percait la paroi que sur l'axe exact de la
-     * tour, alors que le chemin de ronde est LARGE de trois blocs. On perce
-     * desormais sur toute son epaisseur, par les deux courtines qui aboutissent
-     * a la tour.
-     *
-     * L'escalier n'en etait pas un : les marches, calculees tous les 0,62
-     * radian sur un rayon de 3,4, tombaient a plus de deux blocs l'une de
-     * l'autre. On tourne maintenant en seize marches par tour sur un rayon de
-     * 3, ce qui les rend jointives.
-     *
-     * Et il n'y avait aucun plancher : meme entre, on tombait de dix-huit
-     * blocs. Chaque palier a le sien, perce du seul puits de l'escalier.
+     * Tout le detail est dans {@link #roundTower}. Ne restent ici que ses deux
+     * portes : l'une sur le chemin de ronde, l'autre au ras de la cour.
      */
     private static void cornerTower(ServerLevel level, int tx, int y, int tz) {
-        int r = TOWER_RADIUS;
-
-        for (int dx = -r; dx <= r; dx++) {
-            for (int dz = -r; dz <= r; dz++) {
-                double dist = Math.sqrt(dx * dx + dz * dz);
-                if (dist > r + 0.5) {
-                    continue;
-                }
-                boolean shell = dist > r - 1.0;
-                set(level, tx + dx, y, tz + dz, floor());
-                for (int dy = 1; dy <= TOWER_TOP; dy++) {
-                    set(level, tx + dx, y + dy, tz + dz, shell
-                            ? (dy <= 2 ? base() : dy % 6 == 0 ? shrineTrim() : tower())
-                            : Blocks.AIR.defaultBlockState());
-                }
-                if (shell && Math.floorMod(dx + dz, 2) == 0) {
-                    set(level, tx + dx, y + TOWER_TOP + 1, tz + dz, merlon());
-                }
-                if (shell && (dx == 0 || dz == 0)) {
-                    set(level, tx + dx, y + 5, tz + dz, glow());
-                    set(level, tx + dx, y + 13, tz + dz, glow());
-                }
-            }
-        }
-
-        // le fut central : il porte les paliers et guide la vis
-        for (int dy = 1; dy <= TOWER_TOP; dy++) {
-            set(level, tx, y + dy, tz, dy % 6 == 0 ? shrineTrim() : tower());
-        }
-
-        // les planchers, perces du puits de l'escalier
-        for (int landing = 6; landing < TOWER_TOP; landing += 6) {
-            floorDisc(level, tx, y + landing, tz, r - 1, 1.8);
-        }
-        // et celui du niveau d'entree : sans lui, on entre et on tombe
-        floorDisc(level, tx, y + WALK - 1, tz, r - 1, 1.8);
-
-        spiral(level, tx, y, tz, TOWER_TOP - 1, 3.0);
-
-        // le sommet
-        floorDisc(level, tx, y + TOWER_TOP, tz, r - 1, 2.6);
-        // La lanterne PLANAIT : elle etait posee au-dessus du puits d'escalier,
-        // c'est-a-dire au-dessus du vide. On lui donne un socle.
-        set(level, tx, y + TOWER_TOP, tz, shrineTrim());
-        set(level, tx, y + TOWER_TOP + 1, tz, lantern());
-
-        // Les portes : DES PORTES, pas des breches.
-        //
-        // La version precedente evidait la paroi sur tout le diametre et sur
-        // trois hauteurs : une croix beante par laquelle on tombait du haut du
-        // rempart. Ce sont maintenant deux baies de trois de large sur trois de
-        // haut, percees uniquement dans la coque, cote courtines.
-        doorway(level, tx, y + WALK, tz, r, true);
-        doorway(level, tx, y + WALK, tz, r, false);
-        // et deux au ras du sol, cote cour : on entre par le bas
-        doorway(level, tx, y + 1, tz, r, true);
-        doorway(level, tx, y + 1, tz, r, false);
+        roundTower(level, tx, y, tz, TOWER_RADIUS, TOWER_TOP);
+        doorway(level, tx, y + WALK, tz, TOWER_RADIUS, true);
+        doorway(level, tx, y + WALK, tz, TOWER_RADIUS, false);
+        doorway(level, tx, y + 1, tz, TOWER_RADIUS, true);
+        doorway(level, tx, y + 1, tz, TOWER_RADIUS, false);
     }
 
-    /**
-     * Un plancher rond, perce en son centre.
-     *
-     * Le trou laisse passer l'escalier ; sans lui, la vis buterait sous chaque
-     * palier. Le rayon interieur decide de la largeur du puits.
-     */
-    private static void floorDisc(ServerLevel level, int tx, int y, int tz,
-                                  double outer, double inner) {
-        int r = (int) Math.ceil(outer);
-        for (int dx = -r; dx <= r; dx++) {
-            for (int dz = -r; dz <= r; dz++) {
-                double dist = Math.sqrt(dx * dx + dz * dz);
-                if (dist > outer) {
-                    continue;
-                }
-                // Le plancher est PLEIN, sauf la tremie de l'escalier.
-                //
-                // Il etait perce d'un anneau central, ce qui laissait un trou
-                // beant autour du fut a chaque etage -- « il y a des trous dans
-                // le sol ». La tremie ne doit occuper qu'un quartier, celui par
-                // lequel la vis arrive, et le reste doit porter.
-                boolean well = dist > inner && dx > 0 && Math.abs(dz) <= 1;
-                set(level, tx + dx, y, tz + dz,
-                        well ? Blocks.AIR.defaultBlockState() : floor());
-            }
-        }
-    }
 
-    /**
-     * Un escalier en vis JOINTIF.
-     *
-     * Seize marches par tour : l'arc entre deux marches vaut 2 pi r / 16, soit
-     * un peu plus d'un bloc pour un rayon de 3 -- elles se touchent une fois
-     * arrondies. La version precedente tournait de 0,62 radian par marche, ce
-     * qui les espacait de plus de deux blocs : on ne montait pas, on sautait de
-     * piquet en piquet quand on ne tombait pas.
-     */
-    private static void spiral(ServerLevel level, int tx, int y, int tz,
-                               int height, double radius) {
-        // Le nombre de marches par tour se DEDUIT du rayon, il n'est pas fixe.
-        //
-        // Seize marches convenaient a un rayon de trois ; sur un rayon de deux,
-        // elles retombaient a la meme case une fois arrondies -- une pile
-        // verticale qu'on ne peut pas gravir. On vise un arc constant d'environ
-        // un bloc et quart entre deux marches, quel que soit le rayon.
-        int perTurn = Math.max(6, (int) Math.round(Math.PI * 2 * radius / 1.25));
-        double perStep = Math.PI * 2 / perTurn;
-        int lastX = Integer.MIN_VALUE;
-        int lastZ = Integer.MIN_VALUE;
-        for (int step = 1; step <= height; step++) {
-            double angle = step * perStep;
-            int sx = tx + (int) Math.round(Math.cos(angle) * radius);
-            int sz = tz + (int) Math.round(Math.sin(angle) * radius);
-            set(level, sx, y + step, sz, trim());
-            // la marche precedente est prolongee : deux cases par palier, sinon
-            // la vis se prend de biais et l'on rate une marche sur deux
-            if (lastX != Integer.MIN_VALUE && (lastX != sx || lastZ != sz)) {
-                set(level, lastX, y + step, lastZ, trim());
-            }
-            for (int clear = 1; clear <= 3; clear++) {
-                set(level, sx, y + step + clear, sz, Blocks.AIR.defaultBlockState());
-                if (lastX != Integer.MIN_VALUE) {
-                    set(level, lastX, y + step + clear, lastZ, Blocks.AIR.defaultBlockState());
-                }
-            }
-            lastX = sx;
-            lastZ = sz;
-        }
-    }
 
     /** Le repere d'une porte : son axe le long du mur, et sa normale sortante. */
     private record Gate(int ax, int az, int nx, int nz, int ox, int oz) {
@@ -758,50 +643,21 @@ public final class Sanctuary {
     private static void gatehouse(ServerLevel level, int cx, int y, int cz, int side) {
         Gate g = Gate.of(cx, cz, side);
 
+        // Les deux tours du corps de garde, batties comme les autres.
+        //
+        // Elles reposaient sur un losange tronque dont le test de coque
+        // laissait passer des cellules : d'ou les grands trous qu'on voyait
+        // depuis l'exterieur. Un cercle franc, et le meme interieur que les
+        // tours d'angle.
         for (int flank = -1; flank <= 1; flank += 2) {
-            int seat = flank * (GATE_HALF + 4);
-            for (int a = -3; a <= 3; a++) {
-                for (int d = -3; d <= 3; d++) {
-                    if (Math.abs(a) + Math.abs(d) > 4) {
-                        continue;
-                    }
-                    boolean shell = Math.abs(a) == 3 || Math.abs(d) == 3
-                            || Math.abs(a) + Math.abs(d) == 4;
-                    int px = g.x(seat + a, d);
-                    int pz = g.z(seat + a, d);
-                    for (int dy = 1; dy <= TOWER_TOP - 2; dy++) {
-                        set(level, px, y + dy, pz, shell
-                                ? (dy <= 2 ? base() : dy % 5 == 0 ? shrineTrim() : tower())
-                                : Blocks.AIR.defaultBlockState());
-                    }
-                    if (shell && Math.floorMod(a + d, 2) == 0) {
-                        set(level, px, y + TOWER_TOP - 1, pz, merlon());
-                    }
-                }
-            }
-            // Les tours du corps de garde etaient CREUSES ET VIDES : ni
-            // plancher, ni escalier, ni porte. On y tombait, quand on arrivait
-            // a y entrer. Elles recoivent le meme traitement que les tours
-            // d'angle, a leur echelle.
+            int seat = flank * (GATE_HALF + 6);
             int bx = g.x(seat, 0);
             int bz = g.z(seat, 0);
-            for (int dy = 1; dy <= TOWER_TOP - 2; dy++) {
-                set(level, bx, y + dy, bz, dy % 5 == 0 ? shrineTrim() : tower());
-            }
-            for (int landing = 5; landing < TOWER_TOP - 3; landing += 5) {
-                floorDisc(level, bx, y + landing, bz, 2.4, 1.1);
-            }
-            floorDisc(level, bx, y + WALK - 1, bz, 2.4, 1.1);
-            floorDisc(level, bx, y + TOWER_TOP - 2, bz, 2.4, 1.1);
-            spiral(level, bx, y, bz, TOWER_TOP - 4, 2.0);
-            // une porte au chemin de ronde, une au ras de la cour
-            doorway(level, bx, y + WALK, bz, 3, true);
-            doorway(level, bx, y + WALK, bz, 3, false);
-            doorway(level, bx, y + 1, bz, 3, true);
-            doorway(level, bx, y + 1, bz, 3, false);
-
-            set(level, bx, y + TOWER_TOP - 2, bz, shrineTrim());
-            set(level, bx, y + TOWER_TOP - 1, bz, lantern());
+            roundTower(level, bx, y, bz, 6, TOWER_TOP - 4);
+            doorway(level, bx, y + WALK, bz, 6, true);
+            doorway(level, bx, y + WALK, bz, 6, false);
+            doorway(level, bx, y + 1, bz, 6, true);
+            doorway(level, bx, y + 1, bz, 6, false);
         }
 
         // la voute : un arc, pas un linteau plat
@@ -970,19 +826,30 @@ public final class Sanctuary {
         // rempart lui barrait la route. On ouvre donc la travee en face.
         for (int a = from + WALK - 2; a <= from + WALK + 2; a++) {
             for (int w = 0; w < 3; w++) {
-                set(level, g.x(a, -THICK - w), y + WALK, g.z(a, -THICK - w), floor());
+                int px = g.x(a, -THICK - w);
+                int pz = g.z(a, -THICK - w);
+                // le palier repose sur la maconnerie jusqu'au sol : sans cela
+                // il saillait du mur comme une dalle suspendue dans le vide
+                for (int fill = 0; fill < WALK; fill++) {
+                    set(level, px, y + fill, pz, body());
+                }
+                set(level, px, y + WALK, pz, floor());
                 for (int clear = 1; clear <= 3; clear++) {
-                    set(level, g.x(a, -THICK - w), y + WALK + clear,
-                            g.z(a, -THICK - w), Blocks.AIR.defaultBlockState());
+                    set(level, px, y + WALK + clear, pz, Blocks.AIR.defaultBlockState());
                 }
             }
-            // la breche dans le parapet interieur, sur toute l'epaisseur
+            // La breche dans le parapet, du cote INTERIEUR.
+            //
+            // Elle s'ouvrait a des profondeurs positives, c'est-a-dire au-dela
+            // de la face exterieure du rempart : on perforait le vide dehors
+            // pendant que le garde-corps continuait de barrer la route. Le
+            // corps du mur est aux profondeurs NEGATIVES.
             for (int t = 0; t < THICK; t++) {
+                set(level, g.x(a, -t), y + WALK, g.z(a, -t), floor());
                 for (int clear = 1; clear <= 3; clear++) {
-                    set(level, g.x(a, t), y + WALK + clear, g.z(a, t),
+                    set(level, g.x(a, -t), y + WALK + clear, g.z(a, -t),
                             Blocks.AIR.defaultBlockState());
                 }
-                set(level, g.x(a, t), y + WALK, g.z(a, t), floor());
             }
         }
     }
@@ -1032,6 +899,129 @@ public final class Sanctuary {
                 }
             }
         }
+    }
+
+
+    /** La part enterree du tombeau : il n'en affleure que quatre blocs. */
+    private static final int BURIED = 44;
+
+    /**
+     * Retire les blocs techniques du modele.
+     *
+     * « place template » depose le fichier TEL QUEL, blocs de structure et
+     * jonctions compris -- vingt-trois dans le seul premier quadrant. Ce sont
+     * eux, « les structures blocs posees aleatoirement a l'interieur ». La
+     * commande de generation les consommerait ; celle-ci ne le fait pas, c'est
+     * a nous de nettoyer.
+     */
+    private static void scrubMarkers(ServerLevel level, int ox, int oy, int oz) {
+        for (int dx = 0; dx < PYRAMID_W; dx++) {
+            for (int dz = 0; dz < PYRAMID_D; dz++) {
+                for (int dy = 0; dy < 88; dy++) {
+                    BlockPos pos = new BlockPos(ox + dx, oy + dy, oz + dz);
+                    BlockState state = level.getBlockState(pos);
+                    if (state.isAir()) {
+                        continue;
+                    }
+                    String id = BuiltInRegistries.BLOCK.getKey(state.getBlock()).getPath();
+                    if (id.equals("structure_block") || id.equals("jigsaw")
+                            || id.equals("structure_void")) {
+                        level.setBlock(pos, Blocks.AIR.defaultBlockState(), 2);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * L'interieur d'une tour : des planchers PLEINS et un escalier droit.
+     *
+     * Trois versions de vis ont echoue avant celle-ci, et toujours pour la
+     * meme raison : une helice traverse chaque plancher sur toute sa course, si
+     * bien que le degagement qu'elle exige au-dessus d'elle y taille une fente
+     * continue. D'ou « plein de trous dans le sol a chaque etage ».
+     *
+     * Un escalier DROIT ne perce qu'a son arrivee. Chaque etage a donc son
+     * plancher plein et une seule tremie, celle par ou l'on debouche ; la volee
+     * suivante repart dans une autre direction, ce qui fait tourner la montee
+     * sans jamais entamer le reste du sol.
+     */
+    private static void towerInterior(ServerLevel level, int tx, int y, int tz,
+                                      int radius, int top) {
+        int storey = 6;
+        double inner = radius - 1.5;
+        for (int base = 0; base + storey <= top; base += storey) {
+            int turn = (base / storey) % 4;
+            int dx = turn == 0 ? 1 : turn == 2 ? -1 : 0;
+            int dz = turn == 1 ? 1 : turn == 3 ? -1 : 0;
+
+            // le plancher du palier, PLEIN : l'escalier y percera sa tremie
+            solidFloor(level, tx, y + base + storey, tz, inner);
+
+            int reach = (int) inner - 1;
+            for (int i = 0; i < storey; i++) {
+                int px = tx - dx * (reach - i);
+                int pz = tz - dz * (reach - i);
+                // deux blocs de large : on ne monte pas en file indienne
+                for (int w = 0; w <= 1; w++) {
+                    int qx = px + (dx == 0 ? w : 0);
+                    int qz = pz + (dz == 0 ? w : 0);
+                    set(level, qx, y + base + i, qz, trim());
+                    for (int clear = 1; clear <= 3; clear++) {
+                        set(level, qx, y + base + i + clear, qz,
+                                Blocks.AIR.defaultBlockState());
+                    }
+                }
+            }
+        }
+    }
+
+    /** Un plancher rond et PLEIN, sans le moindre trou. */
+    private static void solidFloor(ServerLevel level, int tx, int y, int tz, double radius) {
+        int r = (int) Math.ceil(radius);
+        for (int dx = -r; dx <= r; dx++) {
+            for (int dz = -r; dz <= r; dz++) {
+                if (Math.sqrt(dx * dx + dz * dz) <= radius) {
+                    set(level, tx + dx, y, tz + dz, floor());
+                }
+            }
+        }
+    }
+
+    /**
+     * Une tour ronde et creuse, coque comprise.
+     *
+     * Les tours du corps de garde etaient bâties sur un losange tronque dont le
+     * test de coque laissait passer des cellules : d'ou « d'immenses trous au
+     * centre, vus de l'exterieur ». Un cercle franc n'a pas ce defaut.
+     */
+    private static void roundTower(ServerLevel level, int tx, int y, int tz,
+                                   int radius, int top) {
+        for (int dx = -radius; dx <= radius; dx++) {
+            for (int dz = -radius; dz <= radius; dz++) {
+                double dist = Math.sqrt(dx * dx + dz * dz);
+                if (dist > radius + 0.5) {
+                    continue;
+                }
+                boolean shell = dist > radius - 1.0;
+                set(level, tx + dx, y, tz + dz, floor());
+                for (int dy = 1; dy <= top; dy++) {
+                    set(level, tx + dx, y + dy, tz + dz, shell
+                            ? (dy <= 2 ? base() : dy % 6 == 0 ? shrineTrim() : tower())
+                            : Blocks.AIR.defaultBlockState());
+                }
+                if (shell && Math.floorMod(dx + dz, 2) == 0) {
+                    set(level, tx + dx, y + top + 1, tz + dz, merlon());
+                }
+                if (shell && (dx == 0 || dz == 0) && radius > 4) {
+                    set(level, tx + dx, y + 6, tz + dz, glow());
+                }
+            }
+        }
+        towerInterior(level, tx, y, tz, radius, top - 2);
+        solidFloor(level, tx, y + top, tz, radius - 1.5);
+        set(level, tx, y + top, tz, shrineTrim());
+        set(level, tx, y + top + 1, tz, lantern());
     }
 
     // ----------------------------------------------------------- outillage
