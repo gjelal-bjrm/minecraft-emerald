@@ -1487,12 +1487,16 @@ public final class Sanctuary {
         int last = roof;
         for (int z = fromZ; z >= apexZ + 3; z--) {
             int here = probeTop(level, sx, y, z);
-            // rien tant qu'on est sur le plat : le toit se traverse de plain-pied
-            // et les marches n'apparaissent qu'au moment ou la pyramide monte
-            if (here <= roof && last <= roof) {
-                continue;
-            }
-            // on ne redescend jamais : un escalier qui plonge n'en est plus un
+            // LA VOLEE COMMENCE AU PARVIS, sans attendre que la pyramide monte.
+            //
+            // Elle sautait les cases plates : le parvis d'arcencium se
+            // terminait donc en face verticale, et l'escalier ne prenait
+            // qu'au-dela, en l'air. On voyait ou monter sans pouvoir y aller.
+            // Une premiere marche posee des le parvis suffit -- le trajet
+            // redevient continu du dallage au faite, et la volee plafonne
+            // d'elle-meme tant que la face ne s'eleve pas.
+            //
+            // On ne redescend jamais : un escalier qui plonge n'en est plus un.
             int step = Math.max(last, Math.min(here + 1, last + 1));
             for (int w = -1; w <= 1; w++) {
                 // on monte vers le nord, du pied de la face sud vers le faite
