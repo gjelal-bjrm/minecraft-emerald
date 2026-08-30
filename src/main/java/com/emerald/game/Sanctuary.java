@@ -1473,8 +1473,15 @@ public final class Sanctuary {
                 set(level, cx + w, y, z, trim());
                 set(level, cx + w, y + 4, z, shrineTrim());
             }
+            // Les lanternes AU SOL, et des deux cotes.
+            //
+            // Posees a hauteur de tete, elles n'avaient rien sous elles et
+            // paraissaient suspendues ; et d'un seul cote, elles donnaient un
+            // couloir bancal. Au sol, contre les jambages, elles bordent le
+            // chemin sans gener la voie centrale.
             if (Math.floorMod(depth, 5) == 0) {
-                set(level, cx - 1, y + 3, z, lantern());
+                set(level, cx - 1, y + 1, z, lantern());
+                set(level, cx + 1, y + 1, z, lantern());
             }
             end = z;
         }
@@ -1494,8 +1501,13 @@ public final class Sanctuary {
             }
             set(level, cx, y, z, trim());
             set(level, cx, y + 4, z, shrineTrim());
+            // Ici le couloir n'a qu'une case de large : une lanterne posee au
+            // milieu le boucherait. On lui creuse donc une niche de cote.
             if (depth % 4 == 0) {
-                set(level, cx, y + 3, z, lantern());
+                set(level, cx - 1, y + 1, z, Blocks.AIR.defaultBlockState());
+                set(level, cx - 1, y + 2, z, Blocks.AIR.defaultBlockState());
+                set(level, cx - 1, y, z, trim());
+                set(level, cx - 1, y + 1, z, lantern());
             }
         }
 
