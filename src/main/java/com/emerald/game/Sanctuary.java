@@ -1616,7 +1616,7 @@ public final class Sanctuary {
             }
         }
 
-        seals(level, cx, y, fromZ, end, anchor, rank);
+        seals(level, cx, y, cz, fromZ, end, anchor, rank);
     }
 
     /**
@@ -1668,35 +1668,36 @@ public final class Sanctuary {
     /** Ou les trois sceaux sont tombes, pour le compte rendu de la commande. */
     private static String sealReport = "";
 
-    private static void seals(ServerLevel level, int cx, int y, int fromZ, int endZ,
-                              BlockPos anchor, int rank) {
-        // TROIS LIEUX, ce qui suppose TROIS CHEMINS.
+    private static void seals(ServerLevel level, int cx, int y, int cz, int fromZ,
+                              int endZ, BlockPos anchor, int rank) {
+        // TROIS LIEUX MESURES, et non plus devines.
         //
-        // Les trois derniers essais ont echoue pour la meme raison, que je
-        // n'avais pas vue : le tombeau n'a qu'un couloir. Aligner les sceaux
-        // dessus a onze et quatorze blocs d'intervalle ne fait pas trois
-        // endroits -- on les voit tous les trois d'un seul regard en enfilade,
-        // et « cote a cote » est le mot juste. Chercher un meilleur point sur
-        // une droite ne pouvait pas marcher : il fallait sortir de la droite.
+        // Sept placements de suite ont echoue pour une seule raison : je posais
+        // des sceaux dans un batiment que je n'ai pas dessine, en supposant ou
+        // etaient ses salles. La sonde cherchait des pieces inexistantes, la
+        // chambre haute se murait, la cave manquait de fond, la galerie a perce
+        // le flanc. Chaque fois, un pari.
         //
-        // On creuse donc deux galeries laterales, chacune finissant sur une
-        // salle. Trois virages differents, trois pieces, trois coffres.
-        //
-        // Ce qui rend ces salles sures, la ou la chambre haute perçait le flanc
-        // et la cave manquait de fond : AU RAS DU SOL, sur le cote, il y a
-        // toujours de la matiere. La pyramide fait quatre-vingt-neuf blocs de
-        // large a sa base -- quinze blocs vers l'ouest ou vers l'est, on est
-        // encore en pleine masse, quelle que soit la pyramide qu'on a batie.
-        // C'est la premiere fois qu'un emplacement ne repose pas sur un pari.
+        // Les quatre .nbt de Cataclysm ont donc ete decodes bloc par bloc, et
+        // ils dementent trois de mes suppositions :
+        //   - il n'y a PAS de pilier plein au centre. C'est une cheminee 5x5
+        //     dont les quatre montants sont pleins et dont le noyau 3x3 est
+        //     CREUX de y+1 a y+36 -- un puits vertical deja perce, et qui tombe
+        //     pile sur l'axe de notre couloir (x cx-1..cx+1, z cz-4..cz-2) ;
+        //   - la pyramide a un veritable etage a y+6, avec ses couloirs et ses
+        //     coffres, que le modele relie a la grande salle basse ;
+        //   - le couloir du tombeau n'est ceint de maconnerie pleine qu'a
+        //     partir de sa treizieme case : avant, on est encore dans le gradin,
+        //     et c'est ce qui a fait deboucher une alcove hors du flanc.
         java.util.List<BlockPos> placed = new java.util.ArrayList<>();
         sealReport = "";
 
-        placed.add(alcove(level, cx, y + 1, fromZ - 5, 1, rank));        // le porche
-        placed.add(branchRoom(level, cx, y, fromZ - 13, -1, rank));      // galerie ouest
-        placed.add(branchRoom(level, cx, y, fromZ - 24, 1, rank));       // galerie est
+        placed.add(doorwaySeal(level, cx, y, fromZ));      // 1. l'entree
+        placed.add(upperCorridor(level, cx, y, cz));       // 2. l'etage, au coffre
+        placed.add(chimneySeal(level, cx, y, cz));         // 3. l'etage, au pilier
 
         StringBuilder report = new StringBuilder();
-        String[] labels = {"porche", "ouest", "est"};
+        String[] labels = {"entree", "coffre", "pilier"};
         for (int i = 0; i < placed.size(); i++) {
             BlockPos p = placed.get(i);
             report.append(i == 0 ? "" : " | ").append(labels[i]).append(' ')
@@ -1720,86 +1721,102 @@ public final class Sanctuary {
      * coffre, et le sceau se trouve dans le meme regard.
      */
     /**
-     * Y a-t-il de la matiere PARTOUT dans cette boite ?
+     * 1. LE SCEAU DE L'ENTREE, dans le couloir du tombeau.
      *
-     * C'est la question qu'on aurait du poser avant de creuser quoi que ce
-     * soit dans un batiment qu'on n'a pas dessine. Une seule case d'air dans
-     * l'emprise, et la salle debouche dehors.
+     * A la treizieme case, et pas avant : c'est la premiere ou la maconnerie du
+     * modele enveloppe le couloir de tous cotes. Plus pres du porche on est
+     * encore dans le gradin, et une alcove creusee la ressortait du flanc.
      */
-    private static boolean solidBox(ServerLevel level, int cx, int y, int cz, int half) {
-        for (int dx = -half; dx <= half; dx++) {
-            for (int dz = -half; dz <= half; dz++) {
-                for (int dy = 1; dy <= 5; dy++) {
-                    if (level.getBlockState(new BlockPos(cx + dx, y + dy, cz + dz)).isAir()) {
-                        return false;
-                    }
-                }
-            }
-        }
-        return true;
+    private static BlockPos doorwaySeal(ServerLevel level, int cx, int y, int fromZ) {
+        int z = fromZ - 13;
+        set(level, cx - 1, y + 3, z, lantern());
+        return freeSeal(level, cx - 1, y + 1, z);
     }
 
-    private static BlockPos branchRoom(ServerLevel level, int cx, int y, int z,
-                                       int dir, int rank) {
-        // ON SONDE AVANT DE CREUSER.
-        //
-        // La galerie partait a dix blocs sans rien verifier, et la salle qui la
-        // termine en occupe cinq de plus : a treize blocs du couloir, pres du
-        // bord sud, on n'est plus dans la masse mais dehors -- la salle est
-        // ressortie du flanc et l'a defigure. Je m'etais dit « au ras du sol,
-        // sur le cote, il y a toujours de la matiere ». C'etait encore un pari,
-        // et il etait faux.
-        //
-        // On cherche donc la plus longue galerie dont l'emprise de salle est
-        // ENTIEREMENT dans le plein, en interrogeant le monde tel qu'il est.
-        int reach = 0;
-        for (int candidate = 10; candidate >= 4; candidate--) {
-            if (solidBox(level, cx + dir * (candidate + 3), y, z, 3)) {
-                reach = candidate;
-                break;
+    /**
+     * 2. L'ETAGE DE LA PYRAMIDE, contre un coffre du modele.
+     *
+     * Le modele a son propre etage a y+6, avec ses couloirs et ses coffres, et
+     * notre couloir debouche deja dans sa grande salle basse. Entre le plafond
+     * de cette salle et le plancher de l'etage il n'y a que DEUX assises : on y
+     * taille une cage d'escalier, et tout le reste du trajet appartient au
+     * batiment. Le sceau attend en diagonale d'un coffre du modele.
+     */
+    private static BlockPos upperCorridor(ServerLevel level, int cx, int y, int cz) {
+        // Quatre marches, larges de trois. La premiere est en y+1 et non en
+        // y+2 : le sol de la salle etant en y+1, on aurait bute dessus.
+        int[][] steps = {{1, 26}, {2, 25}, {3, 24}, {4, 23}, {5, 22}};
+        for (int[] st : steps) {
+            for (int w = -3; w <= -1; w++) {
+                set(level, cx + w, y + st[0], cz + st[1], riser(0, -1));
+                for (int clear = 1; clear <= 3; clear++) {
+                    set(level, cx + w, y + st[0] + clear, cz + st[1],
+                            Blocks.AIR.defaultBlockState());
+                }
             }
         }
-        if (reach == 0) {
-            // pas de place ici : mieux vaut une alcove de couloir qu'une
-            // salle qui creve le monument
-            return alcove(level, cx, y + 1, z, dir, rank);
-        }
-        for (int step = 2; step <= reach; step++) {
-            int x = cx + dir * step;
-            set(level, x, y, z, trim());
-            for (int dy = 1; dy <= 3; dy++) {
-                set(level, x, y + dy, z, Blocks.AIR.defaultBlockState());
+        // le palier, de plain-pied sur l'etage
+        for (int w = -3; w <= -1; w++) {
+            set(level, cx + w, y + 5, cz + 21, trim());
+            for (int clear = 1; clear <= 3; clear++) {
+                set(level, cx + w, y + 5 + clear, cz + 21, Blocks.AIR.defaultBlockState());
             }
-            set(level, x, y + 4, z, shrineTrim());
-            if (step % 4 == 0) {
-                set(level, x, y + 1, z - 1, lantern());
+        }
+        set(level, cx - 2, y + 8, cz + 22, lantern());
+        return freeSeal(level, cx - 5, y + 6, cz + 13);
+    }
+
+    /**
+     * 3. L'ETAGE, CONTRE LE PILIER CENTRAL.
+     *
+     * Le centre du monument n'est pas un pilier plein mais une cheminee de cinq
+     * sur cinq : quatre montants de pierre et, entre eux, un noyau creux de
+     * trois sur trois qui monte d'un trait jusqu'a trente-six blocs. On n'a donc
+     * rien a percer verticalement -- le puits existe deja, il suffit d'y arriver
+     * et d'y poser des echelons.
+     *
+     * Une galerie prolonge notre couloir jusqu'a son pied, les echelons montent
+     * au quinzieme niveau, et l'on debouche contre le montant nord. C'est le
+     * seul des trois qui demande de grimper, et c'est voulu.
+     */
+    private static BlockPos chimneySeal(ServerLevel level, int cx, int y, int cz) {
+        // la galerie, du fond du tresor au pied de la cheminee
+        for (int z = cz + 14; z >= cz - 2; z--) {
+            for (int w = -1; w <= 1; w++) {
+                set(level, cx + w, y, z, trim());
+                for (int dy = 1; dy <= 3; dy++) {
+                    set(level, cx + w, y + dy, z, Blocks.AIR.defaultBlockState());
+                }
+                set(level, cx + w, y + 4, z, shrineTrim());
+            }
+            if (Math.floorMod(z, 6) == 0) {
+                standLantern(level, cx - 1, y + 1, z);
+                standLantern(level, cx + 1, y + 1, z);
             }
         }
 
-        int rx = cx + dir * (reach + 3);            // le centre de la salle
-        for (int dx = -2; dx <= 2; dx++) {
-            for (int dz = -2; dz <= 2; dz++) {
-                set(level, rx + dx, y, z + dz,
-                        Math.abs(dx) == 2 || Math.abs(dz) == 2 ? shrineTrim() : trim());
-                for (int dy = 1; dy <= 4; dy++) {
-                    set(level, rx + dx, y + dy, z + dz, Blocks.AIR.defaultBlockState());
-                }
-                set(level, rx + dx, y + 5, z + dz, shrine());
+        // les echelons, dans le noyau creux, adosses au montant nord
+        for (int h = y + 1; h <= y + 16; h++) {
+            set(level, cx, h, cz - 3, Blocks.AIR.defaultBlockState());
+            if (level.getBlockState(new BlockPos(cx, h, cz - 4)).isAir()) {
+                set(level, cx, h, cz - 4, shrine());
             }
-        }
-        // quatre piliers, et leur lumiere : une piece nue ne se retient pas
-        for (int sx = -1; sx <= 1; sx += 2) {
-            for (int sz = -1; sz <= 1; sz += 2) {
-                for (int dy = 1; dy <= 4; dy++) {
-                    set(level, rx + sx * 2, y + dy, z + sz * 2, shrine());
-                }
-                set(level, rx + sx, y + 4, z + sz, lantern());
-            }
+            set(level, cx, h, cz - 3, Blocks.LADDER.defaultBlockState()
+                    .setValue(net.minecraft.world.level.block.LadderBlock.FACING,
+                            Direction.SOUTH));
         }
 
-        // le coffre au fond, le sceau juste a cote : on entre, on voit les deux
-        lootChest(level, rx + dir, y + 1, z - 1, sanctuaryTable(rank));
-        return freeSeal(level, rx + dir, y + 1, z);
+        // le palier du quinzieme niveau, jusqu'au pied du montant
+        for (int z = cz - 3; z >= cz - 6; z--) {
+            for (int w = 0; w <= 1; w++) {
+                set(level, cx + w, y + 15, z, trim());
+                for (int dy = 16; dy <= 18; dy++) {
+                    set(level, cx + w, y + dy, z, Blocks.AIR.defaultBlockState());
+                }
+            }
+        }
+        set(level, cx, y + 17, cz - 5, lantern());
+        return freeSeal(level, cx + 1, y + 16, cz - 6);
     }
 
     /**
@@ -1811,40 +1828,6 @@ public final class Sanctuary {
         return pos;
     }
 
-    /**
-     * Une alcove ouverte sur le couloir, et son sceau.
-     *
-     * Ce qui precedait ne creusait QU'UNE CASE d'air. Employe pour un repli a
-     * deux blocs de l'axe -- c'est-a-dire dans le jambage d'un couloir large de
-     * trois -- cela ne faisait pas une niche mais une poche aveugle enfermee
-     * dans la maconnerie : personne ne pouvait la trouver sans casser un mur au
-     * hasard, ce qui n'est pas une enigme mais une loterie.
-     *
-     * On evide donc un renfoncement de trois sur trois, on lui donne un fond,
-     * un sol et deux lanternes. Il s'ouvre sur le passage : on le voit en
-     * marchant, et il a l'air d'avoir ete voulu.
-     */
-    private static BlockPos alcove(ServerLevel level, int cx, int y, int z, int dir,
-                                   int rank) {
-        int wx = cx + dir * 2;                      // la paroi du couloir
-        for (int dz = -1; dz <= 1; dz++) {
-            set(level, wx, y - 1, z + dz, trim());
-            for (int dy = 0; dy <= 2; dy++) {
-                set(level, wx, y + dy, z + dz, Blocks.AIR.defaultBlockState());
-                // un fond, pour ne pas ouvrir sur le remplissage de la pyramide
-                set(level, wx + dir, y + dy, z + dz, shrine());
-            }
-            set(level, wx, y + 3, z + dz, shrineTrim());
-        }
-        // Le coffre PARTAGE l'alcove avec le sceau.
-        //
-        // Un sceau seul dans un renfoncement se longe sans le voir ; un coffre,
-        // on s'arrete devant. C'est le butin qui fait tourner la tete, et le
-        // sceau se trouve dans le meme regard.
-        lootChest(level, wx, y, z - 1, sanctuaryTable(rank));
-        set(level, wx, y + 2, z + 1, lantern());
-        return freeSeal(level, wx, y, z);
-    }
     /**
      * L'escalier qui monte dans cette direction.
      *
