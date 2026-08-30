@@ -35,53 +35,58 @@ import java.awt.Color;
 @EventBusSubscriber(modid = EmeraldWeaponsMod.MODID, value = Dist.CLIENT)
 public final class AnchorPulseRenderer {
 
-    private static int x;
-    private static int y;
-    private static int z;
-    private static int remaining;
-    private static int total = 1;
+    /**
+     * Un repere en cours, et sa duree.
+     *
+     * Il y en a PLUSIEURS : l'ancre en signale un, mais l'indice des sceaux en
+     * allume trois d'un coup. Une seule position suffisait tant qu'on ne
+     * montrait que l'ancre.
+     */
+    private record Marker(int x, int y, int z, int height, int total, int left) {
+    }
 
-    /** Hauteur de la colonne. Elle doit depasser la pyramide de tres loin. */
-    private static final int HEIGHT = 160;
+    private static final java.util.List<Marker> markers = new java.util.ArrayList<>();
 
     private AnchorPulseRenderer() {
     }
 
     public static void accept(AnchorPulsePayload payload) {
-        x = payload.x();
-        y = payload.y();
-        z = payload.z();
-        remaining = payload.ticks();
-        total = Math.max(1, payload.ticks());
+        markers.removeIf(m -> m.x() == payload.x() && m.y() == payload.y()
+                && m.z() == payload.z());
+        markers.add(new Marker(payload.x(), payload.y(), payload.z(),
+                payload.height(), Math.max(1, payload.ticks()), payload.ticks()));
     }
 
     @SubscribeEvent
     public static void onClientTick(ClientTickEvent.Post event) {
-        if (remaining > 0) {
-            remaining--;
-        }
+        markers.replaceAll(m -> new Marker(m.x(), m.y(), m.z(), m.height(),
+                m.total(), m.left() - 1));
+        markers.removeIf(m -> m.left() <= 0);
     }
 
     @SubscribeEvent
     public static void onRenderStage(RenderLevelStageEvent event) {
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_WEATHER
-                || remaining <= 0) {
+                || markers.isEmpty()) {
             return;
         }
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null) {
             return;
         }
-        float life = remaining / (float) total;
         // deux battements par seconde, sous une enveloppe qui s'eteint
         float beat = 0.55F + 0.45F * (float) Math.sin(
                 (mc.level.getGameTime() + event.getPartialTick()
                         .getGameTimeDeltaPartialTick(false)) * 0.35);
-        draw(event.getPoseStack(), event.getCamera(), life * beat,
-                mc.level.getGameTime());
+        for (Marker marker : markers) {
+            float life = marker.left() / (float) marker.total();
+            draw(event.getPoseStack(), event.getCamera(), life * beat,
+                    mc.level.getGameTime(), marker);
+        }
     }
 
-    private static void draw(PoseStack pose, Camera camera, float alpha, long time) {
+    private static void draw(PoseStack pose, Camera camera, float alpha, long time,
+                             Marker marker) {
         Vec3 eye = camera.getPosition();
         MultiBufferSource.BufferSource buffer =
                 Minecraft.getInstance().renderBuffers().bufferSource();
@@ -91,7 +96,8 @@ public final class AnchorPulseRenderer {
         pose.pushPose();
         // le repere est relatif a la camera : on retranche sa position pour
         // parler en coordonnees du monde (la lecon de l'Aurore)
-        pose.translate(x + 0.5 - eye.x, y - eye.y, z + 0.5 - eye.z);
+        pose.translate(marker.x() + 0.5 - eye.x, marker.y() - eye.y,
+                marker.z() + 0.5 - eye.z);
         Matrix4f matrix = pose.last().pose();
 
         float hue = (float) ((time * 0.008) % 1.0);
@@ -101,11 +107,12 @@ public final class AnchorPulseRenderer {
         float blue = (rgb & 0xFF) / 255F;
 
         // deux lames croisees : la colonne se lit sous tous les angles
-        column(matrix, consumer, 0.9F, red, green, blue, alpha, true);
-        column(matrix, consumer, 0.9F, red, green, blue, alpha, false);
+        int height = marker.height();
+        column(matrix, consumer, 0.9F, red, green, blue, alpha, true, height);
+        column(matrix, consumer, 0.9F, red, green, blue, alpha, false, height);
         // un socle plus large, qui marque le pied
-        column(matrix, consumer, 2.4F, red, green, blue, alpha * 0.5F, true);
-        column(matrix, consumer, 2.4F, red, green, blue, alpha * 0.5F, false);
+        column(matrix, consumer, 2.4F, red, green, blue, alpha * 0.5F, true, height);
+        column(matrix, consumer, 2.4F, red, green, blue, alpha * 0.5F, false, height);
 
         pose.popPose();
         buffer.endBatch(type);
@@ -119,7 +126,7 @@ public final class AnchorPulseRenderer {
      */
     private static void column(Matrix4f matrix, VertexConsumer consumer, float width,
                                float red, float green, float blue, float alpha,
-                               boolean alongX) {
+                               boolean alongX, int height) {
         float w = width / 2.0F;
         float x0 = alongX ? -w : 0.0F;
         float z0 = alongX ? 0.0F : -w;
@@ -131,9 +138,9 @@ public final class AnchorPulseRenderer {
                 .setColor(red, green, blue, alpha).setLight(light);
         consumer.addVertex(matrix, x1, 0.0F, z1)
                 .setColor(red, green, blue, alpha).setLight(light);
-        consumer.addVertex(matrix, x1, HEIGHT, z1)
+        consumer.addVertex(matrix, x1, height, z1)
                 .setColor(red, green, blue, 0.0F).setLight(light);
-        consumer.addVertex(matrix, x0, HEIGHT, z0)
+        consumer.addVertex(matrix, x0, height, z0)
                 .setColor(red, green, blue, 0.0F).setLight(light);
     }
 }

@@ -1,9 +1,15 @@
 package com.emerald.game;
 
+import com.emerald.main.EmeraldWeaponsMod;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.tick.LevelTickEvent;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -28,6 +34,7 @@ import java.util.Set;
  * qu'on lui donne la marche a suivre -- une ancre qui refuse en donnant le
  * compte des sceaux l'enseigne en une fois.
  */
+@EventBusSubscriber(modid = EmeraldWeaponsMod.MODID)
 public final class SanctuarySeals {
 
     /** Nombre de sceaux par sanctuaire. Trois : assez pour fouiller, pas pour lasser. */
@@ -49,6 +56,55 @@ public final class SanctuarySeals {
 
     public static void clearAll() {
         vaults.clear();
+    }
+
+    /** Le delai avant l'indice, et sa duree. */
+    private static final int HINT_AFTER = 7 * 60 * 20;
+    private static final int HINT_TICKS = 20 * 20;
+
+    /**
+     * Au bout de sept minutes, les sceaux se laissent entrevoir.
+     *
+     * Un coup de main, pas une reponse : ils s'allument vingt secondes, en
+     * bornes courtes visibles a travers la pierre, ce qui dit « fouille par
+     * la » sans dire « c'est ce bloc-ci ». Une enigme qui bloque cesse d'etre
+     * une enigme et devient un mur, et sept minutes suffisent a savoir qu'on
+     * tourne en rond.
+     *
+     * L'indice ne part que pour les sceaux ENCORE endormis, et seulement aupres
+     * de qui est dans l'enceinte : le montrer de l'exterieur reviendrait a
+     * poser un panneau sur la carte.
+     */
+    @SubscribeEvent
+    public static void onLevelTick(LevelTickEvent.Post event) {
+        if (!(event.getLevel() instanceof ServerLevel level)
+                || !level.dimension().equals(Level.OVERWORLD)
+                || vaults.isEmpty()
+                || level.getGameTime() % HINT_AFTER != 0) {
+            return;
+        }
+        for (Vault vault : vaults) {
+            if (vault.lit().size() >= vault.seals().size()) {
+                continue;                      // ce tombeau est ouvert
+            }
+            for (ServerPlayer player : level.players()) {
+                if (player.distanceToSqr(vault.anchor().getX(), player.getY(),
+                        vault.anchor().getZ()) > 120.0 * 120.0) {
+                    continue;
+                }
+                for (BlockPos seal : vault.seals()) {
+                    if (vault.lit().contains(seal)) {
+                        continue;
+                    }
+                    net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player,
+                            new com.emerald.network.AnchorPulsePayload(
+                                    seal.getX(), seal.getY(), seal.getZ(), HINT_TICKS, 6));
+                }
+                player.displayClientMessage(Component.translatable(
+                                "game.emeraldweapons.seal.hint")
+                        .withStyle(net.minecraft.ChatFormatting.LIGHT_PURPLE), false);
+            }
+        }
     }
 
     /**

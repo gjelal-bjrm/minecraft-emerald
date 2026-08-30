@@ -1479,6 +1479,26 @@ public final class Sanctuary {
             end = z;
         }
         vault(level, cx, y, end, rank);
+
+        // Le couloir REPART, etroit, vers le coeur du monument.
+        //
+        // Il s'arretait a la salle du tresor, qui devenait un cul-de-sac : rien
+        // ne disait qu'il y avait autre chose derriere, et personne n'allait
+        // plus loin. Neuf blocs de plus, sur la seule ligne centrale, percent
+        // le mur du fond et laissent entrevoir l'interieur -- c'est le regard
+        // qui donne envie d'entrer, pas une consigne.
+        for (int depth = 1; depth <= 9; depth++) {
+            int z = end - 3 - depth;
+            for (int dy = 1; dy <= 3; dy++) {
+                set(level, cx, y + dy, z, Blocks.AIR.defaultBlockState());
+            }
+            set(level, cx, y, z, trim());
+            set(level, cx, y + 4, z, shrineTrim());
+            if (depth % 4 == 0) {
+                set(level, cx, y + 3, z, lantern());
+            }
+        }
+
         seals(level, cx, y, fromZ, end, anchor, cz - (PYRAMID_CZ - 44));
     }
 
@@ -1544,13 +1564,19 @@ public final class Sanctuary {
         // On ne connait pas le plan de ce batiment : on sonde. Un emplacement
         // valable, c'est deux blocs d'air sur un sol dur, et il ne peut y en
         // avoir que dans une piece.
+        // Un par NIVEAU, et non deux au meme etage : c'est ce qui fait
+        // parcourir le monument de bas en haut au lieu de visiter un palier.
+        // Le premier cherche sous le sol -- la pyramide a ses caves -- le
+        // deuxieme a un etage, le troisieme pres de l'entree, pour que le
+        // premier se trouve sans peine et enseigne ce qu'on cherche.
         int[][] targets = {
-                {cx, apexZ, 22, 34},                   // le puits central, en haut
-                {cx - 18, apexZ + 6, 9, 18},           // l'etage, cote ouest
-                {cx + 18, apexZ + 6, 9, 18},           // l'etage, cote est
+                {cx, apexZ, -18, 4},                   // les salles souterraines
+                {cx, apexZ, 20, 34},                   // le puits central, en haut
+                {cx, apexZ + 22, 1, 7},                // pres de l'entree
         };
         for (int[] t : targets) {
-            BlockPos spot = chamberSpot(level, t[0], t[1], y + t[2], y + t[3]);
+            BlockPos spot = chamberSpot(level, t[0], t[1],
+                    Math.max(level.getMinBuildHeight() + 2, y + t[2]), y + t[3]);
             if (spot == null) {
                 continue;
             }

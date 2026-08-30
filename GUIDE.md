@@ -222,9 +222,14 @@ l'affaire). Elle **se referme toute seule quand vous activez l'ancre** — vous
 ou perdu.
 
 **Les Sceaux du Tombeau.** Trois sceaux dorment **dans les salles de la
-pyramide** : un en haut du puits central, deux de part et d'autre d'un étage
-intermédiaire. Deux lanternes les signalent — il faut les trouver, pas les
-deviner. On entre par le couloir qui s'ouvre au pied de la face sud. **L'ancre du sommet refuse l'arcencium
+pyramide**, un par niveau : un dans les **caves**, un en haut du **puits
+central**, un près de l'**entrée**. Deux lanternes signalent chacun — il faut
+trouver la salle, pas le bloc. On entre par le couloir qui s'ouvre au pied de la
+face sud.
+
+Si au bout de **sept minutes** aucune ancre n'est activée, les sceaux encore
+endormis se laissent entrevoir **vingt secondes à travers la pierre**. Un coup
+de main, pas une réponse : ça dit où fouiller, pas quel bloc toucher. **L'ancre du sommet refuse l'arcencium
 tant qu'ils ne sont pas tous éveillés** — il faut donc descendre avant de
 monter. Un clic droit suffit à en éveiller un, et ils ne se cassent pas à la
 pioche.

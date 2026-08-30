@@ -206,5 +206,6 @@
   "game.emeraldweapons.seal.done": "The tomb falls silent",
   "game.emeraldweapons.seal.done.sub": "The summit anchor will now take arcencium",
   "game.emeraldweapons.anchor.sealed": "The anchor stays deaf: %s seal(s) still sleep inside the pyramid",
-  "game.emeraldweapons.anchor.no_game": "No game running -- /arcencium mode on, then pull the Oath Blade"
+  "game.emeraldweapons.anchor.no_game": "No game running -- /arcencium mode on, then pull the Oath Blade",
+  "game.emeraldweapons.seal.hint": "The tomb stirs: its seals show themselves briefly"
 }

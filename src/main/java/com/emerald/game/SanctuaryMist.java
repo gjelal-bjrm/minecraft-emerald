@@ -107,7 +107,7 @@ public final class SanctuaryMist {
                     net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player,
                             new com.emerald.network.AnchorPulsePayload(
                                     site.anchor().getX(), site.anchor().getY(),
-                                    site.anchor().getZ(), PULSE_TICKS));
+                                    site.anchor().getZ(), PULSE_TICKS, 160));
                     level.playSound(null, player.blockPosition(),
                             net.minecraft.sounds.SoundEvents.BEACON_ACTIVATE,
                             net.minecraft.sounds.SoundSource.AMBIENT, 0.6F, 1.6F);
