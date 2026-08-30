@@ -137,6 +137,37 @@ public class GameCommands {
             return 1;
         }));
 
+        // Declencher l'indice a la main.
+        //
+        // L'indice automatique n'arrive qu'au bout de quatre-vingt-dix
+        // secondes, ce qui est le bon rythme en partie et le mauvais en test :
+        // on ne va pas attendre a chaque construction pour verifier ou les
+        // sceaux sont tombes. La commande donne le meme signal, plus les
+        // coordonnees en clair -- une capture d'ecran de trop a ete perdue a
+        // chercher un sceau que le code savait situer.
+        root.then(Commands.literal("seals").executes(ctx -> {
+            ServerLevel level = ctx.getSource().getServer().overworld();
+            var found = com.emerald.game.SanctuaryMist.nearestAnchor(level,
+                    net.minecraft.core.BlockPos.containing(ctx.getSource().getPosition()));
+            if (found == null) {
+                ctx.getSource().sendFailure(Component.translatable(
+                        "command.emeraldweapons.anchor.none"));
+                return 0;
+            }
+            String where = com.emerald.game.SanctuarySeals.describe(found);
+            if (where.isEmpty()) {
+                ctx.getSource().sendFailure(Component.literal(
+                        "Cette ancre n'a pas de tombeau enregistre."));
+                return 0;
+            }
+            if (ctx.getSource().getEntity() instanceof net.minecraft.server.level.ServerPlayer p) {
+                com.emerald.game.SanctuarySeals.reveal(level, found, p);
+            }
+            final String line = where;
+            ctx.getSource().sendSuccess(() -> Component.literal("Sceaux : " + line), false);
+            return 1;
+        }));
+
         root.then(Commands.literal("goto").executes(ctx -> {
             ServerLevel level = ctx.getSource().getServer().overworld();
             var village = GameState.get(level).village();

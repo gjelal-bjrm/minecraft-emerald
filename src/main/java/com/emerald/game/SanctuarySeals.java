@@ -62,8 +62,15 @@ public final class SanctuarySeals {
     private static final int HINT_AFTER = 90 * 20;
     private static final int HINT_TICKS = 20 * 20;
 
-    /** La borne d'un indice passif, et la colonne d'une revelation demandee. */
-    private static final int HINT_HEIGHT = 6;
+    /**
+     * La colonne d'un sceau montre.
+     *
+     * Une borne de six blocs restait sous la maconnerie : elle traversait bien
+     * les murs, mais il fallait etre dans la bonne salle pour la voir, ce qui
+     * ne sert a rien quand on cherche justement la salle. Trente blocs sortent
+     * du monument et se lisent de la cour.
+     */
+    private static final int HINT_HEIGHT = 30;
     private static final int REVEAL_HEIGHT = 30;
     private static final int REVEAL_TICKS = 15 * 20;
 
@@ -170,6 +177,24 @@ public final class SanctuarySeals {
             return true;
         }
         return false;
+    }
+
+    /** Ou en sont les sceaux de cette ancre, en clair. Vide si l'ancre est libre. */
+    public static String describe(BlockPos anchor) {
+        for (Vault vault : vaults) {
+            if (!vault.anchor().equals(anchor)) {
+                continue;
+            }
+            StringBuilder out = new StringBuilder();
+            for (BlockPos seal : vault.seals()) {
+                out.append(out.isEmpty() ? "" : " | ")
+                        .append(seal.getX()).append(',').append(seal.getY())
+                        .append(',').append(seal.getZ())
+                        .append(vault.lit().contains(seal) ? " eveille" : " endormi");
+            }
+            return out.toString();
+        }
+        return "";
     }
 
     /** Combien de sceaux restent a eveiller pour cette ancre, ou zero. */

@@ -1435,6 +1435,18 @@ public final class Sanctuary {
                     if (!level.getBlockState(new BlockPos(cx, roof + 1, z)).isAir()) {
                         continue;
                     }
+                    // La premiere assise n'est PAS une marche.
+                    //
+                    // Elle est de plain-pied avec le toit : elle ne fait donc
+                    // rien monter, et posait seulement un liseré pale le long
+                    // du parvis, sur toute sa longueur. On la rend a
+                    // l'arcencium -- le parvis s'elargit d'un bloc de chaque
+                    // cote et court d'un seul tenant jusqu'aux marches d'en
+                    // face. Les marches, elles, commencent ou l'on descend.
+                    if (i == 0) {
+                        set(level, x, h, z, shrineTrim());
+                        continue;
+                    }
                     // la marche regarde vers le centre : c'est le sens de la montee
                     set(level, x, h, z, riser(-dir, 0));
                     for (int clear = 1; clear <= 3; clear++) {
