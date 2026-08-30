@@ -559,7 +559,7 @@ public final class Sanctuary {
                     // avec la pierre. Un parapet continu se lit comme une
                     // fortification ; l'eclairage se pose PAR-DESSUS.
                     if (t == 0 || t == THICK - 1) {
-                        set(level, xz[0], y + WALK + 1, xz[1], merlon());
+                        setWall(level, xz[0], y + WALK + 1, xz[1]);
                     }
                 }
             }
@@ -763,8 +763,8 @@ public final class Sanctuary {
         }
         // les deux parapets de cette travee, comme partout ailleurs
         for (int a = -GATE_HALF - 1; a <= GATE_HALF + 1; a++) {
-            set(level, g.x(a, 0), y + WALK + 1, g.z(a, 0), merlon());
-            set(level, g.x(a, -(THICK - 1)), y + WALK + 1, g.z(a, -(THICK - 1)), merlon());
+            setWall(level, g.x(a, 0), y + WALK + 1, g.z(a, 0));
+            setWall(level, g.x(a, -(THICK - 1)), y + WALK + 1, g.z(a, -(THICK - 1)));
         }
         for (int flank = -1; flank <= 1; flank += 2) {
             int a = flank * (GATE_HALF + 2);
@@ -1012,8 +1012,8 @@ public final class Sanctuary {
             // hauteur sur la colonne suivante : la rampe devient une suite
             // continue de paliers qui s'accrochent les uns aux autres.
             int rail = -THICK - 3;
-            set(level, g.x(along, rail), y + step + 1, g.z(along, rail), merlon());
-            set(level, g.x(along + 1, rail), y + step + 1, g.z(along + 1, rail), merlon());
+            setWall(level, g.x(along, rail), y + step + 1, g.z(along, rail));
+            setWall(level, g.x(along + 1, rail), y + step + 1, g.z(along + 1, rail));
         }
         // Le palier, ET le passage vers le chemin de ronde.
         //
@@ -1056,7 +1056,7 @@ public final class Sanctuary {
             }
             // et le parapet exterieur est REPOSE, au cas ou une etape
             // precedente l'aurait entame
-            set(level, g.x(a, 0), y + WALK + 1, g.z(a, 0), merlon());
+            setWall(level, g.x(a, 0), y + WALK + 1, g.z(a, 0));
         }
 
         // La main courante rejoint le rempart.
@@ -1065,7 +1065,7 @@ public final class Sanctuary {
         // le parapet : la rampe paraissait finir dans le vague. Deux blocs de
         // plus a hauteur du chemin de ronde suffisent a fermer la jonction.
         for (int a = from + WALK; a <= from + WALK + 3; a++) {
-            set(level, g.x(a, -THICK - 3), y + WALK + 1, g.z(a, -THICK - 3), merlon());
+            setWall(level, g.x(a, -THICK - 3), y + WALK + 1, g.z(a, -THICK - 3));
         }
         // Et le RETOUR d'equerre, qui rejoint le parapet du rempart.
         //
@@ -1074,8 +1074,8 @@ public final class Sanctuary {
         // tombait dans la cour. On ferme la travee en ramenant les murets
         // perpendiculairement jusqu'au parapet, ou ils se lient a lui.
         for (int d = THICK + 3; d >= THICK - 1; d--) {
-            set(level, g.x(from + WALK + 3, -d), y + WALK + 1,
-                    g.z(from + WALK + 3, -d), merlon());
+            setWall(level, g.x(from + WALK + 3, -d), y + WALK + 1,
+                    g.z(from + WALK + 3, -d));
         }
     }
 
@@ -1301,7 +1301,7 @@ public final class Sanctuary {
                     // Rien par-dessus : le bloc poli qu'on y ajoutait
                     // n'apportait rien qu'une bosse claire. La ceinture de
                     // murets se suffit, puisqu'elle se lie d'elle-meme.
-                    set(level, tx + dx, y + top + 1, tz + dz, merlon());
+                    setWall(level, tx + dx, y + top + 1, tz + dz);
                 }
                 if (shell && (dx == 0 || dz == 0) && radius > 4) {
                     set(level, tx + dx, y + 6, tz + dz, glow());
@@ -1361,6 +1361,23 @@ public final class Sanctuary {
         return block.defaultBlockState()
                 .setValue(StairBlock.FACING, facing)
                 .setValue(StairBlock.HALF, Half.BOTTOM);
+    }
+
+    /**
+     * Pose un MURET, en prevenant ses voisins.
+     *
+     * Tout le reste est pose avec le drapeau 2, qui n'envoie aucune mise a
+     * jour de voisinage -- indispensable quand on ecrit cent mille blocs, sinon
+     * les cascades coutent plus cher que la pose. Mais un muret calcule sa
+     * FORME a partir de ses voisins : pose ainsi, il reste dans son etat par
+     * defaut, c'est-a-dire un poteau isole, et ne se relie jamais a celui qu'on
+     * pose juste apres. D'ou ces alignements de piquets qui ne se touchent pas.
+     *
+     * Ils sont assez peu nombreux -- le parapet et les mains courantes -- pour
+     * qu'on puisse leur payer le drapeau 3.
+     */
+    private static void setWall(ServerLevel level, int x, int y, int z) {
+        level.setBlock(new BlockPos(x, y, z), merlon(), 3);
     }
 
     private static void set(ServerLevel level, int x, int y, int z, BlockState state) {
