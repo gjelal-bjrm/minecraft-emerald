@@ -61,8 +61,14 @@ public final class Sanctuary {
     private static final int TOWER_RADIUS = 7;
     private static final int TOWER_TOP = 32;
 
-    private static final int GATE_HALF = 3;
-    private static final int GATE_HEIGHT = 7;
+    /**
+     * L'ouverture est taillee sur la Porte du Sceau, pas l'inverse.
+     *
+     * Le releve de son NBT donne cinq blocs de large et huit de haut : c'est
+     * elle qui commande, et une baie trop etroite l'aurait tronquee.
+     */
+    private static final int GATE_HALF = SealDoor.WIDTH / 2;
+    private static final int GATE_HEIGHT = SealDoor.HEIGHT;
 
     private Sanctuary() {
     }
@@ -572,20 +578,22 @@ public final class Sanctuary {
 
         // le sommet
         floorDisc(level, tx, y + TOWER_TOP, tz, r - 1, 2.6);
+        // La lanterne PLANAIT : elle etait posee au-dessus du puits d'escalier,
+        // c'est-a-dire au-dessus du vide. On lui donne un socle.
+        set(level, tx, y + TOWER_TOP, tz, shrineTrim());
         set(level, tx, y + TOWER_TOP + 1, tz, lantern());
 
-        // Les deux entrees, a hauteur du chemin de ronde et sur TOUTE son
-        // epaisseur : c'est le decalage d'un bloc qui interdisait d'entrer.
-        for (int dy = WALK; dy <= WALK + 2; dy++) {
-            for (int d = -r - 1; d <= r + 1; d++) {
-                for (int w = -1; w <= 1; w++) {
-                    if (Math.abs(d) <= r + 1 && Math.abs(d) > 1) {
-                        set(level, tx + d, y + dy, tz + w, Blocks.AIR.defaultBlockState());
-                        set(level, tx + w, y + dy, tz + d, Blocks.AIR.defaultBlockState());
-                    }
-                }
-            }
-        }
+        // Les portes : DES PORTES, pas des breches.
+        //
+        // La version precedente evidait la paroi sur tout le diametre et sur
+        // trois hauteurs : une croix beante par laquelle on tombait du haut du
+        // rempart. Ce sont maintenant deux baies de trois de large sur trois de
+        // haut, percees uniquement dans la coque, cote courtines.
+        doorway(level, tx, y + WALK, tz, r, true);
+        doorway(level, tx, y + WALK, tz, r, false);
+        // et deux au ras du sol, cote cour : on entre par le bas
+        doorway(level, tx, y + 1, tz, r, true);
+        doorway(level, tx, y + 1, tz, r, false);
     }
 
     /**
@@ -620,17 +628,34 @@ public final class Sanctuary {
      */
     private static void spiral(ServerLevel level, int tx, int y, int tz,
                                int height, double radius) {
-        double perStep = Math.PI * 2 / 16.0;
+        // Le nombre de marches par tour se DEDUIT du rayon, il n'est pas fixe.
+        //
+        // Seize marches convenaient a un rayon de trois ; sur un rayon de deux,
+        // elles retombaient a la meme case une fois arrondies -- une pile
+        // verticale qu'on ne peut pas gravir. On vise un arc constant d'environ
+        // un bloc et quart entre deux marches, quel que soit le rayon.
+        int perTurn = Math.max(6, (int) Math.round(Math.PI * 2 * radius / 1.25));
+        double perStep = Math.PI * 2 / perTurn;
+        int lastX = Integer.MIN_VALUE;
+        int lastZ = Integer.MIN_VALUE;
         for (int step = 1; step <= height; step++) {
             double angle = step * perStep;
-            for (double rad : new double[]{radius, radius - 1.2}) {
-                int sx = tx + (int) Math.round(Math.cos(angle) * rad);
-                int sz = tz + (int) Math.round(Math.sin(angle) * rad);
-                set(level, sx, y + step, sz, trim());
-                for (int clear = 1; clear <= 3; clear++) {
-                    set(level, sx, y + step + clear, sz, Blocks.AIR.defaultBlockState());
+            int sx = tx + (int) Math.round(Math.cos(angle) * radius);
+            int sz = tz + (int) Math.round(Math.sin(angle) * radius);
+            set(level, sx, y + step, sz, trim());
+            // la marche precedente est prolongee : deux cases par palier, sinon
+            // la vis se prend de biais et l'on rate une marche sur deux
+            if (lastX != Integer.MIN_VALUE && (lastX != sx || lastZ != sz)) {
+                set(level, lastX, y + step, lastZ, trim());
+            }
+            for (int clear = 1; clear <= 3; clear++) {
+                set(level, sx, y + step + clear, sz, Blocks.AIR.defaultBlockState());
+                if (lastX != Integer.MIN_VALUE) {
+                    set(level, lastX, y + step + clear, lastZ, Blocks.AIR.defaultBlockState());
                 }
             }
+            lastX = sx;
+            lastZ = sz;
         }
     }
 
@@ -657,6 +682,14 @@ public final class Sanctuary {
 
         BlockPos centre(int y) {
             return new BlockPos(this.ox, y, this.oz);
+        }
+
+        /** La direction vers le dehors : celle que la porte doit regarder. */
+        Direction outward() {
+            if (this.nx != 0) {
+                return this.nx > 0 ? Direction.EAST : Direction.WEST;
+            }
+            return this.nz > 0 ? Direction.SOUTH : Direction.NORTH;
         }
     }
 
@@ -693,7 +726,29 @@ public final class Sanctuary {
                     }
                 }
             }
-            set(level, g.x(seat, 0), y + TOWER_TOP - 1, g.z(seat, 0), lantern());
+            // Les tours du corps de garde etaient CREUSES ET VIDES : ni
+            // plancher, ni escalier, ni porte. On y tombait, quand on arrivait
+            // a y entrer. Elles recoivent le meme traitement que les tours
+            // d'angle, a leur echelle.
+            int bx = g.x(seat, 0);
+            int bz = g.z(seat, 0);
+            for (int dy = 1; dy <= TOWER_TOP - 2; dy++) {
+                set(level, bx, y + dy, bz, dy % 5 == 0 ? shrineTrim() : tower());
+            }
+            for (int landing = 5; landing < TOWER_TOP - 3; landing += 5) {
+                floorDisc(level, bx, y + landing, bz, 2.4, 1.1);
+            }
+            floorDisc(level, bx, y + WALK - 1, bz, 2.4, 1.1);
+            floorDisc(level, bx, y + TOWER_TOP - 2, bz, 2.4, 1.1);
+            spiral(level, bx, y, bz, TOWER_TOP - 4, 2.0);
+            // une porte au chemin de ronde, une au ras de la cour
+            doorway(level, bx, y + WALK, bz, 3, true);
+            doorway(level, bx, y + WALK, bz, 3, false);
+            doorway(level, bx, y + 1, bz, 3, true);
+            doorway(level, bx, y + 1, bz, 3, false);
+
+            set(level, bx, y + TOWER_TOP - 2, bz, shrineTrim());
+            set(level, bx, y + TOWER_TOP - 1, bz, lantern());
         }
 
         // la voute : un arc, pas un linteau plat
@@ -747,7 +802,12 @@ public final class Sanctuary {
         BlockState handle = crank != null ? crank : Blocks.LEVER.defaultBlockState();
         set(level, g.x(GATE_HALF + 2, -1), y + WALK, g.z(GATE_HALF + 2, -1), handle);
 
-        SanctuaryGate.register(g.centre(y), GATE_HALF, GATE_HEIGHT, g.ax(), g.az());
+        Direction outward = g.outward();
+        if (SealDoor.available()) {
+            SealDoor.place(level, g.centre(y).above(), outward, false);
+        }
+        SanctuaryGate.register(g.centre(y), GATE_HALF, GATE_HEIGHT,
+                g.ax(), g.az(), outward);
         SanctuaryGate.close(level, g.centre(y));
     }
 
@@ -899,6 +959,36 @@ public final class Sanctuary {
     /** La pierre du dallage secondaire : le damier a besoin de deux teintes. */
     private static BlockState walkStone() {
         return ModBlocks.GANGUE_STONE.get().defaultBlockState();
+    }
+
+
+    /**
+     * Une baie percee dans la coque d'une tour, sur un axe.
+     *
+     * Trois de large et trois de haut, et RIEN de plus : evider tout le
+     * diametre transformait la tour en carrefour ouvert d'ou l'on tombait.
+     * L'encadrement en pierre taillee dit que c'est une porte et non un trou.
+     */
+    private static void doorway(ServerLevel level, int tx, int y, int tz,
+                                int r, boolean alongX) {
+        for (int side = -1; side <= 1; side += 2) {
+            for (int w = -1; w <= 1; w++) {
+                for (int dy = 0; dy < 3; dy++) {
+                    // on ne perce que la coque : deux blocs d'epaisseur suffisent
+                    for (int t = 0; t < 2; t++) {
+                        int off = side * (r - t);
+                        int px = alongX ? tx + off : tx + w;
+                        int pz = alongX ? tz + w : tz + off;
+                        set(level, px, y + dy, pz, Blocks.AIR.defaultBlockState());
+                    }
+                }
+                // le linteau, qui referme proprement au-dessus
+                int off = side * r;
+                int px = alongX ? tx + off : tx + w;
+                int pz = alongX ? tz + w : tz + off;
+                set(level, px, y + 3, pz, shrineTrim());
+            }
+        }
     }
 
     // ----------------------------------------------------------- outillage

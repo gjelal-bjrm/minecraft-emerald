@@ -2,6 +2,7 @@ package com.emerald.game;
 
 import com.emerald.main.EmeraldWeaponsMod;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
@@ -36,7 +37,8 @@ import java.util.Map;
 @EventBusSubscriber(modid = EmeraldWeaponsMod.MODID)
 public final class SanctuaryGate {
 
-    private record Gate(int half, int height, int ax, int az, boolean open) {
+    private record Gate(int half, int height, int ax, int az,
+                        Direction facing, boolean open) {
     }
 
     /** Volatil, comme les sieges : une porte se retrouve, elle ne se sauve pas. */
@@ -48,8 +50,9 @@ public final class SanctuaryGate {
     private SanctuaryGate() {
     }
 
-    public static void register(BlockPos centre, int half, int height, int ax, int az) {
-        gates.put(centre.immutable(), new Gate(half, height, ax, az, true));
+    public static void register(BlockPos centre, int half, int height,
+                                int ax, int az, Direction facing) {
+        gates.put(centre.immutable(), new Gate(half, height, ax, az, facing, true));
     }
 
     public static void clearAll() {
@@ -101,16 +104,21 @@ public final class SanctuaryGate {
         if (gate == null || gate.open() == open) {
             return;
         }
-        gates.put(centre, new Gate(gate.half(), gate.height(), gate.ax(), gate.az(), open));
+        gates.put(centre, new Gate(gate.half(), gate.height(), gate.ax(), gate.az(),
+                gate.facing(), open));
 
-        // la herse suit l'AXE de son mur : les quatre portes n'ont pas toutes
-        // la meme orientation, et une herse posee sur l'axe des x en boucherait
-        // une sur deux de travers
-        for (int a = -gate.half(); a <= gate.half(); a++) {
-            for (int dy = 1; dy <= gate.height(); dy++) {
-                BlockPos pos = centre.offset(gate.ax() * a, dy, gate.az() * a);
-                level.setBlock(pos, open ? Blocks.AIR.defaultBlockState()
-                        : latticeAt(a, dy), 3);
+        if (SealDoor.available()) {
+            // La VRAIE porte : celle de Cataclysm, qu'on ouvre par sa propriete
+            // plutot qu'en retirant des blocs. C'est son propre mecanisme qui
+            // joue, et non une imitation.
+            SealDoor.setOpen(level, centre.above(), gate.facing(), open);
+        } else {
+            for (int a = -gate.half(); a <= gate.half(); a++) {
+                for (int dy = 1; dy <= gate.height(); dy++) {
+                    BlockPos pos = centre.offset(gate.ax() * a, dy, gate.az() * a);
+                    level.setBlock(pos, open ? Blocks.AIR.defaultBlockState()
+                            : latticeAt(a, dy), 3);
+                }
             }
         }
         level.playSound(null, centre, SoundEvents.CHAIN_PLACE, SoundSource.BLOCKS, 2.0F,

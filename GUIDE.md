@@ -214,10 +214,12 @@ Chaque ancre est au **sommet d'une pyramide**, dans une place forte : muraille
 de 67 blocs de côté avec chemin de ronde et créneaux, quatre tours d'angle, et
 un corps de garde au sud fermé par une **herse**.
 
-La herse est baissée à l'arrivée. On l'ouvre en tournant la **manivelle** sur le
-rempart, à droite de la porte (à défaut, un levier fait l'affaire). Elle
-**retombe toute seule quand vous activez l'ancre** — vous êtes enfermé avec ce
-qui arrive — et se rouvre quand le siège est fini, gagné ou perdu.
+Chaque porte est une **Porte du Sceau** (celle de Cataclysm, 5 blocs de large
+sur 8 de haut). Elle est fermée à l'arrivée. On l'ouvre en tournant la
+**manivelle** sur le rempart, à droite de la porte (à défaut, un levier fait
+l'affaire). Elle **se referme toute seule quand vous activez l'ancre** — vous
+êtes enfermé avec ce qui arrive — et se rouvre quand le siège est fini, gagné
+ou perdu.
 
 Des **gardiens** tiennent les lieux avant vous : deux par tour d'angle, d'autres
 sur le chemin de ronde et autour de la pyramide. Ils ne quittent pas le
