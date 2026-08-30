@@ -20,14 +20,14 @@ import java.util.Comparator;
 import java.util.List;
 
 /**
- * Fouet d'Arcencium -- la Morsure d'Orage.
+ * Griffes d'Arcencium -- la Morsure d'Orage.
  *
  * Quatrieme membre de la famille, et le premier qui ne soit ni lame ni corde.
- * L'epee est la Fureur, l'arc la Tension, le sceptre la Concorde ; le fouet est
+ * L'epee est la Fureur, l'arc la Tension, le sceptre la Concorde ; les griffes sont
  * l'acharnement. Il ne recompense pas la frappe juste mais la frappe QUI NE
  * S'ARRETE PAS, ce qui en fait une arme d'un temperament oppose aux trois
- * autres : lachez la pression une poignee de secondes et vous tenez un bout de
- * lanière sans force.
+ * autres : lachez la pression une poignee de secondes et vous ne tenez plus
+ * que de la ferraille.
  *
  * LA CHARGE D'ORAGE gouverne tout. Chaque coup au corps a corps en ajoute une,
  * jusqu'a cinq ; quatre secondes sans toucher personne et l'orage retombe d'un
@@ -46,7 +46,7 @@ import java.util.List;
  * Le prix de tout cela est a la forge : quatre lingots d'Arcencium, un bloc
  * d'emeraude, et de quoi tresser la laniere. On ne tombe pas dessus par hasard.
  */
-public class ArcenciumLashItem extends Item {
+public class ArcenciumTalonsItem extends Item {
 
     // --- la Charge d'Orage
     public static final int CHARGE_MAX = 5;
@@ -66,15 +66,26 @@ public class ArcenciumLashItem extends Item {
     /** Ce que chaque cran de charge retranche au rechargement. */
     private static final int DASH_PER_CHARGE = 24;        // 1,2 s
     private static final int DASH_FLOOR = 3 * 20;
+    /**
+     * Ce qu'il reste du rechargement quand la Ruee a TUE.
+     *
+     * C'est la boucle refermee une seconde fois. La charge raccourcissait deja
+     * la Ruee, mais elle se gagne au corps a corps : rien ne recompensait le
+     * bond lui-meme, et un bond rate coutait autant qu'un bond qui emporte
+     * tout. A trente-cinq pour cent, une charge qui fauche relance presque
+     * aussitot -- on peut enchainer les bonds tant qu'on ne manque pas sa
+     * cible, et c'est exactement la promesse d'une arme d'acharnement.
+     */
+    private static final double DASH_KILL_KEEP = 0.35;
     private static final double DASH_POWER = 1.85;
     private static final double DASH_LIFT = 0.32;
     private static final float DASH_DAMAGE = 7.0F;
     private static final double DASH_WIDTH = 1.6;
 
-    private static final String TAG_CHARGE = "ArcenciumLashCharge";
-    private static final String TAG_LAST_HIT = "ArcenciumLashLastHit";
+    private static final String TAG_CHARGE = "ArcenciumTalonsCharge";
+    private static final String TAG_LAST_HIT = "ArcenciumTalonsLastHit";
 
-    public ArcenciumLashItem(Properties properties) {
+    public ArcenciumTalonsItem(Properties properties) {
         super(properties);
     }
 
@@ -117,8 +128,9 @@ public class ArcenciumLashItem extends Item {
         Vec3 look = player.getLookAngle().normalize();
         Vec3 from = player.position();
 
+        boolean killed = false;
         if (level instanceof ServerLevel server) {
-            dashDamage(server, player, from, look, charge);
+            killed = dashDamage(server, player, from, look, charge);
             stack.hurtAndBreak(3, player, LivingEntity.getSlotForHand(hand));
         }
 
@@ -135,8 +147,16 @@ public class ArcenciumLashItem extends Item {
         // un bond n'est pas une chute : on efface l'elan accumule
         player.resetFallDistance();
 
-        int cooldown = Math.max(DASH_FLOOR, DASH_COOLDOWN - charge * DASH_PER_CHARGE);
-        player.getCooldowns().addCooldown(this, cooldown);
+        // Le rechargement ne se pose QUE cote serveur : ServerItemCooldowns
+        // en avertit le client de lui-meme, tandis qu'un calcul cote client ne
+        // saurait rien de la mise a mort et afficherait un autre chiffre.
+        if (!level.isClientSide) {
+            int cooldown = Math.max(DASH_FLOOR, DASH_COOLDOWN - charge * DASH_PER_CHARGE);
+            if (killed) {
+                cooldown = (int) Math.round(cooldown * DASH_KILL_KEEP);
+            }
+            player.getCooldowns().addCooldown(this, cooldown);
+        }
         level.playSound(null, player.getX(), player.getY(), player.getZ(),
                 SoundEvents.LIGHTNING_BOLT_THUNDER, SoundSource.PLAYERS,
                 0.5F, 1.6F + charge * 0.06F);
@@ -151,15 +171,21 @@ public class ArcenciumLashItem extends Item {
      * demanderait un etat par joueur, une file a purger et un cas de sortie
      * pour la deconnexion, tout cela pour une boite que l'on sait deja tracer.
      */
-    private void dashDamage(ServerLevel level, Player player, Vec3 from, Vec3 look, int charge) {
+    private boolean dashDamage(ServerLevel level, Player player, Vec3 from, Vec3 look,
+                               int charge) {
         Vec3 to = from.add(look.scale(DASH_POWER * 7.0));
         AABB corridor = new AABB(from, to).inflate(DASH_WIDTH);
         float damage = DASH_DAMAGE + charge * BITE_PER_CHARGE;
 
+        boolean killed = false;
         for (Entity entity : level.getEntities(player, corridor,
                 e -> e instanceof LivingEntity && e.isAlive() && !e.isAlliedTo(player))) {
             entity.hurt(level.damageSources().lightningBolt(), damage);
             spark(level, entity);
+            // on releve la mise a mort APRES le coup : c'est elle qui paie
+            if (entity instanceof LivingEntity hit && hit.isDeadOrDying()) {
+                killed = true;
+            }
         }
 
         // la trainee, une gerbe tous les demi-blocs du couloir traverse
@@ -168,6 +194,7 @@ public class ArcenciumLashItem extends Item {
             level.sendParticles(ParticleTypes.ELECTRIC_SPARK,
                     at.x, at.y + 1.0, at.z, 4, 0.25, 0.4, 0.25, 0.06);
         }
+        return killed;
     }
 
     // ------------------------------------------------------------ clic gauche

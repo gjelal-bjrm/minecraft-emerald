@@ -208,5 +208,5 @@
   "game.emeraldweapons.anchor.sealed": "The anchor stays deaf: %s seal(s) still sleep inside the pyramid",
   "game.emeraldweapons.anchor.no_game": "No game running -- /arcencium mode on, then pull the Oath Blade",
   "game.emeraldweapons.seal.hint": "The tomb stirs: its seals show themselves briefly",
-  "item.emeraldweapons.arcencium_lash": "Arcencium Lash"
+  "item.emeraldweapons.arcencium_talons": "Arcencium Talons"
 }

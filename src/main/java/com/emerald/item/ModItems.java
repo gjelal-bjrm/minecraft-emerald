@@ -2,7 +2,7 @@ package com.emerald.item;
 
 import com.emerald.tiers.EmeraldTier;
 import com.emerald.weapons.ArcenciumBowItem;
-import com.emerald.weapons.ArcenciumLashItem;
+import com.emerald.weapons.ArcenciumTalonsItem;
 import com.emerald.weapons.ArcenciumScepterItem;
 import com.emerald.weapons.EmeraldWindblade;
 import com.emerald.main.EmeraldWeaponsMod;
@@ -42,15 +42,15 @@ public class ModItems {
                     new ArcenciumScepterItem(new Item.Properties().durability(900)));
 
     /**
-     * Fouet d'Arcencium -- la Morsure d'Orage (voir ArcenciumLashItem).
+     * Fouet d'Arcencium -- la Morsure d'Orage (voir ArcenciumTalonsItem).
      *
      * Rapide la ou l'epee est lourde : -1,9 contre -2,2, et deux points de
      * degats de base en moins. Tout ce qui lui manque au repos, la Charge
      * d'Orage le lui rend -- a condition de ne pas cesser de frapper.
      */
-    public static final DeferredItem<ArcenciumLashItem> ARCENCIUM_LASH =
-            ITEMS.register("arcencium_lash", () ->
-                    new ArcenciumLashItem(new Item.Properties()
+    public static final DeferredItem<ArcenciumTalonsItem> ARCENCIUM_TALONS =
+            ITEMS.register("arcencium_talons", () ->
+                    new ArcenciumTalonsItem(new Item.Properties()
                             .durability(1250)
                             .rarity(net.minecraft.world.item.Rarity.EPIC)
                             .attributes(SwordItem.createAttributes(
