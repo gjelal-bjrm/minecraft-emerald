@@ -6,6 +6,7 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.Block;
@@ -171,10 +172,8 @@ public final class Sanctuary {
     /**
      * Bâtit le sanctuaire. La pyramide vient de Cataclysm, le reste est a nous.
      *
-     * @return la position de l'ancre
-     */
-    /**
      * @param tier 1 a 3 : la difficulte de l'ancre, donc la richesse du butin
+     * @return la position de l'ancre
      */
     public static BlockPos build(ServerLevel level, CommandSourceStack source,
                                  BlockPos ground, int tier) {
@@ -239,6 +238,19 @@ public final class Sanctuary {
         BlockPos anchor = crown(level, cx, summit, apexZ, rank);
         SanctuaryGarrison.populate(level, new BlockPos(cx, y, cz), HALF);
         SanctuaryMist.register(new BlockPos(cx, y, cz), HALF, anchor);
+
+        // Un compte rendu, plutot qu'une devinette de plus.
+        //
+        // « le bloc manque » s'est repete trois fois sans que rien, ni dans le
+        // journal ni a l'ecran, ne dise POURQUOI. On rapporte donc les trois
+        // faits qui separent les hypotheses : la pyramide s'est-elle dressee,
+        // a quelle hauteur le sommet a ete trouve, et quel bloc occupe
+        // reellement la case de l'ancre.
+        BlockState found = level.getBlockState(anchor);
+        String occupant = BuiltInRegistries.BLOCK.getKey(found.getBlock()).toString();
+        source.sendSuccess(() -> Component.literal(String.format(
+                "Sol %d | sommet %d | pyramide %s | a l'ancre : %s",
+                y, summit, summit > y + 12 ? "dressee" : "ABSENTE", occupant)), false);
         return anchor;
     }
 
