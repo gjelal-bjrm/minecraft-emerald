@@ -1,0 +1,45 @@
+{
+  "parent": "minecraft:item/handheld",
+  "textures": {
+    "layer0": "emeraldweapons:item/arcencium_cleaver_0"
+  },
+  "_comment": "charge = la Rage, de 0 a 1. Les cinq entailles du dos s'allument une a une a mesure qu'on frappe, et s'eteignent toutes ensemble quand la Rage retombe ou qu'on la depense en Curee.",
+  "overrides": [
+    {
+      "predicate": {
+        "emeraldweapons:charge": 0.0
+      },
+      "model": "emeraldweapons:item/arcencium_cleaver_0"
+    },
+    {
+      "predicate": {
+        "emeraldweapons:charge": 0.2
+      },
+      "model": "emeraldweapons:item/arcencium_cleaver_1"
+    },
+    {
+      "predicate": {
+        "emeraldweapons:charge": 0.4
+      },
+      "model": "emeraldweapons:item/arcencium_cleaver_2"
+    },
+    {
+      "predicate": {
+        "emeraldweapons:charge": 0.6
+      },
+      "model": "emeraldweapons:item/arcencium_cleaver_3"
+    },
+    {
+      "predicate": {
+        "emeraldweapons:charge": 0.8
+      },
+      "model": "emeraldweapons:item/arcencium_cleaver_4"
+    },
+    {
+      "predicate": {
+        "emeraldweapons:charge": 1.0
+      },
+      "model": "emeraldweapons:item/arcencium_cleaver_full"
+    }
+  ]
+}
