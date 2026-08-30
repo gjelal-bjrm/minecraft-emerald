@@ -1,24 +1,22 @@
 #!/usr/bin/env python3
 """
-Texture des Brassards d'Arcencium.
+Textures des Brassards d'Arcencium, pour un modele EN VOLUME.
 
-Quatre formes ont precede celle-ci, et la derniere echouait sur un point que
-je n'avais pas compris : je dessinais UNE lame, avec une garde et un manche.
-Or ces lames-la ne se tiennent pas, elles se SANGLENT -- elles prolongent
-l'avant-bras au lieu de sortir du poing -- et il y en a DEUX, une par bras.
-Tant que le dessin gardait un manche, il restait une epee quelle que soit sa
-largeur.
+Quatre silhouettes plates ont echoue avant celle-ci, et la derniere a montre
+pourquoi : une image plate tenue en main ne pourra JAMAIS paraitre sanglee a
+l'avant-bras. Minecraft affiche un objet ordinaire comme un panneau sortant du
+poing -- c'est vrai de l'epee comme de la carotte. Aucun dessin ne corrige cela,
+parce que ce n'est pas un probleme de dessin.
 
-D'ou la paire croisee. Deux brassards, deux lames qui partent en sens opposes,
-et rien qui ressemble a une poignee : au premier coup d'oeil dans l'inventaire,
-c'est un equipement, pas une arme blanche. Le X remplit la tuile jusqu'aux
-quatre coins, ce qui repond aussi a « petit ».
+On ne fabrique donc plus une image mais un OBJET : des boites, placees le long
+du bras, comme le bouclier ou le trident. Ce fichier ne produit plus une
+silhouette mais les deux MATIERES que ces boites portent :
 
-Six etats, un par cran de Rage : les cinq rivets des brassards s'allument un a
-un -- trois sur l'un, deux sur l'autre. Chaque etat est anime sur douze images ;
-les tranchants et les rivets font tourner leur teinte, comme la lame de l'epee,
-la corde de l'arc et le cristal du sceptre. Le cuir et l'acier ne bougent pas :
-ce qui vit doit se detacher de ce qui ne vit pas.
+  vambrace_bracer_0..5 : le fourreau de cuir cercle d'acier. Six etats, un par
+                         cran de Rage, ses cinq rivets s'allumant un a un.
+  vambrace_blade       : la lame. Sombre, avec la veine irisee le long du
+                         tranchant, animee sur douze images comme la lame de
+                         l'epee et le cristal du sceptre.
 
 Usage :
     python tools/vambrace_texture.py [--preview]
@@ -31,162 +29,111 @@ import sys
 from PIL import Image
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from scepter_mockups import (S, DARK, SHAFT, SHAFT_HI, GOLD_D, GOLD_M,  # noqa: E402
-                             GOLD_L, outline)
+from scepter_mockups import DARK, SHAFT, SHAFT_HI, GOLD_D, GOLD_M, GOLD_L  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ITEM_DIR = os.path.join(ROOT, "src", "main", "resources", "assets",
                         "emeraldweapons", "textures", "item")
 PREVIEW = os.path.join(ROOT, "tools", "preview")
 
+T = 16                 # une face de boite : seize pixels suffisent
 NFRAMES = 12
 FRAMETIME = 3
-NAME = "arcencium_vambraces"
-
 LEATHER = (0x3A, 0x25, 0x0C)
+LEATHER_HI = (0x50, 0x34, 0x12)
 
-# Les deux pieces. Chacune : le talon du brassard, la pointe de la lame, et le
-# cote vers lequel le ventre se renfle.
-#
-# PARALLELES ET DECALEES, et non croisees. Croisees, leurs ventres se
-# rejoignaient au centre et les deux lames fondaient en une seule masse en V --
-# on lisait un oiseau, pas une paire. Decalees le long de la meme diagonale,
-# chacune garde son contour, et la repetition de la MEME forme est precisement
-# ce qui dit « il y en a deux ».
-UNITS = [
-    {"heel": (2, 20), "tip": (21, 2), "side": +1, "rivets": 3},
-    {"heel": (10, 30), "tip": (29, 12), "side": +1, "rivets": 2},
-]
-
-BULGE = 5.2
-BRACER_LEN = 11.0       # ce que le brassard occupe, depuis le talon
-BRACER_HALF = 3.0
+# Les cinq rivets, en colonne sur le fourreau.
+RIVETS = [(4, 3), (7, 3), (10, 3), (5, 12), (10, 12)]
 
 
-def put(dst, x, y, color):
-    x, y = int(round(x)), int(round(y))
-    if 0 <= x < S and 0 <= y < S:
-        dst[x, y] = color + (255,) if len(color) == 3 else color
-
-
-def axes(unit):
-    """Le vecteur de la piece, sa longueur, et sa normale cote ventre."""
-    (hx, hy), (tx, ty) = unit["heel"], unit["tip"]
-    dx, dy = tx - hx, ty - hy
-    length = (dx * dx + dy * dy) ** 0.5
-    ux, uy = dx / length, dy / length
-    nx, ny = -uy * unit["side"], ux * unit["side"]
-    return (hx, hy), (ux, uy), (nx, ny), length
-
-
-def blade(dst, unit, shift):
-    """La lame, a partir du bout du brassard : dos droit, ventre renfle."""
-    (hx, hy), (ux, uy), (nx, ny), length = axes(unit)
-    start = BRACER_LEN
-    steps = int((length - start) * 4)
-    for i in range(steps + 1):
-        t = i / steps
-        along = start + (length - start) * t
-        bx, by = hx + ux * along, hy + uy * along
-        # nul au raccord et a la pointe, maximal au premier tiers
-        width = BULGE * (t ** 0.4) * ((1.0 - t) ** 0.5) * 2.7
-        k = 0.0
-        while k <= width:
-            px, py = bx + nx * k, by + ny * k
-            edge = k / max(0.8, width)
-            if edge > 0.88:
-                hue = (shift + t * 0.5 + unit["side"] * 0.12) % 1.0
-                r, g, b = colorsys.hsv_to_rgb(hue, 0.55, 1.0)
-                put(dst, px, py, (int(r * 255), int(g * 255), int(b * 255)))
-            elif edge > 0.66:
-                put(dst, px, py, SHAFT_HI)
-            elif edge > 0.32:
-                put(dst, px, py, SHAFT)
-            else:
-                put(dst, px, py, DARK)
-            k += 0.5
-        put(dst, bx, by, SHAFT_HI)          # le dos, en arete claire
-
-
-def bracer(dst, unit):
+def bracer(lit):
     """
-    Le brassard : le fourreau de cuir cercle d'acier qui prend l'avant-bras.
+    Le fourreau : cuir tresse, cercles d'acier, cinq rivets.
+
+    La meme image habille les six faces de la boite. C'est volontaire : un
+    brassard est enroule, donc identique de tous les cotes, et cela evite six
+    dessins qu'on ne verrait jamais ensemble.
     """
-    (hx, hy), (ux, uy), (nx, ny), _ = axes(unit)
-    for i in range(int(BRACER_LEN * 4) + 1):
-        along = i / 4.0
-        bx, by = hx + ux * along, hy + uy * along
-        k = -BRACER_HALF
-        while k <= BRACER_HALF:
-            px, py = bx + nx * k, by + ny * k
-            rim = abs(k) > BRACER_HALF - 1.0
-            band = int(along) % 4 == 0        # les cercles d'acier
-            put(dst, px, py, GOLD_D if rim else (GOLD_M if band else LEATHER))
-            k += 0.5
-    # la lumiere sur l'arete haute, pour que le fourreau ait du volume
-    for i in range(int(BRACER_LEN * 4) + 1):
-        along = i / 4.0
-        put(dst, hx + ux * along - nx * BRACER_HALF,
-            hy + uy * along - ny * BRACER_HALF, GOLD_L)
-
-
-def rivets(dst, lit, shift):
-    """Les cinq rivets, trois sur un brassard et deux sur l'autre."""
-    done = 0
-    for unit in UNITS:
-        (hx, hy), (ux, uy), (nx, ny), _ = axes(unit)
-        for j in range(unit["rivets"]):
-            along = 2.5 + j * 3.2
-            bx, by = hx + ux * along, hy + uy * along
-            if done < lit:
-                hue = (shift + done * 0.15) % 1.0
-                r, g, b = colorsys.hsv_to_rgb(hue, 0.66, 1.0)
-                color = (int(r * 255), int(g * 255), int(b * 255))
-                put(dst, bx, by, color)
-                put(dst, bx + nx, by + ny, tuple(int(c * 0.68) for c in color))
+    img = Image.new("RGBA", (T, T), (0, 0, 0, 255))
+    px = img.load()
+    for y in range(T):
+        for x in range(T):
+            if y in (0, T - 1) or y in (5, 6, 9, 10):
+                px[x, y] = GOLD_M + (255,) if y % 2 == 0 else GOLD_D + (255,)
             else:
-                put(dst, bx, by, GOLD_D)
-            done += 1
+                px[x, y] = (LEATHER_HI if (x + y) % 3 == 0 else LEATHER) + (255,)
+    for i, (x, y) in enumerate(RIVETS):
+        if i < lit:
+            hue = (i * 0.15) % 1.0
+            r, g, b = colorsys.hsv_to_rgb(hue, 0.66, 1.0)
+            px[x, y] = (int(r * 255), int(g * 255), int(b * 255), 255)
+            px[x, y + 1] = (int(r * 160), int(g * 160), int(b * 160), 255)
+        else:
+            px[x, y] = GOLD_D + (255,)
+            px[x, y + 1] = (0x30, 0x22, 0x08, 255)
+    return img
 
 
-def frame(lit, shift):
-    img = Image.new("RGBA", (S, S), (0, 0, 0, 0))
-    dst = img.load()
-    # la piece du fond d'abord, pour que celle du dessus la recouvre proprement
-    for unit in reversed(UNITS):
-        blade(dst, unit, shift)
-        bracer(dst, unit)
-    rivets(dst, lit, shift)
-    # le cerne noir de rigueur en pixel art : sans lui, une silhouette posee
-    # sur l'inventaire se dissout dans ce qu'il y a derriere
-    return outline(img)
+def blade(shift):
+    """
+    La lame : corps sombre, veine irisee le long du tranchant.
+
+    Le tranchant est EN HAUT de l'image, et les faces du modele sont orientees
+    pour qu'il tombe du bon cote. Teinter toute la lame donnerait un ruban --
+    c'est le contraste sombre/veine qui fait lire du metal, comme sur l'epee.
+    """
+    img = Image.new("RGBA", (T, T), (0, 0, 0, 255))
+    px = img.load()
+    for y in range(T):
+        for x in range(T):
+            if y <= 1:
+                hue = (shift + x / float(T) * 0.5) % 1.0
+                r, g, b = colorsys.hsv_to_rgb(hue, 0.55, 1.0 if y == 0 else 0.7)
+                px[x, y] = (int(r * 255), int(g * 255), int(b * 255), 255)
+            elif y <= 3:
+                px[x, y] = SHAFT_HI + (255,)
+            elif y <= 8:
+                px[x, y] = SHAFT + (255,)
+            else:
+                px[x, y] = DARK + (255,)
+    # quelques eclats dans la masse, pour qu'elle ne soit pas un aplat
+    for k in range(6):
+        x = (k * 5 + 3) % T
+        y = 5 + (k * 3) % 9
+        px[x, y] = GOLD_D + (255,)
+    return img
 
 
 def write(name, frames):
-    sheet = Image.new("RGBA", (S, S * len(frames)))
+    sheet = Image.new("RGBA", (T, T * len(frames)))
     for i, fr in enumerate(frames):
-        sheet.paste(fr, (0, i * S))
+        sheet.paste(fr, (0, i * T))
     dest = os.path.join(ITEM_DIR, name + ".png")
     sheet.save(dest)
-    with open(dest + ".mcmeta", "w") as fh:
-        fh.write('{"animation": {"frametime": %d, "interpolate": true}}' % FRAMETIME)
-    print("  %s (%dx%d, %d images)" % (name, S, S, len(frames)))
+    meta = dest + ".mcmeta"
+    if len(frames) > 1:
+        with open(meta, "w") as fh:
+            fh.write('{"animation": {"frametime": %d, "interpolate": true}}' % FRAMETIME)
+    elif os.path.exists(meta):
+        os.remove(meta)
+    print("  %s (%dx%d, %d image%s)" % (name, T, T, len(frames),
+                                        "s" if len(frames) > 1 else ""))
 
 
 def main():
     os.makedirs(ITEM_DIR, exist_ok=True)
     for lit in range(6):
-        frames = [frame(lit, f / NFRAMES) for f in range(NFRAMES)]
-        write("%s_%d" % (NAME, lit) if lit < 5 else "%s_full" % NAME, frames)
-    write(NAME, [frame(0, f / NFRAMES) for f in range(NFRAMES)])
+        write("vambrace_bracer_%d" % lit, [bracer(lit)])
+    write("vambrace_blade", [blade(f / NFRAMES) for f in range(NFRAMES)])
 
     if "--preview" in sys.argv:
         os.makedirs(PREVIEW, exist_ok=True)
-        strip = Image.new("RGBA", (S * 6, S))
+        strip = Image.new("RGBA", (T * 7, T))
         for lit in range(6):
-            strip.paste(frame(lit, 0.0), (lit * S, 0))
-        out = os.path.join(PREVIEW, "vambrace_states.png")
-        strip.resize((S * 6 * 6, S * 6), Image.NEAREST).save(out)
+            strip.paste(bracer(lit), (lit * T, 0))
+        strip.paste(blade(0.0), (6 * T, 0))
+        out = os.path.join(PREVIEW, "vambrace_materials.png")
+        strip.resize((T * 7 * 10, T * 10), Image.NEAREST).save(out)
         print("apercu : %s" % os.path.relpath(out, ROOT))
     return 0
 
