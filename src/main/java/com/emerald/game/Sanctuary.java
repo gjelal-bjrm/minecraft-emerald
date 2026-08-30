@@ -47,19 +47,34 @@ public final class Sanctuary {
      * surtout on l'EPAISSIT et on la HAUSSE -- une enceinte se juge a sa
      * proportion, pas a son emprise.
      */
-    private static final int HALF = 80;
+    private static final int HALF = 96;
 
     /** Epaisseur de la courtine. */
-    private static final int THICK = 5;
+    private static final int THICK = 6;
 
     /** Hauteur de la masse pleine ; on marche sur le bloc du dessus. */
-    private static final int WALL_TOP = 18;
+    private static final int WALL_TOP = 22;
 
     /** Le chemin de ronde, seule hauteur ou l'on marche sur le mur. */
     private static final int WALK = WALL_TOP + 1;
 
-    private static final int TOWER_RADIUS = 7;
-    private static final int TOWER_TOP = 32;
+    /**
+     * Rayon des tours. Neuf, et non sept.
+     *
+     * Une tour de rayon sept laisse un interieur de onze blocs, dont un fut
+     * central et une vis : il n'y restait pas de place pour se tenir. A neuf,
+     * on circule autour de la vis et les paliers servent a quelque chose.
+     */
+    private static final int TOWER_RADIUS = 9;
+    private static final int TOWER_TOP = 38;
+
+    /** Les mesures de la Pyramide Maudite, relevees dans ses onze modeles. */
+    private static final int PYRAMID_W = 89;
+    private static final int PYRAMID_D = 94;
+
+    /** Le centre du modele : c'est la que ses quatre quadrants se rejoignent. */
+    private static final int PYRAMID_CX = 44;
+    private static final int PYRAMID_CZ = 47;
 
     /**
      * L'ouverture est taillee sur la Porte du Sceau, pas l'inverse.
@@ -147,18 +162,24 @@ public final class Sanctuary {
     public static BlockPos build(ServerLevel level, CommandSourceStack source, BlockPos ground) {
         int y = ground.getY();
 
-        // LA PYRAMIDE D'ABORD, et l'enceinte ensuite, autour d'elle.
+        int cx = ground.getX();
+        int cz = ground.getZ();
+
+        // On POSE la pyramide au centre, on ne la cherche plus.
         //
-        // L'inverse etait l'erreur de fond : on batissait les murs, puis on
-        // posait la pyramide a un decalage devine (-44, -47) en esperant
-        // qu'elle tombe au milieu. Elle tombait a cote, en grande partie hors
-        // les murs. La commande de placement du jeu decide seule de l'endroit
-        // exact et de la rotation ; la seule facon fiable de s'y accorder est
-        // de la laisser faire, puis de MESURER ou elle a atterri.
-        greatPyramid(level, source, ground.getX(), y, ground.getZ());
-        int[] bounds = measure(level, ground.getX(), y, ground.getZ());
-        int cx = (bounds[0] + bounds[2]) / 2;
-        int cz = (bounds[1] + bounds[3]) / 2;
+        // Deux methodes ont echoue avant celle-ci. Deviner un decalage la
+        // faisait tomber a cote. Mesurer apres coup marchait en theorie, mais
+        // le balayage accrochait le sanctuaire d'a cote quand on en batissait
+        // deux -- et l'enceinte se centrait alors entre les deux.
+        //
+        // La bonne facon etait de lire les modeles. Les quatre quadrants font
+        // 47 et 42 de large sur 47 de profond, et leur jonction -- le centre de
+        // la pyramide -- tombe a (44, 47) de l'angle. On connait donc l'endroit
+        // exact ou poser chaque morceau pour que le sommet vienne sur le
+        // centre voulu, sans rien mesurer.
+        int[] bounds = {cx - PYRAMID_CX, cz - PYRAMID_CZ,
+                cx - PYRAMID_CX + PYRAMID_W, cz - PYRAMID_CZ + PYRAMID_D};
+        greatPyramid(level, source, cx, y, cz);
         reskin(level, bounds, y);
 
         clearSite(level, cx, y, cz, bounds);
@@ -221,20 +242,45 @@ public final class Sanctuary {
                                     int cx, int y, int cz) {
         if (BuiltInRegistries.BLOCK.containsKey(
                 ResourceLocation.fromNamespaceAndPath("cataclysm", "door_of_seal"))) {
-            // aucun decalage devine : on la pose ici, et on mesurera ou elle
-            // a reellement atterri -- c'est elle qui decide, pas nous
-            String command = String.format("place structure cataclysm:cursed_pyramid %d %d %d",
-                    cx, y, cz);
-            try {
-                level.getServer().getCommands().performPrefixedCommand(
-                        source.withSuppressedOutput().withPermission(4), command);
-                return;
-            } catch (RuntimeException e) {
-                org.slf4j.LoggerFactory.getLogger(EmeraldWeaponsMod.MODID)
-                        .warn("Pyramide de Cataclysm non posee, repli sur la notre", e);
+            int ox = cx - PYRAMID_CX;
+            int oz = cz - PYRAMID_CZ;
+            // Les quadrants, dans l'ordre releve : 1 au nord-ouest, 2 au
+            // sud-ouest, 3 au nord-est, 4 au sud-est. Les superieurs se posent
+            // quarante-huit blocs plus haut, aux memes abscisses.
+            int[][] quads = {{1, 0, 0}, {2, 0, 47}, {3, 47, 0}, {4, 47, 47}};
+            boolean ok = true;
+            for (int[] q : quads) {
+                ok &= template(level, source, "cursed_pyramid_lower" + q[0],
+                        ox + q[1], y, oz + q[2]);
+                ok &= template(level, source, "cursed_pyramid_upper" + q[0],
+                        ox + q[1], y + 48, oz + q[2]);
             }
+            if (ok) {
+                return;
+            }
+            org.slf4j.LoggerFactory.getLogger(EmeraldWeaponsMod.MODID)
+                    .warn("Pyramide de Cataclysm incomplete, repli sur la notre");
         }
         steppedPyramid(level, cx, y, cz);
+    }
+
+    /**
+     * Pose un modele a un endroit EXACT.
+     *
+     * « place template » depose le fichier tel quel a la position donnee, sans
+     * assemblage ni rotation, contrairement a « place structure » qui laisse le
+     * generateur decider. C'est ce qui rend le placement previsible.
+     */
+    private static boolean template(ServerLevel level, CommandSourceStack source,
+                                    String name, int x, int y, int z) {
+        try {
+            level.getServer().getCommands().performPrefixedCommand(
+                    source.withSuppressedOutput().withPermission(4),
+                    String.format("place template cataclysm:%s %d %d %d", name, x, y, z));
+            return true;
+        } catch (RuntimeException e) {
+            return false;
+        }
     }
 
     /**
@@ -611,8 +657,15 @@ public final class Sanctuary {
                 if (dist > outer) {
                     continue;
                 }
+                // Le plancher est PLEIN, sauf la tremie de l'escalier.
+                //
+                // Il etait perce d'un anneau central, ce qui laissait un trou
+                // beant autour du fut a chaque etage -- « il y a des trous dans
+                // le sol ». La tremie ne doit occuper qu'un quartier, celui par
+                // lequel la vis arrive, et le reste doit porter.
+                boolean well = dist > inner && dx > 0 && Math.abs(dz) <= 1;
                 set(level, tx + dx, y, tz + dz,
-                        dist > inner ? floor() : Blocks.AIR.defaultBlockState());
+                        well ? Blocks.AIR.defaultBlockState() : floor());
             }
         }
     }
@@ -812,44 +865,6 @@ public final class Sanctuary {
     }
 
 
-    /**
-     * L'emprise reelle de la pyramide, mesuree apres coup.
-     *
-     * On balaie les colonnes autour du point demande et on retient celles qui
-     * portent quelque chose de haut : au-dessus de six blocs, en terrain
-     * degage, ce ne peut etre que la pyramide. C'est grossier et c'est
-     * suffisant -- on ne cherche pas sa forme, seulement sa boite.
-     *
-     * @return {xMin, zMin, xMax, zMax}
-     */
-    private static int[] measure(ServerLevel level, int cx, int y, int cz) {
-        int reach = 150;
-        int xMin = Integer.MAX_VALUE;
-        int zMin = Integer.MAX_VALUE;
-        int xMax = Integer.MIN_VALUE;
-        int zMax = Integer.MIN_VALUE;
-        for (int dx = -reach; dx <= reach; dx += 2) {
-            for (int dz = -reach; dz <= reach; dz += 2) {
-                int x = cx + dx;
-                int z = cz + dz;
-                int top = level.getHeight(
-                        net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
-                        x, z);
-                if (top - y < 6) {
-                    continue;
-                }
-                xMin = Math.min(xMin, x);
-                zMin = Math.min(zMin, z);
-                xMax = Math.max(xMax, x);
-                zMax = Math.max(zMax, z);
-            }
-        }
-        if (xMin > xMax) {
-            // rien de haut : la pyramide n'a pas ete posee, on garde le centre
-            return new int[]{cx - 20, cz - 20, cx + 20, cz + 20};
-        }
-        return new int[]{xMin, zMin, xMax, zMax};
-    }
 
     /**
      * Rhabille la pyramide de NOS materiaux.
@@ -948,10 +963,26 @@ public final class Sanctuary {
             // le garde-corps cote cour
             set(level, g.x(along, -THICK - 3), y + step + 1, g.z(along, -THICK - 3), merlon());
         }
-        // le palier : on debouche sur le chemin de ronde sans marche perdue
-        for (int a = from + WALK; a <= from + WALK + 2; a++) {
+        // Le palier, ET le passage vers le chemin de ronde.
+        //
+        // « quand on arrive en haut, on ne peut pas passer » : la rampe
+        // aboutissait bien a la bonne hauteur, mais le garde-corps interieur du
+        // rempart lui barrait la route. On ouvre donc la travee en face.
+        for (int a = from + WALK - 2; a <= from + WALK + 2; a++) {
             for (int w = 0; w < 3; w++) {
                 set(level, g.x(a, -THICK - w), y + WALK, g.z(a, -THICK - w), floor());
+                for (int clear = 1; clear <= 3; clear++) {
+                    set(level, g.x(a, -THICK - w), y + WALK + clear,
+                            g.z(a, -THICK - w), Blocks.AIR.defaultBlockState());
+                }
+            }
+            // la breche dans le parapet interieur, sur toute l'epaisseur
+            for (int t = 0; t < THICK; t++) {
+                for (int clear = 1; clear <= 3; clear++) {
+                    set(level, g.x(a, t), y + WALK + clear, g.z(a, t),
+                            Blocks.AIR.defaultBlockState());
+                }
+                set(level, g.x(a, t), y + WALK, g.z(a, t), floor());
             }
         }
     }
@@ -974,11 +1005,20 @@ public final class Sanctuary {
         for (int side = -1; side <= 1; side += 2) {
             for (int w = -1; w <= 1; w++) {
                 for (int dy = 0; dy < 3; dy++) {
-                    // on ne perce que la coque : deux blocs d'epaisseur suffisent
-                    for (int t = 0; t < 2; t++) {
+                    // On ne perce QUE la coque, et seulement la ou elle est
+                    // reellement pleine : la version precedente creusait deux
+                    // blocs a un rayon fixe, ce qui, sur un cercle, sortait de
+                    // la tour d'un cote et n'entamait rien de l'autre -- les
+                    // baies « debordaient ».
+                    for (int t = 0; t < 3; t++) {
                         int off = side * (r - t);
                         int px = alongX ? tx + off : tx + w;
                         int pz = alongX ? tz + w : tz + off;
+                        double dist = Math.sqrt((double) (px - tx) * (px - tx)
+                                + (double) (pz - tz) * (pz - tz));
+                        if (dist > r + 0.5) {
+                            continue;          // dehors : on ne touche a rien
+                        }
                         set(level, px, y + dy, pz, Blocks.AIR.defaultBlockState());
                     }
                 }
@@ -986,7 +1026,10 @@ public final class Sanctuary {
                 int off = side * r;
                 int px = alongX ? tx + off : tx + w;
                 int pz = alongX ? tz + w : tz + off;
-                set(level, px, y + 3, pz, shrineTrim());
+                if (Math.sqrt((double) (px - tx) * (px - tx)
+                        + (double) (pz - tz) * (pz - tz)) <= r + 0.5) {
+                    set(level, px, y + 3, pz, shrineTrim());
+                }
             }
         }
     }

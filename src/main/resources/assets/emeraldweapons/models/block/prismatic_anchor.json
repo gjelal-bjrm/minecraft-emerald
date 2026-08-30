@@ -1,8 +1,83 @@
 {
-  "parent": "minecraft:block/cube_bottom_top",
+  "__comment": "Un socle CREUX. La cuve doit se voir en volume, pas seulement en texture : un cube plein passait pour un tronc d'arbre.",
+  "parent": "block/block",
   "textures": {
-    "top": "emeraldweapons:block/chiseled_arcencium",
-    "side": "emeraldweapons:block/arcencium_bricks",
+    "particle": "emeraldweapons:block/prismatic_anchor_side",
+    "side": "emeraldweapons:block/prismatic_anchor_side",
+    "top": "emeraldweapons:block/prismatic_anchor_top",
+    "inner": "emeraldweapons:block/prismatic_anchor_inner",
     "bottom": "emeraldweapons:block/gangue_bricks"
-  }
+  },
+  "elements": [
+    {
+      "__comment": "l'assise, legerement debordante",
+      "from": [0, 0, 0],
+      "to": [16, 3, 16],
+      "faces": {
+        "north": {"texture": "#side", "uv": [0, 13, 16, 16]},
+        "south": {"texture": "#side", "uv": [0, 13, 16, 16]},
+        "west":  {"texture": "#side", "uv": [0, 13, 16, 16]},
+        "east":  {"texture": "#side", "uv": [0, 13, 16, 16]},
+        "down":  {"texture": "#bottom", "cullface": "down"},
+        "up":    {"texture": "#side", "uv": [0, 0, 16, 16]}
+      }
+    },
+    {
+      "__comment": "le fut",
+      "from": [2, 3, 2],
+      "to": [14, 11, 14],
+      "faces": {
+        "north": {"texture": "#side", "uv": [2, 3, 14, 11]},
+        "south": {"texture": "#side", "uv": [2, 3, 14, 11]},
+        "west":  {"texture": "#side", "uv": [2, 3, 14, 11]},
+        "east":  {"texture": "#side", "uv": [2, 3, 14, 11]},
+        "up":    {"texture": "#inner", "uv": [0, 0, 16, 16]}
+      }
+    },
+    {
+      "__comment": "la margelle : quatre parois qui laissent la cuve ouverte",
+      "from": [1, 11, 1],
+      "to": [15, 15, 4],
+      "faces": {
+        "north": {"texture": "#side", "uv": [1, 1, 15, 5]},
+        "south": {"texture": "#inner", "uv": [1, 1, 15, 5]},
+        "west":  {"texture": "#side", "uv": [1, 1, 4, 5]},
+        "east":  {"texture": "#side", "uv": [12, 1, 15, 5]},
+        "up":    {"texture": "#top", "uv": [1, 1, 15, 4]},
+        "down":  {"texture": "#side", "uv": [1, 1, 15, 4]}
+      }
+    },
+    {
+      "from": [1, 11, 12],
+      "to": [15, 15, 15],
+      "faces": {
+        "north": {"texture": "#inner", "uv": [1, 1, 15, 5]},
+        "south": {"texture": "#side", "uv": [1, 1, 15, 5]},
+        "west":  {"texture": "#side", "uv": [1, 1, 4, 5]},
+        "east":  {"texture": "#side", "uv": [12, 1, 15, 5]},
+        "up":    {"texture": "#top", "uv": [1, 12, 15, 15]},
+        "down":  {"texture": "#side", "uv": [1, 12, 15, 15]}
+      }
+    },
+    {
+      "from": [1, 11, 4],
+      "to": [4, 15, 12],
+      "faces": {
+        "west":  {"texture": "#side", "uv": [4, 1, 12, 5]},
+        "east":  {"texture": "#inner", "uv": [4, 1, 12, 5]},
+        "up":    {"texture": "#top", "uv": [1, 4, 4, 12]},
+        "down":  {"texture": "#side", "uv": [1, 4, 4, 12]}
+      }
+    },
+    {
+      "from": [12, 11, 4],
+      "to": [15, 15, 12],
+      "faces": {
+        "west":  {"texture": "#inner", "uv": [4, 1, 12, 5]},
+        "east":  {"texture": "#side", "uv": [4, 1, 12, 5]},
+        "up":    {"texture": "#top", "uv": [12, 4, 15, 12]},
+        "down":  {"texture": "#side", "uv": [12, 4, 15, 12]}
+      }
+    }
+  ]
 }
