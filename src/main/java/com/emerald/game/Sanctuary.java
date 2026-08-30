@@ -1499,21 +1499,30 @@ public final class Sanctuary {
         int last = roof;
         for (int z = fromZ; z >= apexZ + 3; z--) {
             int here = probeTop(level, sx, y, z);
-            // LA VOLEE COMMENCE AU PARVIS, sans attendre que la pyramide monte.
+            // RIEN TANT QU'ON EST SUR LE PLAT.
             //
-            // Elle sautait les cases plates : le parvis d'arcencium se
-            // terminait donc en face verticale, et l'escalier ne prenait
-            // qu'au-dela, en l'air. On voyait ou monter sans pouvoir y aller.
-            // Une premiere marche posee des le parvis suffit -- le trajet
-            // redevient continu du dallage au faite, et la volee plafonne
-            // d'elle-meme tant que la face ne s'eleve pas.
-            //
-            // On ne redescend jamais : un escalier qui plonge n'en est plus un.
+            // J'avais retire cette clause en croyant que le parvis se
+            // terminait en face verticale faute de marches. C'etait faux, et
+            // le remede pire que le mal : sans elle, la volee pose une marche
+            // a CHAQUE case du parvis, une case au-dessus de lui, et couvre
+            // toute sa longueur d'un lisere dente. Le parvis se traverse de
+            // plain-pied ; les marches n'ont a apparaitre qu'au moment ou la
+            // pyramide monte, et c'est aux rampes laterales, non a la volee,
+            // de donner l'acces par le bas.
+            if (here <= roof && last <= roof) {
+                continue;
+            }
+            // on ne redescend jamais : un escalier qui plonge n'en est plus un
             int step = Math.max(last, Math.min(here + 1, last + 1));
             for (int w = -1; w <= 1; w++) {
                 // on monte vers le nord, du pied de la face sud vers le faite
                 set(level, sx + w, step, z, riser(0, -1));
-                for (int clear = 1; clear <= 3; clear++) {
+                // QUATRE blocs de degagement, et non trois.
+                //
+                // Une terrasse qui monte de deux ou trois d'un coup laissait
+                // un chapeau de pierre juste au-dessus de la marche : on
+                // voyait la suite de l'escalier sans pouvoir s'y glisser.
+                for (int clear = 1; clear <= 4; clear++) {
                     set(level, sx + w, step + clear, z, Blocks.AIR.defaultBlockState());
                 }
                 // le remblai sous la marche, pour qu'elle ne flotte pas --
