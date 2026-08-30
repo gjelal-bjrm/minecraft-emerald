@@ -1,0 +1,4 @@
+{
+  "parent": "minecraft:item/handheld",
+  "textures": { "layer0": "emeraldweapons:item/arcencium_lash_3" }
+}

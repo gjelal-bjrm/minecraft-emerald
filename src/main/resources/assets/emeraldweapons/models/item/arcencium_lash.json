@@ -1,0 +1,15 @@
+{
+  "parent": "minecraft:item/handheld",
+  "textures": {
+    "layer0": "emeraldweapons:item/arcencium_lash_0"
+  },
+  "_comment": "charge = la Charge d'Orage, de 0 a 1. Les cinq maillons de la laniere s'allument un a un a mesure qu'on frappe, et s'eteignent tous ensemble quand l'orage retombe.",
+  "overrides": [
+    { "predicate": { "emeraldweapons:charge": 0.0 }, "model": "emeraldweapons:item/arcencium_lash_0" },
+    { "predicate": { "emeraldweapons:charge": 0.2 }, "model": "emeraldweapons:item/arcencium_lash_1" },
+    { "predicate": { "emeraldweapons:charge": 0.4 }, "model": "emeraldweapons:item/arcencium_lash_2" },
+    { "predicate": { "emeraldweapons:charge": 0.6 }, "model": "emeraldweapons:item/arcencium_lash_3" },
+    { "predicate": { "emeraldweapons:charge": 0.8 }, "model": "emeraldweapons:item/arcencium_lash_4" },
+    { "predicate": { "emeraldweapons:charge": 1.0 }, "model": "emeraldweapons:item/arcencium_lash_full" }
+  ]
+}

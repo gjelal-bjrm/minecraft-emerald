@@ -47,6 +47,23 @@ public class ArcenciumScepterClient {
                                 : 0.0F;
                         return 1.0F - remaining;
                     }));
+
+            // Le meme predicat pour le Fouet, mais lu a l'envers du sceptre.
+            //
+            // Le sceptre affiche un rechargement, qui se remplit tout seul ; le
+            // fouet affiche la Charge d'Orage, qui ne monte que par les coups
+            // portes et retombe entierement des qu'on cesse. Le predicat vaut
+            // donc la charge elle-meme, sans passer par le temps de recharge.
+            event.enqueueWork(() -> ItemProperties.register(
+                    ModItems.ARCENCIUM_LASH.get(),
+                    ResourceLocation.fromNamespaceAndPath(EmeraldWeaponsMod.MODID, "charge"),
+                    (stack, level, entity, seed) -> {
+                        if (!(entity instanceof net.minecraft.world.entity.player.Player p)) {
+                            return 0.0F;
+                        }
+                        return com.emerald.weapons.ArcenciumLashItem.charge(p)
+                                / (float) com.emerald.weapons.ArcenciumLashItem.CHARGE_MAX;
+                    }));
         }
     }
 

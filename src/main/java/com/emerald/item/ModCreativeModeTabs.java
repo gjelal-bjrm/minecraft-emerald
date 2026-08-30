@@ -28,6 +28,7 @@ public class ModCreativeModeTabs {
                         output.accept(ModItems.EMERALD_SWORD);
                         output.accept(ModItems.ARCENCIUM_BOW);
                         output.accept(ModItems.ARCENCIUM_SCEPTER);
+                        output.accept(ModItems.ARCENCIUM_LASH);
                         output.accept(ModItems.ARCENCIUM_HELMET);
                         output.accept(ModItems.ARCENCIUM_CHESTPLATE);
                         output.accept(ModItems.ARCENCIUM_LEGGINGS);
