@@ -1469,41 +1469,31 @@ public final class Sanctuary {
     private static void summitStair(ServerLevel level, int sx, int y, int cz,
                                     int apexZ, int summit) {
         int fromZ = cz + PYRAMID_D - PYRAMID_CZ;       // le pied de la face sud
+        // On part du TOIT du couloir, jamais du sol : c'est lui le parvis, et
+        // descendre plus bas reviendrait a rouvrir le tombeau par le plafond.
         int roof = y + 4;
-        int toZ = apexZ + 3;
-
-        // UNE DROITE, et non plus un suiveur de surface.
-        //
-        // L'escalier lisait la hauteur sous chaque marche et montait d'un cran
-        // au plus. Sur une pyramide a gradins, cela le faisait retarder sur les
-        // terrasses puis les rattraper d'un coup : il serpentait, s'enfoncait
-        // en tranchee ici, saillait la, et le dessin devenait d'autant plus
-        // etrange qu'on montait. Ce n'etait pas un escalier, c'etait une
-        // cicatrice.
-        //
-        // On tend donc une droite du parvis au sommet -- les deux seuls points
-        // qui comptent -- et la matiere s'y plie : on comble dessous quand la
-        // face creuse, on degage dessus quand elle deborde. C'est ainsi que
-        // sont batis les vrais escaliers de pyramide, en bande posee sur les
-        // gradins plutot qu'en saignee creusee dedans.
-        int run = Math.max(1, fromZ - toZ);
-        int rise = Math.max(0, summit - roof);
-        for (int z = fromZ; z >= toZ; z--) {
-            int step = roof + (int) Math.round(rise * (double) (fromZ - z) / run);
+        int last = roof;
+        for (int z = fromZ; z >= apexZ + 3; z--) {
+            int here = probeTop(level, sx, y, z);
+            // rien tant qu'on est sur le plat : le toit se traverse de plain-pied
+            // et les marches n'apparaissent qu'au moment ou la pyramide monte
+            if (here <= roof && last <= roof) {
+                continue;
+            }
+            // on ne redescend jamais : un escalier qui plonge n'en est plus un
+            int step = Math.max(last, Math.min(here + 1, last + 1));
             for (int w = -1; w <= 1; w++) {
+                // on monte vers le nord, du pied de la face sud vers le faite
                 set(level, sx + w, step, z, riser(0, -1));
                 for (int clear = 1; clear <= 3; clear++) {
                     set(level, sx + w, step + clear, z, Blocks.AIR.defaultBlockState());
                 }
-                // le remblai sous la marche -- jamais sous le toit du couloir,
-                // sinon on comblerait le tombeau par le plafond
-                for (int fill = 1; fill <= 6; fill++) {
-                    int h = step - fill;
-                    if (h <= roof) {
-                        break;
-                    }
-                    if (level.getBlockState(new BlockPos(sx + w, h, z)).isAir()) {
-                        set(level, sx + w, h, z, shrine());
+                // le remblai sous la marche, pour qu'elle ne flotte pas --
+                // mais jamais sous le toit, sinon on comble le couloir par-dessus
+                for (int fill = 1; fill <= 2; fill++) {
+                    if (step - fill > roof
+                            && level.getBlockState(new BlockPos(sx + w, step - fill, z)).isAir()) {
+                        set(level, sx + w, step - fill, z, shrine());
                     }
                 }
             }
@@ -1511,6 +1501,7 @@ public final class Sanctuary {
                 set(level, sx - 2, step + 1, z, lantern());
                 set(level, sx + 2, step + 1, z, lantern());
             }
+            last = step;
         }
     }
 
