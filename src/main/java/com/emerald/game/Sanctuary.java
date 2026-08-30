@@ -247,16 +247,19 @@ public final class Sanctuary {
         // recours, quand on a du se rabattre sur notre propre pyramide.
         int summit = apex >= 0 ? apex : summitOf(level, cx, y, apexZ);
         BlockPos anchor = crown(level, cx, summit, apexZ, rank);
-        // DEUX volees, de part et d'autre du porche.
+        // Le couloir d'abord, l'ascension PAR-DESSUS lui.
         //
-        // Une seule, centree, tenait exactement la meme ligne que le couloir du
-        // tombeau, et comme elle se batit avant lui, le percement effacait ses
-        // premieres marches : on arrivait devant la porte sans pouvoir monter
-        // plus haut. Les ecarter de six blocs rend les deux acces simultanes,
-        // et l'escalier encadre l'entree au lieu de se battre avec elle.
-        summitStair(level, cx - 6, y, cz, apexZ, summit);
-        summitStair(level, cx + 6, y, cz, apexZ, summit);
+        // Les deux tenaient la ligne centrale de la face sud et se disputaient
+        // le sol : ecartee, la volee laissait le porche tranquille mais devenait
+        // deux rampes de biais qui n'allaient nulle part. La bonne reponse est
+        // d'EMPILER plutot que de croiser -- le couloir passe au ras du sol, et
+        // son toit sert de chemin d'ascension. Rien ne se gene plus, et l'on
+        // gagne un parvis surelu au lieu d'une rampe posee a cote.
+        //
+        // L'ordre compte donc : le toit doit exister avant qu'on marche dessus.
         tombEntrance(level, cx, y, cz, rank, anchor);
+        causewayRamps(level, cx, y, cz);
+        summitStair(level, cx, y, cz, apexZ, summit);
         SanctuaryMist.register(new BlockPos(cx, y, cz), HALF, anchor);
 
         // Un compte rendu, plutot qu'une devinette de plus.
@@ -1406,6 +1409,45 @@ public final class Sanctuary {
 
 
     /**
+     * Les deux rampes qui montent sur le toit du couloir.
+     *
+     * Sans elles, le parvis surelu serait un chemin sans acces : on voit ou il
+     * mene, on ne sait pas y grimper. Elles partent donc du dallage, de part et
+     * d'autre du porche, et montent VERS le centre pour se poser de plain-pied
+     * sur le toit -- une de chaque cote, pour qu'on la trouve d'ou qu'on vienne
+     * et pour que l'entree reste encadree plutot que barree.
+     *
+     * Quatre marches suffisent : le toit est a quatre blocs, et une volee plus
+     * longue mangerait la cour sans rien ajouter.
+     */
+    private static void causewayRamps(ServerLevel level, int cx, int y, int cz) {
+        int fromZ = cz + PYRAMID_D - PYRAMID_CZ;
+        int roof = y + 4;
+        for (int dir = -1; dir <= 1; dir += 2) {
+            for (int i = 0; i <= 3; i++) {
+                int x = cx + dir * (2 + i);        // 2 au sommet, 5 au pied
+                int h = roof - i;
+                for (int z = fromZ - 2; z <= fromZ; z++) {
+                    // la marche regarde vers le centre : c'est le sens de la montee
+                    set(level, x, h, z, riser(-dir, 0));
+                    for (int clear = 1; clear <= 3; clear++) {
+                        set(level, x, h + clear, z, Blocks.AIR.defaultBlockState());
+                    }
+                    // et son remblai, pour qu'elle ne flotte pas au-dessus de la cour
+                    for (int fill = 1; fill <= 3; fill++) {
+                        if (h - fill <= y) {
+                            break;
+                        }
+                        if (level.getBlockState(new BlockPos(x, h - fill, z)).isAir()) {
+                            set(level, x, h - fill, z, shrine());
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /**
      * Un escalier de la cour au sommet, taille dans le flanc sud.
      *
      * La pyramide a bien son propre escalier, mais il ne mene qu'a ses salles :
@@ -1420,12 +1462,15 @@ public final class Sanctuary {
     private static void summitStair(ServerLevel level, int sx, int y, int cz,
                                     int apexZ, int summit) {
         int fromZ = cz + PYRAMID_D - PYRAMID_CZ;       // le pied de la face sud
-        int last = y;
+        // On part du TOIT du couloir, jamais du sol : c'est lui le parvis, et
+        // descendre plus bas reviendrait a rouvrir le tombeau par le plafond.
+        int roof = y + 4;
+        int last = roof;
         for (int z = fromZ; z >= apexZ + 3; z--) {
             int here = probeTop(level, sx, y, z);
-            // rien sur le PLAT : l'escalier partait de la cour et y semait des
-            // marches inutiles avant meme d'avoir touche la pyramide
-            if (here <= y && last <= y) {
+            // rien tant qu'on est sur le plat : le toit se traverse de plain-pied
+            // et les marches n'apparaissent qu'au moment ou la pyramide monte
+            if (here <= roof && last <= roof) {
                 continue;
             }
             // on ne redescend jamais : un escalier qui plonge n'en est plus un
@@ -1436,9 +1481,11 @@ public final class Sanctuary {
                 for (int clear = 1; clear <= 3; clear++) {
                     set(level, sx + w, step + clear, z, Blocks.AIR.defaultBlockState());
                 }
-                // le remblai sous la marche, pour qu'elle ne flotte pas
+                // le remblai sous la marche, pour qu'elle ne flotte pas --
+                // mais jamais sous le toit, sinon on comble le couloir par-dessus
                 for (int fill = 1; fill <= 2; fill++) {
-                    if (level.getBlockState(new BlockPos(sx + w, step - fill, z)).isAir()) {
+                    if (step - fill > roof
+                            && level.getBlockState(new BlockPos(sx + w, step - fill, z)).isAir()) {
                         set(level, sx + w, step - fill, z, shrine());
                     }
                 }
@@ -1501,7 +1548,10 @@ public final class Sanctuary {
                     set(level, cx + w, y + dy, z, Blocks.AIR.defaultBlockState());
                 }
                 lineIfSolid(level, cx + w, y, z, trim());
-                lineIfSolid(level, cx + w, y + 4, z, shrineTrim());
+                // Le plafond du grand couloir, lui, se pose SANS condition :
+                // depuis qu'il sert de parvis, une case manquante n'est plus un
+                // defaut d'habillage mais un trou dans le chemin.
+                set(level, cx + w, y + 4, z, shrineTrim());
             }
             // Les lanternes AU SOL, et des deux cotes.
             //
