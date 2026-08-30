@@ -71,6 +71,19 @@ public class ModBlocks {
             () -> new SocketBenchBlock(BlockBehaviour.Properties.of()
                     .strength(2.5F).sound(SoundType.WOOD)));
 
+    /**
+     * Le Sceau du Tombeau.
+     *
+     * Tres dur et resistant aux explosions : c'est une SERRURE. Si on pouvait
+     * la casser a la pioche, elle ne serait plus une condition mais un
+     * obstacle -- et l'interieur de la pyramide redeviendrait facultatif.
+     */
+    public static final DeferredBlock<TombSealBlock> TOMB_SEAL = registerBlock("tomb_seal",
+            () -> new TombSealBlock(BlockBehaviour.Properties.of()
+                    .strength(50.0F, 1200.0F)
+                    .lightLevel(state -> state.getValue(TombSealBlock.LIT) ? 12 : 3)
+                    .sound(SoundType.AMETHYST)));
+
     // --------------------------------------------- Gangue : la masse du village
 
     public static final DeferredBlock<Block> GANGUE_STONE = village("gangue_stone",

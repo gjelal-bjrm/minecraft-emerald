@@ -578,10 +578,36 @@ public class GameManager {
             return false;
         }
         GameState state = GameState.get(level);
-        if (state.status() != GameState.Status.RUNNING
-                || state.isActivated(pos) || anchorSieges.containsKey(pos)) {
+        if (state.isActivated(pos) || anchorSieges.containsKey(pos)) {
             return false;
         }
+        // Elle refusait SANS RIEN DIRE hors partie.
+        //
+        // C'est le cas le plus frequent a l'essai : on bâtit un sanctuaire par
+        // la commande, mode eteint, et l'on presente ses lingots a une ancre
+        // qui ne repondra jamais. Rien a l'ecran, aucune piste -- « je n'arrive
+        // pas a activer l'ancre alors que j'ai douze lingots ». Un refus doit
+        // toujours se dire.
+        if (state.status() != GameState.Status.RUNNING) {
+            player.displayClientMessage(Component.translatable(
+                            "game.emeraldweapons.anchor.no_game")
+                    .withStyle(ChatFormatting.RED), true);
+            return false;
+        }
+        // Les sceaux d'abord.
+        //
+        // C'est ce qui rend l'interieur de la pyramide obligatoire : sans cette
+        // condition, l'escalier exterieur suffisait a tout, et le tombeau ne
+        // servait a rien. Le message donne le compte, ce qui enseigne la regle
+        // en une fois sans qu'on ait a l'expliquer nulle part.
+        int asleep = SanctuarySeals.remaining(pos);
+        if (asleep > 0) {
+            player.displayClientMessage(Component.translatable(
+                            "game.emeraldweapons.anchor.sealed", asleep)
+                    .withStyle(ChatFormatting.RED), true);
+            return false;
+        }
+
         int tier = state.nextTier();
         int cost = ANCHOR_COST[tier - 1];
         if (stack.getCount() < cost) {

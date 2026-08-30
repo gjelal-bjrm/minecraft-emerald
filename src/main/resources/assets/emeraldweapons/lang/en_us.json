@@ -200,5 +200,11 @@
   "command.emeraldweapons.sanctuary.hint": "The anchor is at the summit. Climb the stair tower south of the pyramid.",
   "command.emeraldweapons.anchor.found": "Anchor at %s %s %s -- you are there",
   "command.emeraldweapons.anchor.missing": "Anchor EXPECTED at %s %s %s, but the block is missing",
-  "command.emeraldweapons.anchor.none": "No sanctuary known to this session"
+  "command.emeraldweapons.anchor.none": "No sanctuary known to this session",
+  "block.emeraldweapons.tomb_seal": "Tomb Seal",
+  "game.emeraldweapons.seal.lit": "Seal awakened -- %s of %s",
+  "game.emeraldweapons.seal.done": "The tomb falls silent",
+  "game.emeraldweapons.seal.done.sub": "The summit anchor will now take arcencium",
+  "game.emeraldweapons.anchor.sealed": "The anchor stays deaf: %s seal(s) still sleep inside the pyramid",
+  "game.emeraldweapons.anchor.no_game": "No game running -- /arcencium mode on, then pull the Oath Blade"
 }

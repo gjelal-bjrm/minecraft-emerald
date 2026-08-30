@@ -92,17 +92,16 @@ def table(tier):
     """Le contenu d'un coffre, pour un palier d'ancre."""
     pools = []
 
-    # 1. La monnaie du mode. Elle monte franchement : c'est elle qui paie les
-    #    ancres suivantes, et un coffre avare rendrait le detour inutile.
-    # Des quantites SOBRES. Vingt a trente lingots par coffre, multiplies par
-    # les etages de quatre tours, noyaient l'economie : l'arcencium doit rester
-    # ce qu'on va chercher, pas ce qu'on ramasse.
-    ingots = {1: (2, 4), 2: (4, 7), 3: (7, 12)}[tier]
-    pools.append(pool(1, [item("%s:arcencium_ingot" % MOD, count=ingots)]))
-
+    # 1. PAS d'arcencium en coffre, ou presque.
+    #
+    # Il en tombait a chaque coffre, multiplie par les etages de quatre tours
+    # et les quatre de la salle du tresor : on n'avait plus aucune raison de
+    # miner, et l'activation des ancres -- qui est censee coute cher -- se
+    # payait toute seule en visitant. Il n'en reste qu'un filet de minerai
+    # BRUT, rare, qu'il faut encore fondre.
     # 2. La matiere premiere et le bois, pour fabriquer sur place
     pools.append(pool({"min": 1, "max": 2}, [
-        item("%s:raw_arcencium" % MOD, 6, (2, 5)),
+        item("%s:raw_arcencium" % MOD, 1, (1, 2)),
         item("%s:prism_branch" % MOD, 4, (2, 6)),
         item("%s:prism_fiber" % MOD, 4, (2, 6)),
     ]))

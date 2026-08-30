@@ -37,33 +37,47 @@ public final class SanctuaryGarrison {
      * cour. L'ordre compte pour la lecture -- ce qu'on voit en approchant, ce
      * sont les tours.
      */
-    public static void populate(ServerLevel level, BlockPos centre, int half) {
+    public static void populate(ServerLevel level, BlockPos centre, int half,
+                                int walk, int towerTop) {
         List<EntityType<?>> pool = pool(level);
         if (pool.isEmpty()) {
             return;
         }
-        // les quatre tours d'angle, deux gardes chacune
+        // Les hauteurs sont DONNEES, plus ecrites en dur.
+        //
+        // Elles valaient huit et quatorze, du temps ou le rempart faisait huit
+        // blocs. Il en fait vingt-quatre et les tours quarante-deux : la
+        // garnison apparaissait donc au coeur de la maconnerie, ou elle
+        // etouffait aussitot. D'ou l'impression que les batiments tuaient les
+        // monstres -- ils etaient simplement poses dedans.
         for (int sx = -1; sx <= 1; sx += 2) {
             for (int sz = -1; sz <= 1; sz += 2) {
-                for (int i = 0; i < 2; i++) {
+                for (int i = 0; i < 3; i++) {
                     place(level, centre, pool,
-                            centre.offset(sx * half, 14, sz * half), 2);
+                            centre.offset(sx * half, towerTop + 1, sz * half), 3);
+                }
+                // et des gardes aux etages, ou ils surprennent
+                for (int floor = 6; floor < towerTop; floor += 12) {
+                    place(level, centre, pool,
+                            centre.offset(sx * half, floor + 1, sz * half), 3);
                 }
             }
         }
-        // le chemin de ronde, un garde tous les douze blocs
-        for (int d = -half + 6; d <= half - 6; d += 12) {
-            place(level, centre, pool, centre.offset(d, 8, -half + 1), 1);
-            place(level, centre, pool, centre.offset(d, 8, half - 1), 1);
-            place(level, centre, pool, centre.offset(-half + 1, 8, d), 1);
-            place(level, centre, pool, centre.offset(half - 1, 8, d), 1);
+        // le chemin de ronde, un garde tous les huit blocs
+        for (int d = -half + 6; d <= half - 6; d += 8) {
+            place(level, centre, pool, centre.offset(d, walk + 1, -half + 2), 1);
+            place(level, centre, pool, centre.offset(d, walk + 1, half - 2), 1);
+            place(level, centre, pool, centre.offset(-half + 2, walk + 1, d), 1);
+            place(level, centre, pool, centre.offset(half - 2, walk + 1, d), 1);
         }
-        // la cour, au pied de la pyramide
-        for (int i = 0; i < 8; i++) {
-            double angle = i / 8.0 * Math.PI * 2;
-            place(level, centre, pool, centre.offset(
-                    (int) Math.round(Math.cos(angle) * 17), 1,
-                    (int) Math.round(Math.sin(angle) * 17)), 3);
+        // la cour, en deux cercles
+        for (int ring : new int[]{24, 52}) {
+            for (int i = 0; i < 12; i++) {
+                double angle = i / 12.0 * Math.PI * 2;
+                place(level, centre, pool, centre.offset(
+                        (int) Math.round(Math.cos(angle) * ring), 1,
+                        (int) Math.round(Math.sin(angle) * ring)), 4);
+            }
         }
     }
 

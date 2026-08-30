@@ -1,0 +1,6 @@
+{
+  "variants": {
+    "lit=false": { "model": "emeraldweapons:block/tomb_seal" },
+    "lit=true": { "model": "emeraldweapons:block/tomb_seal_lit" }
+  }
+}

@@ -200,5 +200,11 @@
   "command.emeraldweapons.sanctuary.hint": "L'ancre est au sommet. On y monte par la tour d'escalier, au sud de la pyramide.",
   "command.emeraldweapons.anchor.found": "Ancre en %s %s %s -- vous y etes",
   "command.emeraldweapons.anchor.missing": "Ancre ATTENDUE en %s %s %s, mais le bloc manque",
-  "command.emeraldweapons.anchor.none": "Aucun sanctuaire connu de cette session"
+  "command.emeraldweapons.anchor.none": "Aucun sanctuaire connu de cette session",
+  "block.emeraldweapons.tomb_seal": "Sceau du Tombeau",
+  "game.emeraldweapons.seal.lit": "Sceau eveille -- %s sur %s",
+  "game.emeraldweapons.seal.done": "Le tombeau se tait",
+  "game.emeraldweapons.seal.done.sub": "L'ancre du sommet accepte enfin l'arcencium",
+  "game.emeraldweapons.anchor.sealed": "L'ancre reste sourde : %s sceau(x) dorment encore dans la pyramide",
+  "game.emeraldweapons.anchor.no_game": "Aucune partie en cours -- /arcencium mode on, puis retirez la Lame"
 }

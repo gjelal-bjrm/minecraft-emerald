@@ -248,8 +248,7 @@ public final class Sanctuary {
         int summit = apex >= 0 ? apex : summitOf(level, cx, y, apexZ);
         BlockPos anchor = crown(level, cx, summit, apexZ, rank);
         summitStair(level, cx, y, cz, apexZ, summit);
-        tombEntrance(level, cx, y, cz, rank);
-        SanctuaryGarrison.populate(level, new BlockPos(cx, y, cz), HALF);
+        tombEntrance(level, cx, y, cz, rank, anchor);
         SanctuaryMist.register(new BlockPos(cx, y, cz), HALF, anchor);
 
         // Un compte rendu, plutot qu'une devinette de plus.
@@ -260,6 +259,12 @@ public final class Sanctuary {
         // a quelle hauteur le sommet a ete trouve, et quel bloc occupe
         // reellement la case de l'ancre.
         linkWalls(level);
+
+        // La garnison EN DERNIER, quand plus un bloc ne bouge.
+        //
+        // Elle etait posee avant le parvis, l'escalier du sommet et le couloir
+        // du tombeau : ces trois-la lui tombaient dessus et l'etouffaient.
+        SanctuaryGarrison.populate(level, new BlockPos(cx, y, cz), HALF, WALK, TOWER_TOP);
 
         BlockState found = level.getBlockState(anchor);
         String occupant = BuiltInRegistries.BLOCK.getKey(found.getBlock()).toString();
@@ -1034,7 +1039,7 @@ public final class Sanctuary {
                 for (int fill = 0; fill < step; fill++) {
                     set(level, px, y + fill, pz, body());
                 }
-                set(level, px, y + step, pz, trim());
+                set(level, px, y + step, pz, riser(g.ax(), g.az()));
                 for (int clear = 1; clear <= 3; clear++) {
                     set(level, px, y + step + clear, pz, Blocks.AIR.defaultBlockState());
                 }
@@ -1275,7 +1280,7 @@ public final class Sanctuary {
                 for (int w = 0; w <= 1; w++) {
                     int qx = px + (dx == 0 ? w : 0);
                     int qz = pz + (dz == 0 ? w : 0);
-                    set(level, qx, y + base + i, qz, trim());
+                    set(level, qx, y + base + i, qz, riser(dx, dz));
                     for (int clear = 1; clear <= 3; clear++) {
                         set(level, qx, y + base + i + clear, qz,
                                 Blocks.AIR.defaultBlockState());
@@ -1413,7 +1418,8 @@ public final class Sanctuary {
             // on ne redescend jamais : un escalier qui plonge n'en est plus un
             int step = Math.max(last, Math.min(here + 1, last + 1));
             for (int w = -1; w <= 1; w++) {
-                set(level, cx + w, step, z, trim());
+                // on monte vers le nord, du pied de la face sud vers le faite
+                set(level, cx + w, step, z, riser(0, -1));
                 for (int clear = 1; clear <= 3; clear++) {
                     set(level, cx + w, step + clear, z, Blocks.AIR.defaultBlockState());
                 }
@@ -1440,7 +1446,8 @@ public final class Sanctuary {
      * salle -- ou, s'il n'y en a pas, sur une douzaine de blocs, ce qui fait au
      * moins un porche.
      */
-    private static void tombEntrance(ServerLevel level, int cx, int y, int cz, int rank) {
+    private static void tombEntrance(ServerLevel level, int cx, int y, int cz, int rank,
+                                     BlockPos anchor) {
         int fromZ = cz + PYRAMID_D - PYRAMID_CZ;
         int end = fromZ;
         boolean broke = false;
@@ -1462,6 +1469,7 @@ public final class Sanctuary {
             end = z;
         }
         vault(level, cx, y, end, rank);
+        seals(level, cx, y, fromZ, end, anchor);
     }
 
     /**
@@ -1500,6 +1508,51 @@ public final class Sanctuary {
         lootChest(level, cx + 2, y + 1, z, sanctuaryTable(rank));
         lootChest(level, cx, y + 1, z - 2, sanctuaryTable(rank));
         lootChest(level, cx, y + 1, z + 2, sanctuaryTable(rank));
+    }
+
+    /**
+     * Les trois sceaux, semes le long du couloir.
+     *
+     * Ils ne sont PAS tous dans la salle du fond : ce serait un seul detour, et
+     * l'on n'aurait rien visite. Espaces le long du chemin, ils obligent a le
+     * parcourir en entier, et le dernier attend dans la salle -- la ou sont
+     * aussi les coffres, ce qui recompense d'etre alle jusqu'au bout.
+     */
+    private static void seals(ServerLevel level, int cx, int y, int fromZ, int endZ,
+                              BlockPos anchor) {
+        java.util.List<BlockPos> placed = new java.util.ArrayList<>();
+        int span = Math.max(6, fromZ - endZ);
+        for (int i = 0; i < SanctuarySeals.PER_SANCTUARY; i++) {
+            int z = fromZ - (int) Math.round(span * (i + 1.0) / SanctuarySeals.PER_SANCTUARY);
+            int side = i % 2 == 0 ? -2 : 2;
+            BlockPos pos = new BlockPos(cx + side, y + 1, z);
+            // une niche, pour qu'il ne bouche pas le passage
+            set(level, pos.getX(), pos.getY(), pos.getZ(), Blocks.AIR.defaultBlockState());
+            set(level, pos.getX(), pos.getY() + 1, pos.getZ(), Blocks.AIR.defaultBlockState());
+            set(level, pos.getX(), pos.getY() - 1, pos.getZ(), shrineTrim());
+            level.setBlock(pos, ModBlocks.TOMB_SEAL.get().defaultBlockState(), 3);
+            placed.add(pos);
+        }
+        SanctuarySeals.register(anchor, placed);
+    }
+
+
+    /**
+     * L'escalier qui monte dans cette direction.
+     *
+     * On posait des blocs PLEINS partout ou l'on monte -- dans les tours, sur
+     * les rampes du rempart, sur le flanc de la pyramide. Il fallait donc
+     * sauter chaque marche, ce qui est penible sur quarante blocs de haut. Un
+     * bloc d'escalier se gravit tout seul.
+     *
+     * Le sens : un escalier se pose en regardant dans la direction ou l'on
+     * MONTE, et c'est cette meme direction qu'il faut lui donner ici.
+     */
+    private static BlockState riser(int dx, int dz) {
+        Direction facing = dx > 0 ? Direction.EAST
+                : dx < 0 ? Direction.WEST
+                : dz > 0 ? Direction.SOUTH : Direction.NORTH;
+        return stair(ModBlocks.POLISHED_GANGUE_STAIRS.get(), facing);
     }
 
     // ----------------------------------------------------------- outillage

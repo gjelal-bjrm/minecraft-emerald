@@ -221,6 +221,12 @@ l'affaire). Elle **se referme toute seule quand vous activez l'ancre** — vous
 êtes enfermé avec ce qui arrive — et se rouvre quand le siège est fini, gagné
 ou perdu.
 
+**Les Sceaux du Tombeau.** Trois sceaux dorment le long du couloir qui s'ouvre
+au pied de la face sud de la pyramide. **L'ancre du sommet refuse l'arcencium
+tant qu'ils ne sont pas tous éveillés** — il faut donc descendre avant de
+monter. Un clic droit suffit à en éveiller un, et ils ne se cassent pas à la
+pioche.
+
 **Le butin.** Chaque étage de chaque tour a son coffre, et **quatre autres dans
 la salle du trésor**, au bout du couloir qui s'ouvre au pied de la face sud de
 la pyramide. Le sommet ne porte que l'ancre : on monte pour la tenir, on

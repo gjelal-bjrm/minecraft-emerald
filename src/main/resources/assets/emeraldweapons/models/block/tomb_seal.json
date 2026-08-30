@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:block/cube_column",
+  "textures": {
+    "end": "emeraldweapons:block/chiseled_arcencium",
+    "side": "emeraldweapons:block/tomb_seal"
+  }
+}
