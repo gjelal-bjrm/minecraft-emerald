@@ -5,6 +5,7 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
+import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -113,6 +114,31 @@ public class GameCommands {
                     anchor.getX(), anchor.getY(), anchor.getZ()), true);
             ctx.getSource().sendSuccess(() -> Component.translatable(
                     "command.emeraldweapons.sanctuary.hint"), false);
+            return 1;
+        }));
+
+        // Retrouver l'ancre du sanctuaire le plus proche, et s'y rendre.
+        // Chercher a la main un bloc pose au sommet d'une pyramide de
+        // quatre-vingt-dix blocs est une perte de temps a chaque essai.
+        root.then(Commands.literal("anchor").executes(ctx -> {
+            ServerLevel level = ctx.getSource().getServer().overworld();
+            var found = com.emerald.game.SanctuaryMist.nearestAnchor(
+                    net.minecraft.core.BlockPos.containing(ctx.getSource().getPosition()));
+            if (found == null) {
+                ctx.getSource().sendFailure(Component.translatable(
+                        "command.emeraldweapons.anchor.none"));
+                return 0;
+            }
+            boolean here = level.getBlockState(found)
+                    .is(com.emerald.block.ModBlocks.PRISMATIC_ANCHOR.get());
+            if (ctx.getSource().getEntity() instanceof net.minecraft.server.level.ServerPlayer player) {
+                player.teleportTo(found.getX() + 0.5, found.getY() + 1, found.getZ() + 0.5);
+            }
+            final BlockPos at = found;
+            ctx.getSource().sendSuccess(() -> Component.translatable(
+                    here ? "command.emeraldweapons.anchor.found"
+                         : "command.emeraldweapons.anchor.missing",
+                    at.getX(), at.getY(), at.getZ()), false);
             return 1;
         }));
 

@@ -49,6 +49,21 @@ public final class SanctuaryMist {
     private static final int PULSE_TICKS = 200;
     private static final int PULSE_EVERY = 600;
 
+    /** L'ancre du sanctuaire le plus proche, pour la commande de verification. */
+    @javax.annotation.Nullable
+    public static BlockPos nearestAnchor(BlockPos near) {
+        BlockPos best = null;
+        double bestDist = Double.MAX_VALUE;
+        for (Site site : sites) {
+            double dist = site.centre().distSqr(near);
+            if (dist < bestDist) {
+                bestDist = dist;
+                best = site.anchor();
+            }
+        }
+        return best;
+    }
+
     public static void clearAll() {
         sites.clear();
     }

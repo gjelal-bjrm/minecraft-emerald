@@ -238,16 +238,21 @@ public final class Sanctuary {
         int best = y;
         for (int dx = -3; dx <= 3; dx++) {
             for (int dz = -3; dz <= 3; dz++) {
-                int top = level.getHeight(
-                        net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
-                        cx + dx, cz + dz);
+                // On DESCEND depuis le plafond du monde au lieu d'interroger la
+                // carte des hauteurs. Celle-ci se met a jour au fil des poses et
+                // se laisse tromper par ce qu'on vient de batir ; un balayage
+                // franc ne rend que ce qui est reellement la, maintenant.
+                int top = y;
+                for (int probe = level.getMaxBuildHeight() - 1; probe > y; probe--) {
+                    if (!level.getBlockState(new BlockPos(cx + dx, probe, cz + dz)).isAir()) {
+                        top = probe;
+                        break;
+                    }
+                }
                 best = Math.max(best, top);
             }
         }
-        // getHeight rend le premier bloc d'AIR au-dessus de la surface : le
-        // parvis se batissait donc un cran trop haut, et l'on voyait la
-        // pyramide « posee une case en dessous ». On veut le bloc plein.
-        return best - 1;
+        return best;
     }
 
     /**

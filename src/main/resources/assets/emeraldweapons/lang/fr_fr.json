@@ -197,5 +197,8 @@
   "game.emeraldweapons.gate.closing": "La herse retombe",
   "command.emeraldweapons.mode.on": "Mode Arcencium ALLUME",
   "command.emeraldweapons.mode.off": "Mode Arcencium ETEINT -- exploration libre",
-  "command.emeraldweapons.sanctuary.hint": "L'ancre est au sommet. On y monte par la tour d'escalier, au sud de la pyramide."
+  "command.emeraldweapons.sanctuary.hint": "L'ancre est au sommet. On y monte par la tour d'escalier, au sud de la pyramide.",
+  "command.emeraldweapons.anchor.found": "Ancre en %s %s %s -- vous y etes",
+  "command.emeraldweapons.anchor.missing": "Ancre ATTENDUE en %s %s %s, mais le bloc manque",
+  "command.emeraldweapons.anchor.none": "Aucun sanctuaire connu de cette session"
 }

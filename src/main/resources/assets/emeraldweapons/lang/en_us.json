@@ -197,5 +197,8 @@
   "game.emeraldweapons.gate.closing": "The portcullis drops",
   "command.emeraldweapons.mode.on": "Arcencium mode ON",
   "command.emeraldweapons.mode.off": "Arcencium mode OFF -- free exploration",
-  "command.emeraldweapons.sanctuary.hint": "The anchor is at the summit. Climb the stair tower south of the pyramid."
+  "command.emeraldweapons.sanctuary.hint": "The anchor is at the summit. Climb the stair tower south of the pyramid.",
+  "command.emeraldweapons.anchor.found": "Anchor at %s %s %s -- you are there",
+  "command.emeraldweapons.anchor.missing": "Anchor EXPECTED at %s %s %s, but the block is missing",
+  "command.emeraldweapons.anchor.none": "No sanctuary known to this session"
 }
