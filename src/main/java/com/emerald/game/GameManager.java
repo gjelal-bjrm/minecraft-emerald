@@ -95,8 +95,17 @@ public class GameManager {
     @SubscribeEvent
     public static void onLevelTick(LevelTickEvent.Post event) {
         if (!(event.getLevel() instanceof ServerLevel level)
-                || !level.dimension().equals(Level.OVERWORLD)
-                || ModeSwitch.off()) {
+                || !level.dimension().equals(Level.OVERWORLD)) {
+            return;
+        }
+        // Les sieges d'ancre tournent MEME mode eteint.
+        //
+        // Eteindre le mode doit couper la partie -- confinement, meteo, Maree,
+        // chronometre -- mais pas le bac a sable. Un sanctuaire se bâtit a la
+        // commande justement pour l'essayer, et un rituel qu'on peut declencher
+        // sans que ses vagues avancent jamais ne s'essaie pas.
+        if (ModeSwitch.off()) {
+            tickAnchorSieges(level);
             return;
         }
         // Les armes ceremonielles n'existent QUE pendant le prologue. Un balayage
@@ -603,7 +612,12 @@ public class GameManager {
         // qui ne repondra jamais. Rien a l'ecran, aucune piste -- « je n'arrive
         // pas a activer l'ancre alors que j'ai douze lingots ». Un refus doit
         // toujours se dire.
-        if (state.status() != GameState.Status.RUNNING) {
+        // Mode eteint, l'ancre repond quand meme : c'est le bac a sable.
+        //
+        // Le refus etait juste en partie -- une ancre n'a pas de sens sans
+        // chronometre -- mais il rendait le sanctuaire d'essai inutilisable,
+        // alors qu'on l'a bâti par commande POUR l'essayer.
+        if (ModeSwitch.enabled() && state.status() != GameState.Status.RUNNING) {
             player.displayClientMessage(Component.translatable(
                             "game.emeraldweapons.anchor.no_game")
                     .withStyle(ChatFormatting.RED), true);

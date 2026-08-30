@@ -295,7 +295,7 @@ Toutes commencent par `/arcencium` et demandent le niveau opérateur.
 | `find` | Donne les coordonnées de la Lame du Serment |
 | `sanctuary [1-3]` | Bâtit un Sanctuaire d'Ancre là où vous êtes, au palier demandé (butin plus riche au 3) |
 | `anchor` | Vous téléporte à l'ancre du sanctuaire le plus proche et dit si le bloc y est |
-| `mode off` | **Éteint le mode** : plus de confinement, ni météo, ni Marée, ni chronomètre. Le monde redevient un Minecraft ordinaire, nos blocs compris — pour explorer et bâtir tranquillement |
+| `mode off` | **Éteint le mode** : plus de confinement, ni météo, ni Marée, ni chronomètre. Le monde redevient un Minecraft ordinaire, nos blocs compris — pour explorer et bâtir tranquillement. Les **rituels d'ancre restent jouables** : c'est le bac à sable où l'on essaie un sanctuaire |
 | `mode on` | Le rallume |
 
 Les noms de météo : `brume`, `aurore`, `nuit`, `meteores`, `dechirure`, `orage`,
