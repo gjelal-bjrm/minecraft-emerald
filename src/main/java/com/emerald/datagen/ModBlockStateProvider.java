@@ -64,8 +64,15 @@ public class ModBlockStateProvider extends BlockStateProvider {
                                 .modelFile(state.getValue(LanternBlock.HANGING) ? hanging : lantern)
                                 .build(),
                 LanternBlock.WATERLOGGED);
+        // L'ICONE a sa propre texture, en seize sur seize.
+        //
+        // On pointait « layer0 » sur la texture du BLOC, qui fait seize par
+        // quarante-huit -- la lanterne y est dessinee en trois bandes que le
+        // gabarit recolle en volume. Ecrasee dans une case d'inventaire, elle
+        // donnait une barre coloree. Le jeu lui-meme ne s'y prend pas
+        // autrement : sa lanterne a une texture d'objet distincte.
         itemModels().withExistingParent("arcencium_lantern", mcLoc("item/generated"))
-                .texture("layer0", lanternTex);
+                .texture("layer0", modLoc("item/arcencium_lantern"));
 
         // --- vegetal
         simpleBlockWithItem(ModBlocks.PRISMATIC_GRASS_BLOCK.get(),

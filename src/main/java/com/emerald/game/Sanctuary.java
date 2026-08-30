@@ -297,13 +297,25 @@ public final class Sanctuary {
                 ResourceLocation.fromNamespaceAndPath("cataclysm", "door_of_seal"))) {
             int ox = cx - PYRAMID_CX;
             int oz = cz - PYRAMID_CZ;
-            int burial = burialAt(level, y);
+
             // Les quadrants, dans l'ordre releve : 1 au nord-ouest, 2 au
             // sud-ouest, 3 au nord-est, 4 au sud-est. Les superieurs se posent
             // quarante-huit blocs plus haut, aux memes abscisses.
             int[][] quads = {{1, 0, 0}, {2, 0, 47}, {3, 47, 0}, {4, 47, 47}};
             boolean ok = true;
             for (int[] q : quads) {
+                // SEULEMENT la moitie haute, et POSEE SUR LE SOL.
+                //
+                // Les quatre morceaux du bas sont les salles du tombeau : un
+                // pave plein de quarante-huit blocs que le generateur enfouit.
+                // Il n'y a pas toujours la place de l'enterrer -- dans un monde
+                // dont le sol est a moins vingt-quatre, il faudrait descendre a
+                // moins soixante-douze, sous le plancher du monde. On l'a donc
+                // vu ressortir en enorme boite rectangulaire, trois fois.
+                //
+                // On ne le pose plus du tout. La pyramide s'arrete a ce qui se
+                // voit, et elle s'assoit franchement sur la cour. Perdre les
+                // salles enterrees coute moins que ce socle qui gachait tout.
                 // La moitie basse est ENTERREE, et c'est ce qui manquait.
                 //
                 // Les quatre morceaux inferieurs ne sont pas un socle : ce sont
@@ -313,17 +325,15 @@ public final class Sanctuary {
                 // pyramide -- « je ne comprends pas pourquoi tu l'as mise sur
                 // un pilier ». On les descend, en laissant affleurer quatre
                 // blocs qui font un parvis naturel.
-                ok &= template(level, source, "cursed_pyramid_lower" + q[0],
-                        ox + q[1], y - burial, oz + q[2]);
                 ok &= template(level, source, "cursed_pyramid_upper" + q[0],
-                        ox + q[1], y - burial + 48, oz + q[2]);
+                        ox + q[1], y, oz + q[2]);
             }
             // On VERIFIE qu'une masse se dresse la ou le faite devrait etre :
             // « place template » ne leve rien quand il echoue, si bien qu'une
             // pose ratee passait inapercue.
             boolean standing = probeTop(level, cx, y, cz - (PYRAMID_CZ - 44)) > y + 12;
             if (ok && standing) {
-                scrubMarkers(level, ox, y - burial, oz);
+                scrubMarkers(level, ox, y, oz);
                 return;
             }
             org.slf4j.LoggerFactory.getLogger(EmeraldWeaponsMod.MODID).warn(
@@ -807,9 +817,6 @@ public final class Sanctuary {
      */
     @Nullable
     private static BlockState skinFor(BlockState state, double height, boolean ridge) {
-        if (!state.getProperties().isEmpty()) {
-            return null;                       // oriente : on n'y touche pas
-        }
         String id = BuiltInRegistries.BLOCK.getKey(state.getBlock()).toString();
         if (id.startsWith(EmeraldWeaponsMod.MODID)) {
             return null;                       // deja a nous
@@ -820,16 +827,77 @@ public final class Sanctuary {
         if (!skin) {
             return null;
         }
+        // La FORME d'abord : la surface de cette pyramide est faite
+        // d'escaliers et de dalles, et c'est precisement pour cela que le
+        // rhabillage ne l'avait jamais touchee -- on refusait tout bloc portant
+        // des proprietes, de peur d'en abimer l'orientation. On recopie
+        // desormais ces proprietes sur le bloc equivalent, ce qui garde le
+        // relief intact tout en changeant la matiere.
+        String shape = id.endsWith("_stairs") ? "stairs"
+                : id.endsWith("_slab") ? "slab"
+                : id.endsWith("_wall") ? "wall" : "block";
+
+        Block target;
         if (ridge) {
-            return height > 0.75 ? shrineTrim() : trim();
+            target = pick(shape, height > 0.75 ? "polished_gangue" : "polished_gangue");
+        } else if (height > 0.82) {
+            target = pick(shape, "arcencium_brick");
+        } else if (height > 0.45) {
+            target = pick(shape, "gangue_brick");
+        } else {
+            target = pick(shape, "corrupted_brick");
         }
-        if (height > 0.82) {
-            return shrine();                   // le faite, en arcencium
+        if (target == null) {
+            return null;
         }
-        if (height > 0.45) {
-            return body();                     // le corps, en gangue
+        return copyShape(state, target.defaultBlockState());
+    }
+
+    /** Le bloc de notre famille qui a cette forme, ou rien. */
+    @Nullable
+    private static Block pick(String shape, String family) {
+        String path = switch (shape) {
+            case "stairs" -> family + "s_stairs";
+            case "slab" -> family + "s_slab";
+            case "wall" -> family + "s_wall";
+            default -> family + "s";
+        };
+        // « polished_gangue » ne prend pas de S, contrairement aux briques
+        if (family.startsWith("polished")) {
+            path = switch (shape) {
+                case "stairs" -> family + "_stairs";
+                case "slab" -> family + "_slab";
+                default -> family;
+            };
         }
-        return base();                         // l'assise, presque noire
+        ResourceLocation key = ResourceLocation.fromNamespaceAndPath(
+                EmeraldWeaponsMod.MODID, path);
+        return BuiltInRegistries.BLOCK.containsKey(key)
+                ? BuiltInRegistries.BLOCK.get(key) : null;
+    }
+
+    /**
+     * Recopie l'orientation d'un bloc sur un autre.
+     *
+     * Facing, moitie, forme, type, immersion : on ne transporte que ce que les
+     * deux blocs ont en commun, si bien qu'un escalier reste un escalier tourne
+     * dans le meme sens, et une dalle reste haute ou basse.
+     */
+    private static BlockState copyShape(BlockState from, BlockState to) {
+        BlockState out = to;
+        for (net.minecraft.world.level.block.state.properties.Property<?> property
+                : from.getProperties()) {
+            if (out.hasProperty(property)) {
+                out = transfer(from, out, property);
+            }
+        }
+        return out;
+    }
+
+    private static <T extends Comparable<T>> BlockState transfer(
+            BlockState from, BlockState to,
+            net.minecraft.world.level.block.state.properties.Property<T> property) {
+        return to.setValue(property, from.getValue(property));
     }
 
     /** La hauteur du premier bloc plein, sondee depuis le plafond du monde. */
@@ -906,19 +974,32 @@ public final class Sanctuary {
                     set(level, px, y + WALK + clear, pz, Blocks.AIR.defaultBlockState());
                 }
             }
-            // La breche dans le parapet, du cote INTERIEUR.
+            // La breche ne touche QUE le parapet interieur.
             //
-            // Elle s'ouvrait a des profondeurs positives, c'est-a-dire au-dela
-            // de la face exterieure du rempart : on perforait le vide dehors
-            // pendant que le garde-corps continuait de barrer la route. Le
-            // corps du mur est aux profondeurs NEGATIVES.
-            for (int t = 0; t < THICK; t++) {
+            // Elle courait sur toute l'epaisseur du mur, parapet exterieur
+            // compris : la rampe debouchait donc a la fois sur le chemin de
+            // ronde et sur le vide dehors, et l'on quittait la place forte en
+            // marchant tout droit. Le garde-corps du dedans doit s'ouvrir,
+            // celui du dehors doit tenir.
+            for (int t = 1; t < THICK; t++) {
                 set(level, g.x(a, -t), y + WALK, g.z(a, -t), floor());
                 for (int clear = 1; clear <= 3; clear++) {
                     set(level, g.x(a, -t), y + WALK + clear, g.z(a, -t),
                             Blocks.AIR.defaultBlockState());
                 }
             }
+            // et le parapet exterieur est REPOSE, au cas ou une etape
+            // precedente l'aurait entame
+            set(level, g.x(a, 0), y + WALK + 1, g.z(a, 0), merlon());
+        }
+
+        // La main courante rejoint le rempart.
+        //
+        // Elle s'arretait a la derniere marche, laissant un vide entre elle et
+        // le parapet : la rampe paraissait finir dans le vague. Deux blocs de
+        // plus a hauteur du chemin de ronde suffisent a fermer la jonction.
+        for (int a = from + WALK; a <= from + WALK + 3; a++) {
+            set(level, g.x(a, -THICK - 3), y + WALK + 1, g.z(a, -THICK - 3), merlon());
         }
     }
 
@@ -1024,7 +1105,7 @@ public final class Sanctuary {
         int floor = level.getMinBuildHeight();
         for (int dx = 0; dx < PYRAMID_W; dx++) {
             for (int dz = 0; dz < PYRAMID_D; dz++) {
-                for (int dy = 0; dy < 88; dy++) {
+                for (int dy = 0; dy < 44; dy++) {
                     if (oy + dy <= floor) {
                         continue;
                     }

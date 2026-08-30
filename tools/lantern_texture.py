@@ -32,6 +32,16 @@ VANILLA_JAR = os.path.join(os.environ.get("USERPROFILE", ""), "curseforge",
                            "minecraft", "Install", "versions", "1.21.1", "1.21.1.jar")
 SOURCE = "assets/minecraft/textures/block/lantern.png"
 
+# L'ICONE d'inventaire a sa PROPRE source, en seize sur seize.
+#
+# La texture de bloc dessine la lanterne en trois bandes de seize, que le
+# gabarit recolle en volume. Pointer l'icone dessus l'ecrasait dans la case
+# d'inventaire et donnait une barre coloree. Le jeu lui-meme ne s'y prend pas
+# autrement : sa lanterne a une texture d'objet distincte.
+ITEM_SOURCE = "assets/minecraft/textures/item/lantern.png"
+ITEM_DIR = os.path.join(ROOT, "src", "main", "resources", "assets", "emeraldweapons",
+                        "textures", "item")
+
 NFRAMES = 8
 
 # La hauteur d'une IMAGE, a declarer explicitement.
@@ -64,13 +74,13 @@ def is_flame(hue, sat, val):
     return val > 0.85 or (sat > 0.45 and (hue < 0.14 or hue > 0.92))
 
 
-def vanilla():
+def vanilla(source=None):
     with zipfile.ZipFile(VANILLA_JAR) as z:
-        return Image.open(_io.BytesIO(z.read(SOURCE))).convert("RGBA")
+        return Image.open(_io.BytesIO(z.read(source or SOURCE))).convert("RGBA")
 
 
-def build(shift):
-    src = vanilla()
+def build(shift, source=None):
+    src = vanilla(source)
     w, h = src.size
     px = src.load()
     out = Image.new("RGBA", (w, h), (0, 0, 0, 0))
@@ -126,6 +136,21 @@ def main():
                  '"width": %d, "height": %d}}\n' % (FRAMETIME, w, h))
     print("  arcencium_lantern  %dx%d, %d images (gabarit vanilla : %dx%d)"
           % (w, h * NFRAMES, NFRAMES, w, h))
+
+    # L'icone d'inventaire, tiree de la texture d'OBJET du jeu
+    os.makedirs(ITEM_DIR, exist_ok=True)
+    icons = [build(f / NFRAMES, ITEM_SOURCE) for f in range(NFRAMES)]
+    iw, ih = icons[0].size
+    idest = os.path.join(ITEM_DIR, "arcencium_lantern.png")
+    isheet = Image.new("RGBA", (iw, ih * NFRAMES), (0, 0, 0, 0))
+    for i, fr in enumerate(icons):
+        isheet.paste(fr, (0, i * ih))
+    isheet.save(idest)
+    with open(idest + ".mcmeta", "w") as fh:
+        fh.write('{"animation": {"frametime": %d, "interpolate": true, '
+                 '"width": %d, "height": %d}}\n' % (FRAMETIME, iw, ih))
+    print("  icone             %dx%d, %d images (%dx%d)"
+          % (iw, ih * NFRAMES, NFRAMES, iw, ih))
 
     if "--preview" in sys.argv:
         os.makedirs(PREVIEW, exist_ok=True)
