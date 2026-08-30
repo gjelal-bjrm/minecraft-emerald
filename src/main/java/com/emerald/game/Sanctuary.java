@@ -1411,10 +1411,15 @@ public final class Sanctuary {
      */
     private static void summitStair(ServerLevel level, int cx, int y, int cz,
                                     int apexZ, int summit) {
-        int fromZ = cz + PYRAMID_D - PYRAMID_CZ + 1;   // le pied de la face sud
+        int fromZ = cz + PYRAMID_D - PYRAMID_CZ;       // le pied de la face sud
         int last = y;
         for (int z = fromZ; z >= apexZ + 3; z--) {
             int here = probeTop(level, cx, y, z);
+            // rien sur le PLAT : l'escalier partait de la cour et y semait des
+            // marches inutiles avant meme d'avoir touche la pyramide
+            if (here <= y && last <= y) {
+                continue;
+            }
             // on ne redescend jamais : un escalier qui plonge n'en est plus un
             int step = Math.max(last, Math.min(here + 1, last + 1));
             for (int w = -1; w <= 1; w++) {
@@ -1450,8 +1455,16 @@ public final class Sanctuary {
                                      BlockPos anchor) {
         int fromZ = cz + PYRAMID_D - PYRAMID_CZ;
         int end = fromZ;
-        boolean broke = false;
-        for (int depth = 0; depth < 26 && !broke; depth++) {
+        // On creuse une PROFONDEUR FIXE, sans chercher a s'arreter.
+        //
+        // Le couloir s'interrompait des qu'il trouvait de l'air deux blocs plus
+        // loin, ce qu'il rencontrait au bout de quatre : au bord d'une pyramide
+        // a gradins, la maconnerie ne fait qu'un ou deux blocs de haut, et tout
+        // ce qui est au-dessus est du ciel. La salle et les sceaux se
+        // retrouvaient donc au pied du monument, en plein air -- « les tomb
+        // seal ne sont pas du tout a l'interieur ». Trente blocs mettent
+        // franchement sous la masse.
+        for (int depth = 0; depth < 30; depth++) {
             int z = fromZ - depth;
             for (int w = -1; w <= 1; w++) {
                 for (int dy = 1; dy <= 3; dy++) {
@@ -1459,9 +1472,6 @@ public final class Sanctuary {
                 }
                 set(level, cx + w, y, z, trim());
                 set(level, cx + w, y + 4, z, shrineTrim());
-            }
-            if (depth > 3 && level.getBlockState(new BlockPos(cx, y + 2, z - 2)).isAir()) {
-                broke = true;                  // on a debouche dans une salle
             }
             if (Math.floorMod(depth, 5) == 0) {
                 set(level, cx - 1, y + 3, z, lantern());
