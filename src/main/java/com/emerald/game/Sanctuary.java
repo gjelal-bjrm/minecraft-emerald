@@ -275,6 +275,7 @@ public final class Sanctuary {
                 ResourceLocation.fromNamespaceAndPath("cataclysm", "door_of_seal"))) {
             int ox = cx - PYRAMID_CX;
             int oz = cz - PYRAMID_CZ;
+            int burial = burialAt(level, y);
             // Les quadrants, dans l'ordre releve : 1 au nord-ouest, 2 au
             // sud-ouest, 3 au nord-est, 4 au sud-est. Les superieurs se posent
             // quarante-huit blocs plus haut, aux memes abscisses.
@@ -291,14 +292,21 @@ public final class Sanctuary {
                 // un pilier ». On les descend, en laissant affleurer quatre
                 // blocs qui font un parvis naturel.
                 ok &= template(level, source, "cursed_pyramid_lower" + q[0],
-                        ox + q[1], y - BURIED, oz + q[2]);
+                        ox + q[1], y - burial, oz + q[2]);
                 ok &= template(level, source, "cursed_pyramid_upper" + q[0],
-                        ox + q[1], y - BURIED + 48, oz + q[2]);
+                        ox + q[1], y - burial + 48, oz + q[2]);
             }
-            if (ok) {
-                scrubMarkers(level, ox, y - BURIED, oz);
+            // On VERIFIE qu'une masse se dresse la ou le faite devrait etre :
+            // « place template » ne leve rien quand il echoue, si bien qu'une
+            // pose ratee passait inapercue.
+            boolean standing = probeTop(level, cx, y, cz - (PYRAMID_CZ - 44)) > y + 12;
+            if (ok && standing) {
+                scrubMarkers(level, ox, y - burial, oz);
                 return;
             }
+            org.slf4j.LoggerFactory.getLogger(EmeraldWeaponsMod.MODID).warn(
+                    "Pyramide de Cataclysm non posee (commandes={}, dressee={}) "
+                            + "a y={} : repli sur la notre", ok, standing, y);
             org.slf4j.LoggerFactory.getLogger(EmeraldWeaponsMod.MODID)
                     .warn("Pyramide de Cataclysm incomplete, repli sur la notre");
         }
@@ -743,7 +751,7 @@ public final class Sanctuary {
                 boolean ridge = Math.abs(ex - ez) < 1.5;
 
                 int painted = 0;
-                for (int dy = top; dy > y - BURIED && painted < 4; dy--) {
+                for (int dy = top; dy > level.getMinBuildHeight() && painted < 4; dy--) {
                     BlockPos pos = new BlockPos(x, dy, z);
                     BlockState state = level.getBlockState(pos);
                     if (state.isAir()) {
@@ -806,7 +814,8 @@ public final class Sanctuary {
 
     /** La hauteur du premier bloc plein, sondee depuis le plafond du monde. */
     private static int probeTop(ServerLevel level, int x, int y, int z) {
-        for (int probe = level.getMaxBuildHeight() - 1; probe > y - BURIED; probe--) {
+        for (int probe = level.getMaxBuildHeight() - 1;
+                probe > level.getMinBuildHeight(); probe--) {
             if (!level.getBlockState(new BlockPos(x, probe, z)).isAir()) {
                 return probe;
             }
@@ -969,6 +978,20 @@ public final class Sanctuary {
     private static final int BURIED = 48;
 
     /**
+     * L'enfouissement REELLEMENT possible a cette altitude.
+     *
+     * C'est ce qui manquait, et le symptome etait deroutant : dans un monde ou
+     * le sol est bas -- moins cinquante-neuf a l'essai -- enterrer le tombeau
+     * de quarante-huit blocs le poussait a moins cent sept, sous le plancher
+     * du monde. La pose echouait alors SANS RIEN DIRE : il n'y avait plus de
+     * pyramide, le sondage du sommet ne trouvait que la cour, et l'ancre
+     * finissait au ras du sol. On borne donc a ce que le monde permet.
+     */
+    private static int burialAt(ServerLevel level, int y) {
+        return Math.max(0, Math.min(BURIED, y - level.getMinBuildHeight() - 2));
+    }
+
+    /**
      * Retire les blocs techniques du modele.
      *
      * « place template » depose le fichier TEL QUEL, blocs de structure et
@@ -978,9 +1001,13 @@ public final class Sanctuary {
      * a nous de nettoyer.
      */
     private static void scrubMarkers(ServerLevel level, int ox, int oy, int oz) {
+        int floor = level.getMinBuildHeight();
         for (int dx = 0; dx < PYRAMID_W; dx++) {
             for (int dz = 0; dz < PYRAMID_D; dz++) {
                 for (int dy = 0; dy < 88; dy++) {
+                    if (oy + dy <= floor) {
+                        continue;
+                    }
                     BlockPos pos = new BlockPos(ox + dx, oy + dy, oz + dz);
                     BlockState state = level.getBlockState(pos);
                     if (state.isAir()) {
