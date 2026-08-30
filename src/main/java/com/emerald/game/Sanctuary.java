@@ -198,11 +198,21 @@ public final class Sanctuary {
         // centre voulu, sans rien mesurer.
         int[] bounds = {cx - PYRAMID_CX, cz - PYRAMID_CZ,
                 cx - PYRAMID_CX + PYRAMID_W, cz - PYRAMID_CZ + PYRAMID_D};
+
+        // LA COUR D'ABORD, LA PYRAMIDE ENSUITE.
+        //
+        // L'ordre inverse expliquait la ceinture de terre autour d'elle et la
+        // marche d'un bloc. On epargnait son emprise au moment de paver, mais
+        // cette emprise est un RECTANGLE, alors que la pyramide n'en occupe
+        // que le centre : les quatre coins du rectangle restaient donc en
+        // terrain naturel, un cran plus bas que la cour, et le rhabillage
+        // venait ensuite les peindre en briques corrompues -- d'ou l'anneau
+        // brun. En pavant tout d'abord, la pyramide se pose PAR-DESSUS et
+        // remplace ce qu'elle recouvre, sans laisser de trou autour.
+        clearSite(level, cx, y, cz, bounds);
+        courtyard(level, cx, y, cz);
         greatPyramid(level, source, cx, y, cz);
         reskin(level, bounds, y);
-
-        clearSite(level, cx, y, cz, bounds);
-        courtyard(level, cx, y, cz, bounds);
         curtainWall(level, cx, y, cz);
         for (int sx = -1; sx <= 1; sx += 2) {
             for (int sz = -1; sz <= 1; sz += 2) {
@@ -451,16 +461,9 @@ public final class Sanctuary {
         }
     }
 
-    private static void courtyard(ServerLevel level, int cx, int y, int cz, int[] keep) {
+    private static void courtyard(ServerLevel level, int cx, int y, int cz) {
         for (int dx = -HALF; dx <= HALF; dx++) {
             for (int dz = -HALF; dz <= HALF; dz++) {
-                // La cour ne PAVE PAS la pyramide : elle lui posait une dalle
-                // en travers du pied, ce qui la faisait paraitre enfoncee dans
-                // un cratere.
-                if (cx + dx >= keep[0] && cx + dx <= keep[2]
-                        && cz + dz >= keep[1] && cz + dz <= keep[3]) {
-                    continue;
-                }
                 // Pas de motif calcule sur (dx + dz) : cela dessinait des
                 // rayures DIAGONALES en travers de toute la cour, ce qui ne
                 // ressemble a aucun dallage. Un damier franc, ou rien.
@@ -560,9 +563,14 @@ public final class Sanctuary {
         // position du coin par rapport au centre de la place.
         int inX = Integer.signum(cx - tx);
         int inZ = Integer.signum(cz - tz);
-        // au chemin de ronde, les deux courtines qui aboutissent a la tour
-        doorway(level, tx, y + WALK, tz, TOWER_RADIUS, true, inX);
-        doorway(level, tx, y + WALK, tz, TOWER_RADIUS, false, inZ);
+        // Au chemin de ronde, DECALEES vers la cour de deux blocs.
+        //
+        // La tour est centree sur la ligne EXTERIEURE du rempart : une baie
+        // percee sur son axe tombait donc au ras du parapet, du mauvais cote de
+        // la travee ou l'on marche. Deux blocs vers l'interieur la ramenent en
+        // face du passage.
+        doorway(level, tx, y + WALK, tz, TOWER_RADIUS, true, inX, inZ * 2);
+        doorway(level, tx, y + WALK, tz, TOWER_RADIUS, false, inZ, inX * 2);
         // Au sol, la baie doit s'ECARTER de la courtine.
         //
         // Une tour d'angle est prise dans les deux murs qui s'y rejoignent :

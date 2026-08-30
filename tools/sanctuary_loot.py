@@ -94,12 +94,15 @@ def table(tier):
 
     # 1. La monnaie du mode. Elle monte franchement : c'est elle qui paie les
     #    ancres suivantes, et un coffre avare rendrait le detour inutile.
-    ingots = {1: (4, 9), 2: (10, 18), 3: (20, 34)}[tier]
+    # Des quantites SOBRES. Vingt a trente lingots par coffre, multiplies par
+    # les etages de quatre tours, noyaient l'economie : l'arcencium doit rester
+    # ce qu'on va chercher, pas ce qu'on ramasse.
+    ingots = {1: (2, 4), 2: (4, 7), 3: (7, 12)}[tier]
     pools.append(pool(1, [item("%s:arcencium_ingot" % MOD, count=ingots)]))
 
     # 2. La matiere premiere et le bois, pour fabriquer sur place
     pools.append(pool({"min": 1, "max": 2}, [
-        item("%s:raw_arcencium" % MOD, 6, (4, 12)),
+        item("%s:raw_arcencium" % MOD, 6, (2, 5)),
         item("%s:prism_branch" % MOD, 4, (2, 6)),
         item("%s:prism_fiber" % MOD, 4, (2, 6)),
     ]))

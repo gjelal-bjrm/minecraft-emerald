@@ -33,6 +33,14 @@ VANILLA_JAR = os.path.join(os.environ.get("USERPROFILE", ""), "curseforge",
 SOURCE = "assets/minecraft/textures/block/lantern.png"
 
 NFRAMES = 8
+
+# La hauteur d'une IMAGE, a declarer explicitement.
+#
+# Sans elle, le jeu suppose des images carrees : notre planche de 16 par 384 se
+# lisait donc comme vingt-quatre vignettes de 16 par 16, chacune un tiers de
+# lanterne. Le bloc s'en tirait par chance, l'icone de l'inventaire non -- elle
+# paraissait coupee en deux.
+FRAME_H = 48
 FRAMETIME = 4
 
 # L'armature. Sombre, mais assez etalee pour que la forme de la lanterne se
@@ -108,7 +116,14 @@ def main():
         sheet.paste(fr, (0, i * h))
     sheet.save(dest)
     with open(dest + ".mcmeta", "w") as fh:
-        fh.write('{"animation": {"frametime": %d, "interpolate": true}}\n' % FRAMETIME)
+        # La hauteur d'image est INDISPENSABLE ici.
+        #
+        # Sans elle, le jeu suppose des vignettes CARREES : notre planche de
+        # 16 par 384 se lisait comme vingt-quatre images de 16 par 16, chacune
+        # un tiers de lanterne. Le bloc pose s'en tirait par chance, l'icone de
+        # l'inventaire non -- elle paraissait coupee en deux.
+        fh.write('{"animation": {"frametime": %d, "interpolate": true, '
+                 '"width": %d, "height": %d}}\n' % (FRAMETIME, w, h))
     print("  arcencium_lantern  %dx%d, %d images (gabarit vanilla : %dx%d)"
           % (w, h * NFRAMES, NFRAMES, w, h))
 
