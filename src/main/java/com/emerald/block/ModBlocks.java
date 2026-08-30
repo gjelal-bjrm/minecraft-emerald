@@ -81,7 +81,10 @@ public class ModBlocks {
     public static final DeferredBlock<TombSealBlock> TOMB_SEAL = registerBlock("tomb_seal",
             () -> new TombSealBlock(BlockBehaviour.Properties.of()
                     .strength(50.0F, 1200.0F)
-                    .lightLevel(state -> state.getValue(TombSealBlock.LIT) ? 12 : 3)
+                    // Endormi, il luit tout de meme : a trois, il se noyait dans une salle
+                    // sombre et l'on passait devant sans le voir. A sept, il se
+                    // signale d'un couloir sans pour autant paraitre deja eveille.
+                    .lightLevel(state -> state.getValue(TombSealBlock.LIT) ? 12 : 7)
                     .sound(SoundType.AMETHYST)));
 
     // --------------------------------------------- Gangue : la masse du village

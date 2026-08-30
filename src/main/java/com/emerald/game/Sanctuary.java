@@ -1677,10 +1677,14 @@ public final class Sanctuary {
         // -- ce qu'on ne peut pas mesurer, on le calcule.
         java.util.List<BlockPos> placed = new java.util.ArrayList<>();
 
-        // 1. LA SALLE DU TRESOR, a l'entree de l'interieur, contre les coffres.
-        //    Celui-la se trouve en meme temps que le butin : il enseigne a quoi
-        //    ressemble un sceau avant qu'on ait a en chercher un.
-        placed.add(cellSeal(level, cx - 2, y + 1, endZ - 2));
+        // 1. CONTRE UN COFFRE, dans la salle du tresor.
+        //
+        //    Un angle de la piece ne suffisait pas : on ouvre les coffres, on
+        //    repart, et le sceau reste dans le dos. Colle au coffre, il tombe
+        //    dans le meme regard que le butin -- on ne peut pas prendre l'un
+        //    sans voir l'autre. Celui-la enseigne a quoi ressemble un sceau
+        //    avant qu'on ait a en chercher un.
+        placed.add(cellSeal(level, cx - 1, y + 1, endZ - 2));
 
         // 2. A L'ETAGE, dans une chambre laterale.
         placed.add(upperChamber(level, cx, y, endZ + 3));
