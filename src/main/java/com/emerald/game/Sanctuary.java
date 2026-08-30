@@ -280,9 +280,9 @@ public final class Sanctuary {
         BlockState found = level.getBlockState(anchor);
         String occupant = BuiltInRegistries.BLOCK.getKey(found.getBlock()).toString();
         source.sendSuccess(() -> Component.literal(String.format(
-                "Sol %d | sommet %d | pyramide %s | %d blocs rhabilles | cave %s | %s | a l'ancre : %s",
+                "Sol %d | sommet %d | pyramide %s | %d blocs rhabilles | %s | a l'ancre : %s",
                 y, summit, apex >= 0 ? "dressee" : "ABSENTE", repainted,
-                cellarBuilt ? "creusee" : "PAS LA PLACE", sealReport, occupant)), false);
+                sealReport, occupant)), false);
         return anchor;
     }
 
@@ -1665,6 +1665,9 @@ public final class Sanctuary {
      * parcourir en entier, et le dernier attend dans la salle -- la ou sont
      * aussi les coffres, ce qui recompense d'etre alle jusqu'au bout.
      */
+    /** Ou les trois sceaux sont tombes, pour le compte rendu de la commande. */
+    private static String sealReport = "";
+
     private static void seals(ServerLevel level, int cx, int y, int fromZ, int endZ,
                               BlockPos anchor, int apexZ) {
         // TROIS NIVEAUX : le tresor, l'etage, le sous-sol.
@@ -1681,20 +1684,14 @@ public final class Sanctuary {
         java.util.List<BlockPos> placed = new java.util.ArrayList<>();
         sealReport = "";
 
-        // 1. CONTRE UN COFFRE, dans la salle du tresor.
-        //
-        //    Un angle de la piece ne suffisait pas : on ouvre les coffres, on
-        //    repart, et le sceau reste dans le dos. Colle au coffre, il tombe
-        //    dans le meme regard que le butin -- on ne peut pas prendre l'un
-        //    sans voir l'autre. Celui-la enseigne a quoi ressemble un sceau
-        //    avant qu'on ait a en chercher un.
-        placed.add(freeSeal(level, cx - 1, y + 1, endZ - 2));
+        // 1. A L'ENTREE, une alcove ouverte sur le couloir, pres du porche.
+        placed.add(alcove(level, cx, y + 1, fromZ - 6, 1));
 
-        // 2. A L'ETAGE, dans une chambre laterale.
+        // 2. A L'ETAGE, dans la chambre centrale, A GAUCHE.
         placed.add(upperChamber(level, cx, y, endZ + 3));
 
-        // 3. AU SOUS-SOL, sous la salle du tresor.
-        placed.add(basement(level, cx, y, endZ, fromZ));
+        // 3. DANS LES SALLES, contre un coffre du tresor.
+        placed.add(freeSeal(level, cx - 1, y + 1, endZ - 2));
 
         // Et l'on DIT ou ils sont partis.
         //
@@ -1705,7 +1702,7 @@ public final class Sanctuary {
         // tranche la question en une ligne -- la meme lecon que pour la
         // pyramide absente.
         StringBuilder report = new StringBuilder();
-        String[] labels = {"tresor", "etage", "cave"};
+        String[] labels = {"entree", "etage", "salle"};
         for (int i = 0; i < placed.size(); i++) {
             BlockPos p = placed.get(i);
             report.append(i == 0 ? "" : " | ").append(labels[i]).append(' ')
@@ -1754,69 +1751,6 @@ public final class Sanctuary {
         return freeSeal(level, wx, y, z);
     }
     /**
-     * La cave, sous la salle du tresor.
-     *
-     * La pyramide a bien des sous-sols dans son modele, mais ils sont dans la
-     * moitie enterree que l'on ne pose pas : les chercher revenait a chercher
-     * ce qui n'existe pas. On la creuse donc, sous le tresor, au bout d'un
-     * puits a echelons perce dans un angle de la salle.
-     *
-     * Elle depend du seul element qu'on ne maitrise pas : la place sous le
-     * sanctuaire. En monde plat de test, le socle du monde n'est qu'a quelques
-     * blocs et il n'y a litteralement pas de quoi creuser -- on se rabat alors
-     * sur une niche de couloir plutot que de percer le vide, et le compte rendu
-     * le dit au lieu de le taire.
-     */
-    private static boolean cellarBuilt;
-    private static String sealReport = "";
-
-    private static BlockPos basement(ServerLevel level, int cx, int y, int z, int fromZ) {
-        int sx = cx + 2;                            // le puits, dans un angle
-        int sz = z + 2;
-        int floor = Math.max(level.getMinBuildHeight() + 2, y - 12);
-        cellarBuilt = y - floor >= 5;
-        if (!cellarBuilt) {
-            // Le repli s'en va LOIN de la salle du tresor.
-            //
-            // Il retombait a un bloc de son mur, et l'on se retrouvait avec
-            // deux sceaux dans le meme regard : la repartition demandee etait
-            // annulee par le repli lui-meme, en silence. Au porche, il reste au
-            // moins a un autre endroit du monument.
-            return alcove(level, cx, y + 1, fromZ - 7, 1);
-        }
-
-        // le puits : on perce le dallage de la salle et l'on descend
-        for (int h = y; h > floor; h--) {
-            set(level, sx, h, z, Blocks.AIR.defaultBlockState());
-            set(level, sx, h, sz, Blocks.AIR.defaultBlockState());
-            if (level.getBlockState(new BlockPos(sx, h, sz - 1)).isAir()) {
-                set(level, sx, h, sz - 1, shrine());
-            }
-            set(level, sx, h, sz, Blocks.LADDER.defaultBlockState()
-                    .setValue(net.minecraft.world.level.block.LadderBlock.FACING,
-                            Direction.SOUTH));
-        }
-
-        // la cave elle-meme, sous la salle
-        for (int dx = -3; dx <= 3; dx++) {
-            for (int dz = -3; dz <= 3; dz++) {
-                set(level, sx + dx, floor - 1, sz + dz, trim());
-                for (int dy = 0; dy <= 2; dy++) {
-                    set(level, sx + dx, floor + dy, sz + dz,
-                            Blocks.AIR.defaultBlockState());
-                }
-                set(level, sx + dx, floor + 3, sz + dz, shrine());
-            }
-        }
-        set(level, sx - 3, floor, sz - 3, lantern());
-        set(level, sx + 3, floor, sz + 3, lantern());
-
-        BlockPos pos = new BlockPos(sx - 2, floor, sz - 2);
-        level.setBlock(pos, ModBlocks.TOMB_SEAL.get().defaultBlockState(), 3);
-        return pos;
-    }
-
-    /**
      * La salle haute, et le puits qui y mene.
      *
      * C'est le seul des trois qui demande un effort : un puits a echelons monte
@@ -1829,8 +1763,10 @@ public final class Sanctuary {
      * monument a cet endroit, faute de quoi la chambre percerait le flanc.
      */
     private static BlockPos upperChamber(ServerLevel level, int cx, int y, int z) {
-        int sx = cx + 2;                            // le puits, contre la paroi
-        int hx = sx + 2;                            // le centre de la chambre
+        // A GAUCHE, comme demande : le puits contre la paroi ouest du couloir,
+        // et la chambre plus loin dans la meme direction.
+        int sx = cx - 2;                            // le puits, contre la paroi
+        int hx = sx - 2;                            // le centre de la chambre
 
         // L'EPAISSEUR SE MESURE SUR TOUTE L'EMPRISE, pas sur le puits.
         //
@@ -1839,7 +1775,7 @@ public final class Sanctuary {
         // elle perforait la paroi et ouvrait une baie beante dans le monument.
         // C'est le point le plus mince qui commande, pas le plus commode.
         int cover = Integer.MAX_VALUE;
-        for (int x = sx; x <= hx + 1; x++) {
+        for (int x = hx - 1; x <= sx; x++) {
             for (int dz = -2; dz <= 2; dz++) {
                 cover = Math.min(cover, probeTop(level, x, y, z + dz));
             }
@@ -1878,7 +1814,7 @@ public final class Sanctuary {
             }
         }
         // le palier qui relie le puits a la chambre
-        for (int x = sx; x <= hx; x++) {
+        for (int x = hx; x <= sx; x++) {
             set(level, x, top, z, trim());
             for (int dy = 1; dy <= 3; dy++) {
                 set(level, x, top + dy, z, Blocks.AIR.defaultBlockState());
