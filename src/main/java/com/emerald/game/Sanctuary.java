@@ -280,9 +280,9 @@ public final class Sanctuary {
         BlockState found = level.getBlockState(anchor);
         String occupant = BuiltInRegistries.BLOCK.getKey(found.getBlock()).toString();
         source.sendSuccess(() -> Component.literal(String.format(
-                "Sol %d | sommet %d | pyramide %s | %d blocs rhabilles | cave %s | a l'ancre : %s",
+                "Sol %d | sommet %d | pyramide %s | %d blocs rhabilles | cave %s | %s | a l'ancre : %s",
                 y, summit, apex >= 0 ? "dressee" : "ABSENTE", repainted,
-                cellarBuilt ? "creusee" : "PAS LA PLACE", occupant)), false);
+                cellarBuilt ? "creusee" : "PAS LA PLACE", sealReport, occupant)), false);
         return anchor;
     }
 
@@ -1667,6 +1667,7 @@ public final class Sanctuary {
         // lecon que pour la profondeur du couloir et le sommet de la pyramide
         // -- ce qu'on ne peut pas mesurer, on le calcule.
         java.util.List<BlockPos> placed = new java.util.ArrayList<>();
+        sealReport = "";
 
         // 1. CONTRE UN COFFRE, dans la salle du tresor.
         //
@@ -1681,7 +1682,24 @@ public final class Sanctuary {
         placed.add(upperChamber(level, cx, y, endZ + 3));
 
         // 3. AU SOUS-SOL, sous la salle du tresor.
-        placed.add(basement(level, cx, y, endZ));
+        placed.add(basement(level, cx, y, endZ, fromZ));
+
+        // Et l'on DIT ou ils sont partis.
+        //
+        // Deux sceaux se retrouvaient contre les coffres sans que rien ne le
+        // signale : les replis des deux autres emplacements tombaient tous
+        // deux au bord de la salle du tresor, et il n'y avait aucun moyen de
+        // le savoir autrement qu'en fouillant tout le monument. Le compte rendu
+        // tranche la question en une ligne -- la meme lecon que pour la
+        // pyramide absente.
+        StringBuilder report = new StringBuilder();
+        String[] labels = {"tresor", "etage", "cave"};
+        for (int i = 0; i < placed.size(); i++) {
+            BlockPos p = placed.get(i);
+            report.append(i == 0 ? "" : " | ").append(labels[i]).append(' ')
+                    .append(p.getX()).append(',').append(p.getY()).append(',').append(p.getZ());
+        }
+        sealReport = report.toString();
 
         SanctuarySeals.register(anchor, placed);
     }
@@ -1714,14 +1732,21 @@ public final class Sanctuary {
      * le dit au lieu de le taire.
      */
     private static boolean cellarBuilt;
+    private static String sealReport = "";
 
-    private static BlockPos basement(ServerLevel level, int cx, int y, int z) {
+    private static BlockPos basement(ServerLevel level, int cx, int y, int z, int fromZ) {
         int sx = cx + 2;                            // le puits, dans un angle
         int sz = z + 2;
         int floor = Math.max(level.getMinBuildHeight() + 2, y - 12);
         cellarBuilt = y - floor >= 5;
         if (!cellarBuilt) {
-            return cellSeal(level, cx + 2, y + 1, z + 4);
+            // Le repli s'en va LOIN de la salle du tresor.
+            //
+            // Il retombait a un bloc de son mur, et l'on se retrouvait avec
+            // deux sceaux dans le meme regard : la repartition demandee etait
+            // annulee par le repli lui-meme, en silence. Au porche, il reste au
+            // moins a un autre endroit du monument.
+            return cellSeal(level, cx + 2, y + 1, fromZ - 7);
         }
 
         // le puits : on perce le dallage de la salle et l'on descend
@@ -1769,7 +1794,7 @@ public final class Sanctuary {
      */
     private static BlockPos upperChamber(ServerLevel level, int cx, int y, int z) {
         int sx = cx + 2;                            // le puits, contre la paroi
-        int hx = sx + 3;                            // le centre de la chambre
+        int hx = sx + 2;                            // le centre de la chambre
 
         // L'EPAISSEUR SE MESURE SUR TOUTE L'EMPRISE, pas sur le puits.
         //
@@ -1778,15 +1803,19 @@ public final class Sanctuary {
         // elle perforait la paroi et ouvrait une baie beante dans le monument.
         // C'est le point le plus mince qui commande, pas le plus commode.
         int cover = Integer.MAX_VALUE;
-        for (int x = sx; x <= hx + 2; x++) {
+        for (int x = sx; x <= hx + 1; x++) {
             for (int dz = -2; dz <= 2; dz++) {
                 cover = Math.min(cover, probeTop(level, x, y, z + dz));
             }
         }
-        int top = Math.min(y + 16, cover - 5);
+        // Une chambre plus modeste tient sous une epaisseur moindre : a cinq
+        // blocs de large elle exigeait une couverture qu'on n'a pas toujours,
+        // et son repli la ramenait au pied de la pyramide -- c'est-a-dire nulle
+        // part ou l'on avait demande qu'elle soit.
+        int top = Math.min(y + 16, cover - 4);
         if (top < y + 6) {
-            // pas assez d'epaisseur ici : on se rabat sur une niche de couloir
-            return cellSeal(level, cx - 2, y + 1, z);
+            // vraiment trop mince : on se hisse au plus haut qu'on puisse
+            top = Math.max(y + 6, cover - 4);
         }
 
         // le puits : une case d'air, une echelle, et de quoi la porter
@@ -1801,8 +1830,8 @@ public final class Sanctuary {
         }
 
         // la chambre, ecartee du puits pour qu'on y debouche de plain-pied
-        for (int dx = -2; dx <= 2; dx++) {
-            for (int dz = -2; dz <= 2; dz++) {
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dz = -1; dz <= 1; dz++) {
                 for (int dy = 0; dy <= 3; dy++) {
                     set(level, hx + dx, top + dy, z + dz,
                             dy == 0 ? trim() : Blocks.AIR.defaultBlockState());
@@ -1817,8 +1846,8 @@ public final class Sanctuary {
                 set(level, x, top + dy, z, Blocks.AIR.defaultBlockState());
             }
         }
-        set(level, hx - 2, top + 1, z - 2, lantern());
-        set(level, hx + 2, top + 1, z + 2, lantern());
+        set(level, hx - 1, top + 1, z - 1, lantern());
+        set(level, hx + 1, top + 1, z + 1, lantern());
 
         BlockPos pos = new BlockPos(hx, top + 1, z);
         level.setBlock(pos, ModBlocks.TOMB_SEAL.get().defaultBlockState(), 3);
