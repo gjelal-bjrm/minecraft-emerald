@@ -221,8 +221,10 @@ l'affaire). Elle **se referme toute seule quand vous activez l'ancre** — vous
 êtes enfermé avec ce qui arrive — et se rouvre quand le siège est fini, gagné
 ou perdu.
 
-**Le butin.** Chaque étage de chaque tour a son coffre, plus deux au sommet de
-part et d'autre de l'ancre. Ce sont des **coffres Lootr** : chaque joueur a son
+**Le butin.** Chaque étage de chaque tour a son coffre, et **quatre autres dans
+la salle du trésor**, au bout du couloir qui s'ouvre au pied de la face sud de
+la pyramide. Le sommet ne porte que l'ancre : on monte pour la tenir, on
+descend pour s'équiper. Ce sont des **coffres Lootr** : chaque joueur a son
 propre tirage, personne ne se fait devancer. La richesse suit le palier de
 l'ancre — la première paie moyennement, la deuxième bien, et la troisième doit
 vous armer pour le boss : lingots par vingtaines, matériaux mythiques

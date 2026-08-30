@@ -248,7 +248,7 @@ public final class Sanctuary {
         int summit = apex >= 0 ? apex : summitOf(level, cx, y, apexZ);
         BlockPos anchor = crown(level, cx, summit, apexZ, rank);
         summitStair(level, cx, y, cz, apexZ, summit);
-        tombEntrance(level, cx, y, cz);
+        tombEntrance(level, cx, y, cz, rank);
         SanctuaryGarrison.populate(level, new BlockPos(cx, y, cz), HALF);
         SanctuaryMist.register(new BlockPos(cx, y, cz), HALF, anchor);
 
@@ -493,9 +493,11 @@ public final class Sanctuary {
             }
         }
         // deux coffres encadrent l'ancre : le sommet doit payer la montee
-        int chestFoot = y - Math.max(0, 3 - 2);
-        lootChest(level, cx - 3, chestFoot + 1, cz, sanctuaryTable(rank));
-        lootChest(level, cx + 3, chestFoot + 1, cz, sanctuaryTable(rank));
+        // Rien au sommet que l'ancre.
+        //
+        // Les deux coffres y etaient une facilite : puisqu'on monte desormais
+        // par l'exterieur, on les aurait pris sans jamais entrer. Le tresor
+        // descend dans le tombeau, ou il faut aller le chercher.
 
         BlockPos anchor = new BlockPos(cx, y + 2, cz);
         level.setBlockAndUpdate(anchor, ModBlocks.PRISMATIC_ANCHOR.get().defaultBlockState());
@@ -1438,8 +1440,9 @@ public final class Sanctuary {
      * salle -- ou, s'il n'y en a pas, sur une douzaine de blocs, ce qui fait au
      * moins un porche.
      */
-    private static void tombEntrance(ServerLevel level, int cx, int y, int cz) {
+    private static void tombEntrance(ServerLevel level, int cx, int y, int cz, int rank) {
         int fromZ = cz + PYRAMID_D - PYRAMID_CZ;
+        int end = fromZ;
         boolean broke = false;
         for (int depth = 0; depth < 26 && !broke; depth++) {
             int z = fromZ - depth;
@@ -1456,7 +1459,47 @@ public final class Sanctuary {
             if (Math.floorMod(depth, 5) == 0) {
                 set(level, cx - 1, y + 3, z, lantern());
             }
+            end = z;
         }
+        vault(level, cx, y, end, rank);
+    }
+
+    /**
+     * La salle du tresor, au bout du couloir.
+     *
+     * C'est elle qui donne une raison d'entrer. Depuis que l'escalier exterieur
+     * mene au sommet, l'interieur n'etait plus sur le chemin de rien : on
+     * prenait l'ancre sans jamais y descendre. Le tresor y est donc descendu
+     * avec lui -- quatre coffres, la ou il y en avait deux la-haut.
+     *
+     * Elle se creuse si le couloir n'a debouche nulle part, et se contente de
+     * meubler la salle du modele s'il y en avait une.
+     */
+    private static void vault(ServerLevel level, int cx, int y, int z, int rank) {
+        for (int dx = -3; dx <= 3; dx++) {
+            for (int dz = -3; dz <= 3; dz++) {
+                for (int dy = 1; dy <= 4; dy++) {
+                    set(level, cx + dx, y + dy, z + dz, Blocks.AIR.defaultBlockState());
+                }
+                boolean rim = Math.abs(dx) == 3 || Math.abs(dz) == 3;
+                set(level, cx + dx, y, z + dz, rim ? shrineTrim() : trim());
+                set(level, cx + dx, y + 5, z + dz, shrine());
+            }
+        }
+        // les quatre piliers d'angle, et leur lumiere
+        for (int sx = -1; sx <= 1; sx += 2) {
+            for (int sz = -1; sz <= 1; sz += 2) {
+                for (int dy = 1; dy <= 4; dy++) {
+                    set(level, cx + sx * 3, y + dy, z + sz * 3, shrine());
+                }
+                set(level, cx + sx * 2, y + 4, z + sz * 2, lantern());
+            }
+        }
+        // quatre coffres, un par mur : de quoi valoir la descente
+        lootChest(level, cx - 2, y + 1, z, sanctuaryTable(rank));
+        lootChest(level, cx + 2, y + 1, z, sanctuaryTable(rank));
+        lootChest(level, cx, y + 1, z - 2, sanctuaryTable(rank));
+        lootChest(level, cx, y + 1, z + 2, sanctuaryTable(rank));
     }
 
     // ----------------------------------------------------------- outillage
