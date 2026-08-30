@@ -214,7 +214,7 @@ public final class Sanctuary {
         clearSite(level, cx, y, cz, bounds);
         courtyard(level, cx, y, cz);
         int apex = greatPyramid(level, source, cx, y, cz);
-        reskin(level, bounds, y);
+        int repainted = reskin(level, bounds, y);
         curtainWall(level, cx, y, cz);
         for (int sx = -1; sx <= 1; sx += 2) {
             for (int sz = -1; sz <= 1; sz += 2) {
@@ -260,8 +260,8 @@ public final class Sanctuary {
         BlockState found = level.getBlockState(anchor);
         String occupant = BuiltInRegistries.BLOCK.getKey(found.getBlock()).toString();
         source.sendSuccess(() -> Component.literal(String.format(
-                "Sol %d | sommet %d | pyramide %s | a l'ancre : %s",
-                y, summit, summit > y + 12 ? "dressee" : "ABSENTE", occupant)), false);
+                "Sol %d | sommet %d | pyramide %s | %d blocs rhabilles | a l'ancre : %s",
+                y, summit, apex >= 0 ? "dressee" : "ABSENTE", repainted, occupant)), false);
         return anchor;
     }
 
@@ -717,6 +717,33 @@ public final class Sanctuary {
             set(level, g.x(a, 0), y + GATE_HEIGHT + 1, g.z(a, 0),
                     Blocks.AIR.defaultBlockState());
         }
+
+        // Le rempart PASSE AU-DESSUS de la porte.
+        //
+        // Il s'arretait a la voute, une douzaine de blocs sous le chemin de
+        // ronde : la courtine s'interrompait donc en plein milieu de chaque
+        // cote, on voyait le paysage -- et la pyramide -- par la breche, et la
+        // ronde ne pouvait pas faire le tour. On remonte la maconnerie jusqu'a
+        // la hauteur du mur, chemin de ronde et parapets compris.
+        for (int d = 0; d < THICK; d++) {
+            for (int a = -GATE_HALF - 1; a <= GATE_HALF + 1; a++) {
+                for (int dy = GATE_HEIGHT + 5; dy <= WALL_TOP; dy++) {
+                    BlockState mat = dy == WALL_TOP ? trim()
+                            : (Math.floorMod(a, 9) == 0 ? shrine() : body());
+                    set(level, g.x(a, -d), y + dy, g.z(a, -d), mat);
+                }
+                set(level, g.x(a, -d), y + WALK, g.z(a, -d), floor());
+                for (int clear = 1; clear <= 3; clear++) {
+                    set(level, g.x(a, -d), y + WALK + clear, g.z(a, -d),
+                            Blocks.AIR.defaultBlockState());
+                }
+            }
+        }
+        // les deux parapets de cette travee, comme partout ailleurs
+        for (int a = -GATE_HALF - 1; a <= GATE_HALF + 1; a++) {
+            set(level, g.x(a, 0), y + WALK + 1, g.z(a, 0), merlon());
+            set(level, g.x(a, -(THICK - 1)), y + WALK + 1, g.z(a, -(THICK - 1)), merlon());
+        }
         for (int flank = -1; flank <= 1; flank += 2) {
             int a = flank * (GATE_HALF + 2);
             set(level, g.x(a, 3), y + 1, g.z(a, 3), shrineTrim());
@@ -765,7 +792,8 @@ public final class Sanctuary {
      * porte le relief du batiment, et les remplacer par des blocs pleins
      * l'aplatirait.
      */
-    private static void reskin(ServerLevel level, int[] bounds, int y) {
+    private static int reskin(ServerLevel level, int[] bounds, int y) {
+        int painted_total = 0;
         // On mesure d'abord la hauteur reelle du batiment, pour que le degrade
         // se repartisse dessus au lieu de dependre de chiffres ecrits en dur.
         int crest = y;
@@ -803,11 +831,14 @@ public final class Sanctuary {
                     BlockState skin = skinFor(state, (dy - y) / (double) span, ridge);
                     if (skin != null) {
                         level.setBlock(pos, skin, 2);
+                        painted++;
+                        painted_total++;
                     }
                     painted++;
                 }
             }
         }
+        return painted_total;
     }
 
     /**
