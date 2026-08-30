@@ -669,9 +669,15 @@ public final class Sanctuary {
             int inward = -(acrossX ? g.nx() : g.nz());
             doorway(level, bx, y + WALK, bz, 6, acrossX, inward);
             doorway(level, bx, y + 1, bz, 6, acrossX, inward);
-            // et le long du rempart, pour passer d'une tour au chemin de ronde
-            doorway(level, bx, y + WALK, bz, 6, !acrossX, 1);
-            doorway(level, bx, y + WALK, bz, 6, !acrossX, -1);
+            // Le long du rempart, DECALEES de deux vers la cour.
+            //
+            // Meme defaut que sur les tours d'angle, et pour la meme raison :
+            // ces tours sont centrees sur la ligne EXTERIEURE du mur, donc une
+            // baie percee sur leur axe tombe au ras du parapet, a cote de la
+            // travee ou l'on marche. Je l'avais corrige aux angles et oublie
+            // ici.
+            doorway(level, bx, y + WALK, bz, 6, !acrossX, 1, inward * 2);
+            doorway(level, bx, y + WALK, bz, 6, !acrossX, -1, inward * 2);
         }
 
         // la voute : un arc, pas un linteau plat
