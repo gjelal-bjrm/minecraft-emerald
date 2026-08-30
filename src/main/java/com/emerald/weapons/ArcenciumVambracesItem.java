@@ -19,11 +19,13 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * Couperet d'Arcencium -- la Rage.
+ * Brassards d'Arcencium -- la Rage.
  *
- * Quatrieme membre de la famille, et le seul qui ne se gouverne pas. L'epee
- * est la Fureur, l'arc la Tension, le sceptre la Concorde ; le couperet ne
- * demande ni adresse ni patience, il demande de ne pas reculer.
+ * Quatrieme membre de la famille, et le seul qui ne se tienne pas : ces deux
+ * lames se SANGLENT, une par avant-bras, et prolongent le bras au lieu de
+ * sortir du poing. L'epee est la Fureur, l'arc la Tension, le sceptre la
+ * Concorde ; les brassards ne demandent ni adresse ni patience, ils demandent
+ * de ne pas reculer.
  *
  * Il est batti sur une idee simple et eprouvee : une jauge qui ne se remplit
  * qu'au contact, et qui achete deux choses opposees -- se soigner, ou clouer
@@ -47,7 +49,7 @@ import net.minecraft.world.phys.Vec3;
  * Ces deux depenses ne se cumulent pas volontiers : ce qu'on garde pour se
  * soigner, on ne l'a pas pour immobiliser. C'est la tension qu'on cherche.
  */
-public class ArcenciumCleaverItem extends Item {
+public class ArcenciumVambracesItem extends Item {
 
     // --- la Rage
     public static final int RAGE_MAX = 5;
@@ -90,7 +92,7 @@ public class ArcenciumCleaverItem extends Item {
     private static final String TAG_LAST_HIT = "ArcenciumRageLastHit";
     private static final String TAG_SECOND = "ArcenciumSecondDash";
 
-    public ArcenciumCleaverItem(Properties properties) {
+    public ArcenciumVambracesItem(Properties properties) {
         super(properties);
     }
 

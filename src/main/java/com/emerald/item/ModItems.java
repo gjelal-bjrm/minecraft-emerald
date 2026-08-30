@@ -2,7 +2,7 @@ package com.emerald.item;
 
 import com.emerald.tiers.EmeraldTier;
 import com.emerald.weapons.ArcenciumBowItem;
-import com.emerald.weapons.ArcenciumCleaverItem;
+import com.emerald.weapons.ArcenciumVambracesItem;
 import com.emerald.weapons.ArcenciumScepterItem;
 import com.emerald.weapons.EmeraldWindblade;
 import com.emerald.main.EmeraldWeaponsMod;
@@ -42,15 +42,16 @@ public class ModItems {
                     new ArcenciumScepterItem(new Item.Properties().durability(900)));
 
     /**
-     * Couperet d'Arcencium -- la Rage (voir ArcenciumCleaverItem).
+     * Brassards d'Arcencium -- la Rage (voir ArcenciumVambracesItem).
      *
-     * Plus lent que l'epee et moins tranchant a froid : -2,4 contre -2,2, et
-     * deux points de degats de base en moins. Tout ce qui lui manque au repos,
-     * la Rage le lui rend -- a condition de ne pas reculer.
+     * Deux lames sanglees aux avant-bras, une par bras. Plus lentes que l'epee
+     * et moins tranchantes a froid : -2,4 contre -2,2, et deux points de degats
+     * de base en moins. Tout ce qui leur manque au repos, la Rage le leur rend
+     * -- a condition de ne pas reculer.
      */
-    public static final DeferredItem<ArcenciumCleaverItem> ARCENCIUM_CLEAVER =
-            ITEMS.register("arcencium_cleaver", () ->
-                    new ArcenciumCleaverItem(new Item.Properties()
+    public static final DeferredItem<ArcenciumVambracesItem> ARCENCIUM_VAMBRACES =
+            ITEMS.register("arcencium_vambraces", () ->
+                    new ArcenciumVambracesItem(new Item.Properties()
                             .durability(1250)
                             .rarity(net.minecraft.world.item.Rarity.EPIC)
                             .attributes(SwordItem.createAttributes(
