@@ -222,7 +222,6 @@ public final class Sanctuary {
         int apexZ = cz - (PYRAMID_CZ - 44);
         int summit = summitOf(level, cx, y, apexZ);
         BlockPos anchor = crown(level, cx, summit, apexZ);
-        ascent(level, cx, y, cz, summit, bounds);
         SanctuaryGarrison.populate(level, new BlockPos(cx, y, cz), HALF);
         SanctuaryMist.register(new BlockPos(cx, y, cz), HALF, anchor);
         return anchor;
@@ -245,7 +244,10 @@ public final class Sanctuary {
                 best = Math.max(best, top);
             }
         }
-        return best;
+        // getHeight rend le premier bloc d'AIR au-dessus de la surface : le
+        // parvis se batissait donc un cran trop haut, et l'on voyait la
+        // pyramide « posee une case en dessous ». On veut le bloc plein.
+        return best - 1;
     }
 
     /**
@@ -386,99 +388,22 @@ public final class Sanctuary {
                 set(level, cx + dx, y + 1, cz + dz, shrineTrim());
             }
         }
+        // deux coffres encadrent l'ancre : le sommet doit payer la montee
+        lootChest(level, cx - 3, y + 1, cz, "minecraft:chests/end_city_treasure");
+        lootChest(level, cx + 3, y + 1, cz, "minecraft:chests/desert_pyramid");
+
         BlockPos anchor = new BlockPos(cx, y + 2, cz);
         level.setBlockAndUpdate(anchor, ModBlocks.PRISMATIC_ANCHOR.get().defaultBlockState());
+        // On VERIFIE : l'ancre a disparu une fois sans qu'on sache pourquoi, et
+        // une place forte sans son ancre n'a plus d'objet. Mieux vaut un
+        // avertissement dans le journal qu'une enigme de plus.
+        if (!level.getBlockState(anchor).is(ModBlocks.PRISMATIC_ANCHOR.get())) {
+            org.slf4j.LoggerFactory.getLogger(EmeraldWeaponsMod.MODID)
+                    .warn("Ancre non posee en {} : {}", anchor, level.getBlockState(anchor));
+        }
         return anchor;
     }
 
-    /**
-     * La montee vers l'ancre : une tour d'escalier et sa passerelle.
-     *
-     * C'est le point qui a bloque deux fois -- « je ne trouve pas l'ancre ».
-     * Elle est au sommet, a quatre-vingt-huit blocs, et la Pyramide Maudite n'a
-     * jamais ete concue pour qu'on l'escalade par l'exterieur. Tailler un
-     * escalier dans sa face aurait suppose de connaitre sa forme, qu'on ne
-     * connait pas puisque c'est la commande du jeu qui la pose.
-     *
-     * On batit donc a cote, ce qu'on maitrise entierement : une tour creuse au
-     * pied de la face sud, un escalier en vis dedans, une passerelle au sommet.
-     * La montee est longue et c'est tant mieux -- on doit sentir qu'on monte a
-     * quelque chose.
-     */
-    private static void ascent(ServerLevel level, int cx, int y, int cz, int summit,
-                               int[] bounds) {
-        int tx = cx;
-        // JUSTE au-dela du pied de la pyramide, cote sud : plus pres, la tour
-        // serait noyee dans la maconnerie ; plus loin, la passerelle
-        // traverserait la moitie de la cour
-        int tz = bounds[3] + 6;
-        int top = summit + 2;
-        int r = 4;
-
-        for (int dx = -r; dx <= r; dx++) {
-            for (int dz = -r; dz <= r; dz++) {
-                double dist = Math.sqrt(dx * dx + dz * dz);
-                if (dist > r + 0.5) {
-                    continue;
-                }
-                boolean shell = dist > r - 1.0;
-                for (int wy = y + 1; wy <= top; wy++) {
-                    if (!shell) {
-                        set(level, tx + dx, wy, tz + dz, Blocks.AIR.defaultBlockState());
-                        continue;
-                    }
-                    int h = wy - y;
-                    set(level, tx + dx, wy, tz + dz,
-                            h <= 2 ? base() : h % 8 == 0 ? shrineTrim() : tower());
-                }
-                set(level, tx + dx, y, tz + dz, floor());
-                // les fenetres, pour qu'on voie ou l'on en est
-                if (shell && (dx == 0 || dz == 0) && Math.floorMod(top - y, 1) == 0) {
-                    for (int wy = y + 6; wy < top; wy += 7) {
-                        set(level, tx + dx, wy, tz + dz, glow());
-                    }
-                }
-            }
-        }
-        // l'entree, cote cour
-        for (int dy = 1; dy <= 3; dy++) {
-            set(level, tx, y + dy, tz + r, Blocks.AIR.defaultBlockState());
-            set(level, tx, y + dy, tz + r - 1, Blocks.AIR.defaultBlockState());
-        }
-        // l'escalier en vis
-        for (int step = 0; step + y < top - 1; step++) {
-            double angle = step * 0.55;
-            int sx = tx + (int) Math.round(Math.cos(angle) * (r - 1.5));
-            int sz = tz + (int) Math.round(Math.sin(angle) * (r - 1.5));
-            set(level, sx, y + step, sz, trim());
-            for (int clear = 1; clear <= 3; clear++) {
-                set(level, sx, y + step + clear, sz, Blocks.AIR.defaultBlockState());
-            }
-            if (step % 12 == 0) {
-                set(level, tx, y + step + 2, tz, lantern());   // le fut eclaire
-            }
-        }
-        // la sortie et la passerelle vers le parvis
-        for (int dz = 0; dz <= tz - cz - 4; dz++) {
-            int bz = tz - dz;
-            for (int dx = -1; dx <= 1; dx++) {
-                set(level, tx + dx, top, bz, trim());
-                for (int clear = 1; clear <= 3; clear++) {
-                    set(level, tx + dx, top + clear, bz, Blocks.AIR.defaultBlockState());
-                }
-            }
-            // un garde-corps : la passerelle est haute
-            set(level, tx - 2, top + 1, bz, merlon());
-            set(level, tx + 2, top + 1, bz, merlon());
-            if (Math.floorMod(dz, 8) == 0) {
-                set(level, tx - 2, top + 2, bz, lantern());
-                set(level, tx + 2, top + 2, bz, lantern());
-            }
-        }
-        for (int dy = 1; dy <= 3; dy++) {
-            set(level, tx, top + dy, tz - r + 1, Blocks.AIR.defaultBlockState());
-        }
-    }
 
     // ------------------------------------------------------------- l'enceinte
 
@@ -613,9 +538,16 @@ public final class Sanctuary {
         // au chemin de ronde, les deux courtines qui aboutissent a la tour
         doorway(level, tx, y + WALK, tz, TOWER_RADIUS, true, inX);
         doorway(level, tx, y + WALK, tz, TOWER_RADIUS, false, inZ);
-        // au sol, seulement du cote de la cour
-        doorway(level, tx, y + 1, tz, TOWER_RADIUS, true, inX);
-        doorway(level, tx, y + 1, tz, TOWER_RADIUS, false, inZ);
+        // Au sol, la baie doit s'ECARTER de la courtine.
+        //
+        // Une tour d'angle est prise dans les deux murs qui s'y rejoignent :
+        // percee sur l'axe de la tour, la baie du bas suivait exactement la
+        // ligne du rempart et le tunnelisait de part en part -- d'ou les trous
+        // qui debouchaient DEHORS, l'inverse exact de ce qu'on veut. On la
+        // decale lateralement d'une epaisseur de mur, ce qui la fait deboucher
+        // franchement dans la cour.
+        doorway(level, tx, y + 1, tz, TOWER_RADIUS, true, inX, inZ * (THICK + 1));
+        doorway(level, tx, y + 1, tz, TOWER_RADIUS, false, inZ, inX * (THICK + 1));
     }
 
 
@@ -912,6 +844,14 @@ public final class Sanctuary {
      */
     private static void doorway(ServerLevel level, int tx, int y, int tz,
                                 int r, boolean alongX, int side) {
+        doorway(level, tx, y, tz, r, alongX, side, 0);
+    }
+
+    /**
+     * @param shift decalage lateral de la baie, perpendiculairement a son axe
+     */
+    private static void doorway(ServerLevel level, int tx, int y, int tz,
+                                int r, boolean alongX, int side, int shift) {
         // Une baie de DEUX blocs de large, et rien qui deborde.
         //
         // Trois de large sur une tour ronde, avec un linteau pose par-dessus,
@@ -920,7 +860,8 @@ public final class Sanctuary {
         // s'en tient au couloir central, et la coque se referme d'elle-meme
         // au-dessus -- une voute taillee n'a pas besoin d'un linteau rapporte.
         {
-            for (int w = 0; w <= 1; w++) {
+            for (int w0 = 0; w0 <= 1; w0++) {
+                int w = w0 + shift;
                 for (int dy = 0; dy < 3; dy++) {
                     for (int t = 0; t <= r; t++) {
                         int off = side * (r - t);
@@ -1006,6 +947,12 @@ public final class Sanctuary {
             // le plancher du palier, PLEIN : l'escalier y percera sa tremie
             solidFloor(level, tx, y + base + storey, tz, inner);
 
+            // le coffre de l'etage, adosse a la paroi, a l'oppose de la volee
+            lootChest(level, tx + (int) (dx == 0 ? inner - 2 : 0),
+                    y + base + storey + 1,
+                    tz + (int) (dz == 0 ? inner - 2 : 0),
+                    "minecraft:chests/simple_dungeon");
+
             int reach = (int) inner - 1;
             for (int i = 0; i < storey; i++) {
                 int px = tx - dx * (reach - i);
@@ -1065,8 +1012,18 @@ public final class Sanctuary {
                             ? (dy <= 2 ? base() : dy % 6 == 0 ? shrineTrim() : tower())
                             : Blocks.AIR.defaultBlockState());
                 }
-                if (shell && Math.floorMod(dx + dz, 2) == 0) {
+                // Le parapet est CONTINU, et les creneaux se posent par-dessus.
+                //
+                // Un bloc de muret isole reste un poteau : c'est en se touchant
+                // que ces blocs se lient et forment une balustrade. Les semer
+                // un sur deux donnait une couronne de piquets separes, ce qui
+                // n'a l'air de rien. On pose donc la ceinture entiere, puis un
+                // bloc plein tous les trois pour le creneau.
+                if (shell) {
                     set(level, tx + dx, y + top + 1, tz + dz, merlon());
+                    if (Math.floorMod(dx * 3 + dz, 3) == 0) {
+                        set(level, tx + dx, y + top + 2, tz + dz, trim());
+                    }
                 }
                 if (shell && (dx == 0 || dz == 0) && radius > 4) {
                     set(level, tx + dx, y + 6, tz + dz, glow());
@@ -1078,8 +1035,34 @@ public final class Sanctuary {
         // Il s'arretait deux blocs plus bas et l'on posait le toit par-dessus :
         // le dernier etage n'avait donc aucun acces, dans toutes les tours.
         towerInterior(level, tx, y, tz, radius, top);
-        set(level, tx, y + top, tz, shrineTrim());
-        set(level, tx, y + top + 1, tz, lantern());
+        // Rien au MILIEU du dernier plancher : c'est la que l'escalier
+        // debouche, et le bloc qui portait la lanterne barrait la sortie --
+        // « on est bloque par un bloc sur lequel tu as pose une lanterne ».
+        // Les lanternes vont sur le parapet, ou elles ne genent personne.
+        for (int side = -1; side <= 1; side += 2) {
+            set(level, tx + side * (radius - 2), y + top + 1, tz, lantern());
+            set(level, tx, y + top + 1, tz + side * (radius - 2), lantern());
+        }
+    }
+
+
+    /**
+     * Un coffre de butin, pose contre la paroi.
+     *
+     * Une tour qu'on visite doit RECOMPENSER la visite : sans cela on monte
+     * une fois par curiosite, et plus jamais. Un coffre par etage suffit --
+     * l'interet est d'y passer, pas d'y camper.
+     */
+    private static void lootChest(ServerLevel level, int x, int y, int z, String table) {
+        BlockPos pos = new BlockPos(x, y, z);
+        level.setBlock(pos, Blocks.CHEST.defaultBlockState(), 2);
+        if (level.getBlockEntity(pos) instanceof
+                net.minecraft.world.level.block.entity.RandomizableContainerBlockEntity chest) {
+            chest.setLootTable(net.minecraft.resources.ResourceKey.create(
+                            net.minecraft.core.registries.Registries.LOOT_TABLE,
+                            ResourceLocation.parse(table)),
+                    level.random.nextLong());
+        }
     }
 
     // ----------------------------------------------------------- outillage
