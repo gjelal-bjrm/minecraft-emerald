@@ -59,8 +59,13 @@ public final class SanctuarySeals {
     }
 
     /** Le delai avant l'indice, et sa duree. */
-    private static final int HINT_AFTER = 7 * 60 * 20;
+    private static final int HINT_AFTER = 90 * 20;
     private static final int HINT_TICKS = 20 * 20;
+
+    /** La borne d'un indice passif, et la colonne d'une revelation demandee. */
+    private static final int HINT_HEIGHT = 6;
+    private static final int REVEAL_HEIGHT = 30;
+    private static final int REVEAL_TICKS = 15 * 20;
 
     /**
      * Au bout de sept minutes, les sceaux se laissent entrevoir.
@@ -98,12 +103,45 @@ public final class SanctuarySeals {
                     }
                     net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player,
                             new com.emerald.network.AnchorPulsePayload(
-                                    seal.getX(), seal.getY(), seal.getZ(), HINT_TICKS, 6));
+                                    seal.getX(), seal.getY(), seal.getZ(), HINT_TICKS, HINT_HEIGHT));
                 }
                 player.displayClientMessage(Component.translatable(
                                 "game.emeraldweapons.seal.hint")
                         .withStyle(net.minecraft.ChatFormatting.LIGHT_PURPLE), false);
             }
+        }
+    }
+
+    /**
+     * Montre les sceaux encore endormis de cette ancre, franchement.
+     *
+     * L'indice passif attendait qu'on se lasse ; celui-ci repond a un geste.
+     * Quiconque touche l'ancre a prouve qu'il cherche, et lui cacher la suite
+     * ne fait plus durer l'enigme -- cela fait errer. La colonne est donc haute
+     * et non plus une borne : elle sort du monument, ce qu'il faut bien pour
+     * s'orienter dans une masse de quarante blocs de haut.
+     *
+     * Ce n'est pas un cadeau : il faut toujours entrer, descendre et fouiller.
+     * On sait seulement vers ou.
+     */
+    public static void reveal(ServerLevel level, BlockPos anchor, Player player) {
+        if (!(player instanceof ServerPlayer served)) {
+            return;
+        }
+        for (Vault vault : vaults) {
+            if (!vault.anchor().equals(anchor)) {
+                continue;
+            }
+            for (BlockPos seal : vault.seals()) {
+                if (vault.lit().contains(seal)) {
+                    continue;
+                }
+                net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(served,
+                        new com.emerald.network.AnchorPulsePayload(
+                                seal.getX(), seal.getY(), seal.getZ(),
+                                REVEAL_TICKS, REVEAL_HEIGHT));
+            }
+            return;
         }
     }
 

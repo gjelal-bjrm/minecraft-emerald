@@ -1648,98 +1648,103 @@ public final class Sanctuary {
      */
     private static void seals(ServerLevel level, int cx, int y, int fromZ, int endZ,
                               BlockPos anchor, int apexZ) {
+        // TROIS NIVEAUX, et plus aucune sonde.
+        //
+        // On cherchait les salles du modele pour y glisser les sceaux. Or ses
+        // pieces sont dans la moitie ENTERREE, celle qu'on ne pose pas : la
+        // sonde ne trouvait donc presque jamais rien et les trois basculaient
+        // sur le repli, c'est-a-dire trois niches dans le meme couloir. La
+        // repartition demandee -- l'entree, un etage, les passages -- n'existait
+        // que dans l'intention.
+        //
+        // On ne cherche donc plus une salle : on en batit une. C'est la meme
+        // lecon que pour la profondeur du couloir et pour le sommet de la
+        // pyramide -- ce qu'on ne peut pas mesurer, on le calcule.
         java.util.List<BlockPos> placed = new java.util.ArrayList<>();
 
-        // TROIS SALLES, pas trois niches dans le couloir.
-        //
-        // Alignes le long du corridor d'entree, on les ramassait tous les trois
-        // en trente secondes sans avoir rien visite : la serrure existait, mais
-        // elle n'obligeait a explorer personne. On les cherche donc dans les
-        // VRAIES salles du monument -- une haut dans le puits central, deux de
-        // part et d'autre d'un etage intermediaire -- ce qui force a monter et
-        // a fouiller.
-        //
-        // On ne connait pas le plan de ce batiment : on sonde. Un emplacement
-        // valable, c'est deux blocs d'air sur un sol dur, et il ne peut y en
-        // avoir que dans une piece.
-        // Un par NIVEAU, et non deux au meme etage : c'est ce qui fait
-        // parcourir le monument de bas en haut au lieu de visiter un palier.
-        // Le premier cherche sous le sol -- la pyramide a ses caves -- le
-        // deuxieme a un etage, le troisieme pres de l'entree, pour que le
-        // premier se trouve sans peine et enseigne ce qu'on cherche.
-        int[][] targets = {
-                {cx, apexZ, -18, 4},                   // les salles souterraines
-                {cx, apexZ, 20, 34},                   // le puits central, en haut
-                {cx, apexZ + 22, 1, 7},                // pres de l'entree
-        };
-        for (int[] t : targets) {
-            BlockPos spot = chamberSpot(level, t[0], t[1],
-                    Math.max(level.getMinBuildHeight() + 2, y + t[2]), y + t[3]);
-            if (spot == null) {
-                continue;
-            }
-            level.setBlock(spot, ModBlocks.TOMB_SEAL.get().defaultBlockState(), 3);
-            // deux lanternes l'annoncent : une salle noire ou dort une serrure
-            // qu'on ne voit pas serait une chasse au pixel, pas une exploration
-            set(level, spot.getX() + 1, spot.getY(), spot.getZ(), lantern());
-            set(level, spot.getX() - 1, spot.getY(), spot.getZ(), lantern());
-            placed.add(spot);
-        }
+        // 1. A L'ENTREE. Celui-ci se trouve sans peine, et c'est voulu : il
+        //    enseigne a quoi ressemble un sceau avant qu'on ait a en chercher.
+        placed.add(cellSeal(level, cx + 2, y + 1, fromZ - 4));
 
-        // Repli : si le monument n'a pas offert assez de salles, on complete
-        // dans le couloir. Mieux vaut un sceau trop facile qu'une ancre qu'on
-        // ne peut plus activer du tout.
-        int span = Math.max(6, fromZ - endZ);
-        for (int i = 0; placed.size() < SanctuarySeals.PER_SANCTUARY; i++) {
-            int z = fromZ - (int) Math.round(span * (i + 1.0) / SanctuarySeals.PER_SANCTUARY);
-            BlockPos pos = new BlockPos(cx + (i % 2 == 0 ? -2 : 2), y + 1, z);
-            set(level, pos.getX(), pos.getY(), pos.getZ(), Blocks.AIR.defaultBlockState());
-            set(level, pos.getX(), pos.getY() + 1, pos.getZ(), Blocks.AIR.defaultBlockState());
-            set(level, pos.getX(), pos.getY() - 1, pos.getZ(), shrineTrim());
-            level.setBlock(pos, ModBlocks.TOMB_SEAL.get().defaultBlockState(), 3);
-            placed.add(pos);
-        }
+        // 2. DANS LES PASSAGES, au fond, pres de la salle du tresor.
+        placed.add(cellSeal(level, cx - 2, y + 1, endZ + 6));
+
+        // 3. A L'ETAGE, sur le cote. Il faut monter pour l'atteindre.
+        placed.add(upperChamber(level, cx, y, endZ + 3));
+
         SanctuarySeals.register(anchor, placed);
     }
 
     /**
-     * Un emplacement dans une salle, sonde autour d'un point vise.
-     *
-     * On descend depuis le haut de la fourchette : les etages superieurs sont
-     * plus interessants a atteindre que le rez-de-chaussee, et c'est le sens de
-     * la demande -- obliger a monter dans le monument. A chaque hauteur, on
-     * balaie en anneaux croissants et l'on retient la premiere case ou l'on
-     * pourrait se tenir : deux blocs d'air sur un sol dur.
+     * Un sceau dans une niche du couloir, avec sa lanterne.
      */
-    @Nullable
-    private static BlockPos chamberSpot(ServerLevel level, int tx, int tz,
-                                        int minY, int maxY) {
-        for (int y = maxY; y >= minY; y--) {
-            for (int ring = 0; ring <= 14; ring++) {
-                for (int dx = -ring; dx <= ring; dx++) {
-                    for (int dz = -ring; dz <= ring; dz++) {
-                        if (Math.max(Math.abs(dx), Math.abs(dz)) != ring) {
-                            continue;              // on ne teste que le bord
-                        }
-                        BlockPos pos = new BlockPos(tx + dx, y, tz + dz);
-                        if (!level.getBlockState(pos).isAir()
-                                || !level.getBlockState(pos.above()).isAir()
-                                || level.getBlockState(pos.below()).isAir()) {
-                            continue;
-                        }
-                        // et de la place autour, pour ne pas le coincer
-                        if (!level.getBlockState(pos.east()).isAir()
-                                || !level.getBlockState(pos.west()).isAir()) {
-                            continue;
-                        }
-                        return pos;
-                    }
-                }
-            }
-        }
-        return null;
+    private static BlockPos cellSeal(ServerLevel level, int x, int y, int z) {
+        BlockPos pos = new BlockPos(x, y, z);
+        set(level, x, y, z, Blocks.AIR.defaultBlockState());
+        set(level, x, y + 1, z, Blocks.AIR.defaultBlockState());
+        set(level, x, y - 1, z, shrineTrim());
+        level.setBlock(pos, ModBlocks.TOMB_SEAL.get().defaultBlockState(), 3);
+        set(level, x, y + 2, z, lantern());
+        return pos;
     }
 
+    /**
+     * La salle haute, et le puits qui y mene.
+     *
+     * C'est le seul des trois qui demande un effort : un puits a echelons monte
+     * du couloir jusqu'a une chambre laterale creusee dans la masse. On la bat
+     * nous-memes plutot que d'esperer en trouver une, et le puits garantit
+     * qu'elle communique -- une salle qu'on ne peut pas atteindre ne serait pas
+     * une enigme difficile, elle serait une enigme fausse.
+     *
+     * La hauteur s'adapte : on se loge quatre blocs sous la surface reelle du
+     * monument a cet endroit, faute de quoi la chambre percerait le flanc.
+     */
+    private static BlockPos upperChamber(ServerLevel level, int cx, int y, int z) {
+        int sx = cx + 2;                            // le puits, contre la paroi
+        int roof = probeTop(level, sx, y, z);
+        int top = Math.min(y + 16, roof - 5);
+        if (top < y + 6) {
+            // pas assez d'epaisseur ici : on se rabat sur une niche de couloir
+            return cellSeal(level, cx - 2, y + 1, z);
+        }
+
+        // le puits : une case d'air, une echelle, et de quoi la porter
+        for (int h = y + 1; h <= top; h++) {
+            set(level, sx, h, z, Blocks.AIR.defaultBlockState());
+            if (level.getBlockState(new BlockPos(sx, h, z - 1)).isAir()) {
+                set(level, sx, h, z - 1, shrine());
+            }
+            set(level, sx, h, z, Blocks.LADDER.defaultBlockState()
+                    .setValue(net.minecraft.world.level.block.LadderBlock.FACING,
+                            Direction.SOUTH));
+        }
+
+        // la chambre, ecartee du puits pour qu'on y debouche de plain-pied
+        int hx = sx + 3;
+        for (int dx = -2; dx <= 2; dx++) {
+            for (int dz = -2; dz <= 2; dz++) {
+                for (int dy = 0; dy <= 3; dy++) {
+                    set(level, hx + dx, top + dy, z + dz,
+                            dy == 0 ? trim() : Blocks.AIR.defaultBlockState());
+                }
+                set(level, hx + dx, top + 4, z + dz, shrineTrim());
+            }
+        }
+        // le palier qui relie le puits a la chambre
+        for (int x = sx; x <= hx; x++) {
+            set(level, x, top, z, trim());
+            for (int dy = 1; dy <= 3; dy++) {
+                set(level, x, top + dy, z, Blocks.AIR.defaultBlockState());
+            }
+        }
+        set(level, hx - 2, top + 1, z - 2, lantern());
+        set(level, hx + 2, top + 1, z + 2, lantern());
+
+        BlockPos pos = new BlockPos(hx, top + 1, z);
+        level.setBlock(pos, ModBlocks.TOMB_SEAL.get().defaultBlockState(), 3);
+        return pos;
+    }
 
     /**
      * L'escalier qui monte dans cette direction.

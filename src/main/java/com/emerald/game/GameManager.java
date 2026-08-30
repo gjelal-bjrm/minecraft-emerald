@@ -586,6 +586,8 @@ public class GameManager {
             player.displayClientMessage(Component.translatable(
                             "game.emeraldweapons.anchor.sealed", asleep)
                     .withStyle(ChatFormatting.LIGHT_PURPLE), true);
+            // et l'on montre ou : refuser sans indiquer, c'est renvoyer errer
+            SanctuarySeals.reveal(level, pos, player);
             return;
         }
 
@@ -634,6 +636,7 @@ public class GameManager {
             player.displayClientMessage(Component.translatable(
                             "game.emeraldweapons.anchor.sealed", asleep)
                     .withStyle(ChatFormatting.RED), true);
+            SanctuarySeals.reveal(level, pos, player);
             return false;
         }
 
