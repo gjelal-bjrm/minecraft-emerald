@@ -215,8 +215,13 @@ public final class Sanctuary {
             gatehouse(level, cx, y, cz, side);
         }
 
-        int summit = summitOf(level, cx, y, cz);
-        BlockPos anchor = crown(level, cx, summit, cz);
+        // Le sommet du modele n'est pas au milieu de son emprise : il tombe a
+        // (44, 44) de l'angle, alors que la jonction des quadrants est a
+        // (44, 47). L'ancre etait donc bien au centre de la PLACE, mais trois
+        // blocs a cote du faite de la pyramide.
+        int apexZ = cz - (PYRAMID_CZ - 44);
+        int summit = summitOf(level, cx, y, apexZ);
+        BlockPos anchor = crown(level, cx, summit, apexZ);
         ascent(level, cx, y, cz, summit, bounds);
         SanctuaryGarrison.populate(level, new BlockPos(cx, y, cz), HALF);
         SanctuaryMist.register(new BlockPos(cx, y, cz), HALF, anchor);
@@ -556,7 +561,11 @@ public final class Sanctuary {
             }
             // les lanternes, POSEES SUR le parapet interieur : elles eclairent
             // le chemin de ronde sans y creuser de breche
-            if (Math.floorMod(d, 9) == 0) {
+            // Pas de lanterne AU-DESSUS DES PORTES : la boucle d'eclairage
+            // ignorait l'ouverture des baies, alors que le parapet qui les
+            // porte n'y existe pas. Elles pendaient donc dans le vide entre
+            // les deux tours du corps de garde.
+            if (Math.floorMod(d, 9) == 0 && Math.abs(d) > GATE_HALF) {
                 for (int side = 0; side < 4; side++) {
                     int[] xz = wallPoint(side, d, THICK - 1, cx, cz);
                     set(level, xz[0], y + WALK + 2, xz[1], lantern());
