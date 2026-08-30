@@ -39,20 +39,27 @@ import javax.annotation.Nullable;
  */
 public final class Sanctuary {
 
-    /** Demi-cote de la muraille. Large : elle doit contenir la pyramide. */
-    private static final int HALF = 62;
+    /**
+     * Demi-cote de la muraille.
+     *
+     * Elle etait a 62 pour une pyramide de quatre-vingt-huit blocs de haut :
+     * vue d'ensemble, un muret autour d'une montagne. On monte a 80, et
+     * surtout on l'EPAISSIT et on la HAUSSE -- une enceinte se juge a sa
+     * proportion, pas a son emprise.
+     */
+    private static final int HALF = 80;
 
     /** Epaisseur de la courtine. */
-    private static final int THICK = 3;
+    private static final int THICK = 5;
 
     /** Hauteur de la masse pleine ; on marche sur le bloc du dessus. */
-    private static final int WALL_TOP = 8;
+    private static final int WALL_TOP = 18;
 
     /** Le chemin de ronde, seule hauteur ou l'on marche sur le mur. */
     private static final int WALK = WALL_TOP + 1;
 
-    private static final int TOWER_RADIUS = 5;
-    private static final int TOWER_TOP = 18;
+    private static final int TOWER_RADIUS = 7;
+    private static final int TOWER_TOP = 32;
 
     private static final int GATE_HALF = 3;
     private static final int GATE_HEIGHT = 7;
@@ -133,10 +140,22 @@ public final class Sanctuary {
      */
     public static BlockPos build(ServerLevel level, CommandSourceStack source, BlockPos ground) {
         int y = ground.getY();
-        int cx = ground.getX();
-        int cz = ground.getZ();
 
-        clearSite(level, cx, y, cz);
+        // LA PYRAMIDE D'ABORD, et l'enceinte ensuite, autour d'elle.
+        //
+        // L'inverse etait l'erreur de fond : on batissait les murs, puis on
+        // posait la pyramide a un decalage devine (-44, -47) en esperant
+        // qu'elle tombe au milieu. Elle tombait a cote, en grande partie hors
+        // les murs. La commande de placement du jeu decide seule de l'endroit
+        // exact et de la rotation ; la seule facon fiable de s'y accorder est
+        // de la laisser faire, puis de MESURER ou elle a atterri.
+        greatPyramid(level, source, ground.getX(), y, ground.getZ());
+        int[] bounds = measure(level, ground.getX(), y, ground.getZ());
+        int cx = (bounds[0] + bounds[2]) / 2;
+        int cz = (bounds[1] + bounds[3]) / 2;
+        reskin(level, bounds, y);
+
+        clearSite(level, cx, y, cz, bounds);
         courtyard(level, cx, y, cz);
         curtainWall(level, cx, y, cz);
         for (int sx = -1; sx <= 1; sx += 2) {
@@ -155,14 +174,9 @@ public final class Sanctuary {
             gatehouse(level, cx, y, cz, side);
         }
 
-        greatPyramid(level, source, cx, y, cz);
-        // On MESURE le sommet au lieu de le supposer : la pyramide de Cataclysm
-        // est posee par la commande du jeu, qui assemble ses onze morceaux comme
-        // elle l'entend. Se fier a une hauteur ecrite en dur, c'etait risquer un
-        // parvis flottant en l'air ou noye dans la maconnerie.
         int summit = summitOf(level, cx, y, cz);
         BlockPos anchor = crown(level, cx, summit, cz);
-        ascent(level, cx, y, cz, summit);
+        ascent(level, cx, y, cz, summit, bounds);
         SanctuaryGarrison.populate(level, new BlockPos(cx, y, cz), HALF);
         SanctuaryMist.register(new BlockPos(cx, y, cz), HALF, anchor);
         return anchor;
@@ -201,8 +215,10 @@ public final class Sanctuary {
                                     int cx, int y, int cz) {
         if (BuiltInRegistries.BLOCK.containsKey(
                 ResourceLocation.fromNamespaceAndPath("cataclysm", "door_of_seal"))) {
+            // aucun decalage devine : on la pose ici, et on mesurera ou elle
+            // a reellement atterri -- c'est elle qui decide, pas nous
             String command = String.format("place structure cataclysm:cursed_pyramid %d %d %d",
-                    cx - 44, y, cz - 47);
+                    cx, y, cz);
             try {
                 level.getServer().getCommands().performPrefixedCommand(
                         source.withSuppressedOutput().withPermission(4), command);
@@ -308,9 +324,13 @@ public final class Sanctuary {
      * La montee est longue et c'est tant mieux -- on doit sentir qu'on monte a
      * quelque chose.
      */
-    private static void ascent(ServerLevel level, int cx, int y, int cz, int summit) {
+    private static void ascent(ServerLevel level, int cx, int y, int cz, int summit,
+                               int[] bounds) {
         int tx = cx;
-        int tz = cz + 34;
+        // JUSTE au-dela du pied de la pyramide, cote sud : plus pres, la tour
+        // serait noyee dans la maconnerie ; plus loin, la passerelle
+        // traverserait la moitie de la cour
+        int tz = bounds[3] + 6;
         int top = summit + 2;
         int r = 4;
 
@@ -381,9 +401,14 @@ public final class Sanctuary {
 
     // ------------------------------------------------------------- l'enceinte
 
-    private static void clearSite(ServerLevel level, int cx, int y, int cz) {
+    private static void clearSite(ServerLevel level, int cx, int y, int cz, int[] keep) {
         for (int dx = -HALF - TOWER_RADIUS; dx <= HALF + TOWER_RADIUS; dx++) {
             for (int dz = -HALF - TOWER_RADIUS; dz <= HALF + TOWER_RADIUS; dz++) {
+                // on ne rase JAMAIS la pyramide qu'on vient de poser
+                if (cx + dx >= keep[0] - 1 && cx + dx <= keep[2] + 1
+                        && cz + dz >= keep[1] - 1 && cz + dz <= keep[3] + 1) {
+                    continue;
+                }
                 // on ne degage que la BANDE de l'enceinte et la cour au sol :
                 // vider tout le volume jusqu'au ciel couterait des centaines de
                 // milliers de blocs pour rien, la pyramide se posant apres
@@ -405,11 +430,13 @@ public final class Sanctuary {
     private static void courtyard(ServerLevel level, int cx, int y, int cz) {
         for (int dx = -HALF; dx <= HALF; dx++) {
             for (int dz = -HALF; dz <= HALF; dz++) {
+                // Pas de motif calcule sur (dx + dz) : cela dessinait des
+                // rayures DIAGONALES en travers de toute la cour, ce qui ne
+                // ressemble a aucun dallage. Un damier franc, ou rien.
                 boolean road = Math.abs(dx) <= GATE_HALF || Math.abs(dz) <= GATE_HALF;
-                // un damier discret : une cour d'un seul bloc fait dalle de beton
-                boolean checker = Math.floorMod(dx + dz, 8) == 0;
+                boolean tile = Math.floorMod(dx, 8) < 4 == Math.floorMod(dz, 8) < 4;
                 set(level, cx + dx, y, cz + dz,
-                        road ? trim() : checker ? shrineTrim() : floor());
+                        road ? trim() : tile ? floor() : walkStone());
             }
         }
     }
@@ -461,10 +488,15 @@ public final class Sanctuary {
             }
         }
         // quatre volees d'escalier, une par cote, qui aboutissent VRAIMENT a neuf
-        stairToWalk(level, cx - 20, y, cz - HALF + THICK, Direction.NORTH, 0, 1);
-        stairToWalk(level, cx + 20, y, cz + HALF - THICK, Direction.SOUTH, 0, -1);
-        stairToWalk(level, cx - HALF + THICK, y, cz + 20, Direction.WEST, 1, 0);
-        stairToWalk(level, cx + HALF - THICK, y, cz - 20, Direction.EAST, -1, 0);
+        // Les volees courent LE LONG de la face interieure, adossees au mur.
+        //
+        // Perpendiculaires, elles s'avancaient de neuf blocs dans la cour en
+        // une rampe pleine : de loin, quatre petites pyramides grises posees au
+        // hasard au milieu de rien. Une rampe de rempart se colle au mur.
+        rampAlong(level, cx, y, cz, 0);
+        rampAlong(level, cx, y, cz, 1);
+        rampAlong(level, cx, y, cz, 2);
+        rampAlong(level, cx, y, cz, 3);
     }
 
     private static int[] wallPoint(int side, int d, int t, int cx, int cz) {
@@ -476,37 +508,6 @@ public final class Sanctuary {
         };
     }
 
-    /**
-     * Une volee d'escalier de la cour au chemin de ronde.
-     *
-     * Elle part du pied du mur vers l'interieur et monte marche par marche
-     * jusqu'a la hauteur exacte du chemin de ronde. Un palier de deux blocs la
-     * termine, faute de quoi on arrive nez au parapet.
-     */
-    private static void stairToWalk(ServerLevel level, int x, int y, int z,
-                                    Direction facing, int dx, int dz) {
-        for (int step = 0; step < WALK; step++) {
-            // PLUS, et non moins. Avec un moins, la volee partait du mur vers
-            // l'exterieur : elle traversait la courtine et debouchait dans le
-            // vide au-dela. (dx, dz) pointe deja vers la cour, il faut la
-            // suivre. Le sens de MONTEE, lui, etait bon -- on gravit toujours
-            // en allant vers le mur.
-            int sx = x + dx * (step + 1);
-            int sz = z + dz * (step + 1);
-            for (int w = -1; w <= 1; w++) {
-                int px = sx + (dx == 0 ? w : 0);
-                int pz = sz + (dz == 0 ? w : 0);
-                for (int fill = 0; fill <= step; fill++) {
-                    set(level, px, y + fill, pz, body());
-                }
-                set(level, px, y + step + 1, pz, stair(
-                        ModBlocks.POLISHED_GANGUE_STAIRS.get(), facing.getOpposite()));
-                for (int clear = 2; clear <= 4; clear++) {
-                    set(level, px, y + step + clear, pz, Blocks.AIR.defaultBlockState());
-                }
-            }
-        }
-    }
 
 
 
@@ -748,6 +749,156 @@ public final class Sanctuary {
 
         SanctuaryGate.register(g.centre(y), GATE_HALF, GATE_HEIGHT, g.ax(), g.az());
         SanctuaryGate.close(level, g.centre(y));
+    }
+
+
+    /**
+     * L'emprise reelle de la pyramide, mesuree apres coup.
+     *
+     * On balaie les colonnes autour du point demande et on retient celles qui
+     * portent quelque chose de haut : au-dessus de six blocs, en terrain
+     * degage, ce ne peut etre que la pyramide. C'est grossier et c'est
+     * suffisant -- on ne cherche pas sa forme, seulement sa boite.
+     *
+     * @return {xMin, zMin, xMax, zMax}
+     */
+    private static int[] measure(ServerLevel level, int cx, int y, int cz) {
+        int reach = 150;
+        int xMin = Integer.MAX_VALUE;
+        int zMin = Integer.MAX_VALUE;
+        int xMax = Integer.MIN_VALUE;
+        int zMax = Integer.MIN_VALUE;
+        for (int dx = -reach; dx <= reach; dx += 2) {
+            for (int dz = -reach; dz <= reach; dz += 2) {
+                int x = cx + dx;
+                int z = cz + dz;
+                int top = level.getHeight(
+                        net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                        x, z);
+                if (top - y < 6) {
+                    continue;
+                }
+                xMin = Math.min(xMin, x);
+                zMin = Math.min(zMin, z);
+                xMax = Math.max(xMax, x);
+                zMax = Math.max(zMax, z);
+            }
+        }
+        if (xMin > xMax) {
+            // rien de haut : la pyramide n'a pas ete posee, on garde le centre
+            return new int[]{cx - 20, cz - 20, cx + 20, cz + 20};
+        }
+        return new int[]{xMin, zMin, xMax, zMax};
+    }
+
+    /**
+     * Rhabille la pyramide de NOS materiaux.
+     *
+     * Elle arrive en gres, ce qui ne dit rien de l'Arcencium. On ne repeint que
+     * la PEAU -- les trois premiers blocs pleins rencontres en descendant
+     * depuis le ciel -- parce que c'est tout ce qu'on voit, et que repeindre le
+     * volume entier ferait sept cent mille blocs pour rien.
+     *
+     * Les escaliers, dalles et murets sont laisses tels quels : leur silhouette
+     * porte le relief du batiment, et les remplacer par des blocs pleins
+     * l'aplatirait.
+     */
+    private static void reskin(ServerLevel level, int[] bounds, int y) {
+        for (int x = bounds[0]; x <= bounds[2]; x++) {
+            for (int z = bounds[1]; z <= bounds[3]; z++) {
+                int top = level.getHeight(
+                        net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                        x, z) - 1;
+                if (top - y < 4) {
+                    continue;
+                }
+                int painted = 0;
+                for (int dy = top; dy > y && painted < 3; dy--) {
+                    BlockPos pos = new BlockPos(x, dy, z);
+                    BlockState state = level.getBlockState(pos);
+                    if (state.isAir()) {
+                        continue;
+                    }
+                    BlockState skin = skinFor(state, dy - y);
+                    if (skin != null) {
+                        level.setBlock(pos, skin, 2);
+                    }
+                    painted++;
+                }
+            }
+        }
+    }
+
+    /**
+     * Le materiau qui remplace celui-ci, ou rien s'il faut le laisser.
+     *
+     * On ne touche qu'aux blocs PLEINS d'un seul etat : un escalier ou une
+     * dalle porte une orientation qu'il faudrait recopier, et se tromper de
+     * recopie abime la forme plus surement qu'un gres laisse en place.
+     */
+    @Nullable
+    private static BlockState skinFor(BlockState state, int height) {
+        if (!state.getProperties().isEmpty()) {
+            return null;                       // oriente : on n'y touche pas
+        }
+        String id = BuiltInRegistries.BLOCK.getKey(state.getBlock()).toString();
+        if (id.startsWith(EmeraldWeaponsMod.MODID)) {
+            return null;                       // deja a nous
+        }
+        if (id.contains("chiseled") || id.contains("cut_")) {
+            return shrineTrim();
+        }
+        if (id.contains("smooth")) {
+            return trim();
+        }
+        if (id.contains("sandstone") || id.contains("sand")) {
+            // une assise plus sombre en bas, l'arcencium en haut : la pyramide
+            // s'eclaircit vers son sommet, ou se trouve l'ancre
+            return height > 55 ? shrine() : height > 25 ? body() : base();
+        }
+        return null;
+    }
+
+    /**
+     * Une rampe de rempart, adossee a la face interieure du mur.
+     *
+     * Elle monte le long du mur, sur trois blocs de large, et se termine de
+     * plain-pied sur le chemin de ronde. Chaque marche est portee par la
+     * maconnerie sous elle : pas de rampe pleine posee dans la cour, pas de
+     * volee suspendue.
+     */
+    private static void rampAlong(ServerLevel level, int cx, int y, int cz, int side) {
+        Gate g = Gate.of(cx, cz, side);
+        // on part a vingt blocs du milieu du cote, vers la porte
+        int from = 20;
+        for (int step = 0; step <= WALK; step++) {
+            int along = from + step;
+            for (int w = 0; w < 3; w++) {
+                int depth = -THICK - w;        // vers l'interieur de la cour
+                int px = g.x(along, depth);
+                int pz = g.z(along, depth);
+                for (int fill = 0; fill < step; fill++) {
+                    set(level, px, y + fill, pz, body());
+                }
+                set(level, px, y + step, pz, trim());
+                for (int clear = 1; clear <= 3; clear++) {
+                    set(level, px, y + step + clear, pz, Blocks.AIR.defaultBlockState());
+                }
+            }
+            // le garde-corps cote cour
+            set(level, g.x(along, -THICK - 3), y + step + 1, g.z(along, -THICK - 3), merlon());
+        }
+        // le palier : on debouche sur le chemin de ronde sans marche perdue
+        for (int a = from + WALK; a <= from + WALK + 2; a++) {
+            for (int w = 0; w < 3; w++) {
+                set(level, g.x(a, -THICK - w), y + WALK, g.z(a, -THICK - w), floor());
+            }
+        }
+    }
+
+    /** La pierre du dallage secondaire : le damier a besoin de deux teintes. */
+    private static BlockState walkStone() {
+        return ModBlocks.GANGUE_STONE.get().defaultBlockState();
     }
 
     // ----------------------------------------------------------- outillage
