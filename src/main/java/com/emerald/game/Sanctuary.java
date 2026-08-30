@@ -1479,7 +1479,7 @@ public final class Sanctuary {
             end = z;
         }
         vault(level, cx, y, end, rank);
-        seals(level, cx, y, fromZ, end, anchor);
+        seals(level, cx, y, fromZ, end, anchor, cz - (PYRAMID_CZ - 44));
     }
 
     /**
@@ -1529,14 +1529,46 @@ public final class Sanctuary {
      * aussi les coffres, ce qui recompense d'etre alle jusqu'au bout.
      */
     private static void seals(ServerLevel level, int cx, int y, int fromZ, int endZ,
-                              BlockPos anchor) {
+                              BlockPos anchor, int apexZ) {
         java.util.List<BlockPos> placed = new java.util.ArrayList<>();
+
+        // TROIS SALLES, pas trois niches dans le couloir.
+        //
+        // Alignes le long du corridor d'entree, on les ramassait tous les trois
+        // en trente secondes sans avoir rien visite : la serrure existait, mais
+        // elle n'obligeait a explorer personne. On les cherche donc dans les
+        // VRAIES salles du monument -- une haut dans le puits central, deux de
+        // part et d'autre d'un etage intermediaire -- ce qui force a monter et
+        // a fouiller.
+        //
+        // On ne connait pas le plan de ce batiment : on sonde. Un emplacement
+        // valable, c'est deux blocs d'air sur un sol dur, et il ne peut y en
+        // avoir que dans une piece.
+        int[][] targets = {
+                {cx, apexZ, 22, 34},                   // le puits central, en haut
+                {cx - 18, apexZ + 6, 9, 18},           // l'etage, cote ouest
+                {cx + 18, apexZ + 6, 9, 18},           // l'etage, cote est
+        };
+        for (int[] t : targets) {
+            BlockPos spot = chamberSpot(level, t[0], t[1], y + t[2], y + t[3]);
+            if (spot == null) {
+                continue;
+            }
+            level.setBlock(spot, ModBlocks.TOMB_SEAL.get().defaultBlockState(), 3);
+            // deux lanternes l'annoncent : une salle noire ou dort une serrure
+            // qu'on ne voit pas serait une chasse au pixel, pas une exploration
+            set(level, spot.getX() + 1, spot.getY(), spot.getZ(), lantern());
+            set(level, spot.getX() - 1, spot.getY(), spot.getZ(), lantern());
+            placed.add(spot);
+        }
+
+        // Repli : si le monument n'a pas offert assez de salles, on complete
+        // dans le couloir. Mieux vaut un sceau trop facile qu'une ancre qu'on
+        // ne peut plus activer du tout.
         int span = Math.max(6, fromZ - endZ);
-        for (int i = 0; i < SanctuarySeals.PER_SANCTUARY; i++) {
+        for (int i = 0; placed.size() < SanctuarySeals.PER_SANCTUARY; i++) {
             int z = fromZ - (int) Math.round(span * (i + 1.0) / SanctuarySeals.PER_SANCTUARY);
-            int side = i % 2 == 0 ? -2 : 2;
-            BlockPos pos = new BlockPos(cx + side, y + 1, z);
-            // une niche, pour qu'il ne bouche pas le passage
+            BlockPos pos = new BlockPos(cx + (i % 2 == 0 ? -2 : 2), y + 1, z);
             set(level, pos.getX(), pos.getY(), pos.getZ(), Blocks.AIR.defaultBlockState());
             set(level, pos.getX(), pos.getY() + 1, pos.getZ(), Blocks.AIR.defaultBlockState());
             set(level, pos.getX(), pos.getY() - 1, pos.getZ(), shrineTrim());
@@ -1544,6 +1576,44 @@ public final class Sanctuary {
             placed.add(pos);
         }
         SanctuarySeals.register(anchor, placed);
+    }
+
+    /**
+     * Un emplacement dans une salle, sonde autour d'un point vise.
+     *
+     * On descend depuis le haut de la fourchette : les etages superieurs sont
+     * plus interessants a atteindre que le rez-de-chaussee, et c'est le sens de
+     * la demande -- obliger a monter dans le monument. A chaque hauteur, on
+     * balaie en anneaux croissants et l'on retient la premiere case ou l'on
+     * pourrait se tenir : deux blocs d'air sur un sol dur.
+     */
+    @Nullable
+    private static BlockPos chamberSpot(ServerLevel level, int tx, int tz,
+                                        int minY, int maxY) {
+        for (int y = maxY; y >= minY; y--) {
+            for (int ring = 0; ring <= 14; ring++) {
+                for (int dx = -ring; dx <= ring; dx++) {
+                    for (int dz = -ring; dz <= ring; dz++) {
+                        if (Math.max(Math.abs(dx), Math.abs(dz)) != ring) {
+                            continue;              // on ne teste que le bord
+                        }
+                        BlockPos pos = new BlockPos(tx + dx, y, tz + dz);
+                        if (!level.getBlockState(pos).isAir()
+                                || !level.getBlockState(pos.above()).isAir()
+                                || level.getBlockState(pos.below()).isAir()) {
+                            continue;
+                        }
+                        // et de la place autour, pour ne pas le coincer
+                        if (!level.getBlockState(pos.east()).isAir()
+                                || !level.getBlockState(pos.west()).isAir()) {
+                            continue;
+                        }
+                        return pos;
+                    }
+                }
+            }
+        }
+        return null;
     }
 
 
