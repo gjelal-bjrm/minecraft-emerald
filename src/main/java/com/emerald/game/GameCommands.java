@@ -199,13 +199,18 @@ public class GameCommands {
             BlockPos centre = com.emerald.game.SanctuaryMist.nearestCentre(at);
             String where;
             if (centre == null) {
-                BlockPos anchor = findAnchor(level, at);
-                if (anchor == null) {
-                    where = "sanctuaire introuvable (ni registre, ni ancre a 120 blocs)";
+                // Le sceau de l'entree est pose en (cx-1, y+1, fromZ-13) :
+                // un seul bloc suffit donc a retrouver tout le repere.
+                BlockPos witness = frameWitness(level, at);
+                if (witness == null) {
+                    where = "sanctuaire introuvable (ni registre, ni sceau a 100 blocs)";
                 } else {
-                    where = String.format("cx%+d | z%+d de l'ancre | ancre en %d,%d,%d",
-                            at.getX() - anchor.getX(), at.getZ() - (anchor.getZ() + 3),
-                            anchor.getX(), anchor.getY(), anchor.getZ());
+                    int cx = witness.getX() + 1;
+                    int gy = witness.getY() - 1;
+                    int fromZ = witness.getZ() + 13;
+                    where = String.format("cx%+d | y%+d | cz%+d  (fromZ%+d)  [d'apres un sceau]",
+                            at.getX() - cx, at.getY() - gy, at.getZ() - (fromZ - 47),
+                            at.getZ() - fromZ);
                 }
             } else {
                 int fromZ = centre.getZ() + 47;
@@ -282,30 +287,33 @@ public class GameCommands {
     }
 
     /**
-     * Cherche l'ancre prismatique autour d'un point.
+     * Reconstitue le repere du sanctuaire a partir des blocs, et non du registre.
      *
-     * On balaie du plus proche au plus lointain et l'on s'arrete au premier
-     * trouve : une ancre est a moins de cent vingt blocs de tout ce que le
-     * sanctuaire a bati, et cette recherche ne sert qu'au diagnostic, ou une
-     * demi-seconde ne coute rien.
+     * Le meilleur temoin n'est pas l'ancre mais un SCEAU DU TOMBEAU : le
+     * premier des trois est pose en (cx-1, y+1, fromZ-13), ce qui donne d'un
+     * coup les trois coordonnees du repere a partir d'un seul bloc. Et comme
+     * les trois s'echelonnent le long du couloir, celui dont le z est le plus
+     * grand est forcement celui de l'entree.
+     *
+     * Le premier jet balayait DE DEUX EN DEUX pour aller plus vite : il ne
+     * testait donc que les decalages pairs, et manquait a coup sur tout temoin
+     * situe a un decalage impair. Une recherche qui saute une case sur deux ne
+     * cherche pas, elle tire au sort.
      */
-    private static BlockPos findAnchor(ServerLevel level, BlockPos near) {
-        var anchor = com.emerald.block.ModBlocks.PRISMATIC_ANCHOR.get();
-        for (int ring = 0; ring <= 120; ring += 2) {
-            for (int dx = -ring; dx <= ring; dx += 2) {
-                for (int dz = -ring; dz <= ring; dz += 2) {
-                    if (Math.max(Math.abs(dx), Math.abs(dz)) != ring) {
-                        continue;                       // on ne teste que le bord
-                    }
-                    for (int dy = -20; dy <= 60; dy++) {
-                        BlockPos probe = near.offset(dx, dy, dz);
-                        if (level.getBlockState(probe).is(anchor)) {
-                            return probe;
-                        }
+    private static BlockPos frameWitness(ServerLevel level, BlockPos near) {
+        var seal = com.emerald.block.ModBlocks.TOMB_SEAL.get();
+        BlockPos best = null;
+        for (int dx = -100; dx <= 100; dx++) {
+            for (int dz = -100; dz <= 100; dz++) {
+                for (int dy = -12; dy <= 24; dy++) {
+                    BlockPos probe = near.offset(dx, dy, dz);
+                    if (level.getBlockState(probe).is(seal)
+                            && (best == null || probe.getZ() > best.getZ())) {
+                        best = probe;
                     }
                 }
             }
         }
-        return null;
+        return best;
     }
 }
