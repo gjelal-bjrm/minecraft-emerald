@@ -73,7 +73,7 @@ def state(base, lit, step):
             # l'onde se propage en diagonale, du manche vers la pointe
             wave = math.sin(step * 2.0 * math.pi - (x - y) * 0.42)
             hh, ss, vv = colorsys.rgb_to_hsv(r / 255.0, g / 255.0, b / 255.0)
-            vv = min(1.0, vv * glow * (0.72 + 0.45 * (wave * 0.5 + 0.5)))
+            vv = min(1.0, vv * glow * (0.55 + 0.95 * (wave * 0.5 + 0.5)))
             ss = min(1.0, ss * (0.78 + 0.045 * lit))
             rr, gg, bb = colorsys.hsv_to_rgb(hh, ss, vv)
             px[x, y] = (int(rr * 255), int(gg * 255), int(bb * 255), a)
@@ -104,6 +104,15 @@ def main():
     # le sol. Un retournement horizontal suffit, et il ne coute rien puisque la
     # piece n'a pas de texte.
     base = base.transpose(Image.FLIP_LEFT_RIGHT)
+    # ET LE TRANCHANT VERS LE BAS.
+    #
+    # Le miroir horizontal met le manche en bas a gauche, ce qu'il faut, mais
+    # laisse le fil tourne vers le haut. Le miroir selon l'ANTI-DIAGONALE est
+    # la seule transformation qui echange les deux flancs de la lame SANS
+    # deplacer le manche ni la pointe : elle laisse fixes les coins bas-gauche
+    # et haut-droit, c'est-a-dire exactement les deux que le jeu utilise pour
+    # tenir l'objet.
+    base = base.transpose(Image.TRANSVERSE)
     for lit in range(6):
         frames = [state(base, lit, f / NFRAMES) for f in range(NFRAMES)]
         write("%s_%d" % (NAME, lit) if lit < 5 else "%s_full" % NAME, frames)

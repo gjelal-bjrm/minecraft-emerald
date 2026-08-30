@@ -58,10 +58,13 @@ public class ArcenciumScepterClient {
                     ModItems.ARCENCIUM_GLAIVE.get(),
                     ResourceLocation.fromNamespaceAndPath(EmeraldWeaponsMod.MODID, "charge"),
                     (stack, level, entity, seed) -> {
-                        if (!(entity instanceof net.minecraft.world.entity.player.Player p)) {
-                            return 0.0F;
-                        }
-                        return com.emerald.weapons.ArcenciumGlaiveItem.rage(p)
+                        // La Rage se lit sur la PILE, pas sur le porteur : les
+                        // donnees persistantes du joueur ne franchissent pas le
+                        // reseau, si bien que ce predicat retournait toujours
+                        // zero et que la jauge restait eteinte.
+                        net.minecraft.world.level.Level world =
+                                level != null ? level : (entity != null ? entity.level() : null);
+                        return com.emerald.weapons.ArcenciumGlaiveItem.rage(stack, world)
                                 / (float) com.emerald.weapons.ArcenciumGlaiveItem.RAGE_MAX;
                     }));
         }

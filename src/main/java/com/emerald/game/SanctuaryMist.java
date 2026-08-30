@@ -51,6 +51,20 @@ public final class SanctuaryMist {
 
     /** L'ancre du sanctuaire le plus proche, pour la commande de verification. */
     @javax.annotation.Nullable
+    /** Le centre du sanctuaire le plus proche, ou null. Sert au diagnostic. */
+    public static BlockPos nearestCentre(BlockPos near) {
+        BlockPos best = null;
+        double bestDist = Double.MAX_VALUE;
+        for (Site site : sites) {
+            double dist = site.centre().distSqr(near);
+            if (dist < bestDist) {
+                bestDist = dist;
+                best = site.centre();
+            }
+        }
+        return best;
+    }
+
     public static BlockPos nearestAnchor(ServerLevel level, BlockPos near) {
         // On prefere un sanctuaire dont l'ancre EXISTE VRAIMENT.
         //

@@ -1,7 +1,9 @@
 package com.emerald.weapons;
 
 import com.emerald.particles.ModParticles;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -14,6 +16,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -96,6 +99,8 @@ public class ArcenciumGlaiveItem extends Item {
     private static final String TAG_LAST_HIT = "ArcenciumRageLastHit";
     private static final String TAG_SECOND = "ArcenciumSecondDash";
 
+    /** Le second bond reste sur le JOUEUR : il ne suit pas l'arme, il suit la main. */
+
     public ArcenciumGlaiveItem(Properties properties) {
         super(properties);
     }
@@ -105,24 +110,37 @@ public class ArcenciumGlaiveItem extends Item {
     /**
      * La Rage telle qu'elle est MAINTENANT.
      *
-     * On ne la fait pas retomber dans un tick : on date le dernier coup et
+     * ELLE VIT SUR L'OBJET, et non plus sur le joueur. Rangee dans les donnees
+     * persistantes du joueur, elle n'existait que cote serveur : le jeu ne
+     * synchronise pas ce sac-la. Le predicat du modele, qui s'evalue chez le
+     * client, lisait donc toujours zero -- la jauge des cinq crans n'a jamais
+     * rien affiche depuis qu'elle existe, et aucune barre a l'ecran n'aurait
+     * pu marcher davantage. Les composants d'un ItemStack, eux, voyagent
+     * d'eux-memes.
+     *
+     * On ne fait pas retomber la Rage dans un tick : on date le dernier coup et
      * l'on relit la date au moment ou l'on en a besoin. Un compteur decremente
      * chaque tick couterait un abonnement au tick du monde pour une valeur que
-     * deux soustractions donnent exactement -- et il tournerait encore pour un
-     * joueur qui a range l'arme.
+     * deux soustractions donnent exactement.
      */
-    public static int rage(Player player) {
-        long since = player.level().getGameTime()
-                - player.getPersistentData().getLong(TAG_LAST_HIT);
-        if (since > RAGE_DECAY) {
+    public static int rage(ItemStack stack, Level level) {
+        if (level == null) {
             return 0;
         }
-        return Math.min(RAGE_MAX, player.getPersistentData().getInt(TAG_RAGE));
+        CompoundTag tag = stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY)
+                .copyTag();
+        if (level.getGameTime() - tag.getLong(TAG_LAST_HIT) > RAGE_DECAY) {
+            return 0;
+        }
+        return Math.min(RAGE_MAX, tag.getInt(TAG_RAGE));
     }
 
-    private static void setRage(Player player, int value) {
-        player.getPersistentData().putInt(TAG_RAGE, Math.max(0, Math.min(RAGE_MAX, value)));
-        player.getPersistentData().putLong(TAG_LAST_HIT, player.level().getGameTime());
+    private static void setRage(ItemStack stack, Level level, int value) {
+        CompoundTag tag = stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY)
+                .copyTag();
+        tag.putInt(TAG_RAGE, Math.max(0, Math.min(RAGE_MAX, value)));
+        tag.putLong(TAG_LAST_HIT, level.getGameTime());
+        stack.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
     }
 
     // ------------------------------------------------------------- clic droit
@@ -136,7 +154,7 @@ public class ArcenciumGlaiveItem extends Item {
             return InteractionResultHolder.fail(stack);
         }
 
-        int rage = rage(player);
+        int rage = rage(stack, level);
         Vec3 look = player.getLookAngle().normalize();
         Vec3 from = player.position();
 
@@ -245,7 +263,7 @@ public class ArcenciumGlaiveItem extends Item {
         if (!(attacker instanceof Player player) || !(attacker.level() instanceof ServerLevel level)) {
             return true;
         }
-        int rage = rage(player);
+        int rage = rage(stack, attacker.level());
 
         // A RAGE PLEINE, le coup devient la Curee.
         //
@@ -269,7 +287,7 @@ public class ArcenciumGlaiveItem extends Item {
             }
             level.playSound(null, player.getX(), player.getY(), player.getZ(),
                     SoundEvents.PLAYER_ATTACK_SWEEP, SoundSource.PLAYERS, 1.0F, 0.6F);
-            setRage(player, 0);
+            setRage(stack, level, 0);
             return true;
         }
 
@@ -277,7 +295,7 @@ public class ArcenciumGlaiveItem extends Item {
         if (rage > 0) {
             target.hurt(level.damageSources().playerAttack(player), rage * RAGE_PER_STEP);
         }
-        setRage(player, rage + 1);
+        setRage(stack, level, rage + 1);
         burst(level, target.position().add(0, target.getBbHeight() * 0.5, 0), 8 + rage * 3);
         level.playSound(null, target.getX(), target.getY(), target.getZ(),
                 SoundEvents.PLAYER_ATTACK_STRONG, SoundSource.PLAYERS,

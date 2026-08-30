@@ -168,6 +168,45 @@ public class GameCommands {
             return 1;
         }));
 
+        // DIRE QUI A POSE CE BLOC.
+        //
+        // Cinq allers-retours ont ete perdus a corriger le mauvais escalier,
+        // faute d'un moyen de designer un bloc autrement qu'en l'entourant sur
+        // une capture. On vise, on tape la commande, et l'on obtient le bloc et
+        // sa position RELATIVE au sanctuaire -- c'est-a-dire dans le repere ou
+        // le code est ecrit, le seul qui permette de retrouver la ligne
+        // fautive. Une capture montre un symptome ; ceci donne une adresse.
+        root.then(Commands.literal("what").executes(ctx -> {
+            if (!(ctx.getSource().getEntity()
+                    instanceof net.minecraft.server.level.ServerPlayer player)) {
+                ctx.getSource().sendFailure(Component.literal("A executer en jeu."));
+                return 0;
+            }
+            ServerLevel level = player.serverLevel();
+            var hit = player.pick(20.0, 0.0F, false);
+            if (!(hit instanceof net.minecraft.world.phys.BlockHitResult block)) {
+                ctx.getSource().sendFailure(Component.literal("Vise un bloc."));
+                return 0;
+            }
+            BlockPos at = block.getBlockPos();
+            String id = net.minecraft.core.registries.BuiltInRegistries.BLOCK
+                    .getKey(level.getBlockState(at).getBlock()).toString();
+            BlockPos centre = com.emerald.game.SanctuaryMist.nearestCentre(at);
+            String where;
+            if (centre == null) {
+                where = "aucun sanctuaire enregistre";
+            } else {
+                int fromZ = centre.getZ() + 47;
+                where = String.format("cx%+d | y%+d | cz%+d  (fromZ%+d)",
+                        at.getX() - centre.getX(), at.getY() - centre.getY(),
+                        at.getZ() - centre.getZ(), at.getZ() - fromZ);
+            }
+            final String line = String.format("%s en %d,%d,%d -> %s",
+                    id, at.getX(), at.getY(), at.getZ(), where);
+            ctx.getSource().sendSuccess(() -> Component.literal(line), false);
+            return 1;
+        }));
+
         root.then(Commands.literal("goto").executes(ctx -> {
             ServerLevel level = ctx.getSource().getServer().overworld();
             var village = GameState.get(level).village();
