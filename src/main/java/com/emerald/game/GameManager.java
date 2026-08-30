@@ -565,6 +565,21 @@ public class GameManager {
                     "game.emeraldweapons.anchor.held").withStyle(ChatFormatting.AQUA), true);
             return;
         }
+        // Les sceaux AVANT le prix.
+        //
+        // Ce message est celui qu'on lit en s'approchant, main vide, et il ne
+        // consultait pas les sceaux : il annoncait un prix en lingots sans dire
+        // qu'il faut d'abord reveiller le tombeau. On partait donc chercher
+        // huit lingots pour se faire refuser au retour. Une condition qu'on
+        // n'annonce qu'au moment de la refuser est une perte de temps offerte.
+        int asleep = SanctuarySeals.remaining(pos);
+        if (asleep > 0) {
+            player.displayClientMessage(Component.translatable(
+                            "game.emeraldweapons.anchor.sealed", asleep)
+                    .withStyle(ChatFormatting.LIGHT_PURPLE), true);
+            return;
+        }
+
         int tier = state.nextTier();
         player.displayClientMessage(Component.translatable(
                 "game.emeraldweapons.anchor.needs", ANCHOR_COST[tier - 1], tier)
