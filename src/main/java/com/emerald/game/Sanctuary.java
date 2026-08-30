@@ -1688,7 +1688,7 @@ public final class Sanctuary {
         //    dans le meme regard que le butin -- on ne peut pas prendre l'un
         //    sans voir l'autre. Celui-la enseigne a quoi ressemble un sceau
         //    avant qu'on ait a en chercher un.
-        placed.add(cellSeal(level, cx - 1, y + 1, endZ - 2));
+        placed.add(freeSeal(level, cx - 1, y + 1, endZ - 2));
 
         // 2. A L'ETAGE, dans une chambre laterale.
         placed.add(upperChamber(level, cx, y, endZ + 3));
@@ -1717,18 +1717,42 @@ public final class Sanctuary {
     }
 
     /**
-     * Un sceau dans une niche du couloir, avec sa lanterne.
+     * Un sceau pose a meme le sol, dans une piece deja ouverte.
      */
-    private static BlockPos cellSeal(ServerLevel level, int x, int y, int z) {
+    private static BlockPos freeSeal(ServerLevel level, int x, int y, int z) {
         BlockPos pos = new BlockPos(x, y, z);
-        set(level, x, y, z, Blocks.AIR.defaultBlockState());
-        set(level, x, y + 1, z, Blocks.AIR.defaultBlockState());
-        set(level, x, y - 1, z, shrineTrim());
         level.setBlock(pos, ModBlocks.TOMB_SEAL.get().defaultBlockState(), 3);
-        set(level, x, y + 2, z, lantern());
         return pos;
     }
 
+    /**
+     * Une alcove ouverte sur le couloir, et son sceau.
+     *
+     * Ce qui precedait ne creusait QU'UNE CASE d'air. Employe pour un repli a
+     * deux blocs de l'axe -- c'est-a-dire dans le jambage d'un couloir large de
+     * trois -- cela ne faisait pas une niche mais une poche aveugle enfermee
+     * dans la maconnerie : personne ne pouvait la trouver sans casser un mur au
+     * hasard, ce qui n'est pas une enigme mais une loterie.
+     *
+     * On evide donc un renfoncement de trois sur trois, on lui donne un fond,
+     * un sol et deux lanternes. Il s'ouvre sur le passage : on le voit en
+     * marchant, et il a l'air d'avoir ete voulu.
+     */
+    private static BlockPos alcove(ServerLevel level, int cx, int y, int z, int dir) {
+        int wx = cx + dir * 2;                      // la paroi du couloir
+        for (int dz = -1; dz <= 1; dz++) {
+            set(level, wx, y - 1, z + dz, trim());
+            for (int dy = 0; dy <= 2; dy++) {
+                set(level, wx, y + dy, z + dz, Blocks.AIR.defaultBlockState());
+                // un fond, pour ne pas ouvrir sur le remplissage de la pyramide
+                set(level, wx + dir, y + dy, z + dz, shrine());
+            }
+            set(level, wx, y + 3, z + dz, shrineTrim());
+        }
+        set(level, wx, y + 1, z - 1, lantern());
+        set(level, wx, y + 1, z + 1, lantern());
+        return freeSeal(level, wx, y, z);
+    }
     /**
      * La cave, sous la salle du tresor.
      *
@@ -1758,7 +1782,7 @@ public final class Sanctuary {
             // deux sceaux dans le meme regard : la repartition demandee etait
             // annulee par le repli lui-meme, en silence. Au porche, il reste au
             // moins a un autre endroit du monument.
-            return cellSeal(level, cx + 2, y + 1, fromZ - 7);
+            return alcove(level, cx, y + 1, fromZ - 7, 1);
         }
 
         // le puits : on perce le dallage de la salle et l'on descend
@@ -1820,14 +1844,16 @@ public final class Sanctuary {
                 cover = Math.min(cover, probeTop(level, x, y, z + dz));
             }
         }
-        // Une chambre plus modeste tient sous une epaisseur moindre : a cinq
-        // blocs de large elle exigeait une couverture qu'on n'a pas toujours,
-        // et son repli la ramenait au pied de la pyramide -- c'est-a-dire nulle
-        // part ou l'on avait demande qu'elle soit.
+        // Une chambre de trois de large tient sous une epaisseur moindre qu'une
+        // de cinq, qui exigeait une couverture qu'on n'a pas toujours.
+        //
+        // Mais on ne la FORCE pas : la tasser sous une couverture insuffisante
+        // percerait le flanc, et l'y loger de travers reviendrait a cacher le
+        // sceau dans un interstice. Faute de place, on prend une alcove de
+        // couloir -- moins ambitieux, mais ouvert et trouvable.
         int top = Math.min(y + 16, cover - 4);
         if (top < y + 6) {
-            // vraiment trop mince : on se hisse au plus haut qu'on puisse
-            top = Math.max(y + 6, cover - 4);
+            return alcove(level, cx, y + 1, z, -1);
         }
 
         // le puits : une case d'air, une echelle, et de quoi la porter
