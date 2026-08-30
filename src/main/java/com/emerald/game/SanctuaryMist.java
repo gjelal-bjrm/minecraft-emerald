@@ -51,17 +51,31 @@ public final class SanctuaryMist {
 
     /** L'ancre du sanctuaire le plus proche, pour la commande de verification. */
     @javax.annotation.Nullable
-    public static BlockPos nearestAnchor(BlockPos near) {
+    public static BlockPos nearestAnchor(ServerLevel level, BlockPos near) {
+        // On prefere un sanctuaire dont l'ancre EXISTE VRAIMENT.
+        //
+        // La commande a longtemps annonce « le bloc manque » alors qu'il etait
+        // bien pose : elle designait un sanctuaire plus ancien, bati puis
+        // abandonne au fil des essais. Un site dont l'ancre a disparu ne merite
+        // plus qu'on y renvoie le joueur.
         BlockPos best = null;
         double bestDist = Double.MAX_VALUE;
+        BlockPos fallback = null;
+        double fallbackDist = Double.MAX_VALUE;
         for (Site site : sites) {
             double dist = site.centre().distSqr(near);
-            if (dist < bestDist) {
+            boolean alive = level.getBlockState(site.anchor())
+                    .is(com.emerald.block.ModBlocks.PRISMATIC_ANCHOR.get());
+            if (alive && dist < bestDist) {
                 bestDist = dist;
                 best = site.anchor();
             }
+            if (dist < fallbackDist) {
+                fallbackDist = dist;
+                fallback = site.anchor();
+            }
         }
-        return best;
+        return best != null ? best : fallback;
     }
 
     public static void clearAll() {

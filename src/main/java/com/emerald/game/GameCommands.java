@@ -117,7 +117,7 @@ public class GameCommands {
         // quatre-vingt-dix blocs est une perte de temps a chaque essai.
         root.then(Commands.literal("anchor").executes(ctx -> {
             ServerLevel level = ctx.getSource().getServer().overworld();
-            var found = com.emerald.game.SanctuaryMist.nearestAnchor(
+            var found = com.emerald.game.SanctuaryMist.nearestAnchor(level,
                     net.minecraft.core.BlockPos.containing(ctx.getSource().getPosition()));
             if (found == null) {
                 ctx.getSource().sendFailure(Component.translatable(

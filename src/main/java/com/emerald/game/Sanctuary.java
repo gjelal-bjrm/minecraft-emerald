@@ -333,7 +333,7 @@ public final class Sanctuary {
                 // Un bloc AU-DESSUS de la cour, et non dedans : posee a la
                 // hauteur du pavage, sa premiere assise se confondait avec lui
                 // et la pyramide paraissait enfoncee d'un cran.
-                ok &= template(level, source, "cursed_pyramid_upper" + q[0],
+                ok &= template(level, "cursed_pyramid_upper" + q[0],
                         ox + q[1], y + 1, oz + q[2]);
             }
             // On VERIFIE qu'une masse se dresse la ou le faite devrait etre :
@@ -359,16 +359,38 @@ public final class Sanctuary {
      * assemblage ni rotation, contrairement a « place structure » qui laisse le
      * generateur decider. C'est ce qui rend le placement previsible.
      */
-    private static boolean template(ServerLevel level, CommandSourceStack source,
-                                    String name, int x, int y, int z) {
-        try {
-            level.getServer().getCommands().performPrefixedCommand(
-                    source.withSuppressedOutput().withPermission(4),
-                    String.format("place template cataclysm:%s %d %d %d", name, x, y, z));
-            return true;
-        } catch (RuntimeException e) {
+    /**
+     * Pose un modele DIRECTEMENT, sans passer par une commande.
+     *
+     * On appelait « place template » par le repartiteur de commandes, et c'est
+     * la que tout se perdait : cette methode avale ses propres echecs. Elle
+     * rendait donc toujours vrai, la pyramide n'etait jamais posee, et l'on
+     * cherchait la cause partout ailleurs -- le sommet, l'enfouissement, le
+     * rhabillage, l'ancre -- pendant que le seul vrai probleme etait ici.
+     *
+     * L'API des modeles, elle, rend un {@code Optional} vide quand le modele
+     * est introuvable et un booleen quand la pose echoue. On sait donc ce qui
+     * s'est passe, et le journal le dit.
+     */
+    private static boolean template(ServerLevel level, String name, int x, int y, int z) {
+        ResourceLocation key = ResourceLocation.fromNamespaceAndPath("cataclysm", name);
+        var found = level.getStructureManager().get(key);
+        if (found.isEmpty()) {
+            org.slf4j.LoggerFactory.getLogger(EmeraldWeaponsMod.MODID)
+                    .warn("Modele introuvable : {}", key);
             return false;
         }
+        BlockPos at = new BlockPos(x, y, z);
+        // le drapeau 2 previent le client sans declencher de mise a jour de
+        // voisinage, comme partout ailleurs dans cette classe
+        boolean placed = found.get().placeInWorld(level, at, at,
+                new net.minecraft.world.level.levelgen.structure.templatesystem
+                        .StructurePlaceSettings(), level.random, 2);
+        if (!placed) {
+            org.slf4j.LoggerFactory.getLogger(EmeraldWeaponsMod.MODID)
+                    .warn("Pose refusee pour {} en {}", key, at);
+        }
+        return placed;
     }
 
     /**
