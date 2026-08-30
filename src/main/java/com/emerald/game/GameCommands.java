@@ -103,19 +103,14 @@ public class GameCommands {
 
         // Le sanctuaire, bati sur place : c'est l'outil pour le regarder en
         // monde plat sans jouer une partie entiere pour l'atteindre.
-        root.then(Commands.literal("sanctuary").executes(ctx -> {
-            ServerLevel level = ctx.getSource().getServer().overworld();
-            var pos = net.minecraft.core.BlockPos.containing(ctx.getSource().getPosition());
-            var ground = new net.minecraft.core.BlockPos(pos.getX(),
-                    WorldSetup.surfaceY(level, pos.getX(), pos.getZ()) - 1, pos.getZ());
-            var anchor = Sanctuary.build(level, ctx.getSource(), ground);
-            ctx.getSource().sendSuccess(() -> Component.translatable(
-                    "command.emeraldweapons.sanctuary",
-                    anchor.getX(), anchor.getY(), anchor.getZ()), true);
-            ctx.getSource().sendSuccess(() -> Component.translatable(
-                    "command.emeraldweapons.sanctuary.hint"), false);
-            return 1;
-        }));
+        root.then(Commands.literal("sanctuary")
+                .then(Commands.argument("palier",
+                                com.mojang.brigadier.arguments.IntegerArgumentType.integer(1, 3))
+                        .executes(ctx -> buildSanctuary(ctx.getSource(),
+                                com.mojang.brigadier.arguments.IntegerArgumentType
+                                        .getInteger(ctx, "palier"))))
+                .executes(ctx -> buildSanctuary(ctx.getSource(), 1)));
+
 
         // Retrouver l'ancre du sanctuaire le plus proche, et s'y rendre.
         // Chercher a la main un bloc pose au sommet d'une pyramide de
@@ -171,6 +166,20 @@ public class GameCommands {
         }));
 
         event.getDispatcher().register(root);
+    }
+
+    private static int buildSanctuary(CommandSourceStack source, int tier) {
+        ServerLevel level = source.getServer().overworld();
+        var pos = net.minecraft.core.BlockPos.containing(source.getPosition());
+        var ground = new net.minecraft.core.BlockPos(pos.getX(),
+                WorldSetup.surfaceY(level, pos.getX(), pos.getZ()) - 1, pos.getZ());
+        var anchor = Sanctuary.build(level, source, ground, tier);
+        source.sendSuccess(() -> Component.translatable(
+                "command.emeraldweapons.sanctuary",
+                anchor.getX(), anchor.getY(), anchor.getZ()), true);
+        source.sendSuccess(() -> Component.translatable(
+                "command.emeraldweapons.sanctuary.hint"), false);
+        return 1;
     }
 
     private static int switchMode(CommandSourceStack source, boolean on) {

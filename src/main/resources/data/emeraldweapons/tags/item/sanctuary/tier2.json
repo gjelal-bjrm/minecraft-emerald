@@ -1,0 +1,29 @@
+{
+  "replace": false,
+  "values": [
+    {
+      "id": "apotheosis:uncommon_material",
+      "required": false
+    },
+    {
+      "id": "apotheosis:rare_material",
+      "required": false
+    },
+    {
+      "id": "apotheosis:gem_fused_slate",
+      "required": false
+    },
+    {
+      "id": "apotheosis:sigil_of_socketing",
+      "required": false
+    },
+    {
+      "id": "apotheosis:sigil_of_rebirth",
+      "required": false
+    },
+    {
+      "id": "apotheosis:vial_of_extraction",
+      "required": false
+    }
+  ]
+}

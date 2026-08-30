@@ -173,7 +173,12 @@ public final class Sanctuary {
      *
      * @return la position de l'ancre
      */
-    public static BlockPos build(ServerLevel level, CommandSourceStack source, BlockPos ground) {
+    /**
+     * @param tier 1 a 3 : la difficulte de l'ancre, donc la richesse du butin
+     */
+    public static BlockPos build(ServerLevel level, CommandSourceStack source,
+                                 BlockPos ground, int tier) {
+        int rank = Math.max(1, Math.min(3, tier));
         int y = ground.getY();
 
         int cx = ground.getX();
@@ -197,11 +202,11 @@ public final class Sanctuary {
         reskin(level, bounds, y);
 
         clearSite(level, cx, y, cz, bounds);
-        courtyard(level, cx, y, cz);
+        courtyard(level, cx, y, cz, bounds);
         curtainWall(level, cx, y, cz);
         for (int sx = -1; sx <= 1; sx += 2) {
             for (int sz = -1; sz <= 1; sz += 2) {
-                cornerTower(level, cx, cz, cx + sx * HALF, y, cz + sz * HALF);
+                cornerTower(level, cx, cz, cx + sx * HALF, y, cz + sz * HALF, rank);
             }
         }
         // QUATRE portes, une par cote.
@@ -212,7 +217,7 @@ public final class Sanctuary {
         // quatre... ou trois. Quatre portes reglent la question par
         // construction, et une forteresse a quatre portes n'a rien d'absurde.
         for (int side = 0; side < 4; side++) {
-            gatehouse(level, cx, y, cz, side);
+            gatehouse(level, cx, y, cz, side, rank);
         }
 
         // Le sommet du modele n'est pas au milieu de son emprise : il tombe a
@@ -221,7 +226,7 @@ public final class Sanctuary {
         // blocs a cote du faite de la pyramide.
         int apexZ = cz - (PYRAMID_CZ - 44);
         int summit = summitOf(level, cx, y, apexZ);
-        BlockPos anchor = crown(level, cx, summit, apexZ);
+        BlockPos anchor = crown(level, cx, summit, apexZ, rank);
         SanctuaryGarrison.populate(level, new BlockPos(cx, y, cz), HALF);
         SanctuaryMist.register(new BlockPos(cx, y, cz), HALF, anchor);
         return anchor;
@@ -365,7 +370,7 @@ public final class Sanctuary {
      * obelisques d'arcencium l'encadrent, et une colonne de verre prismatique
      * descend jusqu'a la maconnerie -- de loin, c'est elle qu'on repere.
      */
-    private static BlockPos crown(ServerLevel level, int cx, int y, int cz) {
+    private static BlockPos crown(ServerLevel level, int cx, int y, int cz, int rank) {
         for (int dx = -4; dx <= 4; dx++) {
             for (int dz = -4; dz <= 4; dz++) {
                 for (int dy = 1; dy <= 8; dy++) {
@@ -394,8 +399,8 @@ public final class Sanctuary {
             }
         }
         // deux coffres encadrent l'ancre : le sommet doit payer la montee
-        lootChest(level, cx - 3, y + 1, cz, "minecraft:chests/end_city_treasure");
-        lootChest(level, cx + 3, y + 1, cz, "minecraft:chests/desert_pyramid");
+        lootChest(level, cx - 3, y + 1, cz, sanctuaryTable(rank));
+        lootChest(level, cx + 3, y + 1, cz, sanctuaryTable(rank));
 
         BlockPos anchor = new BlockPos(cx, y + 2, cz);
         level.setBlockAndUpdate(anchor, ModBlocks.PRISMATIC_ANCHOR.get().defaultBlockState());
@@ -438,9 +443,16 @@ public final class Sanctuary {
         }
     }
 
-    private static void courtyard(ServerLevel level, int cx, int y, int cz) {
+    private static void courtyard(ServerLevel level, int cx, int y, int cz, int[] keep) {
         for (int dx = -HALF; dx <= HALF; dx++) {
             for (int dz = -HALF; dz <= HALF; dz++) {
+                // La cour ne PAVE PAS la pyramide : elle lui posait une dalle
+                // en travers du pied, ce qui la faisait paraitre enfoncee dans
+                // un cratere.
+                if (cx + dx >= keep[0] && cx + dx <= keep[2]
+                        && cz + dz >= keep[1] && cz + dz <= keep[3]) {
+                    continue;
+                }
                 // Pas de motif calcule sur (dx + dz) : cela dessinait des
                 // rayures DIAGONALES en travers de toute la cour, ce qui ne
                 // ressemble a aucun dallage. Un damier franc, ou rien.
@@ -534,8 +546,8 @@ public final class Sanctuary {
      * portes : l'une sur le chemin de ronde, l'autre au ras de la cour.
      */
     private static void cornerTower(ServerLevel level, int cx, int cz,
-                                    int tx, int y, int tz) {
-        roundTower(level, tx, y, tz, TOWER_RADIUS, TOWER_TOP);
+                                    int tx, int y, int tz, int rank) {
+        roundTower(level, tx, y, tz, TOWER_RADIUS, TOWER_TOP, rank);
         // Vers la cour, jamais vers le dehors : le signe se deduit de la
         // position du coin par rapport au centre de la place.
         int inX = Integer.signum(cx - tx);
@@ -600,7 +612,7 @@ public final class Sanctuary {
      * quatre. Quatre portes reglent la question par construction, et une
      * forteresse a quatre portes n'a rien d'absurde.
      */
-    private static void gatehouse(ServerLevel level, int cx, int y, int cz, int side) {
+    private static void gatehouse(ServerLevel level, int cx, int y, int cz, int side, int rank) {
         Gate g = Gate.of(cx, cz, side);
 
         // Les deux tours du corps de garde, batties comme les autres.
@@ -613,7 +625,7 @@ public final class Sanctuary {
             int seat = flank * (GATE_HALF + 6);
             int bx = g.x(seat, 0);
             int bz = g.z(seat, 0);
-            roundTower(level, bx, y, bz, 6, TOWER_TOP - 6);
+            roundTower(level, bx, y, bz, 6, TOWER_TOP - 6, rank);
             // La normale de la porte pointe DEHORS : on perce donc a l'oppose.
             boolean acrossX = g.nx() != 0;
             int inward = -(acrossX ? g.nx() : g.nz());
@@ -675,7 +687,11 @@ public final class Sanctuary {
         BlockState handle = crank != null ? crank : Blocks.LEVER.defaultBlockState();
         set(level, g.x(GATE_HALF + 2, -1), y + WALK, g.z(GATE_HALF + 2, -1), handle);
 
-        Direction outward = g.outward();
+        // La face ornee de la Porte du Sceau est a l'OPPOSE de son « facing ».
+        // Tournee vers le dehors, elle montrait donc son revers aux visiteurs
+        // et son ornement a la cour : exactement l'inverse de ce qu'on veut
+        // d'une porte de forteresse.
+        Direction outward = g.outward().getOpposite();
         if (SealDoor.available()) {
             SealDoor.place(level, g.centre(y).above(), outward, false);
         }
@@ -699,22 +715,41 @@ public final class Sanctuary {
      * l'aplatirait.
      */
     private static void reskin(ServerLevel level, int[] bounds, int y) {
+        // On mesure d'abord la hauteur reelle du batiment, pour que le degrade
+        // se repartisse dessus au lieu de dependre de chiffres ecrits en dur.
+        int crest = y;
+        for (int x = bounds[0]; x <= bounds[2]; x += 4) {
+            for (int z = bounds[1]; z <= bounds[3]; z += 4) {
+                crest = Math.max(crest, probeTop(level, x, y, z));
+            }
+        }
+        int span = Math.max(1, crest - y);
+
         for (int x = bounds[0]; x <= bounds[2]; x++) {
             for (int z = bounds[1]; z <= bounds[3]; z++) {
-                int top = level.getHeight(
-                        net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
-                        x, z) - 1;
-                if (top - y < 4) {
+                // On DESCEND depuis le ciel, comme pour le sommet : la carte
+                // des hauteurs ne connaissait pas encore la pyramide qu'on
+                // venait de poser par commande, si bien que le rhabillage ne
+                // mordait que sur le sol autour d'elle -- « tu n'as pas change
+                // la texture de la pyramide ».
+                int top = probeTop(level, x, y, z);
+                if (top - y < 2) {
                     continue;
                 }
+                // les quatre aretes recoivent la teinte claire : c'est ce qui
+                // dessine la silhouette contre le ciel
+                double ex = Math.abs(x - (bounds[0] + bounds[2]) / 2.0);
+                double ez = Math.abs(z - (bounds[1] + bounds[3]) / 2.0);
+                boolean ridge = Math.abs(ex - ez) < 1.5;
+
                 int painted = 0;
-                for (int dy = top; dy > y && painted < 3; dy--) {
+                for (int dy = top; dy > y - BURIED && painted < 4; dy--) {
                     BlockPos pos = new BlockPos(x, dy, z);
                     BlockState state = level.getBlockState(pos);
                     if (state.isAir()) {
                         continue;
                     }
-                    BlockState skin = skinFor(state, dy - y);
+                    BlockState skin = skinFor(state, (dy - y) / (double) span, ridge);
                     if (skin != null) {
                         level.setBlock(pos, skin, 2);
                     }
@@ -731,8 +766,19 @@ public final class Sanctuary {
      * dalle porte une orientation qu'il faudrait recopier, et se tromper de
      * recopie abime la forme plus surement qu'un gres laisse en place.
      */
+    /**
+     * La peau de la pyramide : SOMBRE, avec deux degrades et des aretes claires.
+     *
+     * Le gres d'origine ne disait rien de l'Arcencium. La gamme va du plus
+     * sombre en bas -- briques corrompues, presque noires -- au plus clair au
+     * sommet, ou l'ancre attend. Les quatre aretes tranchent en pierre polie :
+     * ce sont elles qui dessinent la silhouette contre le ciel, et sans elles
+     * un volume de cette taille se lit comme une masse plate.
+     *
+     * @param height la hauteur RELATIVE, de 0 au pied a 1 au faite
+     */
     @Nullable
-    private static BlockState skinFor(BlockState state, int height) {
+    private static BlockState skinFor(BlockState state, double height, boolean ridge) {
         if (!state.getProperties().isEmpty()) {
             return null;                       // oriente : on n'y touche pas
         }
@@ -740,18 +786,32 @@ public final class Sanctuary {
         if (id.startsWith(EmeraldWeaponsMod.MODID)) {
             return null;                       // deja a nous
         }
-        if (id.contains("chiseled") || id.contains("cut_")) {
-            return shrineTrim();
+        boolean skin = id.contains("sandstone") || id.contains("sand")
+                || id.contains("chiseled") || id.contains("smooth")
+                || id.contains("cut_");
+        if (!skin) {
+            return null;
         }
-        if (id.contains("smooth")) {
-            return trim();
+        if (ridge) {
+            return height > 0.75 ? shrineTrim() : trim();
         }
-        if (id.contains("sandstone") || id.contains("sand")) {
-            // une assise plus sombre en bas, l'arcencium en haut : la pyramide
-            // s'eclaircit vers son sommet, ou se trouve l'ancre
-            return height > 55 ? shrine() : height > 25 ? body() : base();
+        if (height > 0.82) {
+            return shrine();                   // le faite, en arcencium
         }
-        return null;
+        if (height > 0.45) {
+            return body();                     // le corps, en gangue
+        }
+        return base();                         // l'assise, presque noire
+    }
+
+    /** La hauteur du premier bloc plein, sondee depuis le plafond du monde. */
+    private static int probeTop(ServerLevel level, int x, int y, int z) {
+        for (int probe = level.getMaxBuildHeight() - 1; probe > y - BURIED; probe--) {
+            if (!level.getBlockState(new BlockPos(x, probe, z)).isAir()) {
+                return probe;
+            }
+        }
+        return y;
     }
 
     /**
@@ -780,8 +840,17 @@ public final class Sanctuary {
                     set(level, px, y + step + clear, pz, Blocks.AIR.defaultBlockState());
                 }
             }
-            // le garde-corps cote cour
-            set(level, g.x(along, -THICK - 3), y + step + 1, g.z(along, -THICK - 3), merlon());
+            // Le garde-corps, en MARCHES LIEES.
+            //
+            // Un muret par marche, chacun un cran plus haut que le precedent,
+            // ne donne que des poteaux : ces blocs ne se lient qu'a leurs
+            // voisins horizontaux, et deux marches successives sont en
+            // diagonale. On double donc chaque muret d'un second a la MEME
+            // hauteur sur la colonne suivante : la rampe devient une suite
+            // continue de paliers qui s'accrochent les uns aux autres.
+            int rail = -THICK - 3;
+            set(level, g.x(along, rail), y + step + 1, g.z(along, rail), merlon());
+            set(level, g.x(along + 1, rail), y + step + 1, g.z(along + 1, rail), merlon());
         }
         // Le palier, ET le passage vers le chemin de ronde.
         //
@@ -941,7 +1010,7 @@ public final class Sanctuary {
      * sans jamais entamer le reste du sol.
      */
     private static void towerInterior(ServerLevel level, int tx, int y, int tz,
-                                      int radius, int top) {
+                                      int radius, int top, int rank) {
         int storey = 6;
         double inner = radius - 1.0;
         for (int base = 0; base + storey <= top; base += storey) {
@@ -956,7 +1025,7 @@ public final class Sanctuary {
             lootChest(level, tx + (int) (dx == 0 ? inner - 2 : 0),
                     y + base + storey + 1,
                     tz + (int) (dz == 0 ? inner - 2 : 0),
-                    "minecraft:chests/simple_dungeon");
+                    sanctuaryTable(rank));
 
             int reach = (int) inner - 1;
             for (int i = 0; i < storey; i++) {
@@ -1003,7 +1072,7 @@ public final class Sanctuary {
      * centre, vus de l'exterieur ». Un cercle franc n'a pas ce defaut.
      */
     private static void roundTower(ServerLevel level, int tx, int y, int tz,
-                                   int radius, int top) {
+                                   int radius, int top, int rank) {
         for (int dx = -radius; dx <= radius; dx++) {
             for (int dz = -radius; dz <= radius; dz++) {
                 double dist = Math.sqrt(dx * dx + dz * dz);
@@ -1025,10 +1094,10 @@ public final class Sanctuary {
                 // n'a l'air de rien. On pose donc la ceinture entiere, puis un
                 // bloc plein tous les trois pour le creneau.
                 if (shell) {
+                    // Rien par-dessus : le bloc poli qu'on y ajoutait
+                    // n'apportait rien qu'une bosse claire. La ceinture de
+                    // murets se suffit, puisqu'elle se lie d'elle-meme.
                     set(level, tx + dx, y + top + 1, tz + dz, merlon());
-                    if (Math.floorMod(dx * 3 + dz, 3) == 0) {
-                        set(level, tx + dx, y + top + 2, tz + dz, trim());
-                    }
                 }
                 if (shell && (dx == 0 || dz == 0) && radius > 4) {
                     set(level, tx + dx, y + 6, tz + dz, glow());
@@ -1039,7 +1108,7 @@ public final class Sanctuary {
         //
         // Il s'arretait deux blocs plus bas et l'on posait le toit par-dessus :
         // le dernier etage n'avait donc aucun acces, dans toutes les tours.
-        towerInterior(level, tx, y, tz, radius, top);
+        towerInterior(level, tx, y, tz, radius, top, rank);
         // Rien au MILIEU du dernier plancher : c'est la que l'escalier
         // debouche, et le bloc qui portait la lanterne barrait la sortie --
         // « on est bloque par un bloc sur lequel tu as pose une lanterne ».
@@ -1060,7 +1129,13 @@ public final class Sanctuary {
      */
     private static void lootChest(ServerLevel level, int x, int y, int z, String table) {
         BlockPos pos = new BlockPos(x, y, z);
-        level.setBlock(pos, Blocks.CHEST.defaultBlockState(), 2);
+        // Lootr d'abord : il donne a CHAQUE joueur son propre tirage, ce qui
+        // est la seule facon honnete de recompenser un siege mene a plusieurs.
+        // A defaut, notre coffre d'Arcencium, qui a au moins l'air d'etre de la
+        // maison. Le coffre vanilla ne vient qu'en dernier recours.
+        BlockState chestBlock = first(ModBlocks.ARCENCIUM_CHEST.get().defaultBlockState(),
+                "lootr:lootr_chest");
+        level.setBlock(pos, chestBlock, 2);
         if (level.getBlockEntity(pos) instanceof
                 net.minecraft.world.level.block.entity.RandomizableContainerBlockEntity chest) {
             chest.setLootTable(net.minecraft.resources.ResourceKey.create(
@@ -1068,6 +1143,12 @@ public final class Sanctuary {
                             ResourceLocation.parse(table)),
                     level.random.nextLong());
         }
+    }
+
+    /** La table de butin du palier : moyenne, bonne, puis de quoi affronter le boss. */
+    private static String sanctuaryTable(int rank) {
+        return "%s:chests/sanctuary_tier%d".formatted(EmeraldWeaponsMod.MODID,
+                Math.max(1, Math.min(3, rank)));
     }
 
     // ----------------------------------------------------------- outillage

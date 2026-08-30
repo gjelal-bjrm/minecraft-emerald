@@ -1,0 +1,500 @@
+{
+  "type": "minecraft:chest",
+  "pools": [
+    {
+      "rolls": 1,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "emeraldweapons:arcencium_ingot",
+          "weight": 1,
+          "functions": [
+            {
+              "function": "minecraft:set_count",
+              "count": {
+                "min": 10,
+                "max": 18
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "rolls": {
+        "min": 1,
+        "max": 2
+      },
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "emeraldweapons:raw_arcencium",
+          "weight": 6,
+          "functions": [
+            {
+              "function": "minecraft:set_count",
+              "count": {
+                "min": 4,
+                "max": 12
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "emeraldweapons:prism_branch",
+          "weight": 4,
+          "functions": [
+            {
+              "function": "minecraft:set_count",
+              "count": {
+                "min": 2,
+                "max": 6
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "emeraldweapons:prism_fiber",
+          "weight": 4,
+          "functions": [
+            {
+              "function": "minecraft:set_count",
+              "count": {
+                "min": 2,
+                "max": 6
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "rolls": {
+        "min": 2,
+        "max": 5
+      },
+      "entries": [
+        {
+          "type": "minecraft:tag",
+          "name": "emeraldweapons:sanctuary/tier2",
+          "expand": true,
+          "weight": 10,
+          "functions": [
+            {
+              "function": "minecraft:set_count",
+              "count": {
+                "min": 1,
+                "max": 3
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "rolls": {
+        "min": 1,
+        "max": 2
+      },
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "minecraft:golden_apple",
+          "weight": 6,
+          "functions": [
+            {
+              "function": "minecraft:set_count",
+              "count": {
+                "min": 4,
+                "max": 8
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "minecraft:enchanted_golden_apple",
+          "weight": 2,
+          "functions": [
+            {
+              "function": "minecraft:set_count",
+              "count": {
+                "min": 1,
+                "max": 1
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "rolls": {
+        "min": 1,
+        "max": 3
+      },
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "minecraft:diamond",
+          "weight": 6,
+          "functions": [
+            {
+              "function": "minecraft:set_count",
+              "count": {
+                "min": 5,
+                "max": 12
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "minecraft:netherite_scrap",
+          "weight": 3,
+          "functions": [
+            {
+              "function": "minecraft:set_count",
+              "count": {
+                "min": 1,
+                "max": 2
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "minecraft:experience_bottle",
+          "weight": 5,
+          "functions": [
+            {
+              "function": "minecraft:set_count",
+              "count": {
+                "min": 16,
+                "max": 32
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "rolls": 1,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "emeraldweapons:artifact",
+          "weight": 1,
+          "functions": [
+            {
+              "function": "minecraft:set_components",
+              "components": {
+                "emeraldweapons:artifact": "lentille_du_prisme"
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "emeraldweapons:artifact",
+          "weight": 1,
+          "functions": [
+            {
+              "function": "minecraft:set_components",
+              "components": {
+                "emeraldweapons:artifact": "filtre_de_brume"
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "emeraldweapons:artifact",
+          "weight": 1,
+          "functions": [
+            {
+              "function": "minecraft:set_components",
+              "components": {
+                "emeraldweapons:artifact": "repere_d_echo"
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "emeraldweapons:artifact",
+          "weight": 1,
+          "functions": [
+            {
+              "function": "minecraft:set_components",
+              "components": {
+                "emeraldweapons:artifact": "lentille_d_aurore"
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "emeraldweapons:artifact",
+          "weight": 1,
+          "functions": [
+            {
+              "function": "minecraft:set_components",
+              "components": {
+                "emeraldweapons:artifact": "plaque_de_gangue"
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "emeraldweapons:artifact",
+          "weight": 1,
+          "functions": [
+            {
+              "function": "minecraft:set_components",
+              "components": {
+                "emeraldweapons:artifact": "coque_prismatique"
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "emeraldweapons:artifact",
+          "weight": 1,
+          "functions": [
+            {
+              "function": "minecraft:set_components",
+              "components": {
+                "emeraldweapons:artifact": "reservoir_de_prisme"
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "emeraldweapons:artifact",
+          "weight": 1,
+          "functions": [
+            {
+              "function": "minecraft:set_components",
+              "components": {
+                "emeraldweapons:artifact": "plastron_de_resonance"
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "emeraldweapons:artifact",
+          "weight": 1,
+          "functions": [
+            {
+              "function": "minecraft:set_components",
+              "components": {
+                "emeraldweapons:artifact": "lest_de_gangue"
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "emeraldweapons:artifact",
+          "weight": 1,
+          "functions": [
+            {
+              "function": "minecraft:set_components",
+              "components": {
+                "emeraldweapons:artifact": "jambieres_de_maree"
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "emeraldweapons:artifact",
+          "weight": 1,
+          "functions": [
+            {
+              "function": "minecraft:set_components",
+              "components": {
+                "emeraldweapons:artifact": "champ_de_cristal"
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "emeraldweapons:artifact",
+          "weight": 1,
+          "functions": [
+            {
+              "function": "minecraft:set_components",
+              "components": {
+                "emeraldweapons:artifact": "renfort_de_siege"
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "emeraldweapons:artifact",
+          "weight": 1,
+          "functions": [
+            {
+              "function": "minecraft:set_components",
+              "components": {
+                "emeraldweapons:artifact": "semelle_de_prisme"
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "emeraldweapons:artifact",
+          "weight": 1,
+          "functions": [
+            {
+              "function": "minecraft:set_components",
+              "components": {
+                "emeraldweapons:artifact": "bottes_d_eclair"
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "emeraldweapons:artifact",
+          "weight": 1,
+          "functions": [
+            {
+              "function": "minecraft:set_components",
+              "components": {
+                "emeraldweapons:artifact": "semelle_vaporeuse"
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "emeraldweapons:artifact",
+          "weight": 1,
+          "functions": [
+            {
+              "function": "minecraft:set_components",
+              "components": {
+                "emeraldweapons:artifact": "bottes_de_retour"
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "emeraldweapons:artifact",
+          "weight": 1,
+          "functions": [
+            {
+              "function": "minecraft:set_components",
+              "components": {
+                "emeraldweapons:artifact": "regulateur_de_lame"
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "emeraldweapons:artifact",
+          "weight": 1,
+          "functions": [
+            {
+              "function": "minecraft:set_components",
+              "components": {
+                "emeraldweapons:artifact": "lame_de_chaine"
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "emeraldweapons:artifact",
+          "weight": 1,
+          "functions": [
+            {
+              "function": "minecraft:set_components",
+              "components": {
+                "emeraldweapons:artifact": "drain_de_cristal"
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "emeraldweapons:artifact",
+          "weight": 1,
+          "functions": [
+            {
+              "function": "minecraft:set_components",
+              "components": {
+                "emeraldweapons:artifact": "eclat_final"
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "emeraldweapons:artifact",
+          "weight": 1,
+          "functions": [
+            {
+              "function": "minecraft:set_components",
+              "components": {
+                "emeraldweapons:artifact": "tension_rapide"
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "emeraldweapons:artifact",
+          "weight": 1,
+          "functions": [
+            {
+              "function": "minecraft:set_components",
+              "components": {
+                "emeraldweapons:artifact": "fleche_fourchue"
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "emeraldweapons:artifact",
+          "weight": 1,
+          "functions": [
+            {
+              "function": "minecraft:set_components",
+              "components": {
+                "emeraldweapons:artifact": "marque_prolongee"
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "emeraldweapons:artifact",
+          "weight": 1,
+          "functions": [
+            {
+              "function": "minecraft:set_components",
+              "components": {
+                "emeraldweapons:artifact": "fleche_tracante"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

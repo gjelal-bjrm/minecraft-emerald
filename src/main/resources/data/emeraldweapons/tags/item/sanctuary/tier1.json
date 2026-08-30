@@ -1,0 +1,21 @@
+{
+  "replace": false,
+  "values": [
+    {
+      "id": "apotheosis:common_material",
+      "required": false
+    },
+    {
+      "id": "apotheosis:uncommon_material",
+      "required": false
+    },
+    {
+      "id": "apotheosis:gem_dust",
+      "required": false
+    },
+    {
+      "id": "apotheosis:sigil_of_socketing",
+      "required": false
+    }
+  ]
+}

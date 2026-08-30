@@ -1,0 +1,37 @@
+{
+  "replace": false,
+  "values": [
+    {
+      "id": "apotheosis:rare_material",
+      "required": false
+    },
+    {
+      "id": "apotheosis:epic_material",
+      "required": false
+    },
+    {
+      "id": "apotheosis:mythic_material",
+      "required": false
+    },
+    {
+      "id": "apotheosis:sigil_of_enhancement",
+      "required": false
+    },
+    {
+      "id": "apotheosis:superior_sigil_of_socketing",
+      "required": false
+    },
+    {
+      "id": "apotheosis:sigil_of_rebirth",
+      "required": false
+    },
+    {
+      "id": "apotheosis:lucky_foot",
+      "required": false
+    },
+    {
+      "id": "apotheosis:boss_summoner",
+      "required": false
+    }
+  ]
+}

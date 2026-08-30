@@ -221,6 +221,15 @@ l'affaire). Elle **se referme toute seule quand vous activez l'ancre** — vous
 êtes enfermé avec ce qui arrive — et se rouvre quand le siège est fini, gagné
 ou perdu.
 
+**Le butin.** Chaque étage de chaque tour a son coffre, plus deux au sommet de
+part et d'autre de l'ancre. Ce sont des **coffres Lootr** : chaque joueur a son
+propre tirage, personne ne se fait devancer. La richesse suit le palier de
+l'ancre — la première paie moyennement, la deuxième bien, et la troisième doit
+vous armer pour le boss : lingots par vingtaines, matériaux mythiques
+d'Apotheosis, lingot de netherite, pièces d'armure d'Arcencium, pommes d'or
+enchantées, totems, et **un à deux artefacts**. Les artefacts n'apparaissent
+qu'à partir du palier 2.
+
 Des **gardiens** tiennent les lieux avant vous : deux par tour d'angle, d'autres
 sur le chemin de ronde et autour de la pyramide. Ils ne quittent pas le
 sanctuaire. Comptez-les avant d'entrer.
@@ -276,7 +285,8 @@ Toutes commencent par `/arcencium` et demandent le niveau opérateur.
 | `weather stop` | Arrête la météo en cours |
 | `skip <minutes>` | Avance le chronomètre — pour voir la Marée sans jouer 36 minutes |
 | `find` | Donne les coordonnées de la Lame du Serment |
-| `sanctuary` | Bâtit un Sanctuaire d'Ancre là où vous êtes — pour le regarder en monde plat |
+| `sanctuary [1-3]` | Bâtit un Sanctuaire d'Ancre là où vous êtes, au palier demandé (butin plus riche au 3) |
+| `anchor` | Vous téléporte à l'ancre du sanctuaire le plus proche et dit si le bloc y est |
 | `mode off` | **Éteint le mode** : plus de confinement, ni météo, ni Marée, ni chronomètre. Le monde redevient un Minecraft ordinaire, nos blocs compris — pour explorer et bâtir tranquillement |
 | `mode on` | Le rallume |
 
