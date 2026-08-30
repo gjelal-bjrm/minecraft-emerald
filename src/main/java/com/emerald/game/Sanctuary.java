@@ -1424,17 +1424,29 @@ public final class Sanctuary {
     private static void causewayRamps(ServerLevel level, int cx, int y, int cz) {
         int fromZ = cz + PYRAMID_D - PYRAMID_CZ;
         int roof = y + 4;
+
+        // LA PORTEE SE CALCULE UNE FOIS, et non case par case.
+        //
+        // Le test « le parvis est-il a ciel ouvert ici ? » etait refait a
+        // chaque z. Sur une pyramide a GRADINS il alterne vrai, faux, vrai,
+        // faux au rythme des terrasses : la rampe se posait donc en peigne, une
+        // colonne sur deux, et l'on montait un escalier troue. Ce n'etait pas
+        // un probleme de hauteur mais de CONTINUITE -- une condition juste,
+        // appliquee au mauvais grain.
+        //
+        // On cherche donc une bonne fois la longueur du parvis decouvert, en
+        // partant du seuil et en remontant tant que le ciel est libre, puis
+        // l'on batit cette portee d'un seul tenant.
+        int stop = fromZ;
+        while (stop > fromZ - 14
+                && level.getBlockState(new BlockPos(cx, roof + 1, stop)).isAir()) {
+            stop--;
+        }
         for (int dir = -1; dir <= 1; dir += 2) {
             for (int i = 0; i <= 3; i++) {
                 int x = cx + dir * (2 + i);        // 2 au sommet, 5 au pied
                 int h = roof - i;
-                for (int z = fromZ - 14; z <= fromZ + 1; z++) {
-                    // seulement la ou le parvis est a ciel ouvert : plus loin,
-                    // la pyramide le recouvre et une rampe n'aurait rien a
-                    // border. Trois blocs ne bordaient que le seuil.
-                    if (!level.getBlockState(new BlockPos(cx, roof + 1, z)).isAir()) {
-                        continue;
-                    }
+                for (int z = stop + 1; z <= fromZ + 1; z++) {
                     // La premiere assise n'est PAS une marche.
                     //
                     // Elle est de plain-pied avec le toit : elle ne fait donc
