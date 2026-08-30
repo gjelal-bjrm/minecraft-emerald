@@ -22,6 +22,7 @@ Usage :
 """
 
 import colorsys
+import math
 import os
 import sys
 
@@ -46,27 +47,34 @@ def is_bolt(r, g, b):
     return s >= BOLT_SAT and BOLT_HUE[0] <= h <= BOLT_HUE[1] and v > 0.25
 
 
-def state(base, lit, phase):
+def state(base, lit, step):
     """
     Un cran de Rage, a un instant de sa pulsation.
 
-    L'eclair passe de presque eteint a plus vif que la reference, et respire en
-    plus d'un souffle lent : une jauge qui ne bouge pas se confond avec un
-    detail de la texture, et l'on ne la lit plus.
+    DEUX effets, et il faut les distinguer. La Rage regle la LUMINOSITE
+    d'ensemble de la foudre : presque eteinte a vide, plus vive que la
+    reference a plein. Et par-dessus, une onde COURT le long de la lame, a
+    toutes les rages.
+
+    Le premier jet liait la pulsation a la Rage -- « 0,12 fois le cran » --
+    si bien qu'a zero, qui est l'etat ordinaire, les huit images etaient
+    rigoureusement identiques : l'arme ne bougeait jamais. Une animation qui
+    ne joue que dans un cas rare n'est pas une animation.
     """
     out = base.copy()
     px = out.load()
     w, h = out.size
-    glow = 0.38 + 0.16 * lit
-    breath = 1.0 + 0.12 * lit * phase
+    glow = 0.42 + 0.15 * lit
     for y in range(h):
         for x in range(w):
             r, g, b, a = px[x, y]
             if a == 0 or not is_bolt(r, g, b):
                 continue
+            # l'onde se propage en diagonale, du manche vers la pointe
+            wave = math.sin(step * 2.0 * math.pi - (x - y) * 0.42)
             hh, ss, vv = colorsys.rgb_to_hsv(r / 255.0, g / 255.0, b / 255.0)
-            vv = min(1.0, vv * glow * breath)
-            ss = min(1.0, ss * (0.75 + 0.05 * lit))
+            vv = min(1.0, vv * glow * (0.72 + 0.45 * (wave * 0.5 + 0.5)))
+            ss = min(1.0, ss * (0.78 + 0.045 * lit))
             rr, gg, bb = colorsys.hsv_to_rgb(hh, ss, vv)
             px[x, y] = (int(rr * 255), int(gg * 255), int(bb * 255), a)
     return out
@@ -88,20 +96,26 @@ def main():
     base = Image.open(os.path.join(ITEM_DIR, NAME + ".png")).convert("RGBA")
     if base.height != base.width:
         base = base.crop((0, 0, base.width, base.width))   # deja anime : on reprend la premiere
+    # LE MIROIR.
+    #
+    # La reference porte son manche en bas a DROITE. Or toute arme de
+    # Minecraft a le sien en bas a gauche : le jeu tient l'objet par ce coin-la
+    # et pointe le coin oppose vers l'avant. Non retournee, la lame regardait
+    # le sol. Un retournement horizontal suffit, et il ne coute rien puisque la
+    # piece n'a pas de texte.
+    base = base.transpose(Image.FLIP_LEFT_RIGHT)
     for lit in range(6):
-        frames = [state(base, lit, __import__("math").sin(f / NFRAMES * 6.2832))
-                  for f in range(NFRAMES)]
+        frames = [state(base, lit, f / NFRAMES) for f in range(NFRAMES)]
         write("%s_%d" % (NAME, lit) if lit < 5 else "%s_full" % NAME, frames)
     # l'etat de repos sert aussi de texture par defaut du modele parent
-    write(NAME, [state(base, 0, __import__("math").sin(f / NFRAMES * 6.2832))
-                 for f in range(NFRAMES)])
+    write(NAME, [state(base, 0, f / NFRAMES) for f in range(NFRAMES)])
 
     if "--preview" in sys.argv:
         os.makedirs(PREVIEW, exist_ok=True)
         s = base.width
         board = Image.new("RGBA", (s * 6 * 8, s * 8), (22, 22, 26, 255))
         for lit in range(6):
-            fr = state(base, lit, 1.0).resize((s * 8, s * 8), Image.NEAREST)
+            fr = state(base, lit, 0.25).resize((s * 8, s * 8), Image.NEAREST)
             board.paste(fr, (lit * s * 8, 0), fr)
         out = os.path.join(PREVIEW, "glaive_states.png")
         board.save(out)
