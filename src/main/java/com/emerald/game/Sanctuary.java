@@ -73,7 +73,14 @@ public final class Sanctuary {
      * on circule autour de la vis et les paliers servent a quelque chose.
      */
     private static final int TOWER_RADIUS = 9;
-    private static final int TOWER_TOP = 38;
+
+    /**
+     * Hauteur des tours. Quarante-deux, un multiple de six.
+     *
+     * Les planchers se posent tous les six blocs : une hauteur qui n'en est pas
+     * un multiple laisse le dernier etage en l'air, sans volee pour y monter.
+     */
+    private static final int TOWER_TOP = 42;
 
     /** Les mesures de la Pyramide Maudite, relevees dans ses onze modeles. */
     private static final int PYRAMID_W = 89;
@@ -194,7 +201,7 @@ public final class Sanctuary {
         curtainWall(level, cx, y, cz);
         for (int sx = -1; sx <= 1; sx += 2) {
             for (int sz = -1; sz <= 1; sz += 2) {
-                cornerTower(level, cx + sx * HALF, y, cz + sz * HALF);
+                cornerTower(level, cx, cz, cx + sx * HALF, y, cz + sz * HALF);
             }
         }
         // QUATRE portes, une par cote.
@@ -587,12 +594,19 @@ public final class Sanctuary {
      * Tout le detail est dans {@link #roundTower}. Ne restent ici que ses deux
      * portes : l'une sur le chemin de ronde, l'autre au ras de la cour.
      */
-    private static void cornerTower(ServerLevel level, int tx, int y, int tz) {
+    private static void cornerTower(ServerLevel level, int cx, int cz,
+                                    int tx, int y, int tz) {
         roundTower(level, tx, y, tz, TOWER_RADIUS, TOWER_TOP);
-        doorway(level, tx, y + WALK, tz, TOWER_RADIUS, true);
-        doorway(level, tx, y + WALK, tz, TOWER_RADIUS, false);
-        doorway(level, tx, y + 1, tz, TOWER_RADIUS, true);
-        doorway(level, tx, y + 1, tz, TOWER_RADIUS, false);
+        // Vers la cour, jamais vers le dehors : le signe se deduit de la
+        // position du coin par rapport au centre de la place.
+        int inX = Integer.signum(cx - tx);
+        int inZ = Integer.signum(cz - tz);
+        // au chemin de ronde, les deux courtines qui aboutissent a la tour
+        doorway(level, tx, y + WALK, tz, TOWER_RADIUS, true, inX);
+        doorway(level, tx, y + WALK, tz, TOWER_RADIUS, false, inZ);
+        // au sol, seulement du cote de la cour
+        doorway(level, tx, y + 1, tz, TOWER_RADIUS, true, inX);
+        doorway(level, tx, y + 1, tz, TOWER_RADIUS, false, inZ);
     }
 
 
@@ -653,11 +667,15 @@ public final class Sanctuary {
             int seat = flank * (GATE_HALF + 6);
             int bx = g.x(seat, 0);
             int bz = g.z(seat, 0);
-            roundTower(level, bx, y, bz, 6, TOWER_TOP - 4);
-            doorway(level, bx, y + WALK, bz, 6, true);
-            doorway(level, bx, y + WALK, bz, 6, false);
-            doorway(level, bx, y + 1, bz, 6, true);
-            doorway(level, bx, y + 1, bz, 6, false);
+            roundTower(level, bx, y, bz, 6, TOWER_TOP - 6);
+            // La normale de la porte pointe DEHORS : on perce donc a l'oppose.
+            boolean acrossX = g.nx() != 0;
+            int inward = -(acrossX ? g.nx() : g.nz());
+            doorway(level, bx, y + WALK, bz, 6, acrossX, inward);
+            doorway(level, bx, y + 1, bz, 6, acrossX, inward);
+            // et le long du rempart, pour passer d'une tour au chemin de ronde
+            doorway(level, bx, y + WALK, bz, 6, !acrossX, 1);
+            doorway(level, bx, y + WALK, bz, 6, !acrossX, -1);
         }
 
         // la voute : un arc, pas un linteau plat
@@ -824,7 +842,13 @@ public final class Sanctuary {
         // « quand on arrive en haut, on ne peut pas passer » : la rampe
         // aboutissait bien a la bonne hauteur, mais le garde-corps interieur du
         // rempart lui barrait la route. On ouvre donc la travee en face.
-        for (int a = from + WALK - 2; a <= from + WALK + 2; a++) {
+        // Le palier commence APRES la derniere marche.
+        //
+        // Il partait deux blocs plus tot, donc il recouvrait les deux dernieres
+        // marches et les remplissait en dur jusqu'a la hauteur du chemin de
+        // ronde : on grimpait, et l'on butait sur un pan de trois blocs pousse
+        // devant soi. Le palier ne doit jamais mordre sur la volee.
+        for (int a = from + WALK + 1; a <= from + WALK + 3; a++) {
             for (int w = 0; w < 3; w++) {
                 int px = g.x(a, -THICK - w);
                 int pz = g.z(a, -THICK - w);
@@ -867,17 +891,29 @@ public final class Sanctuary {
      * diametre transformait la tour en carrefour ouvert d'ou l'on tombait.
      * L'encadrement en pierre taillee dit que c'est une porte et non un trou.
      */
+    /**
+     * Une baie, sur UN cote seulement.
+     *
+     * Elle en percait deux, ce qui donnait quatre portes par tour -- dont deux
+     * ouvertes sur l'exterieur. On entrait donc dans la place forte par une
+     * tour de garde sans passer par sa porte, et l'enceinte ne servait plus a
+     * rien. Le cote est desormais impose par l'appelant.
+     *
+     * @param side +1 ou -1 : le sens ou percer, le long de l'axe choisi
+     */
     private static void doorway(ServerLevel level, int tx, int y, int tz,
-                                int r, boolean alongX) {
-        for (int side = -1; side <= 1; side += 2) {
-            for (int w = -1; w <= 1; w++) {
+                                int r, boolean alongX, int side) {
+        // Une baie de DEUX blocs de large, et rien qui deborde.
+        //
+        // Trois de large sur une tour ronde, avec un linteau pose par-dessus,
+        // laissait aux extremites des morceaux qui saillaient dans le vide :
+        // « les portes debordent du cote du mur, ce n'est pas realiste ». On
+        // s'en tient au couloir central, et la coque se referme d'elle-meme
+        // au-dessus -- une voute taillee n'a pas besoin d'un linteau rapporte.
+        {
+            for (int w = 0; w <= 1; w++) {
                 for (int dy = 0; dy < 3; dy++) {
-                    // On ne perce QUE la coque, et seulement la ou elle est
-                    // reellement pleine : la version precedente creusait deux
-                    // blocs a un rayon fixe, ce qui, sur un cercle, sortait de
-                    // la tour d'un cote et n'entamait rien de l'autre -- les
-                    // baies « debordaient ».
-                    for (int t = 0; t < 3; t++) {
+                    for (int t = 0; t <= r; t++) {
                         int off = side * (r - t);
                         int px = alongX ? tx + off : tx + w;
                         int pz = alongX ? tz + w : tz + off;
@@ -886,24 +922,27 @@ public final class Sanctuary {
                         if (dist > r + 0.5) {
                             continue;          // dehors : on ne touche a rien
                         }
+                        if (dist < r - 1.5) {
+                            break;             // dedans : la coque est franchie
+                        }
                         set(level, px, y + dy, pz, Blocks.AIR.defaultBlockState());
                     }
-                }
-                // le linteau, qui referme proprement au-dessus
-                int off = side * r;
-                int px = alongX ? tx + off : tx + w;
-                int pz = alongX ? tz + w : tz + off;
-                if (Math.sqrt((double) (px - tx) * (px - tx)
-                        + (double) (pz - tz) * (pz - tz)) <= r + 0.5) {
-                    set(level, px, y + 3, pz, shrineTrim());
                 }
             }
         }
     }
 
 
-    /** La part enterree du tombeau : il n'en affleure que quatre blocs. */
-    private static final int BURIED = 44;
+    /**
+     * La part enterree du tombeau : TOUTE sa hauteur.
+     *
+     * A quarante-quatre, il en affleurait quatre blocs, ce qui soulevait la
+     * pyramide d'autant : elle paraissait posee sur une marche, et l'entree du
+     * tombeau -- qui se trouve au sommet de la partie enterree -- passait
+     * au-dessus du sol, inaccessible. A quarante-huit, la pyramide s'assoit
+     * exactement sur la cour et son entree tombe de plain-pied.
+     */
+    private static final int BURIED = 48;
 
     /**
      * Retire les blocs techniques du modele.
@@ -949,7 +988,7 @@ public final class Sanctuary {
     private static void towerInterior(ServerLevel level, int tx, int y, int tz,
                                       int radius, int top) {
         int storey = 6;
-        double inner = radius - 1.5;
+        double inner = radius - 1.0;
         for (int base = 0; base + storey <= top; base += storey) {
             int turn = (base / storey) % 4;
             int dx = turn == 0 ? 1 : turn == 2 ? -1 : 0;
@@ -977,6 +1016,13 @@ public final class Sanctuary {
     }
 
     /** Un plancher rond et PLEIN, sans le moindre trou. */
+    /**
+     * Le rayon du plancher doit rejoindre la COQUE, pas s'arreter avant.
+     *
+     * La coque commence a {@code rayon - 1} ; un plancher trace jusqu'a
+     * {@code rayon - 1,5} laissait un demi-bloc de vide tout autour --
+     * « beaucoup de trous, surtout dans les bords ».
+     */
     private static void solidFloor(ServerLevel level, int tx, int y, int tz, double radius) {
         int r = (int) Math.ceil(radius);
         for (int dx = -r; dx <= r; dx++) {
@@ -1018,8 +1064,11 @@ public final class Sanctuary {
                 }
             }
         }
-        towerInterior(level, tx, y, tz, radius, top - 2);
-        solidFloor(level, tx, y + top, tz, radius - 1.5);
+        // L'escalier monte jusqu'au SOMMET, dernier plancher compris.
+        //
+        // Il s'arretait deux blocs plus bas et l'on posait le toit par-dessus :
+        // le dernier etage n'avait donc aucun acces, dans toutes les tours.
+        towerInterior(level, tx, y, tz, radius, top);
         set(level, tx, y + top, tz, shrineTrim());
         set(level, tx, y + top + 1, tz, lantern());
     }
