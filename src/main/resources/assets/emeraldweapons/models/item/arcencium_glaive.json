@@ -1,0 +1,45 @@
+{
+  "parent": "minecraft:item/handheld",
+  "textures": {
+    "layer0": "emeraldweapons:item/arcencium_glaive_0"
+  },
+  "_comment": "charge = la Rage, de 0 a 1. Ce n'est pas le dessin qui change mais la FOUDRE qui court dans la lame : eteinte a vide, brulante a plein. L'or, le vert et l'acier ne bougent pas -- ils sont la matiere, et la matiere ne s'excite pas.",
+  "overrides": [
+    {
+      "predicate": {
+        "emeraldweapons:charge": 0.0
+      },
+      "model": "emeraldweapons:item/arcencium_glaive_0"
+    },
+    {
+      "predicate": {
+        "emeraldweapons:charge": 0.2
+      },
+      "model": "emeraldweapons:item/arcencium_glaive_1"
+    },
+    {
+      "predicate": {
+        "emeraldweapons:charge": 0.4
+      },
+      "model": "emeraldweapons:item/arcencium_glaive_2"
+    },
+    {
+      "predicate": {
+        "emeraldweapons:charge": 0.6
+      },
+      "model": "emeraldweapons:item/arcencium_glaive_3"
+    },
+    {
+      "predicate": {
+        "emeraldweapons:charge": 0.8
+      },
+      "model": "emeraldweapons:item/arcencium_glaive_4"
+    },
+    {
+      "predicate": {
+        "emeraldweapons:charge": 1.0
+      },
+      "model": "emeraldweapons:item/arcencium_glaive_full"
+    }
+  ]
+}

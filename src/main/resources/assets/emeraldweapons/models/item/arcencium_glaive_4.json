@@ -1,6 +1,6 @@
 {
   "parent": "minecraft:item/handheld",
   "textures": {
-    "layer0": "emeraldweapons:item/arcencium_vambraces_3"
+    "layer0": "emeraldweapons:item/arcencium_glaive_4"
   }
 }

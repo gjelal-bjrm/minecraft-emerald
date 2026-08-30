@@ -55,14 +55,14 @@ public class ArcenciumScepterClient {
             // portes et retombe entierement des qu'on cesse. Le predicat vaut
             // donc la charge elle-meme, sans passer par le temps de recharge.
             event.enqueueWork(() -> ItemProperties.register(
-                    ModItems.ARCENCIUM_VAMBRACES.get(),
+                    ModItems.ARCENCIUM_GLAIVE.get(),
                     ResourceLocation.fromNamespaceAndPath(EmeraldWeaponsMod.MODID, "charge"),
                     (stack, level, entity, seed) -> {
                         if (!(entity instanceof net.minecraft.world.entity.player.Player p)) {
                             return 0.0F;
                         }
-                        return com.emerald.weapons.ArcenciumVambracesItem.rage(p)
-                                / (float) com.emerald.weapons.ArcenciumVambracesItem.RAGE_MAX;
+                        return com.emerald.weapons.ArcenciumGlaiveItem.rage(p)
+                                / (float) com.emerald.weapons.ArcenciumGlaiveItem.RAGE_MAX;
                     }));
         }
     }

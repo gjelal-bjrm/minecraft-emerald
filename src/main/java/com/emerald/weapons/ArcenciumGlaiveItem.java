@@ -19,13 +19,17 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * Brassards d'Arcencium -- la Rage.
+ * Glaive d'Arcencium -- la Rage.
  *
- * Quatrieme membre de la famille, et le seul qui ne se tienne pas : ces deux
- * lames se SANGLENT, une par avant-bras, et prolongent le bras au lieu de
- * sortir du poing. L'epee est la Fureur, l'arc la Tension, le sceptre la
- * Concorde ; les brassards ne demandent ni adresse ni patience, ils demandent
- * de ne pas reculer.
+ * Quatrieme membre de la famille, et le seul qui ne se gouverne pas. L'epee
+ * est la Fureur, l'arc la Tension, le sceptre la Concorde ; le glaive ne
+ * demande ni adresse ni patience, il demande de ne pas reculer.
+ *
+ * Sa texture vient d'une reference fournie par le joueur, integree telle
+ * quelle : une lame dentelee bordee d'or, parcourue de foudre. Cinq dessins
+ * proceduraux avaient echoue avant elle, ce qui vaut la lecon -- pour une
+ * piece d'IDENTITE, on integre la reference ; le procedural est bon pour ce
+ * qui est systematique.
  *
  * Il est batti sur une idee simple et eprouvee : une jauge qui ne se remplit
  * qu'au contact, et qui achete deux choses opposees -- se soigner, ou clouer
@@ -49,7 +53,7 @@ import net.minecraft.world.phys.Vec3;
  * Ces deux depenses ne se cumulent pas volontiers : ce qu'on garde pour se
  * soigner, on ne l'a pas pour immobiliser. C'est la tension qu'on cherche.
  */
-public class ArcenciumVambracesItem extends Item {
+public class ArcenciumGlaiveItem extends Item {
 
     // --- la Rage
     public static final int RAGE_MAX = 5;
@@ -92,7 +96,7 @@ public class ArcenciumVambracesItem extends Item {
     private static final String TAG_LAST_HIT = "ArcenciumRageLastHit";
     private static final String TAG_SECOND = "ArcenciumSecondDash";
 
-    public ArcenciumVambracesItem(Properties properties) {
+    public ArcenciumGlaiveItem(Properties properties) {
         super(properties);
     }
 
