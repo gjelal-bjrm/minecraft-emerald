@@ -209,5 +209,6 @@
   "game.emeraldweapons.anchor.no_game": "Aucune partie en cours -- /arcencium mode on, puis retirez la Lame",
   "game.emeraldweapons.seal.hint": "Le tombeau fremit : ses sceaux se laissent entrevoir",
   "item.emeraldweapons.arcencium_glaive": "Glaive d'Arcencium",
-  "item.emeraldweapons.sanctuary_probe": "Sonde du Sanctuaire"
+  "item.emeraldweapons.sanctuary_probe": "Sonde du Sanctuaire",
+  "game.emeraldweapons.mode_rearmed": "Mode Arcencium rallume : la Lame du Serment reclame une partie"
 }

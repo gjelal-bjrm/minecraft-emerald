@@ -285,6 +285,15 @@ public class GameManager {
         GameState state = GameState.get(level);
         removePreviousBlade(level, state);
         state.reset();
+        // UNE NOUVELLE PARTIE PART TOUJOURS MODE ALLUME.
+        //
+        // Le commutateur est une variable de session, non un etat de partie :
+        // il survit a la mise en place, et seul un redemarrage du serveur le
+        // rallume. Apres une seance de mise au point -- ou l'on coupe le mode
+        // pour batir en paix -- la partie suivante s'ouvrait donc en apparence,
+        // banniere et villageois compris, sans qu'une seule vague ne tourne. On
+        // cherchait un bug dans le siege, qui n'avait jamais tourne.
+        ModeSwitch.set(level, true);
         // Les registres des sceaux et de la brume sont VOLATILS mais cumulatifs :
         // trois sanctuaires par partie s'y ajouteraient sans jamais en sortir, et
         // une ancre d'une partie precedente reclamerait encore ses sceaux.
@@ -522,6 +531,26 @@ public class GameManager {
                 pos.getZ() + 0.5, 60, 0.5, 1.0, 0.5, 0.25);
         announce(level, "game.emeraldweapons.blade_pulled",
                 "game.emeraldweapons.blade_pulled.sub", 0xFFD36B);
+
+        // TIRER LA LAME RALLUME LE MODE.
+        //
+        // Le tick du prologue est garde derriere ModeSwitch, pour qu'on puisse
+        // batir et essayer en paix. Mais un mode coupe et oublie -- ce qui
+        // arrive apres une seance de mise au point -- laissait la partie
+        // s'ouvrir en apparence : la banniere s'affichait, les villageois
+        // etaient la, et pas une vague ne venait. On cherchait alors un bug
+        // dans le siege, qui n'avait simplement jamais tourne.
+        //
+        // Tirer la Lame du Serment EST la demande d'une partie. Le commutateur
+        // suit, et on le dit.
+        if (ModeSwitch.off()) {
+            ModeSwitch.set(level, true);
+            for (ServerPlayer any : level.players()) {
+                any.sendSystemMessage(Component.translatable(
+                                "game.emeraldweapons.mode_rearmed")
+                        .withStyle(ChatFormatting.YELLOW));
+            }
+        }
 
         state.beginPrologue();
         surroundWithVillagers(level, pos);

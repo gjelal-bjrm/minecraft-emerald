@@ -209,5 +209,6 @@
   "game.emeraldweapons.anchor.no_game": "No game running -- /arcencium mode on, then pull the Oath Blade",
   "game.emeraldweapons.seal.hint": "The tomb stirs: its seals show themselves briefly",
   "item.emeraldweapons.arcencium_glaive": "Arcencium Glaive",
-  "item.emeraldweapons.sanctuary_probe": "Sanctuary Probe"
+  "item.emeraldweapons.sanctuary_probe": "Sanctuary Probe",
+  "game.emeraldweapons.mode_rearmed": "Arcencium mode re-armed: the Oath Blade demands a game"
 }
