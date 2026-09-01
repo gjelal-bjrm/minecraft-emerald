@@ -63,6 +63,26 @@ def main():
     if not os.path.exists(path):
         sys.exit("Releve introuvable : %s" % path)
     cells = read(path)
+
+    # ON CUMULE, on ne remplace pas.
+    #
+    # Un releve se prend contre le sanctuaire tel qu'il vient d'etre bati --
+    # calque compris. Il ne contient donc que ce qui a change DEPUIS, et ecraser
+    # le tableau avec lui effacerait tout le travail des tours precedents. On
+    # relit donc les cases deja posees, et les nouvelles priment a position
+    # egale : c'est la derniere volonte du joueur qui compte.
+    src_before = io.open(TARGET, encoding="utf-8").read()
+    merged = {}
+    for old in re.findall(r'\{"(-?\d+)", "(-?\d+)", "(-?\d+)", "([^"]+)"\}', src_before):
+        merged[(int(old[0]), int(old[1]), int(old[2]))] = old[3]
+    fresh = 0
+    for dx, dy, dz, state in cells:
+        if merged.get((dx, dy, dz)) != state:
+            fresh += 1
+        merged[(dx, dy, dz)] = state
+    cells = [(k[0], k[1], k[2], v) for k, v in sorted(merged.items(),
+                                                     key=lambda kv: (kv[0][2], kv[0][1], kv[0][0]))]
+    print("%d deja posees, %d nouvelles ou modifiees" % (len(merged) - fresh, fresh))
     # Un etat sans espace de noms ne se relit pas : c'est le signe d'un releve
     # produit avant que le format complet ne soit en place.
     naked = [c for c in cells if ":" not in c[3]]
