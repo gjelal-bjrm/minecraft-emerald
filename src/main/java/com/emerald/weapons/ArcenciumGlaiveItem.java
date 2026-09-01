@@ -306,6 +306,77 @@ public class ArcenciumGlaiveItem extends Item {
         return true;
     }
 
+    // -------------------------------------------------------------- l'aura
+
+    /** Tous les combien l'arme respire, quand on la tient. */
+    private static final int AURA_EVERY = 3;
+
+    /**
+     * L'ORAGE QU'ON PORTE.
+     *
+     * Il manquait a cette arme ce qui fait qu'on la sort : elle frappe plus
+     * fort que les trois autres et n'en avait pas l'air. Une texture, meme
+     * animee, s'oublie des qu'on regarde ailleurs -- l'epee a sa foudre,
+     * l'arc sa corde tendue, le sceptre son onde. Le glaive n'avait rien.
+     *
+     * Il porte donc son orage AUTOUR de lui, en permanence, et l'orage grossit
+     * avec la Rage : quelques etincelles a vide, une couronne qui craquele a
+     * plein. C'est le meme signal que la barre et que les veines de la lame --
+     * trois facons de dire la meme chose, ce qui vaut mieux qu'une seule qu'on
+     * peut manquer.
+     */
+    @Override
+    public void inventoryTick(ItemStack stack, Level level, net.minecraft.world.entity.Entity holder,
+                              int slot, boolean selected) {
+        if (!selected || !(level instanceof ServerLevel server)
+                || !(holder instanceof Player player)
+                || level.getGameTime() % AURA_EVERY != 0) {
+            return;
+        }
+        int rage = rage(stack, level);
+        Vec3 hand = player.position()
+                .add(player.getLookAngle().scale(0.6))
+                .add(0, player.getBbHeight() * 0.62, 0);
+
+        // l'etincelle de base : peu, mais jamais rien
+        server.sendParticles(ModParticles.CRYSTALLINE_FISSURE.get(),
+                hand.x, hand.y, hand.z, 1 + rage, 0.16, 0.16, 0.16, 0.01);
+
+        if (rage <= 0) {
+            return;
+        }
+        // LES ARCS, qui tournent autour du porteur.
+        //
+        // Ils tournent avec le temps plutot que d'apparaitre au hasard : un
+        // mouvement regulier se lit comme une machine sous tension, une gerbe
+        // aleatoire comme un feu de camp.
+        double turn = level.getGameTime() * 0.22;
+        for (int i = 0; i < rage; i++) {
+            double a = turn + i * (2.0 * Math.PI / rage);
+            double reach = 0.9 + 0.1 * rage;
+            Vec3 at = player.position().add(Math.cos(a) * reach,
+                    player.getBbHeight() * (0.35 + 0.5 * Math.sin(turn * 1.7 + i)),
+                    Math.sin(a) * reach);
+            server.sendParticles(ParticleTypes.ELECTRIC_SPARK,
+                    at.x, at.y, at.z, 1, 0.0, 0.0, 0.0, 0.0);
+        }
+
+        // A PLEINE RAGE, la couronne se ferme et la Curee s'annonce.
+        //
+        // C'est le seul etat qui change ce que fait le clic gauche : il doit se
+        // voir sans qu'on ait a lire la barre, au moment ou l'on a le moins de
+        // temps pour la lire.
+        if (rage >= RAGE_MAX) {
+            for (int i = 0; i < 12; i++) {
+                double a = turn * 1.6 + i * (Math.PI / 6.0);
+                server.sendParticles(ModParticles.CRYSTALLINE_FISSURE.get(),
+                        player.getX() + Math.cos(a) * 1.4,
+                        player.getY() + 0.1,
+                        player.getZ() + Math.sin(a) * 1.4, 1, 0.0, 0.02, 0.0, 0.0);
+            }
+        }
+    }
+
     // -------------------------------------------------------------- outillage
 
     private static void burst(ServerLevel level, Vec3 at, int count) {

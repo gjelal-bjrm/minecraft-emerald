@@ -275,6 +275,22 @@ def write(name, frames):
 def main():
     base, lines, far = art()
     base, lines, far = orient(base, lines, far)
+
+    # LE TRANCHANT VERS LE BAS.
+    #
+    # Le manche est au bon coin, mais le fil regardait le ciel. Le miroir selon
+    # l'ANTI-DIAGONALE est le seul qui echange les deux flancs de la lame sans
+    # deplacer le manche ni la pointe : il laisse fixes les coins bas-gauche et
+    # haut-droit, c'est-a-dire les deux que le jeu utilise pour tenir l'objet.
+    turn, remap = TURNS["anti-diagonale"]
+    base = base.transpose(turn)
+    lines = {remap(x, y): v for (x, y), v in lines.items()}
+    flipped = [[0] * S for _ in range(S)]
+    for y in range(S):
+        for x in range(S):
+            nx, ny = remap(x, y)
+            flipped[ny][nx] = far[y][x]
+    far = flipped
     os.makedirs(ITEM_DIR, exist_ok=True)
     for lit in range(6):
         frames = [outline(frame(base, lines, far, lit, f / NFRAMES))
