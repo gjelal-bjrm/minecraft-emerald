@@ -39,8 +39,13 @@ NOISE = ("falling_trap", "lootr_chest", "lootr_trapped_chest",
 
 # La cour est piétinée par la garnison : l'herbe qui tourne en terre n'est le
 # fait de personne et reviendrait a chaque partie.
+#
+# « torch » n'y figure PLUS. Une torche est toujours posee a dessein -- c'est
+# meme le geste le plus naturel pour eclairer une tour -- et la ranger parmi
+# les accidents revenait a effacer en silence le travail qu'on nous demande de
+# reprendre. Le feu, lui, reste : il vient des pieges du modele.
 TRAMPLED = ("grass_block", "dirt", "farmland", "grass", "short_grass", "fern",
-            "snow", "fire", "torch")
+            "snow", "fire")
 
 LINE = re.compile(r"^\s+cx([+-]\d+) y([+-]\d+) cz([+-]\d+) : (\S+) -> (\S+)$")
 
