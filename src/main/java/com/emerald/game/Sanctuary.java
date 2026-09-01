@@ -527,7 +527,7 @@ public final class Sanctuary {
                     set(level, ox, foot + dy, oz, dy % 2 == 0 ? shrineTrim() : shrine());
                 }
                 set(level, ox, foot + 6, oz, glow());
-                set(level, ox, foot + 7, oz, lantern());
+                putLantern(level, ox, foot + 7, oz);
             }
         }
         // L'ENTREE SUD, en dalles.
@@ -667,7 +667,7 @@ public final class Sanctuary {
             if (Math.floorMod(d, 9) == 0 && Math.abs(d) > GATE_HALF) {
                 for (int side = 0; side < 4; side++) {
                     int[] xz = wallPoint(side, d, THICK - 1, cx, cz);
-                    set(level, xz[0], y + WALK + 2, xz[1], lantern());
+                    putLantern(level, xz[0], y + WALK + 2, xz[1]);
                 }
             }
         }
@@ -1429,8 +1429,8 @@ public final class Sanctuary {
         // « on est bloque par un bloc sur lequel tu as pose une lanterne ».
         // Les lanternes vont sur le parapet, ou elles ne genent personne.
         for (int side = -1; side <= 1; side += 2) {
-            set(level, tx + side * (radius - 2), y + top + 1, tz, lantern());
-            set(level, tx, y + top + 1, tz + side * (radius - 2), lantern());
+            putLantern(level, tx + side * (radius - 2), y + top + 1, tz);
+            putLantern(level, tx, y + top + 1, tz + side * (radius - 2));
         }
     }
 
@@ -1443,6 +1443,20 @@ public final class Sanctuary {
      * l'interet est d'y passer, pas d'y camper.
      */
     private static void lootChest(ServerLevel level, int x, int y, int z, String table) {
+        lootChest(level, x, y, z, table, null);
+    }
+
+    /**
+     * Un coffre de butin, oriente.
+     *
+     * Sans orientation il prend son etat par defaut, c'est-a-dire que les
+     * quatre coffres de la salle du tresor regardaient tous du meme cote, et du
+     * mauvais : on entre par le sud et l'on ne voyait que des dos. Un coffre
+     * qu'on aborde par l'arriere se lit comme un meuble pousse contre un mur,
+     * pas comme une recompense.
+     */
+    private static void lootChest(ServerLevel level, int x, int y, int z, String table,
+                                  @Nullable Direction facing) {
         BlockPos pos = new BlockPos(x, y, z);
         // Lootr d'abord : il donne a CHAQUE joueur son propre tirage, ce qui
         // est la seule facon honnete de recompenser un siege mene a plusieurs.
@@ -1450,6 +1464,11 @@ public final class Sanctuary {
         // maison. Le coffre vanilla ne vient qu'en dernier recours.
         BlockState chestBlock = first(ModBlocks.ARCENCIUM_CHEST.get().defaultBlockState(),
                 "lootr:lootr_chest");
+        if (facing != null && chestBlock.hasProperty(
+                net.minecraft.world.level.block.ChestBlock.FACING)) {
+            chestBlock = chestBlock.setValue(
+                    net.minecraft.world.level.block.ChestBlock.FACING, facing);
+        }
         level.setBlock(pos, chestBlock, 2);
         if (level.getBlockEntity(pos) instanceof
                 net.minecraft.world.level.block.entity.RandomizableContainerBlockEntity chest) {
@@ -1708,8 +1727,8 @@ public final class Sanctuary {
             // hache la ligne ; a l'entree, en revanche, elles disent ou l'on
             // commence a monter, ce qui est le seul endroit ou l'on hesite.
             if (z == start - 1) {
-                set(level, sx - 2, step + 3, z, lantern());
-                set(level, sx + 2, step + 3, z, lantern());
+                putLantern(level, sx - 2, step + 3, z);
+                putLantern(level, sx + 2, step + 3, z);
             }
             // Plus haut, rien. Le joueur les a toutes retirees : sur
             // un flanc en plein jour elles n'eclairent rien, et posees de part
@@ -1736,10 +1755,32 @@ public final class Sanctuary {
      * ce qui existe -- le tunnel se chemise dans le roc et s'arrete de lui-meme
      * en debouchant, sans qu'on ait a deviner ou est la piece.
      */
+    /**
+     * Une lanterne qui SAIT si elle est posee ou suspendue.
+     *
+     * Elles etaient toutes debout, propriete « hanging » a faux. Or la moitie
+     * d'entre elles se trouve sous un plafond, sans rien dessous : une lanterne
+     * debout dans le vide flotte, et laisse entre elle et la pierre l'espace
+     * qu'aurait du occuper sa chaine. C'est le bloc VOISIN qui decide, et lui
+     * seul le sait -- on le lui demande donc au lieu de trancher a l'ecriture.
+     *
+     * Et si ni le dessus ni le dessous ne la porte, on n'en pose pas : une
+     * lanterne suspendue a rien reste une lanterne suspendue a rien.
+     */
+    private static void putLantern(ServerLevel level, int x, int y, int z) {
+        boolean above = !level.getBlockState(new BlockPos(x, y + 1, z)).isAir();
+        boolean below = !level.getBlockState(new BlockPos(x, y - 1, z)).isAir();
+        if (!above && !below) {
+            return;
+        }
+        set(level, x, y, z, ModBlocks.ARCENCIUM_LANTERN.get().defaultBlockState()
+                .setValue(LanternBlock.HANGING, !below));
+    }
+
     /** Une lanterne au sol, si tant est qu'il y ait un sol. */
     private static void standLantern(ServerLevel level, int x, int y, int z) {
         if (!level.getBlockState(new BlockPos(x, y - 1, z)).isAir()) {
-            set(level, x, y, z, lantern());
+            putLantern(level, x, y, z);
         }
     }
 
@@ -1821,7 +1862,7 @@ public final class Sanctuary {
                 set(level, cx - 1, y + 1, z, Blocks.AIR.defaultBlockState());
                 set(level, cx - 1, y + 2, z, Blocks.AIR.defaultBlockState());
                 set(level, cx - 1, y, z, trim());
-                set(level, cx - 1, y + 1, z, lantern());
+                putLantern(level, cx - 1, y + 1, z);
             }
         }
 
@@ -1857,14 +1898,16 @@ public final class Sanctuary {
                 for (int dy = 1; dy <= 4; dy++) {
                     set(level, cx + sx * 3, y + dy, z + sz * 3, shrine());
                 }
-                set(level, cx + sx * 2, y + 4, z + sz * 2, lantern());
+                putLantern(level, cx + sx * 2, y + 4, z + sz * 2);
             }
         }
         // quatre coffres, un par mur : de quoi valoir la descente
-        lootChest(level, cx - 2, y + 1, z, sanctuaryTable(rank));
-        lootChest(level, cx + 2, y + 1, z, sanctuaryTable(rank));
-        lootChest(level, cx, y + 1, z - 2, sanctuaryTable(rank));
-        lootChest(level, cx, y + 1, z + 2, sanctuaryTable(rank));
+        // Les quatre regardent l'ENTREE, qui est au sud : on arrive par le
+        // couloir et l'on doit voir quatre faces, non quatre dos.
+        lootChest(level, cx - 2, y + 1, z, sanctuaryTable(rank), Direction.SOUTH);
+        lootChest(level, cx + 2, y + 1, z, sanctuaryTable(rank), Direction.SOUTH);
+        lootChest(level, cx, y + 1, z - 2, sanctuaryTable(rank), Direction.SOUTH);
+        lootChest(level, cx, y + 1, z + 2, sanctuaryTable(rank), Direction.SOUTH);
     }
 
     /**
@@ -1973,7 +2016,7 @@ public final class Sanctuary {
     private static BlockPos doorwaySeal(ServerLevel level, int cx, int y, int fromZ) {
         SanctuaryLedger.part("doorwaySeal");
         int z = fromZ - 13;
-        set(level, cx - 1, y + 3, z, lantern());
+        putLantern(level, cx - 1, y + 3, z);
         return freeSeal(level, cx - 1, y + 1, z);
     }
 
@@ -2007,7 +2050,7 @@ public final class Sanctuary {
                 set(level, cx + w, y + 5 + clear, cz + 21, Blocks.AIR.defaultBlockState());
             }
         }
-        set(level, cx - 2, y + 8, cz + 22, lantern());
+        putLantern(level, cx - 2, y + 8, cz + 22);
         return freeSeal(level, cx - 5, y + 6, cz + 13);
     }
 
@@ -2076,7 +2119,7 @@ public final class Sanctuary {
         for (int dy = 17; dy <= 18; dy++) {
             set(level, cx, y + dy, cz - 3, Blocks.AIR.defaultBlockState());
         }
-        set(level, cx, y + 17, cz - 5, lantern());
+        putLantern(level, cx, y + 17, cz - 5);
         return freeSeal(level, cx + 1, y + 16, cz - 6);
     }
 
