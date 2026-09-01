@@ -30,7 +30,12 @@ TARGET = os.path.join(ROOT, "src", "main", "java", "com", "emerald", "game",
                       "SanctuaryOverlay.java")
 
 # Ce qui bouge tout seul entre la construction et le releve.
-NOISE = ("falling_trap", "lootr_chest", "lootr_trapped_chest")
+NOISE = ("falling_trap", "lootr_chest", "lootr_trapped_chest",
+         # Un sceau POSE ne compte pas : il doit etre enregistre aupres de
+         # l'ancre pour entrer dans le decompte des cinq. Le calque le
+         # reproduirait en bloc inerte, joli et sans effet. Il se cable a la
+         # main, dans seals().
+         "tomb_seal")
 
 # La cour est piétinée par la garnison : l'herbe qui tourne en terre n'est le
 # fait de personne et reviendrait a chaque partie.

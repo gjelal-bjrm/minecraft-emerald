@@ -1951,8 +1951,22 @@ public final class Sanctuary {
         placed.add(upperCorridor(level, cx, y, cz));       // 2. l'etage, au coffre
         placed.add(chimneySeal(level, cx, y, cz));         // 3. l'etage, au pilier
 
+        // 4 et 5. DEUX SALLES DU MODELE, choisies par le joueur.
+        //
+        // Elles ne se devinent pas : ce sont des pieces de la pyramide
+        // importee, et j'ai perdu sept tentatives a chercher une regle qui les
+        // trouve. Le joueur y a pose deux sceaux et le releve a rendu leurs
+        // coordonnees. On les inscrit telles quelles -- la structure est
+        // deterministe, donc ce qui etait a cette case y sera toujours.
+        //
+        // Ils s'inscrivent ICI et non dans le calque : un sceau pose sans etre
+        // enregistre aupres de l'ancre serait un bloc inerte, joli et sans
+        // effet sur le compte.
+        placed.add(freeSeal(level, cx + 22, y + 7, cz + 1));    // 4. l'aile est
+        placed.add(freeSeal(level, cx - 14, y + 19, cz - 2));   // 5. l'etage ouest
+
         StringBuilder report = new StringBuilder();
-        String[] labels = {"entree", "coffre", "pilier"};
+        String[] labels = {"entree", "coffre", "pilier", "est", "ouest"};
         for (int i = 0; i < placed.size(); i++) {
             BlockPos p = placed.get(i);
             report.append(i == 0 ? "" : " | ").append(labels[i]).append(' ')

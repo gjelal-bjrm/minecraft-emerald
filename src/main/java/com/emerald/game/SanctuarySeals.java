@@ -37,8 +37,14 @@ import java.util.Set;
 @EventBusSubscriber(modid = EmeraldWeaponsMod.MODID)
 public final class SanctuarySeals {
 
-    /** Nombre de sceaux par sanctuaire. Trois : assez pour fouiller, pas pour lasser. */
-    public static final int PER_SANCTUARY = 3;
+    /**
+     * Nombre de sceaux par sanctuaire.
+     *
+     * Cinq : trois que le generateur sait placer -- le porche, la salle du
+     * tresor, la chambre du pilier -- et deux salles du modele que le joueur a
+     * designees, faute d'une regle qui sache les trouver.
+     */
+    public static final int PER_SANCTUARY = 5;
 
     private record Vault(BlockPos anchor, List<BlockPos> seals, Set<BlockPos> lit) {
     }
@@ -164,7 +170,10 @@ public final class SanctuarySeals {
             }
             int lit = vault.lit().size();
             player.displayClientMessage(Component.translatable(
-                            "game.emeraldweapons.seal.lit", lit, PER_SANCTUARY)
+                            // le total vient du tombeau lui-meme, non d'une
+                            // constante : un sanctuaire qui n'aurait pu en
+                            // placer que quatre annoncerait quand meme cinq
+                            "game.emeraldweapons.seal.lit", lit, vault.seals().size())
                     .withStyle(net.minecraft.ChatFormatting.LIGHT_PURPLE), false);
             if (lit >= vault.seals().size()) {
                 // l'annonce vaut recompense : on a fini de fouiller
