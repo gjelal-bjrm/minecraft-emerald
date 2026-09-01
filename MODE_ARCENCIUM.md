@@ -959,3 +959,61 @@ la hauteur fait le repere.
   pour qu'aucun joueur ne rate l'annonce.
 - Au retrait : **buff d'equipe « le Serment vous lie »**, et **rappel a l'ecran
   apres 60 s** si la lame reste plantee.
+
+## 17. Rarete et runes *(rarete faite, runes a faire)*
+
+Emprunte a NosTale, et volontairement dans cet ordre : la rarete d'abord,
+puisque c'est elle qui ouvre les runes.
+
+### 17.1 La rarete — FAIT
+
+Huit rangs au-dessus du normal, sur les ARMES comme sur les ARMURES :
+
+| rang | nom | couleur |
+|---|---|---|
+| 0 | *(normal, aucun mot)* | blanc |
+| 1 | Utile | `#A0C8FF` |
+| 2 | Bon | `#6FD1FF` |
+| 3 | De bonne qualite | `#5CE68A` |
+| 4 | Excellent | `#C8F050` |
+| 5 | Ancestral | `#FFD24A` |
+| 6 | Mysterieux | `#C77DFF` |
+| 7 | Legendaire | `#FF9B3D` |
+| 8 | Phenomenal | `#FF4D6D` |
+
+Le mot precede le nom, dans la couleur du rang. Les couleurs sont une
+LECTURE de NosTale, non des valeurs relevees : a corriger si le joueur
+fournit les vraies.
+
+Chiffres : `+0,40` degat par rang pour une arme, `+0,35` armure par rang
+pour une piece d'armure. L'ecart doit rester faible -- le mode dure une
+heure, et une arme qui double ses degats la termine seule.
+
+La montee se tente a l'etabli de sertissage avec des **Eclats du Destin**,
+qui ne se fabriquent pas. Le tirage garde le MEILLEUR de N jets, un par
+eclat ; on ne redescend jamais. Voir `GearRarity`.
+
+### 17.2 Les runes — A FAIRE
+
+Ce qui est deja decide, et qu'il ne faut plus redemander :
+
+- **Deux familles distinctes.** Des runes d'ARME et des runes d'ARMURE. Une
+  rune d'arme ne se pose pas sur une armure, et reciproquement. C'est une
+  contrainte de conception, pas une simplification : elle donne deux
+  economies separees et evite qu'une seule rune trouvee serve partout.
+
+- **Les runes ont elles-memes un rang de rarete**, sur la meme echelle a
+  huit crans. Ce rang commande la force de son effet : une meme rune donne
+  peu en Utile et beaucoup en Phenomenal.
+
+- **La rarete de la PIECE commande combien de runes elle accepte.** C'est le
+  lien entre les deux systemes, et la raison pour laquelle la rarete se fait
+  en premier. Une piece normale n'en porte aucune ; le nombre monte avec le
+  rang. (Le bareme exact reste a fixer.)
+
+- **La pose se fait a l'etabli de sertissage**, comme les artefacts et comme
+  la montee de rarete -- un seul lieu pour tout ce qui modifie une piece.
+
+Restent a decider : le bareme rang de piece -> nombre de runes, la liste des
+effets par famille, la facon dont une rune se retire (ou si elle se retire),
+et si les runes se fabriquent ou se trouvent uniquement.
