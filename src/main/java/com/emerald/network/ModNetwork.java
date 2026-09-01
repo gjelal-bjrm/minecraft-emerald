@@ -23,6 +23,10 @@ public class ModNetwork {
                     }
                 }));
 
+        registrar.playToClient(ProbeInfoPayload.TYPE, ProbeInfoPayload.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(
+                        () -> com.emerald.client.ProbeHudClient.accept(payload)));
+
         registrar.playToClient(GameSyncPayload.TYPE, GameSyncPayload.STREAM_CODEC,
                 (payload, context) -> context.enqueueWork(
                         () -> com.emerald.client.GameHudClient.accept(payload)));

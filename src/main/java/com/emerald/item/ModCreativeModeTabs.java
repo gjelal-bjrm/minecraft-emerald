@@ -29,6 +29,7 @@ public class ModCreativeModeTabs {
                         output.accept(ModItems.ARCENCIUM_BOW);
                         output.accept(ModItems.ARCENCIUM_SCEPTER);
                         output.accept(ModItems.ARCENCIUM_GLAIVE);
+                        output.accept(ModItems.SANCTUARY_PROBE);
                         output.accept(ModItems.ARCENCIUM_HELMET);
                         output.accept(ModItems.ARCENCIUM_CHESTPLATE);
                         output.accept(ModItems.ARCENCIUM_LEGGINGS);

@@ -57,6 +57,22 @@ public class ModItems {
                                     new EmeraldTier(), 2.0F, -2.4F))));
 
     /**
+     * Sonde du Sanctuaire -- l'outil de designation.
+     *
+     * Elle n'a rien d'une arme et ne sert qu'a construire : tenue en main, elle
+     * affiche ce que l'on vise -- le bloc, sa place dans le monde, le chantier
+     * qui l'a pose et son adresse dans la structure -- et son clic droit
+     * retient des blocs ou releve les corrections faites a la main.
+     *
+     * Elle existe parce que sept allers-retours ont ete perdus a corriger le
+     * mauvais escalier, faute d'un langage commun entre ce qui se voit et ce
+     * qui s'ecrit. Voir {@link SanctuaryProbeItem}.
+     */
+    public static final DeferredItem<SanctuaryProbeItem> SANCTUARY_PROBE =
+            ITEMS.register("sanctuary_probe", () ->
+                    new SanctuaryProbeItem(new Item.Properties().stacksTo(1)));
+
+    /**
      * La Lame du Serment.
      *
      * Une Epee d'Emeraude ceremonielle, avec TOUS ses effets : Fureur

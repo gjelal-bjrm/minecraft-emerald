@@ -10,16 +10,13 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.tick.LevelTickEvent;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -64,9 +61,10 @@ public final class SanctuaryLedger {
     private static final Map<BlockPos, Mark> ledger = new HashMap<>();
     private static BlockPos origin = BlockPos.ZERO;
 
-    private static final Set<UUID> watchers = new HashSet<>();
-    private static final Set<UUID> picking = new HashSet<>();
     private static final Map<UUID, List<BlockPos>> picks = new HashMap<>();
+    /** La derniere ligne envoyee a chacun, pour n'emettre que sur changement. */
+    private static final Map<UUID, com.emerald.network.ProbeInfoPayload> lastSent =
+            new HashMap<>();
 
     private static final int LOOK_RANGE = 24;
     private static final int EVERY = 4;
@@ -118,23 +116,22 @@ public final class SanctuaryLedger {
 
     // ---------------------------------------------------------------- le mode
 
-    /** @return vrai si l'inspection vient de s'allumer */
-    public static boolean toggleWatch(ServerPlayer player) {
-        if (!watchers.remove(player.getUUID())) {
-            watchers.add(player.getUUID());
-            return true;
+    /**
+     * Retient un bloc, ou le retire s'il l'etait deja.
+     *
+     * Il n'y a plus de mode a activer : c'est la Sonde tenue en main qui fait
+     * office d'interrupteur. Un mode qu'on allume par une commande s'oublie
+     * allume, et l'on finit par designer des blocs en croyant en poser.
+     *
+     * @return vrai si le bloc vient d'etre retenu
+     */
+    public static boolean pick(ServerPlayer player, BlockPos pos) {
+        List<BlockPos> list = picks.computeIfAbsent(player.getUUID(), k -> new ArrayList<>());
+        if (list.remove(pos)) {
+            return false;
         }
-        return false;
-    }
-
-    /** @return vrai si la selection vient de s'allumer */
-    public static boolean togglePick(ServerPlayer player) {
-        if (!picking.remove(player.getUUID())) {
-            picking.add(player.getUUID());
-            picks.computeIfAbsent(player.getUUID(), k -> new ArrayList<>());
-            return true;
-        }
-        return false;
+        list.add(pos.immutable());
+        return true;
     }
 
     public static void clearPicks(ServerPlayer player) {
@@ -154,55 +151,58 @@ public final class SanctuaryLedger {
     }
 
     /**
-     * Le mode inspection : ce qu'on regarde s'affiche tout seul.
+     * Ce que voit la Sonde, envoye a qui la tient.
      *
-     * Une commande a taper par bloc suffit pour verifier un point, pas pour en
-     * parcourir vingt. En continu, on longe la construction et l'on voit les
-     * noms defiler -- c'est ainsi qu'on trouve la frontiere entre deux
-     * routines, qui est presque toujours l'endroit du defaut.
+     * On n'emet que sur CHANGEMENT : la ligne est identique tant qu'on fixe le
+     * meme bloc, et renvoyer quatre chaines quatre fois par seconde a chaque
+     * joueur pour ne rien dire de neuf serait payer cher un panneau qui ne
+     * bouge pas.
      */
     @SubscribeEvent
     public static void onLevelTick(LevelTickEvent.Post event) {
-        if (watchers.isEmpty() || !(event.getLevel() instanceof ServerLevel level)
+        if (!(event.getLevel() instanceof ServerLevel level)
                 || level.getGameTime() % EVERY != 0) {
             return;
         }
         for (ServerPlayer player : level.players()) {
-            if (!watchers.contains(player.getUUID())
-                    || !(player.pick(LOOK_RANGE, 0.0F, false) instanceof BlockHitResult hit)) {
+            if (!holdsProbe(player)) {
+                if (lastSent.remove(player.getUUID()) != null) {
+                    send(player, new com.emerald.network.ProbeInfoPayload("", "", "", ""));
+                }
                 continue;
             }
-            BlockPos at = hit.getBlockPos();
-            String known = describe(at);
-            player.displayClientMessage(Component.literal(known != null ? known
-                    : name(level.getBlockState(at)) + "  |  hors sanctuaire"), true);
+            com.emerald.network.ProbeInfoPayload info = look(level, player);
+            if (!info.equals(lastSent.get(player.getUUID()))) {
+                lastSent.put(player.getUUID(), info);
+                send(player, info);
+            }
         }
     }
 
-    /**
-     * La selection au clic droit.
-     *
-     * On annule l'interaction tant que le mode est actif : sans cela, designer
-     * un bloc poserait un bloc, ouvrirait un coffre ou activerait un sceau --
-     * et l'on abimerait ce qu'on essaie justement de montrer.
-     */
-    @SubscribeEvent
-    public static void onRightClick(PlayerInteractEvent.RightClickBlock event) {
-        if (!(event.getEntity() instanceof ServerPlayer player)
-                || !picking.contains(player.getUUID())) {
-            return;
+    private static boolean holdsProbe(ServerPlayer player) {
+        var probe = com.emerald.item.ModItems.SANCTUARY_PROBE.get();
+        return player.getMainHandItem().is(probe) || player.getOffhandItem().is(probe);
+    }
+
+    private static void send(ServerPlayer player, com.emerald.network.ProbeInfoPayload info) {
+        net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player, info);
+    }
+
+    private static com.emerald.network.ProbeInfoPayload look(ServerLevel level,
+                                                             ServerPlayer player) {
+        if (!(player.pick(LOOK_RANGE, 0.0F, false) instanceof BlockHitResult hit)) {
+            return new com.emerald.network.ProbeInfoPayload("--", "", "", "");
         }
-        event.setCanceled(true);
-        BlockPos at = event.getPos();
-        List<BlockPos> list = picks.computeIfAbsent(player.getUUID(), k -> new ArrayList<>());
-        boolean removed = list.remove(at);
-        if (!removed) {
-            list.add(at.immutable());
+        BlockPos at = hit.getBlockPos();
+        BlockState state = level.getBlockState(at);
+        String world = String.format("%d, %d, %d", at.getX(), at.getY(), at.getZ());
+        Mark mark = ledger.get(at);
+        if (mark == null) {
+            return new com.emerald.network.ProbeInfoPayload(
+                    name(state), world, "hors sanctuaire", "");
         }
-        String known = describe(at);
-        player.displayClientMessage(Component.literal(String.format("%s [%d] %s",
-                removed ? "retire" : "retenu", list.size(),
-                known != null ? known : "hors sanctuaire")), true);
+        return new com.emerald.network.ProbeInfoPayload(name(state), world, mark.part(),
+                String.format("cx%+d  y%+d  cz%+d", mark.dx(), mark.dy(), mark.dz()));
     }
 
     // ------------------------------------------------------------ le releve

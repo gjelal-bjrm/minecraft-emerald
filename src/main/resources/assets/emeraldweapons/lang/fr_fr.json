@@ -208,5 +208,6 @@
   "game.emeraldweapons.anchor.sealed": "L'ancre reste sourde : %s sceau(x) dorment encore dans la pyramide",
   "game.emeraldweapons.anchor.no_game": "Aucune partie en cours -- /arcencium mode on, puis retirez la Lame",
   "game.emeraldweapons.seal.hint": "Le tombeau fremit : ses sceaux se laissent entrevoir",
-  "item.emeraldweapons.arcencium_glaive": "Glaive d'Arcencium"
+  "item.emeraldweapons.arcencium_glaive": "Glaive d'Arcencium",
+  "item.emeraldweapons.sanctuary_probe": "Sonde du Sanctuaire"
 }
