@@ -284,7 +284,15 @@ public final class Sanctuary {
         // traduction.
         int calque = SanctuaryOverlay.apply(level, cx, y, cz);
 
-        SanctuaryLedger.capture(level, new BlockPos(cx, y, cz), HALF + 12, 24, 72);
+        // L'INSTANTANE NE SE PREND QU'EN TEST.
+        //
+        // Il releve quatre millions de cases pour permettre le releve des
+        // corrections a la main. C'est le prix d'un outil de mise au point, pas
+        // celui d'une partie : en jeu on batit trois sanctuaires d'affilee, et
+        // douze millions de lectures figeraient le serveur pour rien.
+        if (source != null) {
+            SanctuaryLedger.capture(level, new BlockPos(cx, y, cz), HALF + 12, 24, 72);
+        }
 
         // Un compte rendu, plutot qu'une devinette de plus.
         //
@@ -303,6 +311,9 @@ public final class Sanctuary {
 
         BlockState found = level.getBlockState(anchor);
         String occupant = BuiltInRegistries.BLOCK.getKey(found.getBlock()).toString();
+        if (source == null) {
+            return anchor;                  // bati par la partie : rien a dire
+        }
         source.sendSuccess(() -> Component.literal(String.format(
                 "Sol %d | sommet %d | pyramide %s | %d blocs rhabilles | calque %d | %s | a l'ancre : %s",
                 y, summit, apex >= 0 ? "dressee" : "ABSENTE", repainted, calque,

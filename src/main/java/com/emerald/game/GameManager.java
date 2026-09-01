@@ -285,6 +285,11 @@ public class GameManager {
         GameState state = GameState.get(level);
         removePreviousBlade(level, state);
         state.reset();
+        // Les registres des sceaux et de la brume sont VOLATILS mais cumulatifs :
+        // trois sanctuaires par partie s'y ajouteraient sans jamais en sortir, et
+        // une ancre d'une partie precedente reclamerait encore ses sceaux.
+        SanctuarySeals.clearAll();
+        SanctuaryMist.clearAll();
 
         BlockPos ground = WorldSetup.findOpenGround(level, center, 24);
         state.setVillage(ground);
@@ -540,11 +545,26 @@ public class GameManager {
                 center.getZ() + 0.5, 120, 1.0, 1.5, 1.0, 0.5);
         level.playSound(null, center, SoundEvents.BEACON_ACTIVATE, SoundSource.PLAYERS, 1.4F, 0.9F);
 
-        for (BlockPos anchor : state.anchors()) {
-            level.setBlockAndUpdate(anchor, ModBlocks.PRISMATIC_ANCHOR.get().defaultBlockState());
-            level.setBlockAndUpdate(anchor.below(),
-                    ModBlocks.ARCENCIUM_BRICKS.get().defaultBlockState());
+        // TROIS SANCTUAIRES, et non trois blocs.
+        //
+        // Une ancre posee nue dans un champ ne se defend pas : on arrivait, on
+        // la nourrissait, on repartait. Tout ce qu'on a bati -- la muraille,
+        // les tours, la pyramide, le tombeau et ses cinq sceaux -- n'existait
+        // que par une commande de test, c'est-a-dire pour personne.
+        //
+        // Chaque site en recoit donc un, et le PALIER suit l'ordre : la
+        // premiere ancre paie moyennement, la troisieme doit armer pour le
+        // boss. C'est la meme echelle que les tables de butin.
+        List<BlockPos> risen = new ArrayList<>();
+        int tier = 1;
+        for (BlockPos site : state.anchors()) {
+            BlockPos raised = Sanctuary.build(level, null, site, tier++);
+            risen.add(raised != null ? raised : site);
         }
+        // L'ancre bougE : elle coiffe le faite de la pyramide, non le sol vise.
+        // Sans cette mise a jour, l'interface et la boussole montreraient le
+        // pied du monument et le siege ne saurait pas ou se declencher.
+        state.setAnchors(risen);
         state.begin(level);
         announce(level, "game.emeraldweapons.anchors_risen",
                 "game.emeraldweapons.anchors_risen.sub", 0x9CE8FF);
