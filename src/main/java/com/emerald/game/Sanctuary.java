@@ -1321,6 +1321,39 @@ public final class Sanctuary {
      * suivante repart dans une autre direction, ce qui fait tourner la montee
      * sans jamais entamer le reste du sol.
      */
+    /**
+     * L'eclairage d'une tour.
+     *
+     * Le joueur a eclaire DEUX tours a la main, une de chaque type, et le
+     * releve a rendu le motif : des torches murales aux quatre points
+     * cardinaux, contre la paroi interieure, tous les six blocs de hauteur --
+     * c'est-a-dire une par etage, puisqu'un etage fait six. On l'applique aux
+     * douze tours, ce qu'il aurait ete absurde de lui faire poser a la main.
+     *
+     * Elles regardent le centre : une torche murale s'oriente a l'oppose de
+     * son mur, et se tromper de sens la fait disparaitre dans la pierre.
+     */
+    private static void towerTorches(ServerLevel level, int tx, int y, int tz,
+                                     int radius, int top) {
+        SanctuaryLedger.part("towerTorches");
+        int reach = radius - 1;
+        int[][] walls = {{reach, 0, 2}, {-reach, 0, 3}, {0, reach, 0}, {0, -reach, 1}};
+        for (int h = 3; h <= top; h += 6) {
+            for (int[] w : walls) {
+                Direction facing = Direction.from2DDataValue(w[2]);
+                BlockPos at = new BlockPos(tx + w[0], y + h, tz + w[1]);
+                // il faut un mur derriere : sans lui, la torche tombe au sol
+                if (level.getBlockState(at.relative(facing.getOpposite())).isAir()) {
+                    continue;
+                }
+                set(level, at.getX(), at.getY(), at.getZ(),
+                        Blocks.WALL_TORCH.defaultBlockState()
+                                .setValue(net.minecraft.world.level.block.WallTorchBlock.FACING,
+                                        facing));
+            }
+        }
+    }
+
     private static void towerInterior(ServerLevel level, int tx, int y, int tz,
                                       int radius, int top, int rank) {
         SanctuaryLedger.part("towerInterior");
@@ -1334,11 +1367,20 @@ public final class Sanctuary {
             // le plancher du palier, PLEIN : l'escalier y percera sa tremie
             solidFloor(level, tx, y + base + storey, tz, inner);
 
-            // le coffre de l'etage, adosse a la paroi, a l'oppose de la volee
-            lootChest(level, tx + (int) (dx == 0 ? inner - 2 : 0),
-                    y + base + storey + 1,
-                    tz + (int) (dz == 0 ? inner - 2 : 0),
-                    sanctuaryTable(rank));
+            // DEUX coffres par etage, adosses aux parois opposees.
+            //
+            // Un seul par palier laissait la moitie du tour de la salle nue, et
+            // l'on montait sans rien regarder : une tour de sept etages ne se
+            // fouille que si chaque etage paie. Les deux se font face, de part
+            // et d'autre de la trémie, pour qu'on en voie un en arrivant et
+            // l'autre en repartant.
+            int chestY = y + base + storey + 1;
+            int offX = (int) (dx == 0 ? inner - 2 : 0);
+            int offZ = (int) (dz == 0 ? inner - 2 : 0);
+            lootChest(level, tx + offX, chestY, tz + offZ, sanctuaryTable(rank),
+                    Direction.NORTH);
+            lootChest(level, tx - offX, chestY, tz - offZ, sanctuaryTable(rank),
+                    Direction.SOUTH);
 
             int reach = (int) inner - 1;
             for (int i = 0; i < storey; i++) {
@@ -1424,6 +1466,7 @@ public final class Sanctuary {
         // Il s'arretait deux blocs plus bas et l'on posait le toit par-dessus :
         // le dernier etage n'avait donc aucun acces, dans toutes les tours.
         towerInterior(level, tx, y, tz, radius, top, rank);
+        towerTorches(level, tx, y, tz, radius, top);
         // Rien au MILIEU du dernier plancher : c'est la que l'escalier
         // debouche, et le bloc qui portait la lanterne barrait la sortie --
         // « on est bloque par un bloc sur lequel tu as pose une lanterne ».

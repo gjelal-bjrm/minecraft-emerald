@@ -101,9 +101,9 @@ def table(tier):
     # BRUT, rare, qu'il faut encore fondre.
     # 2. La matiere premiere et le bois, pour fabriquer sur place
     pools.append(pool({"min": 1, "max": 2}, [
-        item("%s:raw_arcencium" % MOD, 1, (1, 2)),
-        item("%s:prism_branch" % MOD, 4, (2, 6)),
-        item("%s:prism_fiber" % MOD, 4, (2, 6)),
+        item("%s:raw_arcencium" % MOD, 1, (1, 3)),
+        item("%s:prism_branch" % MOD, 4, (4, 10)),
+        item("%s:prism_fiber" % MOD, 4, (4, 10)),
     ]))
 
     # 3. Le materiel d'Apotheosis : de quoi reforger et sertir
@@ -125,12 +125,14 @@ def table(tier):
     # 5. L'equipement. Au palier trois, on trouve NOTRE armure : c'est le
     #    moment de la partie ou l'on doit pouvoir affronter le boss.
     gear = {
-        1: [item("minecraft:iron_ingot", 6, (5, 10)),
-            item("minecraft:diamond", 4, (2, 5)),
-            item("minecraft:experience_bottle", 5, (8, 16))],
-        2: [item("minecraft:diamond", 6, (5, 12)),
-            item("minecraft:netherite_scrap", 3, (1, 2)),
-            item("minecraft:experience_bottle", 5, (16, 32))],
+        1: [item("minecraft:diamond", 6, (4, 9)),
+            item("minecraft:iron_block", 4, (1, 3)),
+            item("minecraft:enchanted_book", 3),
+            item("minecraft:experience_bottle", 5, (16, 28))],
+        2: [item("minecraft:diamond", 6, (8, 16)),
+            item("minecraft:netherite_scrap", 3, (2, 4)),
+            item("minecraft:enchanted_book", 3),
+            item("minecraft:experience_bottle", 5, (24, 48))],
         3: [item("minecraft:netherite_ingot", 5, (1, 3)),
             item("%s:arcencium_helmet" % MOD, 2),
             item("%s:arcencium_chestplate" % MOD, 2),
@@ -140,9 +142,18 @@ def table(tier):
     }[tier]
     pools.append(pool({"min": 1, "max": 1 + tier}, gear))
 
-    # 6. Les artefacts, la vraie recompense. Rien au palier un -- ils doivent
-    #    se meriter -- un au deux, deux au trois.
-    if tier >= 2:
+    # 6. Les artefacts, la vraie recompense.
+    #
+    # Le palier un n'en donnait AUCUN, ce qui etait une erreur de dosage : c'est
+    # le premier donjon de la partie, celui qu'on fouille avec le plus d'espoir,
+    # et un coffre qui ne rend jamais rien de memorable cesse d'etre ouvert.
+    # Il en donne desormais un sur quatre environ -- assez rare pour rester une
+    # trouvaille, assez frequent pour qu'on fouille la douzaine de coffres d'une
+    # tour en esperant.
+    if tier == 1:
+        pools.append(pool(1, [{"type": "minecraft:empty", "weight": 3 * len(ARTIFACTS)}]
+                          + [artifact(name) for name in ARTIFACTS]))
+    else:
         pools.append(pool(1 if tier == 2 else {"min": 1, "max": 2},
                           [artifact(name) for name in ARTIFACTS]))
 
