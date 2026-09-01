@@ -224,6 +224,54 @@ public class GameCommands {
             return 1;
         }));
 
+        // LES TROIS OUTILS DE DESIGNATION.
+        //
+        // Sept allers-retours ont ete perdus a corriger le mauvais escalier,
+        // faute d'un langage commun entre ce qui se voit a l'ecran et ce qui
+        // s'ecrit dans le code. Une capture montre un symptome ; il fallait
+        // une adresse, un moyen de designer, et un moyen de montrer la
+        // correction plutot que de la decrire.
+        root.then(Commands.literal("inspect").executes(ctx -> {
+            if (!(ctx.getSource().getEntity()
+                    instanceof net.minecraft.server.level.ServerPlayer player)) {
+                ctx.getSource().sendFailure(Component.literal("A executer en jeu."));
+                return 0;
+            }
+            boolean on = com.emerald.game.SanctuaryLedger.toggleWatch(player);
+            ctx.getSource().sendSuccess(() -> Component.literal(on
+                    ? "Inspection ACTIVE : vise un bloc, son chantier s'affiche."
+                    : "Inspection arretee."), false);
+            return 1;
+        }));
+
+        root.then(Commands.literal("select")
+                .executes(ctx -> pickMode(ctx.getSource()))
+                .then(Commands.literal("list").executes(ctx -> pickList(ctx.getSource())))
+                .then(Commands.literal("clear").executes(ctx -> {
+                    if (ctx.getSource().getEntity()
+                            instanceof net.minecraft.server.level.ServerPlayer p) {
+                        com.emerald.game.SanctuaryLedger.clearPicks(p);
+                    }
+                    ctx.getSource().sendSuccess(() ->
+                            Component.literal("Selection videe."), false);
+                    return 1;
+                })));
+
+        root.then(Commands.literal("diff").executes(ctx -> {
+            ServerLevel level = ctx.getSource().getServer().overworld();
+            if (com.emerald.game.SanctuaryLedger.empty()) {
+                ctx.getSource().sendFailure(Component.literal(
+                        "Registre vide : rebatis avec /arcencium sanctuary, "
+                                + "corrige a la main, puis relance /arcencium diff."));
+                return 0;
+            }
+            for (String line : com.emerald.game.SanctuaryLedger.diff(level)) {
+                final String text = line;
+                ctx.getSource().sendSuccess(() -> Component.literal(text), false);
+            }
+            return 1;
+        }));
+
         root.then(Commands.literal("goto").executes(ctx -> {
             ServerLevel level = ctx.getSource().getServer().overworld();
             var village = GameState.get(level).village();
@@ -315,5 +363,36 @@ public class GameCommands {
             }
         }
         return best;
+    }
+
+    private static int pickMode(CommandSourceStack source) {
+        if (!(source.getEntity() instanceof net.minecraft.server.level.ServerPlayer player)) {
+            source.sendFailure(Component.literal("A executer en jeu."));
+            return 0;
+        }
+        boolean on = com.emerald.game.SanctuaryLedger.togglePick(player);
+        source.sendSuccess(() -> Component.literal(on
+                ? "Selection ACTIVE : clic droit pour retenir ou retirer un bloc. "
+                        + "/arcencium select list pour la lire."
+                : "Selection arretee."), false);
+        return 1;
+    }
+
+    private static int pickList(CommandSourceStack source) {
+        if (!(source.getEntity() instanceof net.minecraft.server.level.ServerPlayer player)) {
+            source.sendFailure(Component.literal("A executer en jeu."));
+            return 0;
+        }
+        var lines = com.emerald.game.SanctuaryLedger.selection(player);
+        if (lines.isEmpty()) {
+            source.sendFailure(Component.literal("Rien de retenu."));
+            return 0;
+        }
+        source.sendSuccess(() -> Component.literal(lines.size() + " bloc(s) retenus :"), false);
+        for (String line : lines) {
+            final String text = line;
+            source.sendSuccess(() -> Component.literal("  " + text), false);
+        }
+        return 1;
     }
 }

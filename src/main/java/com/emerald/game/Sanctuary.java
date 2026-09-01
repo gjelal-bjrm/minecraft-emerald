@@ -211,6 +211,11 @@ public final class Sanctuary {
         // venait ensuite les peindre en briques corrompues -- d'ou l'anneau
         // brun. En pavant tout d'abord, la pyramide se pose PAR-DESSUS et
         // remplace ce qu'elle recouvre, sans laisser de trou autour.
+        // Le registre s'ouvre AVANT la premiere pose : il note, pour chaque
+        // bloc, la routine qui l'a mis et sa position relative au centre --
+        // c'est ce qui permet ensuite de designer un defaut a l'ecran et de
+        // retrouver la ligne qui en est responsable.
+        SanctuaryLedger.begin(new BlockPos(cx, y, cz));
         clearSite(level, cx, y, cz, bounds);
         courtyard(level, cx, y, cz);
         int apex = greatPyramid(level, source, cx, y, cz);
@@ -261,6 +266,7 @@ public final class Sanctuary {
         causewayRamps(level, cx, y, cz);
         summitStair(level, cx, y, cz, apexZ, summit);
         SanctuaryMist.register(new BlockPos(cx, y, cz), HALF, anchor);
+        SanctuaryLedger.part("fini");
 
         // Un compte rendu, plutot qu'une devinette de plus.
         //
@@ -328,6 +334,7 @@ public final class Sanctuary {
      */
     private static int greatPyramid(ServerLevel level, CommandSourceStack source,
                                     int cx, int y, int cz) {
+        SanctuaryLedger.part("greatPyramid");
         if (BuiltInRegistries.BLOCK.containsKey(
                 ResourceLocation.fromNamespaceAndPath("cataclysm", "door_of_seal"))) {
             int ox = cx - PYRAMID_CX;
@@ -422,6 +429,7 @@ public final class Sanctuary {
      * on peut poser celui-la.
      */
     private static void steppedPyramid(ServerLevel level, int cx, int y, int cz) {
+        SanctuaryLedger.part("steppedPyramid");
         int tiers = 10;
         for (int tier = 0; tier < tiers; tier++) {
             int half = 22 - tier * 2;
@@ -461,6 +469,7 @@ public final class Sanctuary {
      * descend jusqu'a la maconnerie -- de loin, c'est elle qu'on repere.
      */
     private static BlockPos crown(ServerLevel level, int cx, int y, int cz, int rank) {
+        SanctuaryLedger.part("crown");
         // Le parvis est EN GRADINS, pas en plateau.
         //
         // Une dalle de neuf sur neuf posee a plat sur la pointe de la pyramide
@@ -532,6 +541,7 @@ public final class Sanctuary {
     // ------------------------------------------------------------- l'enceinte
 
     private static void clearSite(ServerLevel level, int cx, int y, int cz, int[] keep) {
+        SanctuaryLedger.part("clearSite");
         for (int dx = -HALF - TOWER_RADIUS; dx <= HALF + TOWER_RADIUS; dx++) {
             for (int dz = -HALF - TOWER_RADIUS; dz <= HALF + TOWER_RADIUS; dz++) {
                 // on ne rase JAMAIS la pyramide qu'on vient de poser
@@ -558,6 +568,7 @@ public final class Sanctuary {
     }
 
     private static void courtyard(ServerLevel level, int cx, int y, int cz) {
+        SanctuaryLedger.part("courtyard");
         for (int dx = -HALF; dx <= HALF; dx++) {
             for (int dz = -HALF; dz <= HALF; dz++) {
                 // Pas de motif calcule sur (dx + dz) : cela dessinait des
@@ -581,6 +592,7 @@ public final class Sanctuary {
      * circulation cote cour.
      */
     private static void curtainWall(ServerLevel level, int cx, int y, int cz) {
+        SanctuaryLedger.part("curtainWall");
         for (int d = -HALF; d <= HALF; d++) {
             for (int t = 0; t < THICK; t++) {
                 for (int side = 0; side < 4; side++) {
@@ -654,6 +666,7 @@ public final class Sanctuary {
      */
     private static void cornerTower(ServerLevel level, int cx, int cz,
                                     int tx, int y, int tz, int rank) {
+        SanctuaryLedger.part("cornerTower");
         roundTower(level, tx, y, tz, TOWER_RADIUS, TOWER_TOP, rank);
         // Vers la cour, jamais vers le dehors : le signe se deduit de la
         // position du coin par rapport au centre de la place.
@@ -725,6 +738,7 @@ public final class Sanctuary {
      * forteresse a quatre portes n'a rien d'absurde.
      */
     private static void gatehouse(ServerLevel level, int cx, int y, int cz, int side, int rank) {
+        SanctuaryLedger.part("gatehouse");
         Gate g = Gate.of(cx, cz, side);
 
         // Les deux tours du corps de garde, batties comme les autres.
@@ -860,6 +874,7 @@ public final class Sanctuary {
      * l'aplatirait.
      */
     private static int reskin(ServerLevel level, int[] bounds, int y) {
+        SanctuaryLedger.part("reskin");
         int painted_total = 0;
         // On mesure d'abord la hauteur reelle du batiment, pour que le degrade
         // se repartisse dessus au lieu de dependre de chiffres ecrits en dur.
@@ -1039,6 +1054,7 @@ public final class Sanctuary {
      * volee suspendue.
      */
     private static void rampAlong(ServerLevel level, int cx, int y, int cz, int side) {
+        SanctuaryLedger.part("rampAlong");
         Gate g = Gate.of(cx, cz, side);
         // on part a vingt blocs du milieu du cote, vers la porte
         int from = 20;
@@ -1231,6 +1247,7 @@ public final class Sanctuary {
      * a nous de nettoyer.
      */
     private static void scrubMarkers(ServerLevel level, int ox, int oy, int oz) {
+        SanctuaryLedger.part("scrubMarkers");
         int floor = level.getMinBuildHeight();
         for (int dx = 0; dx < PYRAMID_W; dx++) {
             for (int dz = 0; dz < PYRAMID_D; dz++) {
@@ -1268,6 +1285,7 @@ public final class Sanctuary {
      */
     private static void towerInterior(ServerLevel level, int tx, int y, int tz,
                                       int radius, int top, int rank) {
+        SanctuaryLedger.part("towerInterior");
         int storey = 6;
         double inner = radius - 1.0;
         for (int base = 0; base + storey <= top; base += storey) {
@@ -1311,6 +1329,7 @@ public final class Sanctuary {
      * « beaucoup de trous, surtout dans les bords ».
      */
     private static void solidFloor(ServerLevel level, int tx, int y, int tz, double radius) {
+        SanctuaryLedger.part("solidFloor");
         int r = (int) Math.ceil(radius);
         for (int dx = -r; dx <= r; dx++) {
             for (int dz = -r; dz <= r; dz++) {
@@ -1330,6 +1349,7 @@ public final class Sanctuary {
      */
     private static void roundTower(ServerLevel level, int tx, int y, int tz,
                                    int radius, int top, int rank) {
+        SanctuaryLedger.part("roundTower");
         for (int dx = -radius; dx <= radius; dx++) {
             for (int dz = -radius; dz <= radius; dz++) {
                 double dist = Math.sqrt(dx * dx + dz * dz);
@@ -1439,6 +1459,7 @@ public final class Sanctuary {
     }
 
     private static void causewayRamps(ServerLevel level, int cx, int y, int cz) {
+        SanctuaryLedger.part("causewayRamps");
         int fromZ = cz + PYRAMID_D - PYRAMID_CZ;
         int roof = y + 4;
 
@@ -1505,6 +1526,7 @@ public final class Sanctuary {
      */
     private static void summitStair(ServerLevel level, int sx, int y, int cz,
                                     int apexZ, int summit) {
+        SanctuaryLedger.part("summitStair");
         int fromZ = cz + PYRAMID_D - PYRAMID_CZ;       // le pied de la face sud
         // On part du TOIT du couloir, jamais du sol : c'est lui le parvis, et
         // descendre plus bas reviendrait a rouvrir le tombeau par le plafond.
@@ -1602,6 +1624,7 @@ public final class Sanctuary {
 
     private static void tombEntrance(ServerLevel level, int cx, int y, int cz, int rank,
                                      BlockPos anchor) {
+        SanctuaryLedger.part("tombEntrance");
         int fromZ = cz + PYRAMID_D - PYRAMID_CZ;
         int end = fromZ;
         // On creuse une PROFONDEUR FIXE, sans chercher a s'arreter.
@@ -1684,6 +1707,7 @@ public final class Sanctuary {
      * meubler la salle du modele s'il y en avait une.
      */
     private static void vault(ServerLevel level, int cx, int y, int z, int rank) {
+        SanctuaryLedger.part("vault");
         for (int dx = -3; dx <= 3; dx++) {
             for (int dz = -3; dz <= 3; dz++) {
                 for (int dy = 1; dy <= 4; dy++) {
@@ -1723,6 +1747,7 @@ public final class Sanctuary {
 
     private static void seals(ServerLevel level, int cx, int y, int cz, int fromZ,
                               int endZ, BlockPos anchor, int rank) {
+        SanctuaryLedger.part("seals");
         // TROIS LIEUX MESURES, et non plus devines.
         //
         // Sept placements de suite ont echoue pour une seule raison : je posais
@@ -1781,6 +1806,7 @@ public final class Sanctuary {
      * encore dans le gradin, et une alcove creusee la ressortait du flanc.
      */
     private static BlockPos doorwaySeal(ServerLevel level, int cx, int y, int fromZ) {
+        SanctuaryLedger.part("doorwaySeal");
         int z = fromZ - 13;
         set(level, cx - 1, y + 3, z, lantern());
         return freeSeal(level, cx - 1, y + 1, z);
@@ -1796,6 +1822,7 @@ public final class Sanctuary {
      * batiment. Le sceau attend en diagonale d'un coffre du modele.
      */
     private static BlockPos upperCorridor(ServerLevel level, int cx, int y, int cz) {
+        SanctuaryLedger.part("upperCorridor");
         // Quatre marches, larges de trois. La premiere est en y+1 et non en
         // y+2 : le sol de la salle etant en y+1, on aurait bute dessus.
         int[][] steps = {{1, 26}, {2, 25}, {3, 24}, {4, 23}, {5, 22}};
@@ -1833,6 +1860,7 @@ public final class Sanctuary {
      * seul des trois qui demande de grimper, et c'est voulu.
      */
     private static BlockPos chimneySeal(ServerLevel level, int cx, int y, int cz) {
+        SanctuaryLedger.part("chimneySeal");
         // la galerie, du fond du tresor au pied de la cheminee
         for (int z = cz + 14; z >= cz - 2; z--) {
             for (int w = -1; w <= 1; w++) {
@@ -1952,6 +1980,7 @@ public final class Sanctuary {
     private static void setWall(ServerLevel level, int x, int y, int z) {
         BlockPos pos = new BlockPos(x, y, z);
         level.setBlock(pos, merlon(), 2);
+        SanctuaryLedger.record(x, y, z, merlon());
         walls.add(pos);
     }
 
@@ -1972,5 +2001,10 @@ public final class Sanctuary {
         // voisinage -- sur cent mille blocs, les cascades couteraient bien plus
         // cher que la pose elle-meme
         level.setBlock(new BlockPos(x, y, z), state, 2);
+        // et l'on note QUI vient de poser ce bloc : c'est le seul point de
+        // passage des poses, donc le seul endroit ou l'on ne peut oublier
+        // personne -- une routine ajoutee demain sera enregistree sans qu'on
+        // ait a y penser
+        SanctuaryLedger.record(x, y, z, state);
     }
 }
