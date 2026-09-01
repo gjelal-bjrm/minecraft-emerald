@@ -1634,8 +1634,35 @@ public final class Sanctuary {
             // paraissait se retrecir dans le vide. Le releve montre le joueur
             // pavant ces deux colonnes sur les six premieres cases -- juste ce
             // qu'il faut pour que l'un s'emboite dans l'autre.
-            int half = (start - z) < 6 ? 2 : 1;
-            for (int w = -half; w <= half; w++) {
+            int reach = start - z;
+
+            // LA BORDURE DU PIED EST PLEINE, ET NE SE DEGAGE PAS.
+            //
+            // On elargissait bien a cinq au raccord, mais on degageait les cinq
+            // colonnes : les deux du bord se retrouvaient evidees en tranchee.
+            // Une bordure n'est pas un passage -- elle borde. Seule la voie
+            // centrale, large de trois, s'ouvre au ciel.
+            //
+            // Aux trois premiers pas la bordure s'evase d'un cran de plus :
+            // c'est le raccord avec le dallage de la cour, et une montee qui
+            // jaillit du sol sans evasement se lit comme un mur perce.
+            if (reach < 6) {
+                for (int side = -1; side <= 1; side += 2) {
+                    for (int up = 0; up <= 2; up++) {
+                        set(level, sx + side * 2, step + up, z, trim());
+                    }
+                    if (reach < 3) {
+                        for (int h = y + 3; h <= step + 2; h++) {
+                            BlockPos flare = new BlockPos(sx + side * 3, h, z);
+                            if (!level.getBlockState(flare)
+                                    .isCollisionShapeFullBlock(level, flare)) {
+                                set(level, sx + side * 3, h, z, trim());
+                            }
+                        }
+                    }
+                }
+            }
+            for (int w = -1; w <= 1; w++) {
                 set(level, sx + w, step, z, climbs ? riser(0, -1) : trim());
                 for (int clear = 1; clear <= 4; clear++) {
                     set(level, sx + w, step + clear, z, Blocks.AIR.defaultBlockState());
@@ -1722,6 +1749,12 @@ public final class Sanctuary {
         // retrouvaient donc au pied du monument, en plein air -- « les tomb
         // seal ne sont pas du tout a l'interieur ». Trente blocs mettent
         // franchement sous la masse.
+        // Le parvis avance d'UNE CASE au sud du pied : il s'arretait pile sur
+        // le bord de l'emprise, si bien qu'on abordait sa maconnerie par une
+        // arete vive au lieu d'un seuil.
+        for (int w = -1; w <= 1; w++) {
+            set(level, cx + w, y + 4, fromZ + 1, shrineTrim());
+        }
         for (int depth = 0; depth < 30; depth++) {
             int z = fromZ - depth;
             for (int w = -1; w <= 1; w++) {
@@ -1856,6 +1889,7 @@ public final class Sanctuary {
         java.util.List<BlockPos> placed = new java.util.ArrayList<>();
         sealReport = "";
 
+        clearEastRoom(level, cx, y, cz);
         placed.add(doorwaySeal(level, cx, y, fromZ));      // 1. l'entree
         placed.add(upperCorridor(level, cx, y, cz));       // 2. l'etage, au coffre
         placed.add(chimneySeal(level, cx, y, cz));         // 3. l'etage, au pilier
@@ -1884,6 +1918,37 @@ public final class Sanctuary {
      * coffre : on ne s'arrete pas devant un sceau, on s'arrete devant un
      * coffre, et le sceau se trouve dans le meme regard.
      */
+    /**
+     * Degage la salle est du modele.
+     *
+     * Le joueur y a retire vingt-sept blocs : des montants de gres cisele qui
+     * la traversent, une estrade de gres poli, deux pieges a feu et un pot.
+     * Rien de structurel -- de l'encombrement, plus des pieges qui se
+     * declenchent sur qui entre.
+     *
+     * Les coordonnees sont donnees telles quelles, et c'est ici legitime : la
+     * pyramide est un modele FIXE, pose au meme endroit a chaque construction.
+     * Ce qui gene a cette case-la genera toujours a cette case-la. Chercher une
+     * regle generale sur une piece unique reviendrait a inventer un principe
+     * pour un seul cas -- et l'on sait ce que cela a coute.
+     */
+    private static void clearEastRoom(ServerLevel level, int cx, int y, int cz) {
+        SanctuaryLedger.part("clearEastRoom");
+        int[][] cells = {
+                {14, 7, 20}, {15, 7, 20}, {16, 7, 20},
+                {16, 6, 19}, {10, 7, 19},
+                {12, 5, 18}, {13, 5, 18}, {14, 5, 18}, {10, 7, 18},
+                {14, 4, 17}, {12, 5, 17}, {14, 5, 17}, {15, 5, 17}, {10, 7, 17},
+                {13, 4, 16}, {12, 5, 16}, {13, 5, 16}, {14, 5, 16},
+                {14, 6, 16}, {10, 7, 16}, {14, 7, 16},
+                {12, 5, 15}, {13, 5, 15}, {14, 5, 15}, {14, 6, 15}, {14, 7, 15},
+                {14, 7, 14},
+        };
+        for (int[] c : cells) {
+            set(level, cx + c[0], y + c[1], cz + c[2], Blocks.AIR.defaultBlockState());
+        }
+    }
+
     /**
      * 1. LE SCEAU DE L'ENTREE, dans le couloir du tombeau.
      *
