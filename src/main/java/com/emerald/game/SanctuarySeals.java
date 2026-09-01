@@ -206,6 +206,39 @@ public final class SanctuarySeals {
         return "";
     }
 
+    /**
+     * Eveille d'un coup tous les sceaux d'une ancre.
+     *
+     * Outil de mise au point, comme l'Onde de Purge : verifier un siege ne doit
+     * pas coûter cinq allers-retours dans le tombeau. Le compte rendu dit
+     * combien ont ete touches, faute de quoi on ne saurait pas distinguer « ils
+     * etaient deja tous eveilles » de « l'ancre n'a pas de tombeau ».
+     *
+     * @return combien de sceaux se sont eveilles, ou -1 si l'ancre est inconnue
+     */
+    public static int lightAll(ServerLevel level, BlockPos anchor) {
+        for (Vault vault : vaults) {
+            if (!vault.anchor().equals(anchor)) {
+                continue;
+            }
+            int woke = 0;
+            for (BlockPos seal : vault.seals()) {
+                if (vault.lit().add(seal)) {
+                    woke++;
+                }
+                // le bloc suit, sinon il resterait eteint en jeu alors que le
+                // compte, lui, serait bon : deux verites pour une seule chose
+                var state = level.getBlockState(seal);
+                if (state.hasProperty(com.emerald.block.TombSealBlock.LIT)) {
+                    level.setBlock(seal, state.setValue(
+                            com.emerald.block.TombSealBlock.LIT, true), 3);
+                }
+            }
+            return woke;
+        }
+        return -1;
+    }
+
     /** Combien de sceaux restent a eveiller pour cette ancre, ou zero. */
     public static int remaining(BlockPos anchor) {
         for (Vault vault : vaults) {

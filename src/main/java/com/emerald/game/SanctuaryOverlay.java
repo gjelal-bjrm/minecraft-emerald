@@ -31,6 +31,9 @@ public final class SanctuaryOverlay {
 
     /** {dx, dy, dz, etat} -- engendre, ne pas editer a la main. */
     private static final String[][] CELLS = {
+            {"-1", "8", "37", "emeraldweapons:polished_gangue"},
+            {"1", "8", "37", "emeraldweapons:polished_gangue"},
+            {"0", "9", "37", "emeraldweapons:polished_gangue"},
             {"0", "40", "-6", "emeraldweapons:arcencium_brick_slab[type=bottom,waterlogged=false]"},
             {"-15", "19", "-4", "minecraft:sand"},
             {"15", "19", "-4", "minecraft:sand"},

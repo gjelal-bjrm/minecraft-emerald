@@ -593,11 +593,14 @@ public final class Sanctuary {
         SanctuaryLedger.part("clearSite");
         for (int dx = -HALF - TOWER_RADIUS; dx <= HALF + TOWER_RADIUS; dx++) {
             for (int dz = -HALF - TOWER_RADIUS; dz <= HALF + TOWER_RADIUS; dz++) {
-                // on ne rase JAMAIS la pyramide qu'on vient de poser
-                if (cx + dx >= keep[0] - 1 && cx + dx <= keep[2] + 1
-                        && cz + dz >= keep[1] - 1 && cz + dz <= keep[3] + 1) {
-                    continue;
-                }
+                // ON DEBLAIE AUSSI SOUS LA PYRAMIDE.
+                //
+                // L'emprise du monument etait epargnee « pour ne jamais raser
+                // la pyramide qu'on vient de poser ». Or ce deblaiement tourne
+                // AVANT elle : il ne protegeait donc rien et laissait le
+                // terrain d'origine sous son assise. Sur un flanc de colline,
+                // la terre et l'herbe ressortaient tout autour de sa base --
+                // un talus au milieu du sanctuaire, que personne n'a bati.
                 // ON DEGAGE JUSQU'AU CIEL, mais l'on ne PAIE que le plein.
                 //
                 // On ne vidait que deux blocs au-dessus du sol dans la cour, ce
@@ -1746,32 +1749,14 @@ public final class Sanctuary {
             // qu'il faut pour que l'un s'emboite dans l'autre.
             int reach = start - z;
 
-            // LA BORDURE DU PIED EST PLEINE, ET NE SE DEGAGE PAS.
+            // Pas de bordure ni d'evasement ici.
             //
-            // On elargissait bien a cinq au raccord, mais on degageait les cinq
-            // colonnes : les deux du bord se retrouvaient evidees en tranchee.
-            // Une bordure n'est pas un passage -- elle borde. Seule la voie
-            // centrale, large de trois, s'ouvre au ciel.
-            //
-            // Aux trois premiers pas la bordure s'evase d'un cran de plus :
-            // c'est le raccord avec le dallage de la cour, et une montee qui
-            // jaillit du sol sans evasement se lit comme un mur perce.
-            if (reach < 6) {
-                for (int side = -1; side <= 1; side += 2) {
-                    for (int up = 0; up <= 2; up++) {
-                        set(level, sx + side * 2, step + up, z, trim());
-                    }
-                    if (reach < 3) {
-                        for (int h = y + 3; h <= step + 2; h++) {
-                            BlockPos flare = new BlockPos(sx + side * 3, h, z);
-                            if (!level.getBlockState(flare)
-                                    .isCollisionShapeFullBlock(level, flare)) {
-                                set(level, sx + side * 3, h, z, trim());
-                            }
-                        }
-                    }
-                }
-            }
+            // J'en avais fait une regle a partir des quelques cases que le
+            // joueur avait comblees au pied. C'etait retomber dans le travers
+            // que le calque devait supprimer : il corrige des CASES, j'en
+            // tirais un principe, et le principe produisait un ouvrage qu'il
+            // n'avait jamais demande -- deux murets de part et d'autre du
+            // seuil. Ses corrections sont dans le calque, telles quelles.
             for (int w = -1; w <= 1; w++) {
                 set(level, sx + w, step, z, climbs ? riser(0, -1) : trim());
                 for (int clear = 1; clear <= 4; clear++) {

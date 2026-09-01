@@ -243,6 +243,32 @@ public class GameCommands {
         // nouveau a retenir. Sans lui il fallait recopier des coordonnees a la
         // main pour se rendre a quatre cent cinquante blocs, ce qu'on fait
         // vingt fois par seance de mise au point.
+        // Eveiller tous les sceaux du sanctuaire le plus proche.
+        //
+        // Comme l'Onde de Purge : verifier un siege ne doit pas coûter cinq
+        // allers-retours dans le tombeau.
+        root.then(Commands.literal("wake").executes(ctx -> {
+            ServerLevel level = ctx.getSource().getServer().overworld();
+            var found = com.emerald.game.SanctuaryMist.nearestAnchor(level,
+                    net.minecraft.core.BlockPos.containing(ctx.getSource().getPosition()));
+            if (found == null) {
+                ctx.getSource().sendFailure(Component.translatable(
+                        "command.emeraldweapons.anchor.none"));
+                return 0;
+            }
+            int woke = com.emerald.game.SanctuarySeals.lightAll(level, found);
+            if (woke < 0) {
+                ctx.getSource().sendFailure(Component.literal(
+                        "Cette ancre n'a pas de tombeau enregistre."));
+                return 0;
+            }
+            final int n = woke;
+            ctx.getSource().sendSuccess(() -> Component.literal(n == 0
+                    ? "Tous les sceaux etaient deja eveilles."
+                    : n + " sceau(x) eveille(s) : l'ancre accepte l'arcencium."), false);
+            return 1;
+        }));
+
         root.then(Commands.literal("goto")
                 .then(Commands.argument("ancre",
                                 com.mojang.brigadier.arguments.IntegerArgumentType.integer(1, 3))
