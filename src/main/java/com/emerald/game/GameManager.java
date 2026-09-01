@@ -59,6 +59,10 @@ public class GameManager {
     @Nullable
     private static Siege prologue;
 
+    /** Les sites de sanctuaire encore a batir, un par seconde. */
+    private static final List<BlockPos> pending = new ArrayList<>();
+    private static final int BUILD_EVERY = 20;
+
     /** Golems mis de cote le temps du siege, a rendre au village ensuite. */
     private static int borrowedGolems;
     private static final Map<BlockPos, Siege> anchorSieges = new HashMap<>();
@@ -116,6 +120,25 @@ public class GameManager {
         if (level.getGameTime() % 20 == 0
                 && GameState.get(level).status() != GameState.Status.PROLOGUE) {
             dissolveCeremonial(level);
+        }
+        // un sanctuaire par seconde, tant qu'il en reste
+        if (!pending.isEmpty() && level.getGameTime() % BUILD_EVERY == 0) {
+            GameState state = GameState.get(level);
+            BlockPos site = pending.remove(0);
+            int tier = 3 - pending.size();
+            BlockPos raised = Sanctuary.build(level, null, site, tier);
+            // L'ancre BOUGE : elle coiffe le faite de la pyramide, non le sol
+            // vise. Sans cette mise a jour, l'interface et la boussole
+            // montreraient le pied du monument et le siege ne saurait pas ou se
+            // declencher.
+            if (raised != null && !raised.equals(site)) {
+                List<BlockPos> updated = new ArrayList<>(state.anchors());
+                int at = updated.indexOf(site);
+                if (at >= 0) {
+                    updated.set(at, raised);
+                    state.setAnchors(updated);
+                }
+            }
         }
         if (prologue != null) {
             sustainOath(level);
@@ -294,6 +317,7 @@ public class GameManager {
         // banniere et villageois compris, sans qu'une seule vague ne tourne. On
         // cherchait un bug dans le siege, qui n'avait jamais tourne.
         ModeSwitch.set(level, true);
+        pending.clear();
         // Les registres des sceaux et de la brume sont VOLATILS mais cumulatifs :
         // trois sanctuaires par partie s'y ajouteraient sans jamais en sortir, et
         // une ancre d'une partie precedente reclamerait encore ses sceaux.
@@ -584,16 +608,19 @@ public class GameManager {
         // Chaque site en recoit donc un, et le PALIER suit l'ordre : la
         // premiere ancre paie moyennement, la troisieme doit armer pour le
         // boss. C'est la meme echelle que les tables de butin.
-        List<BlockPos> risen = new ArrayList<>();
-        int tier = 1;
-        for (BlockPos site : state.anchors()) {
-            BlockPos raised = Sanctuary.build(level, null, site, tier++);
-            risen.add(raised != null ? raised : site);
-        }
-        // L'ancre bougE : elle coiffe le faite de la pyramide, non le sol vise.
-        // Sans cette mise a jour, l'interface et la boussole montreraient le
-        // pied du monument et le siege ne saurait pas ou se declencher.
-        state.setAnchors(risen);
+        // ON MET LES TROIS SANCTUAIRES EN FILE, on ne les batit pas ici.
+        //
+        // Chacun pose des centaines de milliers de blocs. Les enchainer dans le
+        // tick qui valide la mission figeait le serveur plusieurs secondes au
+        // pire moment : le joueur venait d'abattre la derniere vague et voyait
+        // le jeu se bloquer, sans savoir s'il avait gagne. La recompense
+        // arrivait apres une panne apparente.
+        //
+        // Un par seconde, donc. L'annonce part tout de suite, les monuments se
+        // dressent a quatre cent cinquante blocs de la ou personne ne regarde,
+        // et l'ancre de chacun rejoint la liste des qu'il est debout.
+        pending.clear();
+        pending.addAll(state.anchors());
         state.begin(level);
         announce(level, "game.emeraldweapons.anchors_risen",
                 "game.emeraldweapons.anchors_risen.sub", 0x9CE8FF);
