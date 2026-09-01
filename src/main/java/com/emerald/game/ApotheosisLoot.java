@@ -302,6 +302,27 @@ public final class ApotheosisLoot {
         }
         boolean storm = entity.getTags().contains(WeatherEffects.TAG_STORM);
         boolean tide = entity.getTags().contains(PrismaticTide.TAG_TIDE);
+
+        // L'ECLAT DU DESTIN TOMBE DE TOUT CE QUI SE BAT.
+        //
+        // Il se compte avant la porte des tempetes, car il ne doit pas dependre
+        // d'une meteo : c'est la matiere des tentatives de rarete, et une
+        // matiere qu'on ne trouve que par temps d'orage ferait attendre le
+        // joueur au lieu de le faire jouer. Une fois sur douze au combat
+        // ordinaire, une fois sur quatre sous la Maree ou l'orage -- ceux-la
+        // frappent plus fort, ils paient davantage.
+        if (event.getSource().getEntity() instanceof net.minecraft.world.entity.player.Player
+                && entity instanceof net.minecraft.world.entity.Mob
+                && !(entity instanceof net.minecraft.world.entity.npc.AbstractVillager)
+                && !(entity instanceof net.minecraft.world.entity.animal.Animal)) {
+            int odds = storm || tide ? 4 : 12;
+            if (level.random.nextInt(odds) == 0) {
+                event.getDrops().add(new net.minecraft.world.entity.item.ItemEntity(
+                        level, entity.getX(), entity.getY() + 0.5, entity.getZ(),
+                        new ItemStack(com.emerald.item.ModItems.FATE_SHARD.get())));
+            }
+        }
+
         if (!storm && !tide) {
             return;
         }

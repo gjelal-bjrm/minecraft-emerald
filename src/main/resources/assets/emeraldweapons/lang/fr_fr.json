@@ -210,5 +210,16 @@
   "game.emeraldweapons.seal.hint": "Le tombeau fremit : ses sceaux se laissent entrevoir",
   "item.emeraldweapons.arcencium_glaive": "Glaive d'Arcencium",
   "item.emeraldweapons.sanctuary_probe": "Sonde du Sanctuaire",
-  "game.emeraldweapons.mode_rearmed": "Mode Arcencium rallume : la Lame du Serment reclame une partie"
+  "game.emeraldweapons.mode_rearmed": "Mode Arcencium rallume : la Lame du Serment reclame une partie",
+  "rarity.emeraldweapons.utile": "Utile",
+  "rarity.emeraldweapons.bon": "Bon",
+  "rarity.emeraldweapons.bonne_qualite": "De bonne qualite",
+  "rarity.emeraldweapons.excellent": "Excellent",
+  "rarity.emeraldweapons.ancestral": "Ancestral",
+  "rarity.emeraldweapons.mysterieux": "Mysterieux",
+  "rarity.emeraldweapons.legendaire": "Legendaire",
+  "rarity.emeraldweapons.phenomenal": "Phenomenal",
+  "item.emeraldweapons.fate_shard": "Eclat du Destin",
+  "socket.emeraldweapons.rarity.kept": "Le Destin reste sourd : la rarete ne change pas.",
+  "socket.emeraldweapons.rarity.risen": "La piece s'eleve : %s"
 }

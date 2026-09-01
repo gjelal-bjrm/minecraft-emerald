@@ -210,5 +210,16 @@
   "game.emeraldweapons.seal.hint": "The tomb stirs: its seals show themselves briefly",
   "item.emeraldweapons.arcencium_glaive": "Arcencium Glaive",
   "item.emeraldweapons.sanctuary_probe": "Sanctuary Probe",
-  "game.emeraldweapons.mode_rearmed": "Arcencium mode re-armed: the Oath Blade demands a game"
+  "game.emeraldweapons.mode_rearmed": "Arcencium mode re-armed: the Oath Blade demands a game",
+  "rarity.emeraldweapons.utile": "Useful",
+  "rarity.emeraldweapons.bon": "Good",
+  "rarity.emeraldweapons.bonne_qualite": "Fine",
+  "rarity.emeraldweapons.excellent": "Excellent",
+  "rarity.emeraldweapons.ancestral": "Ancestral",
+  "rarity.emeraldweapons.mysterieux": "Mysterious",
+  "rarity.emeraldweapons.legendaire": "Legendary",
+  "rarity.emeraldweapons.phenomenal": "Phenomenal",
+  "item.emeraldweapons.fate_shard": "Fate Shard",
+  "socket.emeraldweapons.rarity.kept": "Fate stays deaf: the rarity does not change.",
+  "socket.emeraldweapons.rarity.risen": "The piece rises: %s"
 }

@@ -57,6 +57,18 @@ public class ModItems {
                                     new EmeraldTier(), 2.0F, -2.4F))));
 
     /**
+     * Eclat du Destin -- la matiere des tentatives de rarete.
+     *
+     * Il ne se fabrique pas : il tombe des monstres et dort dans les coffres,
+     * ce qui en fait la seule monnaie du mode qu'on ne puisse pas produire a
+     * volonte. Plus on en met dans l'etabli, plus la loi du tirage penche vers
+     * le haut -- jamais assez pour promettre, toujours assez pour tenter.
+     */
+    public static final DeferredItem<Item> FATE_SHARD =
+            ITEMS.register("fate_shard", () -> new Item(new Item.Properties()
+                    .rarity(net.minecraft.world.item.Rarity.UNCOMMON)));
+
+    /**
      * Sonde du Sanctuaire -- l'outil de designation.
      *
      * Elle n'a rien d'une arme et ne sert qu'a construire : tenue en main, elle

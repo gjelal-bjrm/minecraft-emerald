@@ -101,6 +101,11 @@ def table(tier):
     # BRUT, rare, qu'il faut encore fondre.
     # 2. La matiere premiere et le bois, pour fabriquer sur place
     pools.append(pool({"min": 1, "max": 2}, [
+        # L'Eclat du Destin ne se fabrique pas : c'est la seule monnaie du
+        # mode qu'on ne puisse pas produire a volonte, donc la seule qui garde
+        # sa valeur. Sa quantite monte avec le palier, ce qui fait des
+        # tentatives de haute rarete une recompense de fin de partie.
+        item("%s:fate_shard" % MOD, 6, (1, 1 + tier * 2)),
         item("%s:raw_arcencium" % MOD, 1, (1, 3)),
         item("%s:prism_branch" % MOD, 4, (4, 10)),
         item("%s:prism_fiber" % MOD, 4, (4, 10)),

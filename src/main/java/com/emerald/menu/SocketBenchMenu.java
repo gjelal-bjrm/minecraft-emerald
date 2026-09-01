@@ -75,7 +75,10 @@ public class SocketBenchMenu extends AbstractContainerMenu {
         this.addSlot(new Slot(this.inputs, SLOT_ARTIFACT, 76, 47) {
             @Override
             public boolean mayPlace(ItemStack stack) {
-                return stack.getItem() instanceof ArtifactItem && Artifacts.of(stack) != null;
+                // le meme emplacement sert aux deux usages de l'etabli :
+                // sertir un artefact, ou tenter une montee de rarete
+                return stack.is(com.emerald.item.ModItems.FATE_SHARD.get())
+                        || stack.getItem() instanceof ArtifactItem && Artifacts.of(stack) != null;
             }
         });
         this.addSlot(new Slot(this.result, RESULT_IN_CONTAINER, 134, 47) {
@@ -86,6 +89,34 @@ public class SocketBenchMenu extends AbstractContainerMenu {
 
             @Override
             public void onTake(Player player, ItemStack stack) {
+                // LE TIRAGE SE FAIT ICI, au moment ou la piece quitte l'etabli.
+                //
+                // C'est le seul instant honnete : plus tot, il faudrait
+                // afficher un resultat qui pourrait encore changer ; plus tard,
+                // la piece serait deja dans l'inventaire. Le nombre d'eclats
+                // consommes est celui qui etait pose -- on n'en rend pas.
+                ItemStack fee = SocketBenchMenu.this.inputs.getItem(SLOT_ARTIFACT);
+                if (fee.is(com.emerald.item.ModItems.FATE_SHARD.get())) {
+                    com.emerald.item.GearRarity before =
+                            com.emerald.item.GearRarity.of(stack);
+                    com.emerald.item.GearRarity after = com.emerald.item.GearRarity.roll(
+                            before, fee.getCount(), player.level().random);
+                    com.emerald.item.GearRarity.set(stack, after);
+                    player.displayClientMessage(after == before
+                            ? net.minecraft.network.chat.Component.translatable(
+                                    "socket.emeraldweapons.rarity.kept")
+                                    .withStyle(net.minecraft.ChatFormatting.GRAY)
+                            : net.minecraft.network.chat.Component.translatable(
+                                    "socket.emeraldweapons.rarity.risen", after.label())
+                                    .withStyle(style -> style.withColor(after.colour())),
+                            false);
+                    player.level().playSound(null, player.blockPosition(),
+                            after == before
+                                    ? net.minecraft.sounds.SoundEvents.AMETHYST_BLOCK_BREAK
+                                    : net.minecraft.sounds.SoundEvents.PLAYER_LEVELUP,
+                            net.minecraft.sounds.SoundSource.PLAYERS, 0.8F,
+                            0.7F + after.rank() * 0.08F);
+                }
                 SocketBenchMenu.this.inputs.setItem(SLOT_GEAR, ItemStack.EMPTY);
                 SocketBenchMenu.this.inputs.setItem(SLOT_ARTIFACT, ItemStack.EMPTY);
                 super.onTake(player, stack);
@@ -113,6 +144,13 @@ public class SocketBenchMenu extends AbstractContainerMenu {
     /** Le resultat, ou une pile vide si la combinaison ne tient pas. */
     @Nullable
     private static ItemStack socket(ItemStack gear, ItemStack artifactStack) {
+        // LES ECLATS : l'etabli montre la piece telle quelle, prete a etre
+        // tentee. On ne peut pas montrer le resultat d'un tirage avant de le
+        // tirer, et faire semblant serait pire que ne rien montrer : le rang
+        // se decide au moment ou l'on prend.
+        if (artifactStack.is(com.emerald.item.ModItems.FATE_SHARD.get()) && !gear.isEmpty()) {
+            return gear.copy();
+        }
         Artifact artifact = Artifacts.of(artifactStack);
         if (gear.isEmpty() || artifact == null || !artifact.fits(gear)) {
             return ItemStack.EMPTY;
