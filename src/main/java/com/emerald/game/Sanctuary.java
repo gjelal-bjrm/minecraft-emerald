@@ -1564,9 +1564,26 @@ public final class Sanctuary {
             }
             // on ne redescend jamais : un escalier qui plonge n'en est plus un
             int step = Math.max(last, Math.min(here + 1, last + 1));
+
+            // UNE MARCHE SEULEMENT LA OU L'ON MONTE.
+            //
+            // La volee posait un bloc a chaque case, y compris sur les cases
+            // ou elle ne gagne pas un pouce -- c'est-a-dire sur les TERRASSES
+            // de la pyramide, qui sont plates par nature. Cela donnait des
+            // paliers de deux ou trois blocs d'escalier alignes a la meme
+            // hauteur : de profil, une rangee de marches plates montre ses
+            // dents et se lit comme un defaut, ce qu'elle est.
+            //
+            // La pyramide a gradins est deja un escalier, seulement trop raide
+            // pour etre gravi. Notre volee n'a donc pas a la doubler : elle n'a
+            // qu'a ajouter la marche intermediaire la ou le gradin se releve.
+            // Sur le plat, on marche sur la terrasse elle-meme.
+            boolean climbs = step > last;
             for (int w = -1; w <= 1; w++) {
-                // on monte vers le nord, du pied de la face sud vers le faite
-                set(level, sx + w, step, z, riser(0, -1));
+                if (climbs) {
+                    // on monte vers le nord, du pied de la face sud vers le faite
+                    set(level, sx + w, step, z, riser(0, -1));
+                }
                 // QUATRE blocs de degagement, et non trois.
                 //
                 // Une terrasse qui monte de deux ou trois d'un coup laissait
@@ -1577,7 +1594,7 @@ public final class Sanctuary {
                 }
                 // le remblai sous la marche, pour qu'elle ne flotte pas --
                 // mais jamais sous le toit, sinon on comble le couloir par-dessus
-                for (int fill = 1; fill <= 2; fill++) {
+                for (int fill = 1; climbs && fill <= 2; fill++) {
                     if (step - fill > roof
                             && level.getBlockState(new BlockPos(sx + w, step - fill, z)).isAir()) {
                         set(level, sx + w, step - fill, z, shrine());
