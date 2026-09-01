@@ -598,15 +598,38 @@ public final class Sanctuary {
                         && cz + dz >= keep[1] - 1 && cz + dz <= keep[3] + 1) {
                     continue;
                 }
-                // on ne degage que la BANDE de l'enceinte et la cour au sol :
-                // vider tout le volume jusqu'au ciel couterait des centaines de
-                // milliers de blocs pour rien, la pyramide se posant apres
-                boolean band = Math.abs(dx) > HALF - THICK - 2 || Math.abs(dz) > HALF - THICK - 2;
-                int top = band ? TOWER_TOP + 3 : 2;
-                for (int dy = 1; dy <= top; dy++) {
+                // ON DEGAGE JUSQU'AU CIEL, mais l'on ne PAIE que le plein.
+                //
+                // On ne vidait que deux blocs au-dessus du sol dans la cour, ce
+                // qui suffit a l'herbe et a rien d'autre : les sapins d'une
+                // taiga, les congeres et le relief restaient debout au milieu
+                // de l'enceinte. Le sanctuaire ne doit contenir que ce qu'il a
+                // bati lui-meme.
+                //
+                // Le cout redoute -- des centaines de milliers de poses -- ne
+                // vient pas de la HAUTEUR balayee mais des poses inutiles. On
+                // lit donc chaque case et l'on n'ecrit que si elle contient
+                // quelque chose, en s'arretant apres huit vides d'affilee :
+                // au-dessus, il n'y a plus que le ciel. Une colonne ordinaire
+                // coute alors huit lectures et zero pose.
+                int voids = 0;
+                for (int dy = 1; dy <= TOWER_TOP + 6 && voids < 8; dy++) {
+                    BlockPos pos = new BlockPos(cx + dx, y + dy, cz + dz);
+                    if (level.getBlockState(pos).isAir()) {
+                        voids++;
+                        continue;
+                    }
+                    voids = 0;
                     set(level, cx + dx, y + dy, cz + dz, Blocks.AIR.defaultBlockState());
                 }
-                for (int dy = 0; dy >= -3; dy--) {
+                // ET L'ON COMBLE SOUS LE SOL, plus profond qu'avant.
+                //
+                // Trois blocs suffisaient sur un terrain plat. Sur un flanc de
+                // colline, le sol de la cour se retrouvait suspendu au-dessus
+                // du vide des qu'on descendait un peu -- on rasait la bosse
+                // sans remplir le creux d'en face. Douze rattrapent une pente
+                // ordinaire, et l'on ne comble que le vide et l'eau.
+                for (int dy = 0; dy >= -12; dy--) {
                     BlockPos pos = new BlockPos(cx + dx, y + dy, cz + dz);
                     if (level.getBlockState(pos).isAir() || !level.getFluidState(pos).isEmpty()) {
                         level.setBlock(pos, base(), 2);
