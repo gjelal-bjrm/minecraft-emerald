@@ -40,6 +40,28 @@ public class Siege {
     /** Rayon dans lequel les monstres sont tenus, et au-dela duquel ils ne vont pas. */
     public static final int LEASH = 26;
 
+    /**
+     * La laisse REELLE de ce siege-ci.
+     *
+     * Vingt-six blocs convenaient a la defense d'un village, ou tout se joue
+     * sur la place. Un siege d'ancre se tient dans un sanctuaire large de deux
+     * cents : les monstres restaient agglutines autour de la pyramide, et
+     * surtout le joueur qui reculait dans sa propre cour etait compte comme
+     * absent -- la mission echouait toute seule pour avoir combattu trop loin.
+     */
+    private final int leash;
+
+    /**
+     * Jusqu'ou un defenseur compte comme present.
+     *
+     * Bien plus large que la laisse des monstres : reculer, contourner, monter
+     * sur un rempart font partie du combat. On ne declare la place abandonnee
+     * que si personne n'est plus dans l'enceinte.
+     */
+    private int watch() {
+        return this.leash * 2;
+    }
+
     private static final int SPAWN_MIN = 12;
     private static final int SPAWN_MAX = 20;
     private static final int WAVE_GAP = 5 * 20;
@@ -73,6 +95,9 @@ public class Siege {
         this.center = center;
         this.tier = tier;
         this.failure = failure;
+        // Le village se defend sur sa place, l'ancre au milieu d'un sanctuaire
+        // de deux cents blocs : la meme laisse ne peut pas servir aux deux.
+        this.leash = failure == Failure.VILLAGERS ? LEASH : 90;
         this.waveSizes = waveSizes;
         this.bar = new ServerBossEvent(title, color, BossEvent.BossBarOverlay.NOTCHED_10);
         this.bar.setProgress(1.0F);
@@ -158,7 +183,7 @@ public class Siege {
     private boolean defendersGone() {
         for (ServerPlayer player : this.level.players()) {
             if (player.isAlive() && !player.isSpectator()
-                    && player.blockPosition().closerThan(this.center, LEASH * 1.5)) {
+                    && player.blockPosition().closerThan(this.center, watch())) {
                 return false;
             }
         }
@@ -194,7 +219,7 @@ public class Siege {
         int n = 0;
         for (ServerPlayer player : this.level.players()) {
             if (player.isAlive() && !player.isSpectator()
-                    && player.blockPosition().closerThan(this.center, LEASH * 1.5)) {
+                    && player.blockPosition().closerThan(this.center, watch())) {
                 n++;
             }
         }
@@ -214,7 +239,7 @@ public class Siege {
             if (!(entity instanceof PathfinderMob mob)) {
                 continue;
             }
-            mob.restrictTo(this.center, LEASH);
+            mob.restrictTo(this.center, this.leash);
             mob.setPersistenceRequired();
             converge(mob);
             reinforce(mob);
@@ -280,7 +305,16 @@ public class Siege {
 
     private BlockPos spawnPos() {
         double angle = this.level.random.nextDouble() * Math.PI * 2;
-        double radius = SPAWN_MIN + this.level.random.nextDouble() * (SPAWN_MAX - SPAWN_MIN);
+        // L'ANNEAU SUIT LA LAISSE.
+        //
+        // Douze a vingt blocs conviennent a une place de village. Autour d'une
+        // ancre perchee au faite d'une pyramide, cela faisait apparaitre toute
+        // la vague sur ses pentes : on ne defendait pas un sanctuaire, on
+        // tenait un sommet. L'anneau s'ouvre donc a la mesure de l'enceinte, et
+        // les monstres arrivent de la cour comme il se doit.
+        int near = Math.max(SPAWN_MIN, this.leash / 3);
+        int far = Math.max(SPAWN_MAX, this.leash * 3 / 4);
+        double radius = near + this.level.random.nextDouble() * (far - near);
         int x = this.center.getX() + (int) Math.round(Math.cos(angle) * radius);
         int z = this.center.getZ() + (int) Math.round(Math.sin(angle) * radius);
         // hauteur prise sur le chunk lui-meme : getHeight rend -64 tant qu'il

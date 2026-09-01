@@ -6,9 +6,7 @@ import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -67,11 +65,39 @@ public final class PurgeWave {
     private PurgeWave() {
     }
 
+    /**
+     * Ce que l'onde emporte.
+     *
+     * On filtrait sur l'interface Enemy, ce qui parait juste et ne l'est pas :
+     * beaucoup de creatures hostiles des mods ne l'implementent pas. Le Priest
+     * d'Iron's Spellbooks, par exemple, descend de PathfinderMob sans plus --
+     * il attaque, mais aucune interface ne le dit. L'onde le laissait debout.
+     *
+     * On prend donc le probleme a l'envers : tout ce qui n'est PAS des notres
+     * y passe. Villageois, marchands, golems, animaux et betes apprivoisees
+     * sont epargnes -- ce sont eux qu'on essaie -- et le reste tombe, quelle
+     * que soit la hierarchie de classes que son mod a choisie.
+     */
+    private static boolean hostile(LivingEntity e) {
+        if (!(e instanceof net.minecraft.world.entity.Mob mob) || !mob.isAlive()) {
+            return false;
+        }
+        if (mob instanceof net.minecraft.world.entity.npc.AbstractVillager
+                || mob instanceof net.minecraft.world.entity.animal.Animal
+                || mob instanceof net.minecraft.world.entity.animal.IronGolem
+                || mob instanceof net.minecraft.world.entity.animal.SnowGolem
+                || mob instanceof net.minecraft.world.entity.TamableAnimal tame
+                        && tame.isTame()) {
+            return false;
+        }
+        return true;
+    }
+
     /** Lance une onde. @return combien d'hostiles se trouvent dans sa portee */
     public static int start(ServerLevel level, Vec3 centre, double reach) {
         List<LivingEntity> doomed = level.getEntitiesOfClass(LivingEntity.class,
                 new AABB(centre, centre).inflate(reach),
-                e -> e instanceof Enemy && e.isAlive());
+                PurgeWave::hostile);
         waves.add(new Wave(level, centre, reach, 0.0,
                 Math.max(MIN_SPEED, reach / SWEEP_TICKS), doomed));
         level.playSound(null, centre.x, centre.y, centre.z,
