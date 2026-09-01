@@ -72,8 +72,14 @@ def main():
     src = io.open(TARGET, encoding="utf-8").read()
     body = "\n".join(
         '            {"%d", "%d", "%d", "%s"},' % c for c in cells)
-    out = re.sub(r"(private static final String\[\]\[\] CELLS = \{\n).*?(\n    \};)",
-                 lambda m: m.group(1) + body + m.group(2), src, flags=re.S)
+    # La borne haute NE contient PAS le saut de ligne qui la precede : sinon
+    # le groupe d'ouverture l'a deja consomme, plus rien ne correspond, et
+    # re.sub rend le fichier inchange -- ce qu'il a fait deux fois en silence.
+    out, count = re.subn(r"(CELLS = \{)[\s\S]*?(\n    \};)",
+                         lambda m: m.group(1) + "\n" + body + m.group(2),
+                         src)
+    if count != 1:
+        sys.exit("Tableau CELLS introuvable dans %s" % TARGET)
     io.open(TARGET, "w", encoding="utf-8", newline="\n").write(out)
     print("%d cases rejouees dans %s" % (len(cells), os.path.relpath(TARGET, ROOT)))
     return 0
