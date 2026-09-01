@@ -524,16 +524,32 @@ public final class Sanctuary {
         // le reste en dalles pour entrer de plain-pied. Une demi-marche se
         // franchit sans sauter, ce qui est toute la difference entre un parvis
         // qu'on atteint et un parvis qu'on escalade.
+        var slab = ModBlocks.ARCENCIUM_BRICK_SLAB.get().defaultBlockState();
         for (int dz = 6; dz >= 2; dz--) {
             int step = Math.max(0, dz - 2);
-            for (int dx = -1; dx <= 1; dx++) {
-                set(level, cx + dx, y - step, cz + dz,
-                        ModBlocks.ARCENCIUM_BRICK_SLAB.get().defaultBlockState());
+            for (int dx = -3; dx <= 3; dx++) {
+                if (Math.abs(dx) == 2) {
+                    // les deux JOURS : la ou le gradin restait plein, on ne
+                    // voyait pas que le parvis s'ouvrait. Deux vides de part et
+                    // d'autre du seuil, et l'entree se lit de loin.
+                    set(level, cx + dx, y - step, cz + dz, Blocks.AIR.defaultBlockState());
+                    continue;
+                }
+                set(level, cx + dx, y - step, cz + dz, slab);
                 for (int dy = 1; dy <= 4; dy++) {
                     set(level, cx + dx, y - step + dy, cz + dz,
                             Blocks.AIR.defaultBlockState());
                 }
             }
+        }
+
+        // LES QUATRE POINTS CARDINAUX DU RAYON TROIS, en dalles.
+        //
+        // Le parvis s'arretait net a son gradin ; ces quatre demi-blocs
+        // ferment le tour et donnent le meme franchissement dans les quatre
+        // directions, non pas seulement du cote de la volee.
+        for (int[] card : new int[][]{{3, 0}, {-3, 0}, {0, -3}, {0, 3}}) {
+            set(level, cx + card[0], y, cz + card[1], slab);
         }
 
         // le socle, un cran plus haut que le parvis
@@ -1634,9 +1650,46 @@ public final class Sanctuary {
             // paraissait se retrecir dans le vide. Le releve montre le joueur
             // pavant ces deux colonnes sur les six premieres cases -- juste ce
             // qu'il faut pour que l'un s'emboite dans l'autre.
-            int half = (start - z) < 6 ? 2 : 1;
-            for (int w = -half; w <= half; w++) {
-                set(level, sx + w, step, z, climbs ? riser(0, -1) : trim());
+            int reach = start - z;
+            int half = reach < 6 ? 2 : 1;
+
+            // LA BORDURE DU PIED EST PLEINE, ET NE SE DEGAGE PAS.
+            //
+            // On elargissait bien a cinq au raccord, mais on degageait les cinq
+            // colonnes : les deux du bord se retrouvaient evidees en tranchee,
+            // et le joueur les a remplies a la main sur trois assises. Une
+            // bordure n'est pas un passage -- elle borde. Seule la voie
+            // centrale, large de trois, s'ouvre au ciel.
+            //
+            // Au tout premier pas, la bordure s'evase encore d'un cran : c'est
+            // le raccord avec le dallage de la cour, et une montee qui jaillit
+            // du sol sans evasement se lit comme un mur perce.
+            if (reach < 6) {
+                for (int side = -1; side <= 1; side += 2) {
+                    for (int up = 0; up <= 2; up++) {
+                        set(level, sx + side * 2, step + up, z, trim());
+                    }
+                    if (reach < 3) {
+                        for (int h = y + 3; h <= step + 2; h++) {
+                            BlockPos flare = new BlockPos(sx + side * 3, h, z);
+                            if (!level.getBlockState(flare).isCollisionShapeFullBlock(level, flare)) {
+                                set(level, sx + side * 3, h, z, trim());
+                            }
+                        }
+                    }
+                }
+            }
+
+            // LA DERNIERE MARCHE EST UNE DALLE.
+            //
+            // Elle arrive contre le parvis de l'ancre, dont les gradins font un
+            // bloc : une marche pleine obligeait a sauter le dernier pas. Une
+            // demi-hauteur se franchit sans y penser.
+            boolean landing = z <= apexZ + 3;
+            for (int w = -1; w <= 1; w++) {
+                set(level, sx + w, step, z, landing
+                        ? ModBlocks.ARCENCIUM_BRICK_SLAB.get().defaultBlockState()
+                        : climbs ? riser(0, -1) : trim());
                 for (int clear = 1; clear <= 4; clear++) {
                     set(level, sx + w, step + clear, z, Blocks.AIR.defaultBlockState());
                 }
@@ -1722,6 +1775,14 @@ public final class Sanctuary {
         // retrouvaient donc au pied du monument, en plein air -- « les tomb
         // seal ne sont pas du tout a l'interieur ». Trente blocs mettent
         // franchement sous la masse.
+        // Le parvis avance d'UNE CASE au sud du pied.
+        //
+        // Il s'arretait pile sur le bord de l'emprise, si bien qu'on abordait
+        // sa maconnerie par une arete vive au lieu d'un seuil. Le joueur a pose
+        // les trois blocs manquants ; on part donc de fromZ+1.
+        for (int w = -1; w <= 1; w++) {
+            set(level, cx + w, y + 4, fromZ + 1, shrineTrim());
+        }
         for (int depth = 0; depth < 30; depth++) {
             int z = fromZ - depth;
             for (int w = -1; w <= 1; w++) {
