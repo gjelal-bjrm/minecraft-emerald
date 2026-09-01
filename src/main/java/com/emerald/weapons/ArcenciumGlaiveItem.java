@@ -280,6 +280,7 @@ public class ArcenciumGlaiveItem extends Item {
                 healed = Math.min(CULL_HEAL_CAP, healed + CULL_HEAL);
                 burst(level, caught.position().add(0, caught.getBbHeight() * 0.5, 0), 14);
             }
+            ring(level, player, CULL_RADIUS);
             if (healed > 0.0F) {
                 player.heal(healed);
                 level.sendParticles(ParticleTypes.HEART,
@@ -296,7 +297,9 @@ public class ArcenciumGlaiveItem extends Item {
             target.hurt(level.damageSources().playerAttack(player), rage * RAGE_PER_STEP);
         }
         setRage(stack, level, rage + 1);
-        burst(level, target.position().add(0, target.getBbHeight() * 0.5, 0), 8 + rage * 3);
+        Vec3 hit = target.position().add(0, target.getBbHeight() * 0.5, 0);
+        burst(level, hit, 8 + rage * 3);
+        crescent(level, player, hit, rage);
         level.playSound(null, target.getX(), target.getY(), target.getZ(),
                 SoundEvents.PLAYER_ATTACK_STRONG, SoundSource.PLAYERS,
                 0.4F, 0.7F + rage * 0.08F);
@@ -308,5 +311,50 @@ public class ArcenciumGlaiveItem extends Item {
     private static void burst(ServerLevel level, Vec3 at, int count) {
         level.sendParticles(ModParticles.CRYSTALLINE_FISSURE.get(),
                 at.x, at.y, at.z, count, 0.35, 0.35, 0.35, 0.04);
+    }
+
+    /**
+     * LE CROISSANT : la trace du coup, dessinee en l'air.
+     *
+     * Une gerbe sur la cible dit qu'on a touche, pas qu'on a FRAPPE. Le glaive
+     * est une arme de fauchage : son geste doit se voir, et se voir d'autant
+     * plus loin que la Rage est haute. On trace donc l'arc du coup entre le
+     * porteur et sa cible, dans le plan horizontal.
+     *
+     * Les couleurs sont celles des veines de la lame -- les deux signaux
+     * doivent se reconnaitre comme un seul, sans quoi l'arme a deux identites.
+     */
+    private static void crescent(ServerLevel level, Player player, Vec3 target, int rage) {
+        Vec3 from = player.position().add(0, player.getBbHeight() * 0.55, 0);
+        Vec3 axis = target.subtract(from);
+        double reach = Math.max(1.2, axis.horizontalDistance());
+        double base = Math.atan2(axis.z, axis.x);
+        int arc = 9 + rage * 3;
+        for (int i = 0; i <= arc; i++) {
+            double sweep = base + (i / (double) arc - 0.5) * (1.1 + rage * 0.12);
+            double radius = reach * (0.55 + 0.45 * Math.cos((i / (double) arc - 0.5) * 3.0));
+            Vec3 at = from.add(Math.cos(sweep) * radius,
+                    (i / (double) arc - 0.5) * 0.5, Math.sin(sweep) * radius);
+            level.sendParticles(ModParticles.CRYSTALLINE_FISSURE.get(),
+                    at.x, at.y, at.z, 1, 0.0, 0.0, 0.0, 0.0);
+        }
+    }
+
+    /**
+     * L'ANNEAU de la Curee : une onde au sol, qui dit la portee du fauchage.
+     *
+     * Sans elle, on ne sait pas ce que la Curee a ratisse -- on voit des degats
+     * sans en voir la cause, et un pouvoir dont on ne mesure pas la portee ne
+     * s'apprend jamais.
+     */
+    private static void ring(ServerLevel level, Player player, double radius) {
+        Vec3 mid = player.position();
+        int steps = (int) (radius * 12);
+        for (int i = 0; i < steps; i++) {
+            double a = i * 2.0 * Math.PI / steps;
+            level.sendParticles(ModParticles.CRYSTALLINE_FISSURE.get(),
+                    mid.x + Math.cos(a) * radius, mid.y + 0.15,
+                    mid.z + Math.sin(a) * radius, 1, 0.0, 0.03, 0.0, 0.01);
+        }
     }
 }
