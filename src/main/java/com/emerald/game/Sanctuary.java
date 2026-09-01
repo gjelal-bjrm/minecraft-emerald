@@ -516,6 +516,26 @@ public final class Sanctuary {
                 set(level, ox, foot + 7, oz, lantern());
             }
         }
+        // L'ENTREE SUD, en dalles.
+        //
+        // Les gradins du parvis font un bloc de haut chacun : on les gravit,
+        // mais la volee arrive par le sud et bute sur eux de plein fouet -- le
+        // releve du joueur montre qu'il a ouvert deux cases a l'air et taille
+        // le reste en dalles pour entrer de plain-pied. Une demi-marche se
+        // franchit sans sauter, ce qui est toute la difference entre un parvis
+        // qu'on atteint et un parvis qu'on escalade.
+        for (int dz = 6; dz >= 2; dz--) {
+            int step = Math.max(0, dz - 2);
+            for (int dx = -1; dx <= 1; dx++) {
+                set(level, cx + dx, y - step, cz + dz,
+                        ModBlocks.ARCENCIUM_BRICK_SLAB.get().defaultBlockState());
+                for (int dy = 1; dy <= 4; dy++) {
+                    set(level, cx + dx, y - step + dy, cz + dz,
+                            Blocks.AIR.defaultBlockState());
+                }
+            }
+        }
+
         // le socle, un cran plus haut que le parvis
         for (int dx = -1; dx <= 1; dx++) {
             for (int dz = -1; dz <= 1; dz++) {
@@ -1493,6 +1513,13 @@ public final class Sanctuary {
                     // l'arcencium -- le parvis s'elargit d'un bloc de chaque
                     // cote et court d'un seul tenant jusqu'aux marches d'en
                     // face. Les marches, elles, commencent ou l'on descend.
+                    // La derniere case, cote pyramide, est un BLOC PLEIN : la
+                    // marche n'a plus rien a descendre une fois le parvis fini,
+                    // et le releve la montre posee pleine.
+                    if (i == 0 && z == stop + 1) {
+                        set(level, x, h, z, trim());
+                        continue;
+                    }
                     // La premiere assise est une MARCHE, non un liseré
                     // d'arcencium.
                     //
@@ -1599,19 +1626,51 @@ public final class Sanctuary {
             // Le remblai passe de la brique d'arcencium a la gangue polie pour
             // la meme raison : c'est un seul ouvrage, il n'a qu'une matiere.
             boolean climbs = step > last;
-            for (int w = -1; w <= 1; w++) {
+
+            // CINQ DE LARGE AU DEPART, TROIS ENSUITE.
+            //
+            // Le parvis fait cinq de large, la volee trois : au raccord, deux
+            // colonnes restaient en gres brut de part et d'autre et la montee
+            // paraissait se retrecir dans le vide. Le releve montre le joueur
+            // pavant ces deux colonnes sur les six premieres cases -- juste ce
+            // qu'il faut pour que l'un s'emboite dans l'autre.
+            int half = (start - z) < 6 ? 2 : 1;
+            for (int w = -half; w <= half; w++) {
                 set(level, sx + w, step, z, climbs ? riser(0, -1) : trim());
                 for (int clear = 1; clear <= 4; clear++) {
                     set(level, sx + w, step + clear, z, Blocks.AIR.defaultBlockState());
                 }
-                for (int fill = 1; fill <= 2; fill++) {
-                    if (step - fill > roof
-                            && level.getBlockState(new BlockPos(sx + w, step - fill, z)).isAir()) {
+                // ON COMBLE SOUS LA MARCHE TOUT CE QUI N'EST PAS PLEIN.
+                //
+                // Le remblai ne remplacait que l'AIR. Or ce qui se trouve sous
+                // la volee, ce sont les propres marches de la pyramide : des
+                // demi-blocs, qui ne sont pas de l'air et passaient donc au
+                // travers du test. La volee restait dechaussee sur toute sa
+                // longueur, creuse par en dessous -- trente-quatre blocs
+                // reposes a la main le disent, tous a x-1 et x+1, jamais au
+                // centre, la ou nos propres blocs bouchaient deja.
+                for (int fill = 1; fill <= 3; fill++) {
+                    BlockPos under = new BlockPos(sx + w, step - fill, z);
+                    if (step - fill <= roof) {
+                        break;
+                    }
+                    if (!level.getBlockState(under).isCollisionShapeFullBlock(level, under)) {
                         set(level, sx + w, step - fill, z, trim());
                     }
                 }
             }
-            // PAS DE LANTERNES. Le joueur les a toutes retirees, les douze : sur
+            // DEUX LANTERNES AU PIED, et aucune plus haut.
+            //
+            // Le releve est explicite : douze lanternes retirees le long de la
+            // montee, deux ajoutees a son depart. Sur un flanc en plein jour
+            // elles n'eclairent rien et bordent la volee d'un pointille qui
+            // hache la ligne ; a l'entree, en revanche, elles disent ou l'on
+            // commence a monter, ce qui est le seul endroit ou l'on hesite.
+            if (z == start - 1) {
+                set(level, sx - 2, step + 3, z, lantern());
+                set(level, sx + 2, step + 3, z, lantern());
+            }
+            // Plus haut, rien. Le joueur les a toutes retirees : sur
             // un flanc en plein jour elles n'eclairent rien, et posees de part
             // et d'autre d'une volee elles la bordent d'un pointille qui hache
             // la ligne au lieu de la souligner.
