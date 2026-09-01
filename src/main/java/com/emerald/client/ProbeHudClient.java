@@ -25,8 +25,11 @@ import net.neoforged.neoforge.client.gui.VanillaGuiLayers;
  * ensuite, parce qu'elle est stable d'une partie a l'autre ; puis le bloc et
  * enfin sa position dans le monde, qui ne servent qu'a s'y retrouver sur place.
  *
- * Le panneau se place a DROITE : la gauche appartient au panneau de partie, et
- * deux cadres qui se recouvrent ne se lisent ni l'un ni l'autre.
+ * Le panneau se place au bord droit, A MI-HAUTEUR. C'est le seul coin libre :
+ * le haut a gauche porte le panneau de partie, le bas au centre la barre
+ * d'action et la jauge de Rage, et le haut a droite la minimap des mods de
+ * carte -- que presque tout le monde installe, et sous laquelle le panneau
+ * disparaissait purement et simplement.
  */
 @EventBusSubscriber(modid = EmeraldWeaponsMod.MODID, value = Dist.CLIENT,
         bus = EventBusSubscriber.Bus.MOD)
@@ -80,7 +83,7 @@ public final class ProbeHudClient {
         int w = width + PAD * 2;
         int h = rows * LINE + PAD * 2 - 2;
         int x = graphics.guiWidth() - MARGIN - w;
-        int y = MARGIN;
+        int y = (graphics.guiHeight() - h) / 2;
 
         graphics.fill(x, y, x + w, y + h, 0xC0060608);
         // un filet clair sur le bord gauche : le cadre doit se detacher d'un
