@@ -224,6 +224,19 @@ public class GameCommands {
             return 1;
         }));
 
+        // Vider le terrain d'essai.
+        //
+        // Rien a voir avec le jeu : c'est pour la mise au point. Essayer un
+        // sanctuaire avec quarante morts-vivants aux trousses fait perdre plus
+        // de temps que de le batir.
+        root.then(Commands.literal("purge")
+                .executes(ctx -> purge(ctx.getSource(), 256))
+                .then(Commands.argument("rayon",
+                                com.mojang.brigadier.arguments.IntegerArgumentType.integer(8, 512))
+                        .executes(ctx -> purge(ctx.getSource(),
+                                com.mojang.brigadier.arguments.IntegerArgumentType
+                                        .getInteger(ctx, "rayon")))));
+
         root.then(Commands.literal("goto").executes(ctx -> {
             ServerLevel level = ctx.getSource().getServer().overworld();
             var village = GameState.get(level).village();
@@ -318,4 +331,12 @@ public class GameCommands {
     }
 
 
+
+    private static int purge(CommandSourceStack source, int reach) {
+        ServerLevel level = source.getServer().overworld();
+        int doomed = com.emerald.game.PurgeWave.start(level, source.getPosition(), reach);
+        source.sendSuccess(() -> Component.literal(String.format(
+                "Onde de purge : %d hostile(s) dans %d blocs.", doomed, reach)), false);
+        return 1;
+    }
 }
