@@ -270,7 +270,7 @@ public final class Sanctuary {
         // L'instantane se prend UNE FOIS TOUT POSE : c'est lui qui permettra
         // de relever, plus tard, ce que le joueur aura change -- y compris ce
         // qu'il aura ajoute la ou nous n'avions rien mis.
-        SanctuaryLedger.capture(level, new BlockPos(cx, y, cz), HALF + 4, 12, 56);
+        SanctuaryLedger.capture(level, new BlockPos(cx, y, cz), HALF + 12, 24, 72);
 
         // Un compte rendu, plutot qu'une devinette de plus.
         //
