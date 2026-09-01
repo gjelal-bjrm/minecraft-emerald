@@ -237,7 +237,19 @@ public class GameCommands {
                                 com.mojang.brigadier.arguments.IntegerArgumentType
                                         .getInteger(ctx, "rayon")))));
 
-        root.then(Commands.literal("goto").executes(ctx -> {
+        // « goto 1 », « goto 2 », « goto 3 » : chaque ancre a son numero.
+        //
+        // C'est celui de l'interface et des messages de partie, donc rien de
+        // nouveau a retenir. Sans lui il fallait recopier des coordonnees a la
+        // main pour se rendre a quatre cent cinquante blocs, ce qu'on fait
+        // vingt fois par seance de mise au point.
+        root.then(Commands.literal("goto")
+                .then(Commands.argument("ancre",
+                                com.mojang.brigadier.arguments.IntegerArgumentType.integer(1, 3))
+                        .executes(ctx -> gotoAnchor(ctx.getSource(),
+                                com.mojang.brigadier.arguments.IntegerArgumentType
+                                        .getInteger(ctx, "ancre"))))
+                .executes(ctx -> {
             ServerLevel level = ctx.getSource().getServer().overworld();
             var village = GameState.get(level).village();
             if (ctx.getSource().getEntity() instanceof net.minecraft.server.level.ServerPlayer player) {
@@ -337,6 +349,30 @@ public class GameCommands {
         int doomed = com.emerald.game.PurgeWave.start(level, source.getPosition(), reach);
         source.sendSuccess(() -> Component.literal(String.format(
                 "Onde de purge : %d hostile(s) dans %d blocs.", doomed, reach)), false);
+        return 1;
+    }
+
+    /**
+     * Se rendre a une ancre par son numero.
+     *
+     * On atterrit A COTE et non dessus : l'ancre coiffe le faite de la
+     * pyramide, et s'y materialiser reviendrait a se poser dans le bloc.
+     */
+    private static int gotoAnchor(CommandSourceStack source, int index) {
+        ServerLevel level = source.getServer().overworld();
+        var anchors = GameState.get(level).anchors();
+        if (index > anchors.size()) {
+            source.sendFailure(Component.literal(
+                    "Cette partie n'a que " + anchors.size() + " ancre(s)."));
+            return 0;
+        }
+        BlockPos anchor = anchors.get(index - 1);
+        if (source.getEntity() instanceof net.minecraft.server.level.ServerPlayer player) {
+            player.teleportTo(anchor.getX() + 2.5, anchor.getY() + 1, anchor.getZ() + 0.5);
+        }
+        source.sendSuccess(() -> Component.translatable(
+                "game.emeraldweapons.anchor.at", index,
+                anchor.getX(), anchor.getY(), anchor.getZ()), false);
         return 1;
     }
 }
