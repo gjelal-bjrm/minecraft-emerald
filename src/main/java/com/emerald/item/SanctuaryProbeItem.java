@@ -90,7 +90,17 @@ public class SanctuaryProbeItem extends Item {
                     + "corrige a la main, puis reviens.", ChatFormatting.RED);
             return InteractionResultHolder.success(stack);
         }
-        SanctuaryLedger.diff(server).forEach(line -> say(player, line, ChatFormatting.WHITE));
+        // Le releve part dans un FICHIER, pas dans le tchat.
+        //
+        // Un chemin de cent blocs ne tient pas en huit lignes, et une capture
+        // d'ecran ne se lit pas : il faudrait la retranscrire, donc la
+        // deformer. Le fichier est sur le disque, entier et exact.
+        List<String> lines = SanctuaryLedger.diff(server);
+        java.nio.file.Path file = SanctuaryLedger.writeReport(server, lines);
+        say(player, lines.get(0), ChatFormatting.AQUA);
+        say(player, file != null ? "Releve ecrit : " + file
+                : "Releve NON ecrit -- voir le journal.",
+                file != null ? ChatFormatting.GREEN : ChatFormatting.RED);
         return InteractionResultHolder.success(stack);
     }
 

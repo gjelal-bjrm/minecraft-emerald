@@ -61,6 +61,26 @@ public final class SanctuaryLedger {
     private static final Map<BlockPos, Mark> ledger = new HashMap<>();
     private static BlockPos origin = BlockPos.ZERO;
 
+    /**
+     * L'instantane du site, pris une fois la construction finie.
+     *
+     * Le registre seul ne suffisait pas : il ne connait que les cases OU L'ON
+     * A POSE quelque chose, si bien qu'un bloc ajoute a la main dans le vide,
+     * ou un chemin trace en terrain vierge, restait invisible au releve. Or
+     * ajouter est justement la facon la plus claire de montrer ce qu'on veut.
+     *
+     * On garde donc tout le volume, en palette et tableau de courts plutot
+     * qu'en carte de positions : deux cent mille fois seize octets tiendraient
+     * mal en memoire, la ou trois millions de courts font six megaoctets.
+     */
+    private static short[] snapshot;
+    private static final List<BlockState> palette = new ArrayList<>();
+    private static final Map<BlockState, Short> paletteIndex = new HashMap<>();
+    private static BlockPos low = BlockPos.ZERO;
+    private static int spanX;
+    private static int spanY;
+    private static int spanZ;
+
     private static final Map<UUID, List<BlockPos>> picks = new HashMap<>();
     /** La derniere ligne envoyee a chacun, pour n'emettre que sur changement. */
     private static final Map<UUID, com.emerald.network.ProbeInfoPayload> lastSent =
@@ -68,8 +88,6 @@ public final class SanctuaryLedger {
 
     private static final int LOOK_RANGE = 24;
     private static final int EVERY = 4;
-    /** Au-dela, une liste de differences cesse d'etre lisible. */
-    private static final int DIFF_MAX = 60;
 
     private SanctuaryLedger() {
     }
@@ -86,6 +104,48 @@ public final class SanctuaryLedger {
         ledger.clear();
         origin = centre.immutable();
         part = "?";
+    }
+
+    /**
+     * Fige l'etat du site apres construction.
+     *
+     * On prend TOUT le volume, y compris ce que le sanctuaire n'a pas touche :
+     * c'est la seule facon de voir ensuite un ajout, et un ajout vaut mieux
+     * qu'une description.
+     */
+    public static void capture(ServerLevel level, BlockPos centre, int half,
+                               int down, int up) {
+        low = centre.offset(-half, -down, -half);
+        spanX = half * 2 + 1;
+        spanY = down + up + 1;
+        spanZ = half * 2 + 1;
+        snapshot = new short[spanX * spanY * spanZ];
+        palette.clear();
+        paletteIndex.clear();
+        BlockPos.MutableBlockPos at = new BlockPos.MutableBlockPos();
+        for (int dy = 0; dy < spanY; dy++) {
+            for (int dz = 0; dz < spanZ; dz++) {
+                for (int dx = 0; dx < spanX; dx++) {
+                    at.set(low.getX() + dx, low.getY() + dy, low.getZ() + dz);
+                    snapshot[index(dx, dy, dz)] = intern(level.getBlockState(at));
+                }
+            }
+        }
+    }
+
+    private static int index(int dx, int dy, int dz) {
+        return (dy * spanZ + dz) * spanX + dx;
+    }
+
+    private static short intern(BlockState state) {
+        Short known = paletteIndex.get(state);
+        if (known != null) {
+            return known;
+        }
+        short id = (short) palette.size();
+        palette.add(state);
+        paletteIndex.put(state, id);
+        return id;
     }
 
     /** Note un bloc pose, avec son chantier et son etat. */
@@ -211,47 +271,80 @@ public final class SanctuaryLedger {
      * Ce que le joueur a change depuis la construction.
      *
      * C'est l'outil qui vaut tous les autres : plutot que de decrire un defaut
-     * et d'esperer que je comprenne, on corrige a la main et l'on releve. Le
-     * resultat porte l'intention -- « ici il y avait une marche, tu l'as
-     * enlevee » -- et se traduit directement en modification du code, sans
-     * passer par une interpretation.
+     * et d'esperer qu'il soit compris, on corrige a la main et l'on releve. Le
+     * resultat porte l'INTENTION -- « ici il y avait une marche, tu l'as
+     * enlevee », « la tu as pose un chemin qui n'existait pas » -- et se
+     * traduit en modification du code sans passer par une interpretation.
      *
-     * On regroupe par chantier : c'est le niveau auquel le code est ecrit, et
-     * voir trente lignes toutes marquees « summitStair » dit plus que trente
-     * coordonnees eparses.
+     * On balaie TOUT LE VOLUME et non les seules cases posees : un chemin
+     * ajoute en terrain vierge n'appartient a aucun chantier, et c'est
+     * pourtant la facon la plus claire de montrer ce qu'on veut.
+     *
+     * On regroupe par chantier, qui est le niveau auquel le code est ecrit :
+     * trente lignes toutes marquees « summitStair » disent plus que trente
+     * coordonnees eparses. Ce qui n'a pas ete pose par nous tombe sous
+     * « ajout », et c'est precisement la que se trouvent les propositions.
      */
     public static List<String> diff(ServerLevel level) {
-        Map<String, List<String>> byPart = new LinkedHashMap<>();
-        int total = 0;
-        for (Map.Entry<BlockPos, Mark> entry : ledger.entrySet()) {
-            Mark mark = entry.getValue();
-            BlockState now = level.getBlockState(entry.getKey());
-            if (now.getBlock() == mark.state().getBlock()) {
-                continue;
-            }
-            total++;
-            byPart.computeIfAbsent(mark.part(), k -> new ArrayList<>())
-                    .add(String.format("  cx%+d y%+d cz%+d : %s -> %s",
-                            mark.dx(), mark.dy(), mark.dz(),
-                            name(mark.state()), name(now)));
-        }
         List<String> out = new ArrayList<>();
+        if (snapshot == null) {
+            out.add("Aucun instantane : rebatis avec /arcencium sanctuary.");
+            return out;
+        }
+        Map<String, List<String>> byPart = new LinkedHashMap<>();
+        BlockPos.MutableBlockPos at = new BlockPos.MutableBlockPos();
+        int total = 0;
+        for (int dy = 0; dy < spanY; dy++) {
+            for (int dz = 0; dz < spanZ; dz++) {
+                for (int dx = 0; dx < spanX; dx++) {
+                    BlockState was = palette.get(snapshot[index(dx, dy, dz)]);
+                    at.set(low.getX() + dx, low.getY() + dy, low.getZ() + dz);
+                    BlockState now = level.getBlockState(at);
+                    if (now.getBlock() == was.getBlock()) {
+                        continue;
+                    }
+                    total++;
+                    Mark mark = ledger.get(at.immutable());
+                    String part = mark != null ? mark.part()
+                            : (was.isAir() ? "ajout" : "terrain");
+                    byPart.computeIfAbsent(part, k -> new ArrayList<>())
+                            .add(String.format("  cx%+d y%+d cz%+d : %s -> %s",
+                                    at.getX() - origin.getX(),
+                                    at.getY() - origin.getY(),
+                                    at.getZ() - origin.getZ(),
+                                    name(was), name(now)));
+                }
+            }
+        }
         if (total == 0) {
             out.add("Aucune correction relevee.");
             return out;
         }
         out.add(String.format("%d bloc(s) changes depuis la construction :", total));
-        int shown = 0;
         for (Map.Entry<String, List<String>> group : byPart.entrySet()) {
             out.add(String.format("[%s] %d", group.getKey(), group.getValue().size()));
-            for (String line : group.getValue()) {
-                if (shown++ >= DIFF_MAX) {
-                    out.add(String.format("  ... et %d de plus", total - shown + 1));
-                    return out;
-                }
-                out.add(line);
-            }
+            out.addAll(group.getValue());
         }
         return out;
+    }
+
+    /**
+     * Ecrit le releve dans un fichier plutot que dans le tchat.
+     *
+     * Un chemin de cent blocs ne tient pas en huit lignes de tchat, et une
+     * capture d'ecran ne se lit pas. Le fichier, lui, est sur le disque : il
+     * se lit en entier, sans transcription et sans perte.
+     */
+    public static java.nio.file.Path writeReport(ServerLevel level, List<String> lines) {
+        java.nio.file.Path dest = level.getServer().getServerDirectory()
+                .resolve("arcencium_diff.txt");
+        try {
+            java.nio.file.Files.write(dest, lines);
+        } catch (java.io.IOException failed) {
+            org.slf4j.LoggerFactory.getLogger(EmeraldWeaponsMod.MODID)
+                    .warn("Releve non ecrit : {}", failed.toString());
+            return null;
+        }
+        return dest;
     }
 }
