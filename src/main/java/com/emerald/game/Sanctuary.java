@@ -271,7 +271,6 @@ public final class Sanctuary {
         // de relever, plus tard, ce que le joueur aura change -- y compris ce
         // qu'il aura ajoute la ou nous n'avions rien mis.
         SanctuaryLedger.capture(level, new BlockPos(cx, y, cz), HALF + 4, 12, 56);
-        SanctuaryLedger.part("fini");
 
         // Un compte rendu, plutot qu'une devinette de plus.
         //
