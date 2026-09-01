@@ -100,7 +100,7 @@ public class SocketBenchMenu extends AbstractContainerMenu {
                     com.emerald.item.GearRarity before =
                             com.emerald.item.GearRarity.of(stack);
                     com.emerald.item.GearRarity after = com.emerald.item.GearRarity.roll(
-                            before, fee.getCount(), player.level().random);
+                            stack, fee.getCount(), player.level().random);
                     com.emerald.item.GearRarity.set(stack, after);
                     player.displayClientMessage(after == before
                             ? net.minecraft.network.chat.Component.translatable(

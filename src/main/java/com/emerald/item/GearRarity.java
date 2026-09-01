@@ -45,6 +45,10 @@ public enum GearRarity {
     public static final double ARMOR_STEP = 0.35;
 
     private static final String TAG = "ArcenciumRarity";
+    /** Tout ce qu'on a deja depense sur cette piece, tentatives ratees comprises. */
+    private static final String TAG_SPENT = "ArcenciumRaritySpent";
+    /** Combien d'eclats depenses valent un jet supplementaire. */
+    private static final int PITY_PER_DRAW = 3;
 
     private final String key;
     private final int colour;
@@ -128,11 +132,31 @@ public enum GearRarity {
      * amelioree sur un mauvais jet serait juste dans un jeu qui dure des mois,
      * pas dans une partie d'une heure.
      */
-    public static GearRarity roll(GearRarity current, int shards, RandomSource random) {
-        int best = current.rank();
-        for (int i = 0; i < Math.max(1, shards); i++) {
+    public static GearRarity roll(ItemStack stack, int shards, RandomSource random) {
+        CompoundTag tag = stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY)
+                .copyTag();
+        int spent = tag.getInt(TAG_SPENT);
+
+        // LE TRAVAIL DEJA FOURNI COMPTE.
+        //
+        // Sans cela, chaque tentative repartait de zero : avec une pile pleine,
+        // le Phenomenal sortait une fois sur trente-deux, c'est-a-dire jamais
+        // dans une partie d'une heure. Le joueur voyait un plafond la ou il n'y
+        // avait qu'une loi trop maigre.
+        //
+        // Tout ce qu'on a deja verse sur CETTE piece-ci lui reste donc acquis :
+        // trois eclats depenses valent un jet de plus, indefiniment. On
+        // n'achete toujours pas un rang -- on accumule des essais, et un joueur
+        // obstine finit par y arriver. C'est ce que « les chances augmentent de
+        // plus en plus » veut dire.
+        int draws = Math.max(1, shards) + spent / PITY_PER_DRAW;
+        int best = of(stack).rank();
+        for (int i = 0; i < draws; i++) {
             best = Math.max(best, draw(random));
         }
+
+        tag.putInt(TAG_SPENT, spent + Math.max(1, shards));
+        stack.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
         return values()[Math.min(values().length - 1, best)];
     }
 
@@ -144,13 +168,21 @@ public enum GearRarity {
      * un virgule six pour cent des le premier eclat, et vingt-deux pour cent du
      * Legendaire a huit. Une courbe se raisonne mal, une table se lit.
      *
-     * Ces nombres-ci se lisent donc directement : plus de la moitie des jets ne
-     * donnent rien, et le Phenomenal sort cinq fois sur dix mille. Comme on
-     * garde le MEILLEUR de plusieurs jets, la quantite fait tout le travail --
-     * a soixante-quatre eclats, le Legendaire sort environ une fois sur six et
-     * le Phenomenal une fois sur trente.
+     * LE BAREME EST CALE SUR LA DUREE D'UNE PARTIE, et verifie par simulation
+     * plutot que par raisonnement. En depensant par lots de trente-deux, avec
+     * la memoire des tentatives, le Phenomenal s'obtient :
+     *
+     *    40 eclats  (~20 min)  : 20 %
+     *   100 eclats  (~35 min)  : 52 %
+     *   200 eclats  (une partie entiere) : 85 %
+     *
+     * C'est la fourchette demandee : improbable en vingt minutes, a peu pres
+     * une chance sur deux en trente-cinq, presque acquis pour qui y consacre
+     * toute la partie. Un premier bareme donnait une chance sur trente-deux
+     * meme avec une pile pleine -- c'est-a-dire jamais -- et le joueur y voyait
+     * un plafond la ou il n'y avait qu'une loi trop maigre.
      */
-    private static final int[] WEIGHTS = {5500, 2000, 1200, 700, 350, 160, 60, 25, 5};
+    private static final int[] WEIGHTS = {5330, 1950, 1200, 700, 380, 200, 105, 90, 45};
 
     private static int draw(RandomSource random) {
         int roll = random.nextInt(10000);
