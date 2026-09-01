@@ -109,7 +109,14 @@ public class GameHudClient {
 
         anchorPips(graphics, x + PANEL_W / 2, y + PANEL_H - 5);
         anchorList(graphics, mc, x, y + PANEL_H + 2);
-        int rows = anchorPositions.isEmpty() ? 0 : Math.min(3, anchorPositions.size());
+        // le panneau meteo se cale sous les ancres RESTANTES : compter celles
+        // qui sont prises laisserait un trou qui grandit a chaque victoire
+        int rows = 0;
+        for (int i = 0; i < Math.min(3, anchorPositions.size()); i++) {
+            if ((heldMask & (1 << i)) == 0) {
+                rows++;
+            }
+        }
         weatherPanel(graphics, mc, x,
                 y + PANEL_H + 2 + (rows > 0 ? rows * 10 + 4 : 0));
     }
@@ -153,18 +160,35 @@ public class GameHudClient {
         if (anchorPositions.isEmpty() || mc.player == null) {
             return;
         }
-        int rows = Math.min(3, anchorPositions.size());
+        // UNE ANCRE PRISE DISPARAIT DE LA LISTE.
+        //
+        // Elle restait affichee avec un losange plein au lieu d'un losange
+        // vide. La nuance ne se lit pas d'un coup d'oeil : on se dirigeait vers
+        // une ancre deja tenue en croyant qu'il restait a la prendre. Une liste
+        // d'objectifs ne doit contenir que ce qui reste a faire -- ce qui est
+        // fait se voit sur le terrain.
+        java.util.List<Integer> todo = new java.util.ArrayList<>();
+        for (int i = 0; i < Math.min(3, anchorPositions.size()); i++) {
+            if ((heldMask & (1 << i)) == 0) {
+                todo.add(i);
+            }
+        }
+        if (todo.isEmpty()) {
+            return;
+        }
+        int rows = todo.size();
         graphics.fill(x, y, x + PANEL_W, y + 2 + rows * 10, 0x8C060608);
-        for (int i = 0; i < rows; i++) {
+        for (int r = 0; r < rows; r++) {
+            int i = todo.get(r);
             net.minecraft.core.BlockPos pos =
                     net.minecraft.core.BlockPos.of(anchorPositions.get(i));
-            boolean done = (heldMask & (1 << i)) != 0;
+            boolean done = false;
             double dx = pos.getX() - mc.player.getX();
             double dz = pos.getZ() - mc.player.getZ();
             int distance = (int) Math.sqrt(dx * dx + dz * dz);
             String label = String.format(Locale.ROOT, "%s %s  %dm",
                     done ? "◆" : "◇", cardinal(dx, dz), distance);
-            graphics.drawString(mc.font, label, x + 4, y + 2 + i * 10,
+            graphics.drawString(mc.font, label, x + 4, y + 2 + r * 10,
                     done ? 0xFF78E8AE : 0xFF9CE8FF, false);
         }
     }

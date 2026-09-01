@@ -615,15 +615,26 @@ public final class Sanctuary {
                 // quelque chose, en s'arretant apres huit vides d'affilee :
                 // au-dessus, il n'y a plus que le ciel. Une colonne ordinaire
                 // coute alors huit lectures et zero pose.
-                int voids = 0;
-                for (int dy = 1; dy <= TOWER_TOP + 6 && voids < 8; dy++) {
+                // LA HAUTEUR SE DEMANDE AU TERRAIN, elle ne se devine pas.
+                //
+                // Une limite fixe -- quarante-huit blocs -- suffisait a une
+                // butte et pas a une falaise : le sommet du relief restait
+                // debout au milieu de l'enceinte. Le jeu tient une carte des
+                // hauteurs pour chaque colonne ; on la lit, et l'on sait
+                // exactement jusqu'ou monter. Deux blocs de marge pour la neige
+                // et le feuillage, et un plafond de deux cents pour qu'une
+                // montagne ne fasse pas boucler jusqu'au ciel.
+                int surface = level.getHeight(
+                        net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING,
+                        cx + dx, cz + dz);
+                int top = Math.min(200, Math.max(TOWER_TOP + 6, surface - y + 2));
+                for (int dy = 1; dy <= top; dy++) {
                     BlockPos pos = new BlockPos(cx + dx, y + dy, cz + dz);
-                    if (level.getBlockState(pos).isAir()) {
-                        voids++;
-                        continue;
+                    // on ne PAIE que le plein : une case vide coute une lecture
+                    // et rien d'autre, ce qui rend le balayage haut abordable
+                    if (!level.getBlockState(pos).isAir()) {
+                        set(level, cx + dx, y + dy, cz + dz, Blocks.AIR.defaultBlockState());
                     }
-                    voids = 0;
-                    set(level, cx + dx, y + dy, cz + dz, Blocks.AIR.defaultBlockState());
                 }
                 // ET L'ON COMBLE SOUS LE SOL, plus profond qu'avant.
                 //
