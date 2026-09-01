@@ -45,8 +45,8 @@ PREVIEW = os.path.join(ROOT, "tools", "preview")
 
 NAME = "arcencium_glaive"
 S = 32
-NFRAMES = 8
-FRAMETIME = 3
+NFRAMES = 12
+FRAMETIME = 2
 
 GOLD = ((0xF8, 0xD8, 0x70), (0xC9, 0x96, 0x26), (0x70, 0x4C, 0x10))
 STEEL = ((0x1B, 0x2B, 0x2A), (0x11, 0x1C, 0x1E), (0x08, 0x10, 0x14))
@@ -133,6 +133,60 @@ def veins(solid):
     return out
 
 
+# Les retournements dont je connais la formule EXACTE.
+#
+# Les rotations d'un quart de tour sont ecartees a dessein : leur sens differe
+# d'une bibliotheque a l'autre, et il ne s'agit pas seulement de tourner
+# l'image -- il faut appliquer la MEME transformation aux coordonnees des
+# veines, sinon l'animation s'allume a cote du dessin. Six suffisent a
+# atteindre n'importe quel coin.
+TURNS = {
+    "identite": (None, lambda x, y: (x, y)),
+    "miroir horizontal": (Image.FLIP_LEFT_RIGHT, lambda x, y: (S - 1 - x, y)),
+    "miroir vertical": (Image.FLIP_TOP_BOTTOM, lambda x, y: (x, S - 1 - y)),
+    "demi-tour": (Image.ROTATE_180, lambda x, y: (S - 1 - x, S - 1 - y)),
+    "diagonale": (Image.TRANSPOSE, lambda x, y: (y, x)),
+    "anti-diagonale": (Image.TRANSVERSE, lambda x, y: (S - 1 - y, S - 1 - x)),
+}
+
+
+def orient(img, lines, far):
+    """
+    Met le manche dans le coin BAS-GAUCHE, image ET coordonnees.
+
+    Le jeu saisit un objet par ce coin-la et pointe l'oppose vers l'avant : un
+    manche ailleurs, et le joueur tient sa lame par le tranchant -- ce qui
+    s'est produit, faute d'avoir verifie. On essaie donc les six
+    retournements et l'on garde celui dont le manche tombe le plus pres du bon
+    coin, au lieu de raisonner : deux miroirs se sont deja annules sous mes
+    yeux.
+    """
+    grips = {GRIP[0], GRIP[1]}
+    best = None
+    for label, (turn, remap) in TURNS.items():
+        cand = img if turn is None else img.transpose(turn)
+        px = cand.load()
+        pts = [(x, y) for y in range(S) for x in range(S) if px[x, y][:3] in grips]
+        if not pts:
+            continue
+        mx = sum(p[0] for p in pts) / len(pts)
+        my = sum(p[1] for p in pts) / len(pts)
+        here = mx + (S - my)                 # petit x, grand y : bas-gauche
+        if best is None or here < best[0]:
+            best = (here, label, cand, remap)
+    if best is None:
+        return img, lines, far
+    _, label, cand, remap = best
+    print("  orientation : %s" % label)
+    moved = {remap(x, y): v for (x, y), v in lines.items()}
+    deep = [[0] * S for _ in range(S)]
+    for y in range(S):
+        for x in range(S):
+            nx, ny = remap(x, y)
+            deep[ny][nx] = far[y][x]
+    return cand, moved, deep
+
+
 def art():
     solid = mask()
     far = depth(solid)
@@ -187,13 +241,21 @@ def frame(base, lines, far, lit, step):
     """Un instant de la decharge : l'onde remonte chaque veine."""
     out = base.copy()
     px = out.load()
-    glow = 0.40 + 0.14 * lit
+    glow = 0.52 + 0.12 * lit
     for (x, y), (i, t) in lines.items():
         if far[y][x] < 3:
             continue
-        wave = math.exp(-(((t - step) % 1.0) ** 2) / 0.02)
+        # CHAQUE BRANCHE A SON PROPRE RETARD.
+        #
+        # Elles brillaient toutes ensemble : la lame passait d'eteinte a vive
+        # d'un bloc, ce qui donne une lampe et non une decharge. Un decalage
+        # par branche suffit a ce que l'une s'allume quand l'autre s'eteint,
+        # et c'est ce chevauchement qui fait lire de la foudre.
+        phase = (step + i * 0.37) % 1.0
+        gap = min(abs(t - phase), 1.0 - abs(t - phase))
+        wave = math.exp(-(gap ** 2) / 0.05)
         hue = (VEIN_HUES[i % len(VEIN_HUES)] + 0.05 * wave) % 1.0
-        val = min(1.0, glow * (0.65 + 1.9 * wave))
+        val = min(1.0, glow * (1.05 + 1.4 * wave))
         r, g, b = colorsys.hsv_to_rgb(hue, 0.60, val)
         px[x, y] = (int(r * 255), int(g * 255), int(b * 255), 255)
     return out
@@ -212,6 +274,7 @@ def write(name, frames):
 
 def main():
     base, lines, far = art()
+    base, lines, far = orient(base, lines, far)
     os.makedirs(ITEM_DIR, exist_ok=True)
     for lit in range(6):
         frames = [outline(frame(base, lines, far, lit, f / NFRAMES))
