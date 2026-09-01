@@ -138,10 +138,7 @@ public final class SanctuaryOverlay {
             {"0", "7", "37", "minecraft:air"},
             {"1", "7", "37", "minecraft:air"},
             {"2", "7", "37", "emeraldweapons:polished_gangue"},
-            {"-1", "8", "37", "emeraldweapons:polished_gangue"},
             {"0", "8", "37", "minecraft:air"},
-            {"1", "8", "37", "emeraldweapons:polished_gangue"},
-            {"0", "9", "37", "emeraldweapons:polished_gangue"},
     };
 
     private SanctuaryOverlay() {

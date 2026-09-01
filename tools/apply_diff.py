@@ -93,6 +93,19 @@ def main():
     cells = [(k[0], k[1], k[2], v) for k, v in sorted(merged.items(),
                                                      key=lambda kv: (kv[0][2], kv[0][1], kv[0][0]))]
     print("%d deja posees, %d nouvelles ou modifiees" % (len(merged) - fresh, fresh))
+
+    # LE COULOIR DE LA VOLEE DOIT RESTER LIBRE.
+    #
+    # Le calque a une faiblesse : il fige des corrections faites contre un
+    # generateur qui, lui, continue d'evoluer. Une case pleine posee a la main
+    # pour combler un trou devient un mur des que le code apprend a combler ce
+    # trou tout seul -- c'est ainsi que l'acces au sommet s'est retrouve mure.
+    # On ne peut pas l'empecher, mais on peut le SIGNALER.
+    axis = [c for c in cells if abs(c[0]) <= 1 and "air" not in c[3]]
+    if axis:
+        print("  ATTENTION : %d case(s) pleine(s) dans l'axe du passage" % len(axis))
+        for c in axis[:8]:
+            print("    cx%+d y%+d cz%+d  %s" % (c[0], c[1], c[2], c[3].split("[")[0]))
     # Un etat sans espace de noms ne se relit pas : c'est le signe d'un releve
     # produit avant que le format complet ne soit en place.
     naked = [c for c in cells if ":" not in c[3]]
