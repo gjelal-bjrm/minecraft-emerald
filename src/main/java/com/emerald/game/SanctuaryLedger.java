@@ -160,14 +160,39 @@ public final class SanctuaryLedger {
         return BuiltInRegistries.BLOCK.getKey(state.getBlock()).getPath();
     }
 
-    /** Ce qu'on sait de ce bloc, ou null si le sanctuaire ne l'a pas pose. */
+    /**
+     * Ce qu'on sait de ce bloc.
+     *
+     * LE REGISTRE NE SUFFIT PAS. Il n'enregistre que nos propres poses, or la
+     * pyramide arrive par l'API de structure, qui ne passe pas par notre point
+     * d'ecriture : tous ses blocs se declaraient « hors sanctuaire », c'est-a
+     * dire precisement la ou l'on a le plus besoin de designer quelque chose.
+     *
+     * On se rabat donc sur l'INSTANTANE, qui couvre tout le volume sans se
+     * soucier de qui a pose quoi. On perd le nom du chantier -- il n'y en a
+     * pas -- mais on garde l'adresse, qui est ce qui compte.
+     */
     public static String describe(BlockPos pos) {
         Mark mark = ledger.get(pos);
-        if (mark == null) {
+        if (mark != null) {
+            return String.format("%s  |  cx%+d y%+d cz%+d  |  %s", mark.part(),
+                    mark.dx(), mark.dy(), mark.dz(), name(mark.state()));
+        }
+        if (snapshot == null || !inside(pos)) {
             return null;
         }
-        return String.format("%s  |  cx%+d y%+d cz%+d  |  %s", mark.part(),
-                mark.dx(), mark.dy(), mark.dz(), name(mark.state()));
+        BlockState was = palette.get(snapshot[index(pos.getX() - low.getX(),
+                pos.getY() - low.getY(), pos.getZ() - low.getZ())]);
+        return String.format("modele  |  cx%+d y%+d cz%+d  |  %s",
+                pos.getX() - origin.getX(), pos.getY() - origin.getY(),
+                pos.getZ() - origin.getZ(), name(was));
+    }
+
+    private static boolean inside(BlockPos pos) {
+        int dx = pos.getX() - low.getX();
+        int dy = pos.getY() - low.getY();
+        int dz = pos.getZ() - low.getZ();
+        return dx >= 0 && dx < spanX && dy >= 0 && dy < spanY && dz >= 0 && dz < spanZ;
     }
 
     public static boolean empty() {
@@ -257,12 +282,19 @@ public final class SanctuaryLedger {
         BlockState state = level.getBlockState(at);
         String world = String.format("%d, %d, %d", at.getX(), at.getY(), at.getZ());
         Mark mark = ledger.get(at);
-        if (mark == null) {
-            return new com.emerald.network.ProbeInfoPayload(
-                    name(state), world, "hors sanctuaire", "");
+        if (mark != null) {
+            return new com.emerald.network.ProbeInfoPayload(name(state), world, mark.part(),
+                    String.format("cx%+d  y%+d  cz%+d", mark.dx(), mark.dy(), mark.dz()));
         }
-        return new com.emerald.network.ProbeInfoPayload(name(state), world, mark.part(),
-                String.format("cx%+d  y%+d  cz%+d", mark.dx(), mark.dy(), mark.dz()));
+        // pas des notres, mais peut-etre du modele : l'instantane le sait
+        if (snapshot != null && inside(at)) {
+            return new com.emerald.network.ProbeInfoPayload(name(state), world, "modele",
+                    String.format("cx%+d  y%+d  cz%+d",
+                            at.getX() - origin.getX(), at.getY() - origin.getY(),
+                            at.getZ() - origin.getZ()));
+        }
+        return new com.emerald.network.ProbeInfoPayload(
+                name(state), world, "hors sanctuaire", "");
     }
 
     // ------------------------------------------------------------ le releve
