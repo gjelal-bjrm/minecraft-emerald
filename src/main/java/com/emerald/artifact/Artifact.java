@@ -98,7 +98,44 @@ public enum Artifact implements StringRepresentable {
     /** La Marque Prismatique dure trois fois plus longtemps. */
     MARQUE_PROLONGEE(Socket.BOW, 0xE478FF),
     /** Les fleches inflechissent leur course vers la cible. */
-    FLECHE_TRACANTE(Socket.BOW, 0xFFB84A);
+    FLECHE_TRACANTE(Socket.BOW, 0xFFB84A),
+
+    // ------------------------------------------------- glaive : la fureur
+
+    // Les quatre repondent aux quatre systemes de l'arme -- la Rage, la Ruee,
+    // la Curee, l'immobilisation -- de sorte qu'aucun ne fasse doublon et que
+    // le choix soit un choix de style et non de puissance.
+
+    /** La Rage ne retombe plus d'un coup : elle perd un cran a la fois. */
+    CRAN_D_ARRET(Socket.GLAIVE, 0xFF7A5C),
+    /** Un second bond qui touche en ouvre encore un autre, jusqu'a trois. */
+    RUEE_EN_CHAINE(Socket.GLAIVE, 0xFFC46B),
+    /** La Curee porte bien plus loin et rend deux fois plus de vie. */
+    ONDE_DE_CUREE(Socket.GLAIVE, 0x5CFFC4),
+    /** L'immobilisation de la Ruee gagne les ennemis autour de la cible. */
+    ETAU_DE_GANGUE(Socket.GLAIVE, 0xB0C4FF),
+
+    // ------------------------------------------------ sceptre : la Concorde
+
+    // Le Sceptre n'en avait AUCUN, alors que son emplacement existait depuis le
+    // debut. C'etait le seul membre de la famille sans artefact -- et le seul
+    // dont on ne pouvait donc pas inflechir le role.
+
+    /**
+     * Le Conduit de Prisme : le Sceptre devient une arme d'attaque.
+     *
+     * Il ne s'agit pas d'un bonus mais d'un CHANGEMENT DE ROLE. Le Sceptre est
+     * fait pour soigner et repousser ; sa puissance elementaire de base est
+     * modeste, et le Conduit la triple. On abandonne un emplacement pour jouer
+     * le mage, et l'on garde les soins -- c'est le choix, et il coute.
+     */
+    CONDUIT_DE_PRISME(Socket.SCEPTER, 0xC77DFF),
+    /** L'Onde de Concorde porte bien plus loin et dure plus longtemps. */
+    ONDE_PROLONGEE(Socket.SCEPTER, 0x6BE0FF),
+    /** Le trait prismatique se dedouble vers une seconde cible. */
+    TRAIT_JUMEAU(Socket.SCEPTER, 0x9CE8FF),
+    /** Soigner un allie soigne aussi le porteur, de moitie. */
+    CALICE_DE_CONCORDE(Socket.SCEPTER, 0x9CFF8C);
 
     /** Ce qu'une piece doit etre pour accueillir un artefact donne. */
     public enum Socket {
@@ -111,6 +148,8 @@ public enum Artifact implements StringRepresentable {
         SWORD(stack -> stack.getItem() instanceof EmeraldWindblade
                 && !stack.is(com.emerald.item.ModItems.OATH_BLADE.get())),
         BOW(stack -> stack.getItem() instanceof ArcenciumBowItem),
+        GLAIVE(stack -> stack.getItem()
+                instanceof com.emerald.weapons.ArcenciumGlaiveItem),
         SCEPTER(stack -> stack.getItem() instanceof ArcenciumScepterItem);
 
         private final Predicate<ItemStack> accepts;

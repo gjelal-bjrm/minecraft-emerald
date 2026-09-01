@@ -16,6 +16,8 @@ deuxieme bien, la troisieme doit armer pour le boss. Un coffre de palier trois
 doit valoir le siege qu'on vient de tenir.
 """
 
+import io
+import re
 import json
 import os
 
@@ -24,16 +26,29 @@ DATA = os.path.join(ROOT, "src", "main", "resources", "data", "emeraldweapons")
 
 MOD = "emeraldweapons"
 
-# Les artefacts, par emplacement. Ce sont les recompenses signature du mode.
-ARTIFACTS = [
-    "lentille_du_prisme", "filtre_de_brume", "repere_d_echo", "lentille_d_aurore",
-    "plaque_de_gangue", "coque_prismatique", "reservoir_de_prisme",
-    "plastron_de_resonance", "lest_de_gangue", "jambieres_de_maree",
-    "champ_de_cristal", "renfort_de_siege", "semelle_de_prisme", "bottes_d_eclair",
-    "semelle_vaporeuse", "bottes_de_retour", "regulateur_de_lame", "lame_de_chaine",
-    "drain_de_cristal", "eclat_final", "tension_rapide", "fleche_fourchue",
-    "marque_prolongee", "fleche_tracante",
-]
+# Les artefacts, LUS DANS L'ENUMERATION JAVA.
+#
+# Ils y etaient recopies a la main. La liste avait deja pris du retard : quatre
+# artefacts de Glaive existaient dans le jeu, avec leur texture et leur effet,
+# et ne pouvaient tomber d'aucun coffre -- une recompense qui n'existe que dans
+# le code creatif n'est pas une recompense.
+#
+# Une seule source, donc, et c'est le Java qui fait foi. Ajouter un artefact
+# a l'enumeration suffit desormais a le faire entrer dans les coffres.
+ARTIFACT_ENUM = os.path.join(ROOT, "src", "main", "java", "com", "emerald",
+                             "artifact", "Artifact.java")
+
+
+def read_artifacts():
+    src = io.open(ARTIFACT_ENUM, encoding="utf-8").read()
+    body = src[src.index("public enum Artifact"):src.index("public enum Socket")]
+    names = re.findall(r"^\s{4}([A-Z][A-Z_0-9]*)\(Socket\.", body, re.M)
+    if len(names) < 20:
+        raise SystemExit("Enumeration illisible : %d artefacts trouves" % len(names))
+    return [n.lower() for n in names]
+
+
+ARTIFACTS = read_artifacts()
 
 # Les materiaux d'Apotheosis, par rarete croissante. Facultatifs.
 APOTH = {

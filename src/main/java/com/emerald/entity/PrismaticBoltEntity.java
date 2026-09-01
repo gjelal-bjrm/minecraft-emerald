@@ -179,6 +179,19 @@ public class PrismaticBoltEntity extends ThrowableProjectile {
         }
         target.getPersistentData().putLong(TAG_LAST_HEAL, now);
         target.heal(HEAL);
+
+        // LE CALICE DE CONCORDE rend au porteur la moitie de ce qu'il donne.
+        //
+        // La moitie et non la totalite : le Sceptre doit rester une arme qui
+        // soigne LES AUTRES. Un soin plein ferait du tir sur coequipier la
+        // meilleure facon de se soigner soi-meme, et le role de soutien
+        // deviendrait un role d'egoiste.
+        if (getOwner() instanceof net.minecraft.world.entity.player.Player caster
+                && caster != target
+                && com.emerald.artifact.Artifacts.wearing(caster,
+                        com.emerald.artifact.Artifact.CALICE_DE_CONCORDE)) {
+            caster.heal(HEAL * 0.5F);
+        }
         if (this.level() instanceof ServerLevel server) {
             server.sendParticles(ModParticles.CRYSTAL_GREEN.get(),
                     target.getX(), target.getY() + target.getBbHeight() * 0.6, target.getZ(),

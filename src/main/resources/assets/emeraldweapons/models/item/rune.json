@@ -1,0 +1,21 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "emeraldweapons:item/rune_weapon"
+  },
+  "_comment": "variant = ordinal de la FAMILLE, en entier.",
+  "overrides": [
+    {
+      "predicate": {
+        "emeraldweapons:variant": 0
+      },
+      "model": "emeraldweapons:item/rune_weapon"
+    },
+    {
+      "predicate": {
+        "emeraldweapons:variant": 1
+      },
+      "model": "emeraldweapons:item/rune_armor"
+    }
+  ]
+}

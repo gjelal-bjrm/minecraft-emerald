@@ -48,7 +48,7 @@ public enum GearRarity {
     /** Tout ce qu'on a deja depense sur cette piece, tentatives ratees comprises. */
     private static final String TAG_SPENT = "ArcenciumRaritySpent";
     /** Combien d'eclats depenses valent un jet supplementaire. */
-    private static final int PITY_PER_DRAW = 3;
+    private static final int PITY_PER_DRAW = 6;
 
     private final String key;
     private final int colour;
@@ -100,16 +100,10 @@ public enum GearRarity {
         tag.putInt(TAG, rarity.rank());
         stack.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
 
-        if (rarity == NORMAL) {
-            stack.remove(DataComponents.CUSTOM_NAME);
-            return;
-        }
-        MutableComponent named = Component.empty()
-                .append(rarity.label())
-                .append(" ")
-                .append(Component.translatable(stack.getItem().getDescriptionId()))
-                .withStyle(style -> style.withColor(rarity.colour()).withItalic(false));
-        stack.set(DataComponents.CUSTOM_NAME, named);
+        // LE NOM SE COMPOSE AILLEURS. La rarete n'est plus seule a l'ecrire :
+        // l'amelioration y met son cran, et deux systemes qui ecrivent le meme
+        // nom l'effacent tour a tour. Voir GearName.
+        GearName.refresh(stack);
     }
 
     // ------------------------------------------------------------- le tirage
@@ -170,19 +164,25 @@ public enum GearRarity {
      *
      * LE BAREME EST CALE SUR LA DUREE D'UNE PARTIE, et verifie par simulation
      * plutot que par raisonnement. En depensant par lots de trente-deux, avec
-     * la memoire des tentatives, le Phenomenal s'obtient :
+     * la memoire des tentatives :
      *
-     *    40 eclats  (~20 min)  : 20 %
-     *   100 eclats  (~35 min)  : 52 %
-     *   200 eclats  (une partie entiere) : 85 %
+     *    40 eclats  (~20 min)  : R7+ 11 %,  Phenomenal  3 %
+     *   100 eclats  (~35 min)  : R7+ 29 %,  Phenomenal  9 %
+     *   200 eclats             : R7+ 54 %,  Phenomenal 19 %
+     *   400 eclats  (la partie entiere) : R7+ 87 %, Phenomenal 43 %
      *
-     * C'est la fourchette demandee : improbable en vingt minutes, a peu pres
-     * une chance sur deux en trente-cinq, presque acquis pour qui y consacre
-     * toute la partie. Un premier bareme donnait une chance sur trente-deux
-     * meme avec une pile pleine -- c'est-a-dire jamais -- et le joueur y voyait
-     * un plafond la ou il n'y avait qu'une loi trop maigre.
+     * DEUXIEME RESSERRAGE. Le premier bareme donnait une chance sur trente-deux
+     * meme avec une pile pleine, c'est-a-dire jamais ; je l'ai desserre, et il
+     * est alors devenu trop large -- quarante eclats suffisaient a la moitie des
+     * Legendaires, et une partie sur cinq finissait en Phenomenal apres vingt
+     * minutes. Une piece de rang huit obtenue en vingt minutes rend inutile
+     * tout ce qu'on trouvera ensuite, et la partie n'a plus d'enjeu.
+     *
+     * L'equilibre tenu ici : le Phenomenal reste POSSIBLE pour qui y consacre
+     * toute sa partie, et improbable pour tous les autres. On peut toujours
+     * tenter, jamais compter dessus.
      */
-    private static final int[] WEIGHTS = {5330, 1950, 1200, 700, 380, 200, 105, 90, 45};
+    private static final int[] WEIGHTS = {6100, 1900, 1050, 530, 240, 110, 45, 18, 7};
 
     private static int draw(RandomSource random) {
         int roll = random.nextInt(10000);

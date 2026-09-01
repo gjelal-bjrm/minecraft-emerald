@@ -27,7 +27,10 @@ public class ModItems {
                     new EmeraldWindblade(
                             new EmeraldTier(),
                             new Item.Properties()
-                                    .attributes(SwordItem.createAttributes(new EmeraldTier(), 4.0F, -2.2F))
+                                    // Le coup ORDINAIRE le plus lourd des quatre :
+                                    // c'est ce que l'epeiste gagne en echange
+                                    // d'un critique rare et faible.
+                                    .attributes(SwordItem.createAttributes(new EmeraldTier(), 4.5F, -2.2F))
                     )
             );
 
@@ -102,6 +105,41 @@ public class ModItems {
                             .attributes(SwordItem.createAttributes(new EmeraldTier(), 3.0F, -2.2F))));
 
     /** Objet artefact : voir com.emerald.artifact.ArtifactItem. */
+    /**
+     * L'objet rune, tous types confondus.
+     *
+     * Un seul enregistrement pour les douze runes : ce qu'elle est, son rang et
+     * la valeur qu'elle a tiree sont des composants de la pile. C'est le meme
+     * choix que pour les artefacts, et pour la meme raison -- douze objets
+     * enregistres demanderaient douze modeles et douze traductions de plus sans
+     * rien apporter.
+     */
+    /**
+     * Cristal elementaire -- ce avec quoi on accorde une arme.
+     *
+     * Il s'empile, contrairement aux runes et aux artefacts : accorder n'est
+     * pas un objet unique qu'on serti mais une matiere qu'on consomme, et l'on
+     * en ramasse beaucoup.
+     */
+    /**
+     * Pierre de Forge -- ce qu'il faut EN PLUS du metal pour ameliorer.
+     *
+     * Le metal seul ne suffirait pas : il se ramasse en creusant, et un systeme
+     * qu'on alimente en creusant recompense le temps passe plutot que le jeu
+     * joue. La Pierre, elle, ne tombe que des creatures -- elle borne donc le
+     * rythme des ameliorations sur le combat, comme les runes.
+     */
+    public static final DeferredItem<Item> FORGE_STONE =
+            ITEMS.register("forge_stone", () -> new Item(new Item.Properties()));
+
+    public static final DeferredItem<com.emerald.element.ElementStoneItem> ELEMENT_STONE =
+            ITEMS.register("element_stone", () ->
+                    new com.emerald.element.ElementStoneItem(new Item.Properties()));
+
+    public static final DeferredItem<com.emerald.rune.RuneItem> RUNE =
+            ITEMS.register("rune", () ->
+                    new com.emerald.rune.RuneItem(new Item.Properties()));
+
     public static final DeferredItem<com.emerald.artifact.ArtifactItem> ARTIFACT =
             ITEMS.register("artifact", () ->
                     new com.emerald.artifact.ArtifactItem(new Item.Properties()));

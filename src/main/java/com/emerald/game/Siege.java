@@ -98,12 +98,55 @@ public class Siege {
         // Le village se defend sur sa place, l'ancre au milieu d'un sanctuaire
         // de deux cents blocs : la meme laisse ne peut pas servir aux deux.
         this.leash = failure == Failure.VILLAGERS ? LEASH : 90;
-        this.waveSizes = waveSizes;
+        this.waveSizes = scaled(level, waveSizes);
         this.bar = new ServerBossEvent(title, color, BossEvent.BossBarOverlay.NOTCHED_10);
         this.bar.setProgress(1.0F);
         for (ServerPlayer player : level.players()) {
             this.bar.addPlayer(player);
         }
+    }
+
+    /** Ce que chaque joueur SUPPLEMENTAIRE ajoute a chaque vague. */
+    private static final double EXTRA_PER_PLAYER = 0.75;
+    /** Ce qu'une vague ne depasse pas, quel que soit l'effectif. */
+    private static final int WAVE_CEILING = 40;
+
+    /**
+     * Met les vagues a l'echelle de l'effectif.
+     *
+     * Un siege calibre pour un joueur devient une formalite a quatre : les
+     * memes huit monstres tombent sous quatre epees au lieu d'une, et la
+     * defense n'a plus rien d'une defense. On ajoute donc trois quarts d'une
+     * vague par joueur supplementaire.
+     *
+     * TROIS QUARTS ET NON UN ENTIER, deliberement. Deux joueurs valent plus que
+     * deux fois un joueur -- ils couvrent deux angles, se relevent, concentrent
+     * leurs coups -- mais ils partagent aussi un seul jeu d'ancres et une seule
+     * heure. Doubler franchement les vagues punirait le fait de jouer ensemble ;
+     * ne rien changer le recompenserait. La fraction est le milieu honnete.
+     *
+     * LE PLAFOND N'EST PAS UN REGLAGE D'EQUILIBRE mais une securite : au-dela
+     * de quarante creatures par vague, c'est le serveur qui perd, pas le
+     * joueur.
+     *
+     * L'effectif est compte UNE FOIS, a l'ouverture du siege. Un joueur qui
+     * rejoint au milieu d'une vague ne la fait pas gonfler sous ses pieds : la
+     * jauge de progression, elle, compte deja les monstres promis, et la voir
+     * reculer serait pire que le desequilibre qu'on corrigerait.
+     */
+    private static int[] scaled(ServerLevel level, int[] waves) {
+        int players = (int) level.players().stream()
+                .filter(player -> !player.isSpectator())
+                .count();
+        if (players <= 1) {
+            return waves;
+        }
+        double factor = 1.0 + EXTRA_PER_PLAYER * (players - 1);
+        int[] out = new int[waves.length];
+        for (int i = 0; i < waves.length; i++) {
+            out[i] = Math.min(WAVE_CEILING, (int) Math.round(waves[i] * factor));
+        }
+        return out;
     }
 
     public boolean isDone() {
@@ -243,6 +286,10 @@ public class Siege {
             mob.setPersistenceRequired();
             converge(mob);
             reinforce(mob);
+            // L'EQUIPEMENT SUIT LE STADE. Sans lui, la quarantieme minute
+            // devient une promenade : le joueur a monte sa fiche, sa rarete,
+            // ses runes et ses ameliorations, et le bestiaire n'a pas bouge.
+            MobGear.equip(mob, MobGear.stage(this.level, this.tier), this.level.random);
             this.alive.add(mob.getUUID());
         }
         refreshBar();

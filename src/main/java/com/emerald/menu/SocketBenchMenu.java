@@ -43,6 +43,16 @@ public class SocketBenchMenu extends AbstractContainerMenu {
     private static final int RESULT_IN_CONTAINER = 0;
 
     private final ContainerLevelAccess access;
+    /**
+     * Le joueur, retenu pour une seule raison : le metal de l'amelioration
+     * vit dans SON sac et non dans l'etabli.
+     *
+     * L'etabli n'a que deux cases d'entree, et en ajouter une troisieme
+     * demanderait de refaire la texture et l'ecran. Lire le sac evite ce
+     * chantier et se joue mieux : on n'a pas a deplacer neuf lingots pour
+     * tenter une amelioration.
+     */
+    private final Player owner;
     private final Container inputs = new SimpleContainer(2) {
         @Override
         public void setChanged() {
@@ -59,13 +69,20 @@ public class SocketBenchMenu extends AbstractContainerMenu {
     public SocketBenchMenu(int id, Inventory inventory, ContainerLevelAccess access) {
         super(ModMenus.SOCKET_BENCH.get(), id);
         this.access = access;
+        this.owner = inventory.player;
 
         this.addSlot(new Slot(this.inputs, SLOT_GEAR, 27, 47) {
             @Override
             public boolean mayPlace(ItemStack stack) {
-                // toute piece capable d'accueillir au moins un artefact
+                // toute piece capable d'accueillir un artefact OU une rune
                 for (Artifact artifact : Artifact.values()) {
                     if (artifact.fits(stack)) {
+                        return true;
+                    }
+                }
+                for (com.emerald.rune.RuneFamily family
+                        : com.emerald.rune.RuneFamily.values()) {
+                    if (family.accepts(stack)) {
                         return true;
                     }
                 }
@@ -75,10 +92,13 @@ public class SocketBenchMenu extends AbstractContainerMenu {
         this.addSlot(new Slot(this.inputs, SLOT_ARTIFACT, 76, 47) {
             @Override
             public boolean mayPlace(ItemStack stack) {
-                // le meme emplacement sert aux deux usages de l'etabli :
-                // sertir un artefact, ou tenter une montee de rarete
+                // le meme emplacement sert aux trois usages de l'etabli :
+                // sertir un artefact, graver une rune, ou tenter une montee de
+                // rarete. Un seul lieu pour tout ce qui modifie une piece.
                 return stack.is(com.emerald.item.ModItems.FATE_SHARD.get())
-                        || stack.getItem() instanceof ArtifactItem && Artifacts.of(stack) != null;
+                        || stack.getItem() instanceof ArtifactItem && Artifacts.of(stack) != null
+                        || com.emerald.rune.Runes.of(stack) != null
+                        || stack.is(com.emerald.item.ModItems.FORGE_STONE.get());
             }
         });
         this.addSlot(new Slot(this.result, RESULT_IN_CONTAINER, 134, 47) {
@@ -117,6 +137,47 @@ public class SocketBenchMenu extends AbstractContainerMenu {
                             net.minecraft.sounds.SoundSource.PLAYERS, 0.8F,
                             0.7F + after.rank() * 0.08F);
                 }
+                if (fee.is(com.emerald.item.ModItems.FORGE_STONE.get())) {
+                    // ON PAIE D'ABORD, ON TIRE ENSUITE. Un tirage qui se
+                    // solderait par un echec de paiement laisserait la piece
+                    // amelioree sans que rien n'ait ete depense.
+                    int before = com.emerald.item.Upgrade.of(stack);
+                    if (com.emerald.item.Upgrade.charge(player, stack)) {
+                        int after = com.emerald.item.Upgrade.attempt(
+                                before, player.level().random);
+                        com.emerald.item.Upgrade.set(stack, after);
+                        boolean won = after > before;
+                        boolean lost = after < before;
+                        player.displayClientMessage(
+                                net.minecraft.network.chat.Component.translatable(
+                                        won ? "socket.emeraldweapons.upgrade.won"
+                                                : lost ? "socket.emeraldweapons.upgrade.lost"
+                                                : "socket.emeraldweapons.upgrade.kept",
+                                        after)
+                                        .withStyle(won
+                                                ? net.minecraft.ChatFormatting.GREEN
+                                                : lost ? net.minecraft.ChatFormatting.RED
+                                                : net.minecraft.ChatFormatting.GRAY),
+                                false);
+                        player.level().playSound(null, player.blockPosition(),
+                                won ? net.minecraft.sounds.SoundEvents.ANVIL_USE
+                                        : net.minecraft.sounds.SoundEvents.ANVIL_LAND,
+                                net.minecraft.sounds.SoundSource.PLAYERS, 0.9F,
+                                won ? 0.9F + after * 0.06F : 0.6F);
+                    }
+                }
+                com.emerald.rune.RuneMark graved =
+                        com.emerald.rune.Runes.of(fee);
+                if (graved != null) {
+                    player.displayClientMessage(
+                            net.minecraft.network.chat.Component.translatable(
+                                    "socket.emeraldweapons.rune.engraved", graved.label()),
+                            false);
+                    player.level().playSound(null, player.blockPosition(),
+                            net.minecraft.sounds.SoundEvents.AMETHYST_BLOCK_CHIME,
+                            net.minecraft.sounds.SoundSource.PLAYERS, 0.9F,
+                            0.8F + graved.rank() * 0.05F);
+                }
                 SocketBenchMenu.this.inputs.setItem(SLOT_GEAR, ItemStack.EMPTY);
                 SocketBenchMenu.this.inputs.setItem(SLOT_ARTIFACT, ItemStack.EMPTY);
                 super.onTake(player, stack);
@@ -137,13 +198,27 @@ public class SocketBenchMenu extends AbstractContainerMenu {
     public void slotsChanged(Container container) {
         super.slotsChanged(container);
         this.result.setItem(0, socket(this.inputs.getItem(SLOT_GEAR),
-                                      this.inputs.getItem(SLOT_ARTIFACT)));
+                                      this.inputs.getItem(SLOT_ARTIFACT),
+                                      this.inputs.getItem(SLOT_ARTIFACT)
+                                              .is(com.emerald.item.ModItems.FORGE_STONE.get())
+                                              ? this.owner : null));
         this.broadcastChanges();
     }
 
     /** Le resultat, ou une pile vide si la combinaison ne tient pas. */
     @Nullable
-    private static ItemStack socket(ItemStack gear, ItemStack artifactStack) {
+    private static ItemStack socket(ItemStack gear, ItemStack artifactStack, Player forge) {
+        // L'AMELIORATION : comme les eclats, on montre la piece TELLE QUELLE.
+        //
+        // Le cran se joue aux des ; afficher un +8 avant de l'avoir obtenu
+        // serait un mensonge, et afficher le +7 actuel dit exactement la
+        // verite -- voila ce que vous posez, voila ce que vous risquez.
+        if (forge != null && !gear.isEmpty()
+                && com.emerald.item.Upgrade.of(gear) < com.emerald.item.Upgrade.MAX
+                && com.emerald.item.Upgrade.affordable(forge, gear)) {
+            return gear.copy();
+        }
+
         // LES ECLATS : l'etabli montre la piece telle quelle, prete a etre
         // tentee. On ne peut pas montrer le resultat d'un tirage avant de le
         // tirer, et faire semblant serait pire que ne rien montrer : le rang
@@ -151,6 +226,19 @@ public class SocketBenchMenu extends AbstractContainerMenu {
         if (artifactStack.is(com.emerald.item.ModItems.FATE_SHARD.get()) && !gear.isEmpty()) {
             return gear.copy();
         }
+        // LA GRAVURE, elle, se montre en entier : contrairement au tirage de
+        // rarete, son resultat est deja connu. Le joueur voit donc la piece
+        // gravee avant de la prendre, et peut renoncer.
+        com.emerald.rune.RuneMark mark = com.emerald.rune.Runes.of(artifactStack);
+        if (mark != null) {
+            if (!com.emerald.rune.Runes.canEngrave(gear, mark)) {
+                return ItemStack.EMPTY;
+            }
+            ItemStack graved = gear.copy();
+            com.emerald.rune.Runes.engrave(graved, mark);
+            return graved;
+        }
+
         Artifact artifact = Artifacts.of(artifactStack);
         if (gear.isEmpty() || artifact == null || !artifact.fits(gear)) {
             return ItemStack.EMPTY;

@@ -493,6 +493,110 @@
               }
             }
           ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "emeraldweapons:artifact",
+          "weight": 1,
+          "functions": [
+            {
+              "function": "minecraft:set_components",
+              "components": {
+                "emeraldweapons:artifact": "cran_d_arret"
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "emeraldweapons:artifact",
+          "weight": 1,
+          "functions": [
+            {
+              "function": "minecraft:set_components",
+              "components": {
+                "emeraldweapons:artifact": "ruee_en_chaine"
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "emeraldweapons:artifact",
+          "weight": 1,
+          "functions": [
+            {
+              "function": "minecraft:set_components",
+              "components": {
+                "emeraldweapons:artifact": "onde_de_curee"
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "emeraldweapons:artifact",
+          "weight": 1,
+          "functions": [
+            {
+              "function": "minecraft:set_components",
+              "components": {
+                "emeraldweapons:artifact": "etau_de_gangue"
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "emeraldweapons:artifact",
+          "weight": 1,
+          "functions": [
+            {
+              "function": "minecraft:set_components",
+              "components": {
+                "emeraldweapons:artifact": "conduit_de_prisme"
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "emeraldweapons:artifact",
+          "weight": 1,
+          "functions": [
+            {
+              "function": "minecraft:set_components",
+              "components": {
+                "emeraldweapons:artifact": "onde_prolongee"
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "emeraldweapons:artifact",
+          "weight": 1,
+          "functions": [
+            {
+              "function": "minecraft:set_components",
+              "components": {
+                "emeraldweapons:artifact": "trait_jumeau"
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "emeraldweapons:artifact",
+          "weight": 1,
+          "functions": [
+            {
+              "function": "minecraft:set_components",
+              "components": {
+                "emeraldweapons:artifact": "calice_de_concorde"
+              }
+            }
+          ]
         }
       ]
     }

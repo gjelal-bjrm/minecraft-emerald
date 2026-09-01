@@ -1,0 +1,33 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "emeraldweapons:item/element_stone_eau"
+  },
+  "_comment": "variant = ordinal de l'Element, en entier.",
+  "overrides": [
+    {
+      "predicate": {
+        "emeraldweapons:variant": 1
+      },
+      "model": "emeraldweapons:item/element_stone_eau"
+    },
+    {
+      "predicate": {
+        "emeraldweapons:variant": 2
+      },
+      "model": "emeraldweapons:item/element_stone_feu"
+    },
+    {
+      "predicate": {
+        "emeraldweapons:variant": 3
+      },
+      "model": "emeraldweapons:item/element_stone_lumiere"
+    },
+    {
+      "predicate": {
+        "emeraldweapons:variant": 4
+      },
+      "model": "emeraldweapons:item/element_stone_obscur"
+    }
+  ]
+}

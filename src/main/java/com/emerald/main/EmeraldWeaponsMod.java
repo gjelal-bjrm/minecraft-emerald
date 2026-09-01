@@ -24,6 +24,8 @@ public class EmeraldWeaponsMod {
         ModItems.ITEMS.register(modEventBus);
         ModArmorMaterials.register(modEventBus);
         com.emerald.artifact.ModDataComponents.register(modEventBus);
+        com.emerald.rune.ModRuneComponents.register(modEventBus);
+        com.emerald.element.Attunement.register(modEventBus);
         modEventBus.addListener(this::addItemsToCreativeTab);
         com.emerald.effects.ModEffects.EFFECTS.register(modEventBus);
         com.emerald.particles.ModParticles.PARTICLES.register(modEventBus);

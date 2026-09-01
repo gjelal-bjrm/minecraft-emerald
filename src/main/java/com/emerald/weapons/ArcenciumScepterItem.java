@@ -44,6 +44,8 @@ public class ArcenciumScepterItem extends Item {
     public static final int REGEN_TICKS = 8 * 20;
     public static final int ARMOR_TICKS = 15 * 20;
     private static final double KNOCKBACK = 2.3;
+    /** Ce que l'Onde Prolongee multiplie : la portee, puis la duree. */
+    private static final double WIDE_REACH = 1.6;
 
     // --- trait prismatique
     // La cadence, et non la vitesse d'attaque, est ce qui bride reellement le
@@ -51,6 +53,17 @@ public class ArcenciumScepterItem extends Item {
     // deja au maximum. C'est ce delai-la qu'il fallait raccourcir.
     public static final int BOLT_COOLDOWN = 5;            // 0,25 s entre deux tirs
     private static final float BOLT_SPEED = 1.9F;
+    /** Jusqu'ou le Trait Jumeau cherche sa seconde cible. */
+    private static final double TWIN_RANGE = 22.0;
+    /**
+     * L'ouverture du cone ou il la cherche, en cosinus.
+     *
+     * Zero virgule cinq, soit soixante degres de part et d'autre du regard.
+     * Assez large pour qu'on n'ait pas a viser au pixel, assez etroit pour que
+     * le second trait parte toujours vers l'avant -- un jumeau qui repart
+     * derriere l'epaule ne se lit pas comme un dedoublement.
+     */
+    private static final double TWIN_CONE = 0.5;
     private static final float BOLT_SPREAD = 0.3F;
 
     // --- fatigue : le matraquage se paie
@@ -75,7 +88,7 @@ public class ArcenciumScepterItem extends Item {
             return InteractionResultHolder.fail(stack);
         }
         if (!level.isClientSide) {
-            concordWave(level, player);
+            concordWave(level, player, stack);
             stack.hurtAndBreak(2, player, LivingEntity.getSlotForHand(hand));
         }
         player.getCooldowns().addCooldown(this, WAVE_COOLDOWN);
@@ -95,17 +108,27 @@ public class ArcenciumScepterItem extends Item {
      * colonne montante sur CHAQUE allie protege -- c'est elle qui rend le
      * soutien lisible pour toute l'equipe.
      */
-    private void concordWave(Level level, Player caster) {
-        AABB box = caster.getBoundingBox().inflate(WAVE_RADIUS);
+    private void concordWave(Level level, Player caster, ItemStack stack) {
+        // L'ONDE PROLONGEE elargit le cercle ET allonge les effets. Les deux
+        // ensemble : elargir seul ferait toucher plus de monde pour la meme
+        // duree, ce qui est un gain de portee deguise plutot qu'un changement
+        // de facon de jouer.
+        boolean wide = com.emerald.artifact.Artifacts.has(stack,
+                com.emerald.artifact.Artifact.ONDE_PROLONGEE);
+        double radius = wide ? WAVE_RADIUS * WIDE_REACH : WAVE_RADIUS;
+        int regen = wide ? REGEN_TICKS * 2 : REGEN_TICKS;
+        int armour = wide ? ARMOR_TICKS * 2 : ARMOR_TICKS;
+
+        AABB box = caster.getBoundingBox().inflate(radius);
         List<LivingEntity> around = level.getEntitiesOfClass(LivingEntity.class, box,
-                e -> e.isAlive() && e.distanceTo(caster) <= WAVE_RADIUS);
+                e -> e.isAlive() && e.distanceTo(caster) <= radius);
 
         ServerLevel server = level instanceof ServerLevel sl ? sl : null;
         int allies = 0;
         for (LivingEntity entity : around) {
             if (entity instanceof Player ally) {
-                ally.addEffect(new MobEffectInstance(MobEffects.REGENERATION, REGEN_TICKS, 1));
-                ally.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, ARMOR_TICKS, 0));
+                ally.addEffect(new MobEffectInstance(MobEffects.REGENERATION, regen, 1));
+                ally.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, armour, 0));
                 allies++;
                 if (server != null) {
                     shieldColumn(server, ally);
@@ -237,6 +260,20 @@ public class ArcenciumScepterItem extends Item {
         bolt.shootFromRotation(player, player.getXRot(), player.getYRot(),
                 0.0F, BOLT_SPEED, BOLT_SPREAD);
         level.addFreshEntity(bolt);
+
+        // LE TRAIT JUMEAU part vers une AUTRE cible, jamais vers la meme.
+        //
+        // C'est ce qui le distingue d'un simple doublement de degats : si rien
+        // d'autre ne se presente devant le lanceur, aucun second trait ne part.
+        // L'artefact recompense donc le placement -- se tenir la ou deux
+        // creatures, ou deux allies, tombent dans le meme cone -- et non le
+        // simple fait de tirer.
+        if (level instanceof ServerLevel server
+                && com.emerald.artifact.Artifacts.has(stack,
+                        com.emerald.artifact.Artifact.TRAIT_JUMEAU)) {
+            twinBolt(server, player, power);
+        }
+
         // SHULKER_SHOOT est le seul echantillon vanilla qui sonne vraiment
         // comme un tir d'energie ; CONDUIT_ATTACK_TARGET lui donne sa queue
         // magique. L'amethyste sonnait comme un bloc qu'on tape, pas comme
@@ -248,6 +285,49 @@ public class ArcenciumScepterItem extends Item {
         level.playSound(null, pos, SoundEvents.CONDUIT_ATTACK_TARGET, SoundSource.PLAYERS,
                 0.35F * power, 1.9F);
         stack.hurtAndBreak(1, player, EquipmentSlot.MAINHAND);
+    }
+
+    /**
+     * Le second trait du Trait Jumeau.
+     *
+     * On cherche la DEUXIEME cible du cone, pas la premiere : la premiere est
+     * deja celle que le trait principal a de bonnes chances d'atteindre, et l'y
+     * envoyer aussi ferait un doublement de degats deguise.
+     *
+     * Le trait vise indifferemment un ennemi ou un allie, comme le trait
+     * principal -- c'est le sceptre qui decide a l'impact, et il serait etrange
+     * que le jumeau trie ce que l'original ne trie pas. Sur un champ de
+     * bataille, cela veut dire qu'un tir peut blesser et soigner du meme geste.
+     *
+     * On VISE et l'on ne copie pas la direction du regard : un second trait
+     * tire droit devant retomberait sur la premiere cible, et l'artefact
+     * n'aurait aucun effet visible.
+     */
+    private static void twinBolt(ServerLevel level, Player player, float power) {
+        Vec3 eye = player.getEyePosition();
+        Vec3 look = player.getLookAngle().normalize();
+
+        List<LivingEntity> candidates = new java.util.ArrayList<>(
+                level.getEntitiesOfClass(LivingEntity.class,
+                        player.getBoundingBox().inflate(TWIN_RANGE),
+                        other -> other.isAlive() && other != player
+                                && look.dot(other.position().add(0, other.getBbHeight() * 0.5, 0)
+                                        .subtract(eye).normalize()) > TWIN_CONE));
+        if (candidates.size() < 2) {
+            return;                    // pas de seconde cible : pas de jumeau
+        }
+        candidates.sort(java.util.Comparator.comparingDouble(player::distanceToSqr));
+
+        LivingEntity target = candidates.get(1);
+        Vec3 aim = target.position().add(0, target.getBbHeight() * 0.5, 0)
+                .subtract(eye).normalize();
+
+        PrismaticBoltEntity twin = new PrismaticBoltEntity(level, player);
+        twin.setPower(power);
+        twin.shoot(aim.x, aim.y, aim.z, BOLT_SPEED, 0.0F);
+        level.addFreshEntity(twin);
+        level.playSound(null, player.blockPosition(), SoundEvents.CONDUIT_ATTACK_TARGET,
+                SoundSource.PLAYERS, 0.30F, 2.0F);
     }
 
     // ------------------------------------------------------------- divers

@@ -148,6 +148,54 @@
         "emeraldweapons:variant": 23
       },
       "model": "emeraldweapons:item/artifact_fleche_tracante"
+    },
+    {
+      "predicate": {
+        "emeraldweapons:variant": 24
+      },
+      "model": "emeraldweapons:item/artifact_cran_d_arret"
+    },
+    {
+      "predicate": {
+        "emeraldweapons:variant": 25
+      },
+      "model": "emeraldweapons:item/artifact_ruee_en_chaine"
+    },
+    {
+      "predicate": {
+        "emeraldweapons:variant": 26
+      },
+      "model": "emeraldweapons:item/artifact_onde_de_curee"
+    },
+    {
+      "predicate": {
+        "emeraldweapons:variant": 27
+      },
+      "model": "emeraldweapons:item/artifact_etau_de_gangue"
+    },
+    {
+      "predicate": {
+        "emeraldweapons:variant": 28
+      },
+      "model": "emeraldweapons:item/artifact_conduit_de_prisme"
+    },
+    {
+      "predicate": {
+        "emeraldweapons:variant": 29
+      },
+      "model": "emeraldweapons:item/artifact_onde_prolongee"
+    },
+    {
+      "predicate": {
+        "emeraldweapons:variant": 30
+      },
+      "model": "emeraldweapons:item/artifact_trait_jumeau"
+    },
+    {
+      "predicate": {
+        "emeraldweapons:variant": 31
+      },
+      "model": "emeraldweapons:item/artifact_calice_de_concorde"
     }
   ]
 }

@@ -77,6 +77,16 @@ ARTIFACTS = [
     ("fleche_fourchue",        "arrow",                0x8CFFB0),
     ("marque_prolongee",       "glow_ink_sac",         0xE478FF),
     ("fleche_tracante",        "spectral_arrow",       0xFFB84A),
+    # glaive : la fureur
+    ("cran_d_arret",           "flint",                0xFF7A5C),
+    ("ruee_en_chaine",         "rabbit_foot",          0xFFC46B),
+    ("onde_de_curee",          "glistering_melon_slice", 0x5CFFC4),
+    ("etau_de_gangue",         "lead",                 0xB0C4FF),
+    # sceptre : la Concorde
+    ("conduit_de_prisme",      "blaze_rod",            0xC77DFF),
+    ("onde_prolongee",         "nautilus_shell",       0x6BE0FF),
+    ("trait_jumeau",           "breeze_rod",           0x9CE8FF),
+    ("calice_de_concorde",     "honey_bottle",         0x9CFF8C),
 ]
 
 

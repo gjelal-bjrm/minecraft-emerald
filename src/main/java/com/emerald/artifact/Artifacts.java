@@ -42,7 +42,7 @@ public final class Artifacts {
             case CHEST -> EquipmentSlot.CHEST;
             case LEGS -> EquipmentSlot.LEGS;
             case FEET -> EquipmentSlot.FEET;
-            case SWORD, BOW, SCEPTER -> EquipmentSlot.MAINHAND;
+            case SWORD, BOW, SCEPTER, GLAIVE -> EquipmentSlot.MAINHAND;
         };
         return has(entity.getItemBySlot(slot), artifact);
     }

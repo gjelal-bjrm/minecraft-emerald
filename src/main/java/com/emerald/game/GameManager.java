@@ -215,24 +215,37 @@ public class GameManager {
     }
 
     /**
-     * Prete aux autres defenseurs un arc ou un sceptre, au hasard.
+     * Prete aux autres defenseurs l'une des trois armes du mode.
      *
-     * Celui qui tire la lame porte l'epee ; les autres recoivent l'une des deux
-     * autres armes du mode. La composition d'equipe existe donc des le prologue,
-     * et chacun voit ce que le mode reserve sans qu'on court-circuite la
-     * progression -- tout est repris a la fin du siege.
+     * Celui qui tire la lame porte l'epee ; les autres recoivent un arc, un
+     * sceptre ou un glaive. La composition d'equipe existe donc des le
+     * prologue, et chacun voit ce que le mode reserve sans qu'on court-circuite
+     * la progression -- tout est repris a la fin du siege.
+     *
+     * ON DISTRIBUE, on ne tire pas au sort pour chacun. Trois tirages
+     * independants donnent trois sceptres une fois sur vingt-sept, et la
+     * composition que le prologue est justement cense montrer n'existe alors
+     * plus. On melange donc les trois armes une fois, puis on les fait tourner :
+     * a trois defenseurs, chacun tient une arme differente ; au-dela, le cycle
+     * recommence. Le hasard porte sur QUI recoit quoi, pas sur ce qui sort.
      */
     private static void lendCeremonialArms(ServerLevel level, Player puller) {
+        java.util.List<net.minecraft.world.item.Item> pool = new java.util.ArrayList<>(
+                java.util.List.of(ModItems.ARCENCIUM_BOW.get(),
+                        ModItems.ARCENCIUM_SCEPTER.get(),
+                        ModItems.ARCENCIUM_GLAIVE.get()));
+        java.util.Collections.shuffle(pool, new java.util.Random(level.random.nextLong()));
+
+        int dealt = 0;
         for (ServerPlayer other : level.players()) {
             if (other == puller) {
                 continue;
             }
-            boolean bow = level.random.nextBoolean();
-            ItemStack weapon = new ItemStack(bow
-                    ? ModItems.ARCENCIUM_BOW.get() : ModItems.ARCENCIUM_SCEPTER.get());
+            net.minecraft.world.item.Item chosen = pool.get(dealt++ % pool.size());
+            ItemStack weapon = new ItemStack(chosen);
             weapon.set(com.emerald.artifact.ModDataComponents.CEREMONIAL.get(),
                     net.minecraft.util.Unit.INSTANCE);
-            if (bow) {
+            if (chosen == ModItems.ARCENCIUM_BOW.get()) {
                 // Infinite, plutot qu'une reserve qui s'epuise au milieu du siege.
                 // Vanilla exige malgre tout une fleche en poche pour que
                 // l'enchantement s'applique : on en laisse quelques-unes.
@@ -541,6 +554,7 @@ public class GameManager {
         player.getInventory().add(new ItemStack(ModItems.OATH_BLADE.get()));
 
         lendCeremonialArms(level, player);
+        seedElements(level);
 
         // le Serment lie toute l'equipe, pas seulement celui qui a tire la lame
         for (ServerPlayer other : level.players()) {
@@ -763,6 +777,24 @@ public class GameManager {
         announce(level, "game.emeraldweapons.anchor_held",
                 "game.emeraldweapons.anchor_held.sub", 0x78E8AE);
 
+        // LA VRAIE PAIE DE L'ANCRE.
+        //
+        // Dix niveaux pour la premiere, douze pour chacune des deux suivantes :
+        // trente-quatre en tout, soit le tiers de la progression rendu par les
+        // trois sanctuaires. C'est deliberement enorme. Une ancre coute un
+        // siege entier ; la recompenser par de l'experience ordinaire, que le
+        // joueur venait de toute facon d'amasser en la defendant, ne se
+        // remarquerait pas.
+        //
+        // La montee suit l'ORDRE des prises, pas l'identite du sanctuaire :
+        // c'est le nombre d'ancres deja tenues qui compte, de sorte qu'on
+        // puisse les prendre dans n'importe quel ordre.
+        int held = state.anchorsActive();
+        int reward = held <= 1 ? 10 : 12;
+        for (ServerPlayer player : level.players()) {
+            com.emerald.hero.HeroEvents.awardLevels(player, reward);
+        }
+
         if (state.anchorsActive() >= 3) {
             announce(level, "game.emeraldweapons.rainbow",
                     "game.emeraldweapons.rainbow.sub", 0xB98CFF);
@@ -795,5 +827,46 @@ public class GameManager {
         }
         anchorSieges.values().forEach(Siege::cancel);
         anchorSieges.clear();
+    }
+
+    /**
+     * Donne a chacun un element de depart, tire au sort.
+     *
+     * ON NE LAISSE PERSONNE CHOISIR AU LANCEMENT, et c'est le point. Un menu de
+     * choix au depart demanderait de decider avant d'avoir vu quoi que ce soit
+     * du bestiaire ; un tirage impose un point de vue, et c'est en decouvrant
+     * ce qu'on affronte qu'on apprend s'il faut en changer. Le changement, lui,
+     * reste libre -- il suffit de trouver une Pierre.
+     *
+     * ON TIRE SANS REMISE tant qu'il y a moins de joueurs que d'elements : a
+     * quatre, chacun en a un different, ce qui donne d'emblee une equipe qui se
+     * complete. Le hasard sert a surprendre, pas a donner deux fois la meme
+     * chose.
+     */
+    private static void seedElements(ServerLevel level) {
+        java.util.List<com.emerald.element.Element> pool = new java.util.ArrayList<>(
+                java.util.List.of(com.emerald.element.Element.EAU,
+                        com.emerald.element.Element.FEU,
+                        com.emerald.element.Element.LUMIERE,
+                        com.emerald.element.Element.OBSCUR));
+        java.util.Collections.shuffle(pool, new java.util.Random(level.random.nextLong()));
+
+        int dealt = 0;
+        for (ServerPlayer player : level.players()) {
+            com.emerald.element.Element given = pool.get(dealt++ % pool.size());
+            com.emerald.element.Attunement.set(player, given);
+            player.sendSystemMessage(Component.translatable(
+                            "element.emeraldweapons.granted", given.label(),
+                            given.opposite().label())
+                    .withStyle(style -> style.withColor(given.colour())));
+            player.connection.send(new ClientboundSetTitleTextPacket(
+                    Component.translatable("element.emeraldweapons.granted.title", given.label())
+                            .withStyle(style -> style.withColor(given.colour()))));
+            player.connection.send(new ClientboundSetSubtitleTextPacket(
+                    Component.translatable("element.emeraldweapons.granted.sub")
+                            .withStyle(ChatFormatting.GRAY)));
+            level.playSound(null, player.blockPosition(),
+                    SoundEvents.AMETHYST_BLOCK_RESONATE, SoundSource.PLAYERS, 1.0F, 1.1F);
+        }
     }
 }

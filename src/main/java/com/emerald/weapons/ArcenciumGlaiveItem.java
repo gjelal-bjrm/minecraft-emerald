@@ -1,5 +1,7 @@
 package com.emerald.weapons;
 
+import com.emerald.artifact.Artifact;
+import com.emerald.artifact.Artifacts;
 import com.emerald.particles.ModParticles;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.particles.ParticleTypes;
@@ -98,6 +100,15 @@ public class ArcenciumGlaiveItem extends Item {
     private static final String TAG_RAGE = "ArcenciumRage";
     private static final String TAG_LAST_HIT = "ArcenciumRageLastHit";
     private static final String TAG_SECOND = "ArcenciumSecondDash";
+    /** Combien de bonds la serie compte deja, pour la Ruee en Chaine. */
+    private static final String TAG_CHAIN = "ArcenciumDashChain";
+    /** Ce que la Ruee en Chaine ne depasse pas. */
+    private static final int CHAIN_MAX = 3;
+    /** Ce que l'Onde de Curee multiplie : la portee, puis la vie rendue. */
+    private static final double WAVE_REACH = 1.7;
+    private static final float WAVE_HEAL = 2.0F;
+    /** La portee a laquelle l'Etau de Gangue propage l'immobilisation. */
+    private static final double CLAMP_SPREAD = 4.0;
 
     /** Le second bond reste sur le JOUEUR : il ne suit pas l'arme, il suit la main. */
 
@@ -129,10 +140,22 @@ public class ArcenciumGlaiveItem extends Item {
         }
         CompoundTag tag = stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY)
                 .copyTag();
-        if (level.getGameTime() - tag.getLong(TAG_LAST_HIT) > RAGE_DECAY) {
+        int stored = Math.min(RAGE_MAX, tag.getInt(TAG_RAGE));
+        long idle = level.getGameTime() - tag.getLong(TAG_LAST_HIT);
+        if (idle <= RAGE_DECAY) {
+            return stored;
+        }
+        // LE CRAN D'ARRET change la NATURE de la retombee, pas sa vitesse.
+        //
+        // Sans lui, six secondes sans toucher personne effacent tout : l'arme
+        // exige qu'on reste au contact, ce qui est son caractere. Avec lui, on
+        // perd un cran par fenetre -- de quoi contourner un mur, remonter une
+        // muraille ou changer de cible sans repartir de zero. C'est le meme
+        // budget de temps, depense autrement.
+        if (!Artifacts.has(stack, Artifact.CRAN_D_ARRET)) {
             return 0;
         }
-        return Math.min(RAGE_MAX, tag.getInt(TAG_RAGE));
+        return Math.max(0, stored - (int) (idle / RAGE_DECAY));
     }
 
     private static void setRage(ItemStack stack, Level level, int value) {
@@ -161,7 +184,7 @@ public class ArcenciumGlaiveItem extends Item {
         int touched = 0;
         boolean killed = false;
         if (level instanceof ServerLevel server) {
-            long[] tally = charge(server, player, from, look, rage);
+            long[] tally = charge(server, player, stack, from, look, rage);
             touched = (int) tally[0];
             killed = tally[1] != 0L;
             stack.hurtAndBreak(3, player, LivingEntity.getSlotForHand(hand));
@@ -187,11 +210,21 @@ public class ArcenciumGlaiveItem extends Item {
         // Le second, lui, referme toujours -- sans quoi on tiendrait a distance
         // indefiniment en enchainant sur le premier venu.
         if (!level.isClientSide) {
-            if (touched > 0 && !second) {
+            // LA RUEE EN CHAINE prolonge la serie tant qu'on touche, jusqu'a
+            // trois maillons. Le plafond n'est pas une precaution mais la
+            // condition pour que l'artefact reste un artefact : sans lui, un
+            // troupeau de zombies devient un moteur de deplacement infini, et
+            // l'arme ne serait plus un corps-a-corps mais une monture.
+            int links = player.getPersistentData().getInt(TAG_CHAIN);
+            boolean chains = Artifacts.has(stack, Artifact.RUEE_EN_CHAINE)
+                    && links < CHAIN_MAX;
+            if (touched > 0 && (!second || chains)) {
                 player.getPersistentData().putLong(TAG_SECOND, now + SECOND_WINDOW);
+                player.getPersistentData().putInt(TAG_CHAIN, second ? links + 1 : 1);
                 player.getCooldowns().addCooldown(this, SECOND_GRACE);
             } else {
                 player.getPersistentData().putLong(TAG_SECOND, 0L);
+                player.getPersistentData().putInt(TAG_CHAIN, 0);
                 int cooldown = Math.max(DASH_FLOOR, DASH_COOLDOWN - rage * DASH_PER_RAGE);
                 if (killed) {
                     cooldown = (int) Math.round(cooldown * DASH_KILL_KEEP);
@@ -216,7 +249,8 @@ public class ArcenciumGlaiveItem extends Item {
      *
      * @return {nombre de corps touches, 1 si l'un d'eux est mort}
      */
-    private long[] charge(ServerLevel level, Player player, Vec3 from, Vec3 look, int rage) {
+    private long[] charge(ServerLevel level, Player player, ItemStack stack,
+                          Vec3 from, Vec3 look, int rage) {
         Vec3 to = from.add(look.scale(DASH_POWER * 7.0));
         AABB corridor = new AABB(from, to).inflate(DASH_WIDTH);
         float damage = DASH_DAMAGE + rage * RAGE_PER_STEP;
@@ -235,10 +269,20 @@ public class ArcenciumGlaiveItem extends Item {
                 // pic. Ce n'est pas un vrai stun, mais cela en fait le travail
                 // sans introduire d'etat que le jeu ne saurait pas afficher.
                 if (rage >= STUN_FROM) {
-                    hit.addEffect(new MobEffectInstance(
-                            MobEffects.MOVEMENT_SLOWDOWN, STUN_TICKS, 6, false, true));
-                    hit.addEffect(new MobEffectInstance(
-                            MobEffects.DIG_SLOWDOWN, STUN_TICKS, 3, false, true));
+                    clamp(hit);
+                    // L'ETAU DE GANGUE fait de l'immobilisation un outil de
+                    // controle et non un simple bonus au duel : ce qui se
+                    // pressait autour de la cible se fige avec elle. C'est la
+                    // reponse a la seule facon de mourir avec cette arme --
+                    // etre encercle au moment ou l'on bondit.
+                    if (Artifacts.has(stack, Artifact.ETAU_DE_GANGUE)) {
+                        for (LivingEntity near : level.getEntitiesOfClass(LivingEntity.class,
+                                hit.getBoundingBox().inflate(CLAMP_SPREAD),
+                                e -> e.isAlive() && e != player && e != hit
+                                        && !e.isAlliedTo(player))) {
+                            clamp(near);
+                        }
+                    }
                 }
                 if (hit.isDeadOrDying()) {
                     killed = 1;
@@ -254,6 +298,21 @@ public class ArcenciumGlaiveItem extends Item {
                     at.x, at.y + 1.0, at.z, 2, 0.2, 0.32, 0.2, 0.02);
         }
         return new long[]{touched, killed};
+    }
+
+    /**
+     * Clouer sur place.
+     *
+     * Minecraft n'a pas d'etourdissement ; la lenteur a un niveau eleve en
+     * tient lieu, et la fatigue empeche de riposter au pic. Ce n'est pas un
+     * vrai stun, mais cela en fait le travail sans introduire d'etat que le
+     * jeu ne saurait pas afficher.
+     */
+    private static void clamp(LivingEntity victim) {
+        victim.addEffect(new MobEffectInstance(
+                MobEffects.MOVEMENT_SLOWDOWN, STUN_TICKS, 6, false, true));
+        victim.addEffect(new MobEffectInstance(
+                MobEffects.DIG_SLOWDOWN, STUN_TICKS, 3, false, true));
     }
 
     // ------------------------------------------------------------ clic gauche
@@ -272,15 +331,24 @@ public class ArcenciumGlaiveItem extends Item {
         // est tout l'interet -- une ressource qui achete deux choses a la fois
         // n'est pas une ressource, c'est un bonus.
         if (rage >= RAGE_MAX) {
+            // L'ONDE DE CUREE fait de la depense de soin une depense de survie.
+            //
+            // La portee ET le plafond montent ensemble, a dessein : elargir
+            // seulement le cercle ferait faucher plus de monde pour la meme
+            // vie, ce qui est un gain de degats deguise. Ici l'artefact
+            // recompense ce qu'il promet -- tenir au milieu de la meute.
+            boolean wave = Artifacts.has(stack, Artifact.ONDE_DE_CUREE);
+            double reach = wave ? CULL_RADIUS * WAVE_REACH : CULL_RADIUS;
+            float cap = wave ? CULL_HEAL_CAP * WAVE_HEAL : CULL_HEAL_CAP;
             float healed = 0.0F;
             for (LivingEntity caught : level.getEntitiesOfClass(LivingEntity.class,
-                    player.getBoundingBox().inflate(CULL_RADIUS),
+                    player.getBoundingBox().inflate(reach),
                     e -> e.isAlive() && e != player && !e.isAlliedTo(player))) {
                 caught.hurt(level.damageSources().playerAttack(player), CULL_DAMAGE);
-                healed = Math.min(CULL_HEAL_CAP, healed + CULL_HEAL);
+                healed = Math.min(cap, healed + CULL_HEAL);
                 burst(level, caught.position().add(0, caught.getBbHeight() * 0.5, 0), 14);
             }
-            ring(level, player, CULL_RADIUS);
+            ring(level, player, reach);
             if (healed > 0.0F) {
                 player.heal(healed);
                 level.sendParticles(ParticleTypes.HEART,

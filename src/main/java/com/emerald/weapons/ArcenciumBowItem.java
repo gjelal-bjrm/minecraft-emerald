@@ -87,7 +87,11 @@ public class ArcenciumBowItem extends BowItem {
 
     /** Degats de base de la fleche (vanilla : 2.0). Pleine tension : 6.0, soit ~18 pv. */
     public static double baseDamageForStage(int stage) {
-        return 2.0 + 0.8 * stage;
+        // Un cran EN DESSOUS de ce que l'arc faisait, et c'est voulu : l'archer
+        // doit frapper moins fort qu'un epeiste quand il ne critique pas, et
+        // plus fort que lui a la longue parce qu'il critique bien davantage.
+        // Sans cette baisse, il gagnait sur les deux tableaux.
+        return 1.8 + 0.72 * stage;
     }
 
     /** Particule de la couleur du cristal atteint (bleu = flocons vanilla). */

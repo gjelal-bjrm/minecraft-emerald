@@ -512,6 +512,32 @@ Quatre artefacts possibles par emplacement, tous a effet **comportemental**
 - **Marque Prolongee** : la Marque Prismatique dure trois fois plus longtemps.
 - **Fleche Tracante** : les fleches inflechissent leur course vers la cible.
 
+**Glaive, la fureur**
+
+Les quatre repondent aux quatre systemes de l'arme -- la Rage, la Ruee, la
+Curee, l'immobilisation -- de sorte qu'aucun ne fasse doublon et que le choix
+soit un choix de style et non de puissance.
+
+- **Cran d'Arret** : la Rage ne retombe plus d'un coup, elle perd un cran a la
+  fois. Change la NATURE de la retombee et non sa vitesse : le meme budget de
+  temps, depense autrement -- de quoi contourner un mur ou changer de cible
+  sans repartir de zero.
+- **Ruee en Chaine** : un second bond qui touche en ouvre encore un autre,
+  **jusqu'a trois**. Le plafond n'est pas une precaution mais la condition pour
+  que l'artefact reste un artefact : sans lui, un troupeau de zombies devient
+  un moteur de deplacement infini et l'arme n'est plus un corps-a-corps.
+- **Onde de Curee** : la Curee porte 1,7 fois plus loin et rend deux fois plus
+  de vie. Portee ET plafond montent ensemble a dessein -- elargir seulement le
+  cercle serait un gain de degats deguise.
+- **Etau de Gangue** : l'immobilisation de la Ruee gagne les ennemis a quatre
+  blocs de la cible. Reponse a la seule facon de mourir avec cette arme : etre
+  encercle au moment ou l'on bondit.
+
+> Les tables de butin des sanctuaires **lisent desormais l'enumeration Java**
+> (`tools/sanctuary_loot.py`). La liste y etait recopiee a la main et avait
+> deja pris du retard -- une recompense qui n'existe que dans l'onglet creatif
+> n'est pas une recompense.
+
 ### 7.2 Le Repere d'Echo (regle particuliere)
 
 - **Actif uniquement pendant les sieges d'ancre.**
@@ -960,7 +986,7 @@ la hauteur fait le repere.
 - Au retrait : **buff d'equipe « le Serment vous lie »**, et **rappel a l'ecran
   apres 60 s** si la lame reste plantee.
 
-## 17. Rarete et runes *(rarete faite, runes a faire)*
+## 17. Rarete et runes *(les deux faites)*
 
 Emprunte a NosTale, et volontairement dans cet ordre : la rarete d'abord,
 puisque c'est elle qui ouvre les runes.
@@ -993,27 +1019,602 @@ La montee se tente a l'etabli de sertissage avec des **Eclats du Destin**,
 qui ne se fabriquent pas. Le tirage garde le MEILLEUR de N jets, un par
 eclat ; on ne redescend jamais. Voir `GearRarity`.
 
-### 17.2 Les runes — A FAIRE
+**Le bareme a ete resserre deux fois, et mesure a chaque fois.** Le premier
+donnait une chance sur trente-deux meme avec une pile pleine -- c'est-a-dire
+jamais. Je l'ai desserre, et il est devenu trop large : quarante eclats
+suffisaient a la moitie des Legendaires. Une piece de rang huit obtenue en vingt
+minutes rend inutile tout ce qu'on trouvera ensuite.
 
-Ce qui est deja decide, et qu'il ne faut plus redemander :
+Bareme actuel, par lots de trente-deux, memoire des tentatives comprise :
 
-- **Deux familles distinctes.** Des runes d'ARME et des runes d'ARMURE. Une
-  rune d'arme ne se pose pas sur une armure, et reciproquement. C'est une
-  contrainte de conception, pas une simplification : elle donne deux
-  economies separees et evite qu'une seule rune trouvee serve partout.
+| Eclats depenses | R7+ | Phenomenal |
+|---|---|---|
+| 40 (~20 min) | 11 % | 3 % |
+| 100 (~35 min) | 29 % | 9 % |
+| 200 | 54 % | 19 % |
+| 400 (la partie entiere) | 87 % | 43 % |
 
-- **Les runes ont elles-memes un rang de rarete**, sur la meme echelle a
-  huit crans. Ce rang commande la force de son effet : une meme rune donne
-  peu en Utile et beaucoup en Phenomenal.
+Le Phenomenal reste POSSIBLE pour qui y consacre toute sa partie, et improbable
+pour tous les autres. On peut toujours tenter, jamais compter dessus.
 
-- **La rarete de la PIECE commande combien de runes elle accepte.** C'est le
-  lien entre les deux systemes, et la raison pour laquelle la rarete se fait
-  en premier. Une piece normale n'en porte aucune ; le nombre monte avec le
-  rang. (Le bareme exact reste a fixer.)
+### 17.2 Les runes — FAIT
 
-- **La pose se fait a l'etabli de sertissage**, comme les artefacts et comme
-  la montee de rarete -- un seul lieu pour tout ce qui modifie une piece.
+Barème relevé sur NosTale (Gameforge EU) ; le prompt ayant servi est dans
+`tools/prompts/nostale_runes.md`.
 
-Restent a decider : le bareme rang de piece -> nombre de runes, la liste des
-effets par famille, la facon dont une rune se retire (ou si elle se retire),
-et si les runes se fabriquent ou se trouvent uniquement.
+#### La structure — ce que j'avais faux
+
+Je croyais qu'une rune portait **une** statistique dont le rang multipliait la
+valeur. Le vrai système fait tout autrement :
+
+- une rune porte **plusieurs options** ;
+- **le rang ne multiplie rien** — il décide du *schéma* : combien d'options, et
+  de quels grades ;
+- chaque option a un **grade** (C < B < A < S) qui, lui, multiplie sa valeur ;
+- chaque option a un **grade minimal** : « Attaque augmentée » se voit partout,
+  « Ravage » n'apparaît que dans un emplacement S ;
+- chaque option **tire sa valeur** entre un min et un max propres à son grade.
+
+C'est bien meilleur que ce que j'avais posé : deux runes de même rang ne
+diffèrent plus par un chiffre mais par leur **composition**. Une Légendaire aux
+mauvaises statistiques peut valoir moins qu'une Excellente bien tombée — et
+c'est cette incertitude qui donne envie d'en ramasser une de plus.
+
+#### Le schéma par rang
+
+| Rang | Schéma | Rang | Schéma |
+|---|---|---|---|
+| 1 Utile | C | 5 Ancestral | CBA |
+| 2 Bon | CC | 6 Mystérieux | CBAA |
+| 3 Bonne qualité | CB | 7 Légendaire | CBAAS |
+| 4 Excellent | CBB | 8 Phénoménal | **CBAASS** |
+
+Le rang 8 est **notre ajout** : le relevé donne le même schéma au 7 et au 8
+(CBAAS), ce qui rendrait chez nous le Phénoménal strictement inutile. C'est le
+seul endroit où l'on s'écarte de la source.
+
+Multiplicateurs de grade : C ×1,00 · B ×1,40 · A ×1,90 · S ×2,60.
+
+#### Les deux familles
+
+| Famille | Support | C | B | A | S |
+|---|---|---|---|---|---|
+| **Arme** | l'arme tenue **et le casque** | Tranchant, Chance, Fureur, Syncope, Saignée | Cadence, Allonge, **SL Att.**, **SL Élém.**, Curée, Aubaine | Percée, Acharnement, Cerné | **Ravage**, **Cataclysme**, **SL Générale** |
+| **Armure** | les 4 pièces | Carapace, Égide | Endurance, Esquive, **SL Déf.**, **SL HP/MP** | Absorption | **Régénération**, **Sauvegarde** |
+
+17 options pour l'arme, 9 pour l'armure. Le rang 8 tire six options
+**distinctes**, il en faut donc au moins sept par famille — vérifié.
+
+#### Le casque tient lieu d'arme secondaire
+
+NosTale équipe une arme **principale** et une arme **secondaire**, toutes deux
+runables, et toutes deux avec des runes d'**arme**. Nous n'avons pas d'arme
+secondaire : c'est le **casque** qui en tient le rôle, et il prend donc une rune
+d'arme, tout simplement.
+
+Le casque accepte les **deux** familles, dans deux emplacements distincts : une
+rune d'armure parce qu'il est une pièce d'armure, une rune d'arme parce qu'il
+tient lieu d'arme secondaire.
+
+> **J'avais inventé une troisième famille, à tort.** Mon objection était qu'une
+> rune d'arme posée sur un casque ferait exactement ce qu'elle ferait sur
+> l'arme — mais c'est précisément ainsi que NosTale fonctionne, et cela suffit :
+> le casque n'a pas besoin d'un rôle propre, il a besoin d'un **second
+> emplacement offensif**. Une famille de plus n'ajoutait qu'un catalogue à
+> maintenir.
+
+Les effets **conditionnels** (Syncope, Saignée, Curée, Aubaine, Acharnement,
+Cerné, Cataclysme) rejoignent donc la famille Arme — et c'est là qu'ils sont
+chez NosTale, qui range la syncope et le saignement en grade C et la
+régénération par victoire en grade B. Une rune d'arme peut désormais tomber
+franchement offensive ou franchement opportuniste, et deux Légendaires ne se
+ressemblent plus du tout.
+
+#### Les SL — le pont avec la fiche du Héros
+
+C'est la pièce que j'avais manquée. Chez NosTale, « SL Attaque 17 » ne donne pas
+dix-sept points d'attaque mais **dix-sept niveaux dans la voie**. Nos runes font
+pareil :
+
+| Option | Famille | Grade min | Effet |
+|---|---|---|---|
+| SL Attaque | Arme | B | +4 à +13 niveaux en Attaque |
+| SL Élément | Arme | B | +4 à +13 niveaux en Élément |
+| SL Défense | Armure | B | +4 à +13 niveaux en Défense |
+| SL HP/MP | Armure | B | +4 à +13 niveaux en Vitalité |
+| **SL Générale** | Arme | **S** | +2 à +4 niveaux dans **les quatre** |
+
+Ces niveaux **ne se paient pas** et s'ajoutent par-dessus l'achat. Ils peuvent
+pousser une voie **au-delà du centième** — jusqu'à 120, plafond relevé de
+NosTale — ce qu'aucune dépense de points ne permet.
+
+C'est de loin l'option la plus forte du catalogue. Mesuré en points de fiche
+économisés :
+
+| Grade | Sur une voie à 0 | à 50 | à 90 |
+|---|---|---|---|
+| B | ~7 pts | ~28 pts | ~49 pts |
+| A | ~9 pts | ~36 pts | ~66 pts |
+| S | ~16 pts | ~55 pts | ~76 pts |
+
+Plus la voie est haute, plus la rune vaut cher — parce que là-haut chaque niveau
+coûte jusqu'à dix points. **Un joueur qui a déjà tout dépensé a donc encore une
+raison de chercher une bonne rune.**
+
+Deux garde-fous : les **paliers restent bloqués à dix** (le dépassement donne du
+linéaire, jamais un palier entier, qu'une rune ne doit pas pouvoir offrir), et
+la fiche **sépare à l'écran l'acheté de l'offert** — le prix du niveau suivant se
+calcule sur ce qu'on a payé, jamais sur le total.
+
+> Le relevé confirme que les effets **conditionnels** existent bien chez NosTale
+> — il cite la syncope et le saignement en grade C, la régénération par victoire
+> en grade B. La séparation qu'on avait posée avant de le savoir se trouve donc
+> validée, jusque dans le détail des grades.
+
+#### Les trois règles
+
+1. **Une seule rune par emplacement.** Graver, c'est choisir. Le casque a deux
+   emplacements — un d'armure, un d'arme — parce qu'il tient le rôle de l'arme
+   secondaire de NosTale.
+2. **Le rang de la rune ne peut pas dépasser celui de la pièce.** Une pièce
+   Phénoménale accepte tout, une pièce Utile n'accepte que de l'Utile. C'est ce
+   qui relie les deux systèmes : monter une pièce en rareté **ouvre l'accès** aux
+   bonnes runes, ce qui vaut bien mieux qu'ajouter des chiffres.
+3. **Graver remplace, et l'ancienne rune est perdue.** Même règle que les
+   artefacts : on peut changer d'avis, mais cela coûte.
+
+#### L'obtention — la raison de continuer à tuer
+
+Les runes tombent **des monstres, et d'eux seuls**. Les artefacts dorment dans
+les coffres, la rareté se monte à l'établi : ni l'un ni l'autre ne récompense le
+combat lui-même. Les runes, si.
+
+Le rang est plafonné par les points de vie maximaux de la bête — même mesure que
+pour l'expérience du Héros, seule comparable d'un mod à l'autre :
+
+| PV max | Rang maximum |
+|---|---|
+| < 15 | 2 |
+| < 30 | 3 |
+| < 60 | 4 |
+| < 100 | 5 |
+| < 200 | 6 |
+| < 400 | 7 |
+| ≥ 400 | 8 |
+
+Sous le plafond, le tirage est **uniforme** — et c'est une correction mesurée.
+Je prenais d'abord le plus petit de deux tirages : un rang 8 n'apparaissait
+alors que dans 4 parties sur 1000, c'est-à-dire jamais. **Un rang qu'on ne voit
+jamais n'est pas rare, il est absent.**
+
+**Mesure sur une partie type** (483 monstres, dont trois boss) : 18 runes
+ramassées, un rang 7+ dans **6 %** des parties, un rang 8 dans **3 %**.
+
+Tomber sur une Phénoménale *avec* les bonnes options *et* de bons tirages relève
+donc d'une chance considérable. On ne construit pas une partie autour, on s'en
+souvient.
+
+#### Un seul jet, pas deux
+
+La fiche du Héros et les runes touchent aux mêmes quatre grandeurs — chance de
+critique, dégâts critiques, esquive, critiques subis. **Elles se versent dans
+les mêmes totaux** et ne tirent pas séparément. Deux systèmes qui tireraient
+chacun le leur donneraient deux coups forts par frappe et deux chances
+d'esquiver le même coup, et le joueur ne saurait plus ce qu'il possède.
+
+## 18. Le niveau Heros *(fait, bareme NosTale reel)*
+
+Une progression PARALLELE a celle du jeu, plafonnee a cent, qui rend des points
+a repartir entre quatre voies. C'est le modele de NosTale, repris pour la meme
+raison : un joueur qui choisit ou mettre ses points se souvient de son
+personnage, alors qu'une progression automatique ne se remarque pas.
+
+### 18.1 Le bareme
+
+Le total au niveau cent est FIXE A 486 POINTS, et la table y tombe juste :
+
+| Niveaux | Points par montee | Sous-total |
+|---|---|---|
+| 2 a 25 | 3 | 72 |
+| 26 a 50 | 4 | 100 |
+| 51 a 75 | 5 | 125 |
+| 76 a 99 | 6 | 144 |
+| 100 | 45 | 45 |
+| | | **486** |
+
+Le gros lot final est delibere : les derniers niveaux sont les plus longs, et
+une recompense plate les rendrait ingrats.
+
+### 18.2 L'experience
+
+`needed(level) = 28 + level * 3/5 + level^2 / 500`, soit six mille trois cents
+points en tout. **La courbe a ete mesuree, non estimee** : ma premiere version
+en demandait soixante-seize mille — six mille quatre cents monstres — parce que
+j'avais ecrit « plus rapide que le jeu » sans jamais faire la somme.
+
+La pente est douce (28 points au premier palier, 106 au dernier) plutot
+qu'exponentielle : une courbe raide rendait les vingt premiers niveaux gratuits
+et les vingt derniers hors d'atteinte.
+
+L'experience vient du COMBAT et des objectifs, jamais du temps qui passe. Une
+creature vaut `2 + PV_max / 4`, plafonne a 120 : la valeur suit ce que la
+creature coute, non ce qu'elle est, et cette mesure range d'elle-meme un boss
+au-dessus d'un zombie.
+
+**Les ancres donnent des NIVEAUX, pas de l'experience** : dix pour la premiere,
+douze pour chacune des deux suivantes. Trente-quatre en tout, soit le tiers de
+la progression. C'est enorme a dessein — une ancre coute un siege entier, et la
+recompenser par de l'experience ordinaire, que le joueur venait de toute facon
+d'amasser en la defendant, ne se remarquerait pas.
+
+### 18.3 Les quatre voies — barème réel de NosTale
+
+**LES POINTS N'ACHÈTENT PAS DE LA VALEUR, ILS ACHÈTENT DES NIVEAUX.** C'est la
+découverte qui a fait refaire le système. Je croyais que NosTale ajoutait un
+gain fixe par point ; le vrai barème (relevé Gameforge EU, post-extension) montre
+tout autre chose : une voie monte de 0 à 100, **chaque niveau coûte de plus en
+plus cher**, et **chaque niveau rapporte de plus en plus**. Rendement dégressif
+par le coût, croissant par la valeur — rien à voir avec une droite.
+
+**Table de coût** (une seule pour les quatre voies ; le vrai barème Attaque
+demande 410 points pour 100 niveaux, celle-ci 406, soit 1 % d'écart) :
+
+| Niveaux | Coût | Niveaux | Coût |
+|---|---|---|---|
+| 0-9 | 1 | 60-79 | 5 |
+| 10-19 | 2 | 80-89 | 6 |
+| 20-39 | 3 | 90-96 | 7 |
+| 40-59 | 4 | 97 / 98 / 99 | 8 / 9 / 10 |
+
+**C'est ce qui fait le choix**, et les chiffres tombent remarquablement bien sur
+nos 486 points :
+
+- une voie pleine coûte **406** des 486 points ;
+- il reste 80, soit le **niveau 36** dans une deuxième voie ;
+- répartir également donne le **niveau 47 partout** ;
+- deux voies pleines demanderaient 812 points : **impossible**.
+
+**Gain linéaire** (la valeur d'un niveau monte par tranche de dix, coefficients
+1,0 → 2,4, comme l'Attaque NosTale qui passe de +5 à +20) :
+
+| Voie | Par niveau (base) | Total à 100 |
+|---|---|---|
+| Attaque | 0,05 dégât | +7,4 dégâts |
+| Élément | 0,35 % | +51,8 % aux effets du mode |
+| Défense | 0,05 armure | +7,4 armure |
+| Vitalité | 0,12 PV | +17,8 PV |
+
+**Paliers tous les 10 niveaux** (et non tous les 20 points), avec des
+statistiques secondaires — c'est ce qui empêche une voie d'être un curseur :
+
+| Voie | Palier donne | Total à 100 |
+|---|---|---|
+| Attaque | proba critique, dégâts critiques | 20 % / +100 % (×2,5) |
+| Défense | esquive, critiques subis | 15 % / −50 % |
+| Élément | résistance aux dégâts indirects | 35 % |
+| Vitalité | dégâts et armure | +3,5 / +5,0 |
+
+La Vitalité **déborde sur les deux autres**, comme la voie HP/MP de NosTale dont
+les paliers donnent de la puissance d'attaque et de la défense. C'est ce qui
+l'empêche d'être la voie qu'on prend faute de mieux.
+
+**Quatre profils mesurés** (simulation, pas estimation) :
+
+| Répartition | Niveaux | Résultat |
+|---|---|---|
+| Tout Attaque | 100/0/0/0 | +7,4 dég, crit 20 % ×2,50 |
+| Tout Vitalité | 0/0/0/100 | +17,8 PV, +3,5 dég, +5,0 arm |
+| Équilibré | 47/47/48/48 | +3,4 dég, +4,0 arm, +6,4 PV, +18 % eff |
+| Attaque + Défense | 74/0/74/0 | +4,7 dég, +4,7 arm, esq 10 %, crit 14 % |
+
+Aucune des quatre n'en domine une autre, et chacune se joue différemment.
+
+**Les statistiques secondaires n'existent pas dans Minecraft** — le critique
+vanilla est purement géométrique et n'obéit à aucune probabilité. Elles sont
+appliquées à la main dans `HeroCombat`, sur `LivingIncomingDamageEvent`, seul
+endroit qui voie à la fois qui frappe, qui encaisse et le montant avant
+réduction. L'ordre y est explicite : **on esquive d'abord, on critique ensuite,
+on résiste en dernier.**
+
+### 18.4 L'interface
+
+- **Jauge permanente** en bas a gauche : niveau et pourcentage du niveau
+  suivant, plus un lisere violet quand des points attendent. Le coin inferieur
+  gauche est le dernier libre — chronometre et ancres en haut a gauche, minimap
+  en haut a droite, barres de siege et annonces au centre, Sonde a droite.
+- **Fiche complete** sur la touche **H** : les quatre voies, une ligne chacune,
+  avec ce que la voie DONNE et non ce qu'elle vaut. Placement par **+1 / +5 /
+  +10**, les boutons impossibles etant grises plutot que refuses en silence.
+- **Repli en commande** : `/arcencium hero`, `/arcencium hero <voie> <n>`,
+  `/arcencium hero reset`, `/arcencium hero xp <n>` pour les essais.
+
+La fiche ne decide de rien : chaque clic est une demande, le serveur revalide
+tout et renvoie la fiche entiere — y compris quand rien n'a ete place. Les
+points vivent dans les donnees persistantes du joueur, **qui ne se
+synchronisent pas** : sans `HeroSyncPayload`, l'ecran serait vide alors que le
+serveur sait tout. C'est exactement la panne qu'avait connue la jauge de Rage.
+
+## 19. L'echelle multijoueur *(fait)*
+
+Un siege calibre pour un joueur est une formalite a quatre. Chaque vague gagne
+donc **trois quarts de sa taille par joueur supplementaire** :
+
+| Joueurs | Facteur | Vague de 8 |
+|---|---|---|
+| 1 | 1,00 | 8 |
+| 2 | 1,75 | 14 |
+| 3 | 2,50 | 20 |
+| 4 | 3,25 | 26 |
+
+**Trois quarts et non un entier.** Deux joueurs valent plus que deux fois un
+joueur — ils couvrent deux angles, se relevent, concentrent leurs coups — mais
+ils partagent aussi un seul jeu d'ancres et une seule heure. Doubler franchement
+punirait le fait de jouer ensemble ; ne rien changer le recompenserait.
+
+Plafond de quarante creatures par vague : ce n'est pas un reglage d'equilibre
+mais une securite serveur. L'effectif est compte une fois, a l'ouverture du
+siege — un joueur qui arrive en cours de vague ne la fait pas gonfler sous ses
+pieds, car la jauge de progression compte deja les monstres promis et la voir
+reculer serait pire.
+
+Reste a decider : faut-il aussi mettre a l'echelle le cout en Arcencium des
+ancres (8 / 16 / 32), ou la duree de l'heure ?
+
+
+## 20. Le critique des armes *(fait)*
+
+Il manquait. La fiche du Héros et les runes distribuent de la chance de critique
+et des dégâts critiques, mais **les armes elles-mêmes n'en avaient aucun** : un
+joueur sans point d'Attaque et sans rune ne critiquait jamais, et les deux
+systèmes semblaient greffés sur rien.
+
+Chaque arme part donc d'une base, **et cette base monte avec sa rareté**
+(+0,7 % de chance et +4 % de dégâts critiques par rang). C'est ce qui donne
+enfin à la rareté un effet qu'on **ressent** : jusqu'ici elle n'ajoutait que des
+dégâts plats, qu'on ne distingue pas d'une bonne arme ordinaire.
+
+| Arme | Rang 0 | Rang 8 |
+|---|---|---|
+| Glaive | 7,0 % ×1,62 | 12,6 % ×1,94 |
+| Arc | 5,0 % ×1,75 | 10,6 % ×2,07 |
+| Lame | 5,0 % ×1,70 | 10,6 % ×2,02 |
+| Sceptre | 3,0 % ×1,90 | 8,6 % ×2,22 |
+
+**Les quatre ne sont pas égales, à dessein.** Le Glaive frappe vite et souvent :
+beaucoup de chance, peu de dégâts. Le Sceptre frappe rarement et fort :
+l'inverse. Le produit reste comparable — au maximum, Glaive ×1,77 et Sceptre
+×1,78 de dégâts moyens — mais la **sensation** diffère.
+
+Les trois sources (arme, fiche, runes) se versent dans **un seul total** et
+tirent une seule fois. Voir §17.2 et `HeroCombat`.
+
+## 21. Les commandes de test *(fait)*
+
+Le mode a deux systèmes qu'on ne peut pas éprouver en jouant : les runes tombent
+dix-huit fois par partie, et le niveau 100 demande cinq cents monstres. Ces
+commandes les rendent immédiats.
+
+| Commande | Effet |
+|---|---|
+| `/arcencium rune weapon <rang> [n]` | donne n runes d'arme de ce rang |
+| `/arcencium rune armor <rang> [n]` | idem, famille armure |
+| `/arcencium rune drop <pv> <morts>` | simule N morts d'une bête de X PV, rend la distribution des rangs |
+| `/arcencium hero level <n>` | offre n niveaux de Héros |
+| `/arcencium hero xp <n>` | donne n points d'expérience |
+| `/arcencium hero <voie> <n>` | monte une voie de n niveaux |
+| `/arcencium hero reset` | rend tous les points |
+
+`rune drop` et `rune <famille>` appellent **la même loi que le jeu**
+(`RuneDrops.simulate`, `RuneMark.roll`) et non une copie : une mesure faite au
+banc d'essai vaut donc pour la partie. Une simulation qui recalculerait sa
+propre loi ne testerait qu'elle-même.
+
+
+## 22. L'amelioration +1 a +10 *(fait)*
+
+Le troisieme systeme qui touche une piece. Trois systemes, trois questions
+differentes -- c'est ce qui les rend compatibles plutot que redondants :
+
+- la **rarete** dit ce que la piece EST, et commande le rang des runes ;
+- les **runes** et **artefacts** disent ce qu'elle FAIT ;
+- l'**amelioration** dit seulement de combien elle frappe ou protege PLUS.
+
+### 22.1 Le bareme
+
+Releve de NosTale, tel quel :
+
+| Cran | +1 | +2 | +3 | +4 | +5 | +6 | +7 | +8 | +9 | +10 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Gain | 10 % | 15 % | 22 % | 32 % | 43 % | 54 % | 65 % | **90 %** | **120 %** | **200 %** |
+
+Sa FORME est ce qui compte : les sept premiers montent doucement, puis le
+huitieme saute a 90 % et le dixieme a 200 %. Les trois derniers valent a eux
+seuls plus que les sept premiers reunis. Un +7 est une piece correcte qu'on
+obtient sans y penser ; un +10 est un evenement.
+
+Le bonus **multiplie** les degats propres de l'arme (`ADD_MULTIPLIED_BASE`), pas
+le total du joueur -- sinon un +10 triplerait aussi tout ce que la fiche du
+Heros a construit.
+
+### 22.2 L'echelle des materiaux
+
+| Cran vise | Materiau | Quantite |
+|---|---|---|
+| +1 / +2 / +3 | Fer | 4 / 6 / 9 |
+| +4 / +5 / +6 | Or | 4 / 6 / 9 |
+| +7 / +8 | Diamant | 4 / 7 |
+| +9 | Netherite | 2 |
+| +10 | Arcencium | 6 |
+
+Elle fait deux choses d'un geste : elle donne aux metaux vanilla une raison
+d'exister passe la cinquieme minute, et elle **borne** la progression -- on ne
+monte pas un +9 sans avoir trouve de la netherite, quelle que soit sa chance.
+
+Il faut **en plus** une **Pierre de Forge**, qui ne tombe que des creatures
+(12 %). Le metal se ramasse en creusant ; si la pierre aussi, le systeme entier
+recompenserait le temps passe plutot que le jeu joue.
+
+### 22.3 Les chances, et ce qu'un echec coute
+
+| Depuis | +0 | +1 | +2 | +3 | +4 | +5 | +6 | +7 | +8 | +9 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Reussite | 90 % | 82 % | 74 % | 62 % | 52 % | 44 % | 36 % | 26 % | 18 % | 10 % |
+
+**Un echec ne fait pas redescendre.** Il coute la pierre et le metal, rien de
+plus. J'avais commence par faire retomber d'un cran a partir du septieme, pour
+la tension ; la mesure a tranche : la marche aleatoire demandait **3 153
+pierres et 11 854 diamants** pour un +10 -- c'est-a-dire jamais, dans un mode
+d'une heure. *Une tension qu'on n'atteint pas n'est pas une tension.*
+
+**Cout mesure, depuis zero :**
+
+| Cible | Pierres (median) | Materiaux |
+|---|---|---|
+| +5 | 7 | 24 fer, 18 or |
+| +8 | 15 | 24 fer, 38 or, 38 diamants |
+| +9 | 21 | + 11 netherite |
+| +10 | 29 | + 60 lingots d'Arcencium |
+
+Une partie rapporte une soixantaine de pierres : le +10 est atteignable, et
+coute a peu pres tout ce qu'on ramasse.
+
+### 22.4 Le nom
+
+`GearName` compose le nom des DEUX systemes qui y ont droit : `+8 Legendaire
+Glaive d'Arcencium`. Il en fallait un seul endroit -- la rarete l'ecrivait deja,
+l'amelioration voulait l'ecrire aussi, et chacune aurait efface l'autre.
+
+### 22.5 Commandes de test
+
+| Commande | Effet |
+|---|---|
+| `/arcencium upgrade <0-10>` | pose directement un cran sur l'objet en main |
+| `/arcencium upgrade try <n>` | tente n fois, avec la vraie loi, sans payer |
+| `/arcencium upgrade sim <cible>` | simule 1000 montees, rend le cout median |
+| `/arcencium upgrade kit` | 64 pierres et 64 de chaque metal |
+
+## 23. A FAIRE — les evenements aleatoires
+
+Des fenetres de quelques minutes, tirees au hasard pendant la partie, qui
+augmentent temporairement :
+
+- les **chances d'amelioration** d'un equipement ;
+- les **chances de rarete elevee** au tirage des Eclats du Destin ;
+- le **rang des runes** que laissent les monstres.
+
+L'interet est d'introduire un rythme : on met de cote ses pierres et ses eclats
+en attendant la fenetre, au lieu de les depenser au fil de l'eau. Cela donne
+aussi une raison de surveiller l'ecran entre deux sieges.
+
+Restent a decider : la frequence, la duree, l'ampleur du bonus, et si les trois
+fenetres sont distinctes ou si une seule les ouvre toutes.
+
+
+## 24. Les elements *(fait)*
+
+Quatre elements, **deux couples opposes** : Eau ↔ Feu, Lumiere ↔ Obscur. Entre
+les deux couples, rien. Une seule question a se poser devant un ennemi -- « suis-je
+son contraire ? » -- au lieu d'un tableau de seize cases.
+
+| | contre son contraire | contre lui-meme | ailleurs |
+|---|---|---|---|
+| Multiplicateur | ×1,60 | ×0,45 | ×1,00 |
+
+### 24.1 Le calcul
+
+Comme chez NosTale, **l'element se calcule sur les degats bruts** :
+
+```
+elementaire = brut × puissance × affinite × voie Element × (1 − resistance)
+```
+
+Il **s'ajoute** au coup au lieu de le multiplier -- sinon il profiterait du
+critique, et le Sceptre, qui n'en a pas, serait puni deux fois.
+
+### 24.2 L'asymetrie qui fait le systeme
+
+**Le joueur CHOISIT le sien, la creature PORTE le sien.** Sans cette asymetrie
+il n'y aurait rien a preparer : on ne choisit pas contre quelque chose qui
+choisit aussi.
+
+- L'element appartient au **joueur**, pas a l'arme. J'avais commence par le
+  faire porter par l'arme : il fallait accorder chaque arme separement, et deux
+  verites apparaissaient des qu'on en changeait. C'est la repartition de NosTale
+  -- la fee porte l'element, l'arme la force.
+- **Chacun recoit un element au lancement**, tire sans remise : a quatre, chacun
+  en a un different. Un menu de choix au depart demanderait de decider avant
+  d'avoir rien vu du bestiaire ; un tirage impose un point de vue, et c'est en
+  decouvrant ce qu'on affronte qu'on apprend s'il faut en changer.
+- Pour en changer, il faut **trouver une Pierre elementaire** et s'en servir
+  (clic droit, en main). Aucune commande ne le fait -- un raccourci aurait fini
+  par etre le seul chemin qu'on emprunte, et la boucle ne serait jamais eprouvee.
+
+Les Pierres tombent des creatures **de leur element** (22 %). C'est la boucle :
+pour frapper l'Obscur il faut une Pierre de Lumiere, donc chasser des creatures
+de Lumiere -- qu'on combat mal justement parce qu'on n'est pas encore accorde.
+
+### 24.3 Les resistances des creatures — fixes
+
+Chaque creature a un **profil complet de quatre resistances**, pas un chiffre :
+
+| Profil | Eau | Feu | Lumiere | Obscur |
+|---|---|---|---|---|
+| Eau | 55 % | **0** | 20 % | 20 % |
+| Feu | **0** | 55 % | 20 % | 20 % |
+| Lumiere | 20 % | 20 % | 55 % | **0** |
+| Obscur | 20 % | 20 % | **0** | 55 % |
+
+**Le zero est la porte** : c'est lui qui recompense le joueur qui a prepare le
+bon element. Sans lui le systeme ne serait qu'une taxe. Il n'y a donc pas UN bon
+element, mais un par famille d'ennemis.
+
+Attribution par les TRAITS et jamais par une liste de noms : immunise au feu →
+Feu, aquatique → Eau, mort-vivant ou lanceur de sorts → Obscur. **La Lumiere n'a
+aucun representant naturel** -- elle est reservee a ce que le mode place
+lui-meme. La croiser doit vouloir dire quelque chose.
+
+### 24.4 Les boss bi-element
+
+Deux elements, affinite calculee sur la **moyenne** des deux couples : contre un
+boss Obscur + Feu, une arme de Lumiere obtient 1,6 et 1,0, donc 1,3. Plus 18 %
+de resistance, et jamais zero meme devant un contraire.
+
+On moyenne plutot que de prendre le minimum : le minimum rendrait tout boss
+insensible au choix d'element, et la mecanique disparaitrait au moment ou elle
+compte le plus.
+
+## 25. L'equipement des monstres *(fait)*
+
+Sans lui, tout le reste casse le jeu : le joueur monte sa fiche, sa rarete, ses
+runes et ses ameliorations pendant une heure, et si le bestiaire ne bouge pas la
+quarantieme minute devient une promenade.
+
+Les monstres utilisent **les memes systemes que le joueur** -- meme rarete, meme
+amelioration, memes tables. Retoucher un bareme demain profite au bestiaire le
+jour meme.
+
+**Le stade** se lit sur trois sources, dont on prend la plus AVANCEE : temps
+ecoule, ancres tenues, palier du siege. Un joueur qui prend trois ancres en vingt
+minutes est en avance ; lui envoyer des monstres de vingtieme minute le punirait
+de sa vitesse.
+
+| Stade | Echelon | Arme | Armure |
+|---|---|---|---|
+| 0 % | cuir | 4,0 | 7 |
+| 25 % | maille | 6,0 | 12 |
+| 50 % | fer, +2 | 7,7 | 15 |
+| 75 % | diamant, +3 | 9,7 | 20 |
+| 100 % | diamant, +4 | **12,2** | 20 |
+
+**L'ARMURE SATURE, PAS L'ARME**, et c'est la mesure qui l'a dit. Minecraft
+plafonne la reduction a vingt points d'armure ; un plastron de diamant complet y
+arrive deja. J'avais monte le bestiaire a trente-huit points -- dix-huit de purs
+chiffres perdus, pendant que les monstres devenaient injouables a 80 % de
+reduction.
+
+L'echelle s'arrete donc au diamant et c'est l'ARME qui porte la difficulte : les
+degats montent lineairement et ne plafonnent jamais. Un monstre de fin de partie
+n'est pas plus dur a tuer, il est plus **dangereux**.
+
+Ni Legendaire ni Phenomenal sur un monstre : ce sont les deux rangs que le joueur
+poursuit. Leur equipement tombe a 1,5 % -- un butin, pas une source.

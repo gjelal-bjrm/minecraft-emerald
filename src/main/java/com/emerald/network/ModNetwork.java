@@ -43,6 +43,17 @@ public class ModNetwork {
                 (payload, context) -> context.enqueueWork(
                         () -> com.emerald.client.AnchorPulseRenderer.accept(payload)));
 
+        registrar.playToClient(HeroSyncPayload.TYPE, HeroSyncPayload.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(
+                        () -> com.emerald.client.HeroHudClient.accept(payload)));
+
+        registrar.playToServer(HeroSpendPayload.TYPE, HeroSpendPayload.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(() -> {
+                    if (context.player() instanceof ServerPlayer player) {
+                        onSpendRequest(player, payload);
+                    }
+                }));
+
         registrar.playToServer(ArtifactActionPayload.TYPE, ArtifactActionPayload.STREAM_CODEC,
                 (payload, context) -> context.enqueueWork(() -> {
                     if (context.player() instanceof ServerPlayer player) {
@@ -64,5 +75,28 @@ public class ModNetwork {
         if (stack.getItem() instanceof ArcenciumScepterItem) {
             ArcenciumScepterItem.tryFire(player, stack);
         }
+    }
+
+    /**
+     * Le serveur place les points, ou refuse.
+     *
+     * Il revalide TOUT : le numero de voie, la quantite, les points libres et
+     * le plafond. La fiche repart ensuite dans tous les cas, y compris quand
+     * rien n'a ete place -- c'est ce qui remet l'ecran d'accord avec la verite
+     * apres un clic refuse.
+     */
+    private static void onSpendRequest(ServerPlayer player,
+                                       com.emerald.network.HeroSpendPayload payload) {
+        com.emerald.hero.HeroStat[] all = com.emerald.hero.HeroStat.values();
+        int which = payload.stat();
+        if (which < 0 || which >= all.length) {
+            return;
+        }
+        int amount = Math.max(1, Math.min(com.emerald.hero.HeroStat.MAX_PATH,
+                payload.amount()));
+        if (com.emerald.hero.HeroLevel.spend(player, all[which], amount) > 0) {
+            com.emerald.hero.HeroEvents.apply(player);
+        }
+        com.emerald.hero.HeroEvents.sync(player);
     }
 }

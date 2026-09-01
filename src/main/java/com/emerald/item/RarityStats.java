@@ -36,11 +36,19 @@ public final class RarityStats {
     private RarityStats() {
     }
 
+    private static final net.minecraft.resources.ResourceLocation UPGRADE_DAMAGE_ID =
+            net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(
+                    com.emerald.main.EmeraldWeaponsMod.MODID, "upgrade_damage");
+    private static final net.minecraft.resources.ResourceLocation UPGRADE_ARMOR_ID =
+            net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(
+                    com.emerald.main.EmeraldWeaponsMod.MODID, "upgrade_armor");
+
     @SubscribeEvent
     public static void onModifiers(ItemAttributeModifierEvent event) {
         ItemStack stack = event.getItemStack();
         GearRarity rarity = GearRarity.of(stack);
-        if (rarity == GearRarity.NORMAL) {
+        int upgrade = Upgrade.of(stack);
+        if (rarity == GearRarity.NORMAL && upgrade <= 0) {
             return;
         }
         int rank = rarity.rank();
@@ -69,6 +77,22 @@ public final class RarityStats {
                     new AttributeModifier(DAMAGE_ID, rank * GearRarity.DAMAGE_STEP,
                             AttributeModifier.Operation.ADD_VALUE),
                     EquipmentSlotGroup.MAINHAND);
+            // L'AMELIORATION MULTIPLIE, elle n'ajoute pas.
+            //
+            // C'est ce qui la distingue de la rarete, qui ajoute des points
+            // plats. Un +8 vaut donc d'autant plus que l'arme etait deja bonne,
+            // et ameliorer une piece mediocre ne la sauve pas -- exactement le
+            // rapport qu'entretiennent les deux systemes chez NosTale.
+            //
+            // MULTIPLY_BASE et non MULTIPLY_TOTAL : le pourcentage porte sur
+            // les degats propres de l'arme, pas sur ceux du joueur. Sinon un +10
+            // triplerait aussi tout ce que la fiche du Heros a construit.
+            if (upgrade > 0) {
+                event.addModifier(Attributes.ATTACK_DAMAGE,
+                        new AttributeModifier(UPGRADE_DAMAGE_ID, Upgrade.bonus(upgrade),
+                                AttributeModifier.Operation.ADD_MULTIPLIED_BASE),
+                        EquipmentSlotGroup.MAINHAND);
+            }
         }
         if (armour) {
             // ARMOR sur TOUTE piece portee : le groupe exact n'importe pas,
@@ -78,6 +102,12 @@ public final class RarityStats {
                     new AttributeModifier(ARMOR_ID, rank * GearRarity.ARMOR_STEP,
                             AttributeModifier.Operation.ADD_VALUE),
                     EquipmentSlotGroup.ARMOR);
+            if (upgrade > 0) {
+                event.addModifier(Attributes.ARMOR,
+                        new AttributeModifier(UPGRADE_ARMOR_ID, Upgrade.bonus(upgrade),
+                                AttributeModifier.Operation.ADD_MULTIPLIED_BASE),
+                        EquipmentSlotGroup.ARMOR);
+            }
         }
     }
 }

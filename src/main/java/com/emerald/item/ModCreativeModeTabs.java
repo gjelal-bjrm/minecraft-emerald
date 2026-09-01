@@ -40,6 +40,33 @@ public class ModCreativeModeTabs {
                             output.accept(com.emerald.artifact.ArtifactItem.stack(
                                     artifact, ModItems.ARTIFACT.get()));
                         }
+                        output.accept(ModItems.FORGE_STONE);
+                        // les quatre cristaux elementaires
+                        for (com.emerald.element.Element element
+                                : com.emerald.element.Element.values()) {
+                            if (element != com.emerald.element.Element.NEUTRE) {
+                                output.accept(com.emerald.element.ElementStoneItem.stack(
+                                        element, ModItems.ELEMENT_STONE.get(), 1));
+                            }
+                        }
+                        // une rune de chaque famille, a chaque rang.
+                        //
+                        // Vingt-quatre entrees, et leurs options sont tirees a
+                        // l'ouverture de l'onglet : c'est voulu. On teste ainsi
+                        // des compositions differentes sans avoir a tuer mille
+                        // monstres, et l'on voit du premier coup d'oeil ce que
+                        // chaque rang change au schema.
+                        for (com.emerald.rune.RuneFamily family
+                                : com.emerald.rune.RuneFamily.values()) {
+                            for (int rank = 1;
+                                 rank < com.emerald.item.GearRarity.values().length; rank++) {
+                                output.accept(com.emerald.rune.RuneItem.stack(
+                                        com.emerald.rune.RuneMark.roll(family, rank,
+                                                net.minecraft.util.RandomSource.create(
+                                                        family.ordinal() * 31L + rank)),
+                                        ModItems.RUNE.get()));
+                            }
+                        }
                     }).build()
     );
 
