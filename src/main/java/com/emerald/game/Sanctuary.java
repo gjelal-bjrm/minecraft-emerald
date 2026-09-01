@@ -1493,10 +1493,14 @@ public final class Sanctuary {
                     // l'arcencium -- le parvis s'elargit d'un bloc de chaque
                     // cote et court d'un seul tenant jusqu'aux marches d'en
                     // face. Les marches, elles, commencent ou l'on descend.
-                    if (i == 0) {
-                        set(level, x, h, z, shrineTrim());
-                        continue;
-                    }
+                    // La premiere assise est une MARCHE, non un liseré
+                    // d'arcencium.
+                    //
+                    // Je l'avais rendue a l'arcencium en croyant corriger un
+                    // lisere pale ; le releve montre que le joueur repose des
+                    // marches de gangue tout du long. Le defaut n'etait pas la
+                    // matiere mais les TROUS que laissait alors la pose case
+                    // par case -- corriges depuis.
                     // la marche regarde vers le centre : c'est le sens de la montee
                     set(level, x, h, z, riser(-dir, 0));
                     for (int clear = 1; clear <= 3; clear++) {
@@ -1582,33 +1586,35 @@ public final class Sanctuary {
             // pour etre gravi. Notre volee n'a donc pas a la doubler : elle n'a
             // qu'a ajouter la marche intermediaire la ou le gradin se releve.
             // Sur le plat, on marche sur la terrasse elle-meme.
+            // UN ESCALIER QUAND ON MONTE, UN BLOC PLEIN QUAND ON NE MONTE PAS.
+            //
+            // Trois etats ont ete essayes ici, et le releve du joueur a tranche.
+            // Poser une marche partout donnait des paliers de blocs d'escalier
+            // alignes, qui montrent leurs dents de profil. Ne rien poser sur le
+            // plat laissait la terrasse nue, c'est-a-dire un trou dans le
+            // dallage. Ce qu'il faut est entre les deux : la volee est une
+            // BANDE PAVEE de gangue polie, large de trois, qui prend la forme
+            // d'un escalier la ou elle monte et d'un sol la ou elle est plate.
+            //
+            // Le remblai passe de la brique d'arcencium a la gangue polie pour
+            // la meme raison : c'est un seul ouvrage, il n'a qu'une matiere.
             boolean climbs = step > last;
             for (int w = -1; w <= 1; w++) {
-                if (climbs) {
-                    // on monte vers le nord, du pied de la face sud vers le faite
-                    set(level, sx + w, step, z, riser(0, -1));
-                }
-                // QUATRE blocs de degagement, et non trois.
-                //
-                // Une terrasse qui monte de deux ou trois d'un coup laissait
-                // un chapeau de pierre juste au-dessus de la marche : on
-                // voyait la suite de l'escalier sans pouvoir s'y glisser.
+                set(level, sx + w, step, z, climbs ? riser(0, -1) : trim());
                 for (int clear = 1; clear <= 4; clear++) {
                     set(level, sx + w, step + clear, z, Blocks.AIR.defaultBlockState());
                 }
-                // le remblai sous la marche, pour qu'elle ne flotte pas --
-                // mais jamais sous le toit, sinon on comble le couloir par-dessus
-                for (int fill = 1; climbs && fill <= 2; fill++) {
+                for (int fill = 1; fill <= 2; fill++) {
                     if (step - fill > roof
                             && level.getBlockState(new BlockPos(sx + w, step - fill, z)).isAir()) {
-                        set(level, sx + w, step - fill, z, shrine());
+                        set(level, sx + w, step - fill, z, trim());
                     }
                 }
             }
-            if (Math.floorMod(z, 9) == 0) {
-                set(level, sx - 2, step + 1, z, lantern());
-                set(level, sx + 2, step + 1, z, lantern());
-            }
+            // PAS DE LANTERNES. Le joueur les a toutes retirees, les douze : sur
+            // un flanc en plein jour elles n'eclairent rien, et posees de part
+            // et d'autre d'une volee elles la bordent d'un pointille qui hache
+            // la ligne au lieu de la souligner.
             last = step;
         }
     }
