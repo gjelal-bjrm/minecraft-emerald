@@ -156,8 +156,19 @@ public final class SanctuaryLedger {
 
     // --------------------------------------------------------------- lecture
 
+    /**
+     * Le nom d'un bloc, AVEC SES PROPRIETES.
+     *
+     * On n'en donnait que le chemin : « polished_gangue_stairs ». Or une marche
+     * a une orientation, une moitie, une forme -- et rejouer un releve sans
+     * elles, c'est reposer des marches tournees au hasard. Le format complet
+     * « emeraldweapons:polished_gangue_stairs[facing=north,half=bottom] » se
+     * relit tel quel et se rejoue a l'identique.
+     */
     private static String name(BlockState state) {
-        return BuiltInRegistries.BLOCK.getKey(state.getBlock()).getPath();
+        // le format « id[prop=val] », qui se relit avec BlockStateParser :
+        // c'est ce qui permet de REJOUER un releve, et non de le paraphraser
+        return net.minecraft.commands.arguments.blocks.BlockStateParser.serialize(state);
     }
 
     /**

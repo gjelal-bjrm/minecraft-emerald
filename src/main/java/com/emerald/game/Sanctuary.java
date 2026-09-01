@@ -270,6 +270,20 @@ public final class Sanctuary {
         // L'instantane se prend UNE FOIS TOUT POSE : c'est lui qui permettra
         // de relever, plus tard, ce que le joueur aura change -- y compris ce
         // qu'il aura ajoute la ou nous n'avions rien mis.
+        // LE CALQUE EN DERNIER.
+        //
+        // Il rejoue, telles quelles, les corrections relevees a la Sonde : la
+        // position exacte, le bloc exact, l'orientation exacte. Il s'applique
+        // apres tout le reste et ecrase ce qui le gene -- c'est bien ce qu'on
+        // lui demande.
+        //
+        // C'est la lecon de dix allers-retours. Je lisais le releve, j'en
+        // tirais une regle -- « il veut des blocs pleins sur les paliers », «
+        // il veut une bordure » -- et je reecrivais le generateur d'apres cette
+        // regle. Chaque traduction perdait quelque chose. Le calque supprime la
+        // traduction.
+        int calque = SanctuaryOverlay.apply(level, cx, y, cz);
+
         SanctuaryLedger.capture(level, new BlockPos(cx, y, cz), HALF + 12, 24, 72);
 
         // Un compte rendu, plutot qu'une devinette de plus.
@@ -290,8 +304,8 @@ public final class Sanctuary {
         BlockState found = level.getBlockState(anchor);
         String occupant = BuiltInRegistries.BLOCK.getKey(found.getBlock()).toString();
         source.sendSuccess(() -> Component.literal(String.format(
-                "Sol %d | sommet %d | pyramide %s | %d blocs rhabilles | %s | a l'ancre : %s",
-                y, summit, apex >= 0 ? "dressee" : "ABSENTE", repainted,
+                "Sol %d | sommet %d | pyramide %s | %d blocs rhabilles | calque %d | %s | a l'ancre : %s",
+                y, summit, apex >= 0 ? "dressee" : "ABSENTE", repainted, calque,
                 sealReport, occupant)), false);
         return anchor;
     }
