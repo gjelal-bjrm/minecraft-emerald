@@ -44,8 +44,11 @@ public class RuneItem extends Item {
             tooltip.add(Component.literal(" ")
                     .append(option.grade().label())
                     .append(Component.literal("  "))
+                    // Le nom prend la couleur de son GRADE, non d'une teinte propre a
+                    // l'option : c'est le grade qui dit ce que vaut la ligne, et une
+                    // couleur par option ne renseignait sur rien.
                     .append(Component.translatable(option.stat().translationKey())
-                            .withStyle(style -> style.withColor(option.stat().colour())))
+                            .withStyle(option.grade().colour()))
                     .append(Component.literal("  "))
                     .append(option.stat().effect(option.value())
                             .copy().withStyle(ChatFormatting.BLUE)));

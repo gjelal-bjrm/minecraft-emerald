@@ -45,6 +45,8 @@ public final class HeroCombat {
      * lequel des deux systemes vient de se declencher.
      */
     private static final double CRIT_BASE = 1.5;
+    /** Le tick du dernier critique recu, note sur la victime le temps d'un evenement. */
+    private static final String TAG_CRIT_AT = "ArcenciumCritAt";
 
     private HeroCombat() {
     }
@@ -111,6 +113,11 @@ public final class HeroCombat {
                     multiplier = 1.0 + (multiplier - 1.0) * Math.max(0.0, 1.0 - soak);
                 }
                 amount = (float) (amount * multiplier);
+                // On NOTE le critique sur la victime, pour l'affichage. Le chiffre
+                // reel n'est connu qu'apres l'armure, dans un autre evenement ;
+                // c'est la que le paquet part, et il doit savoir si ce coup-ci
+                // etait critique.
+                victim.getPersistentData().putLong(TAG_CRIT_AT, victim.level().getGameTime());
                 if (attacker.level() instanceof ServerLevel world) {
                     world.playSound(null, victim.blockPosition(),
                             SoundEvents.PLAYER_ATTACK_CRIT, SoundSource.PLAYERS, 0.9F, 1.1F);
@@ -165,6 +172,42 @@ public final class HeroCombat {
 
         if (amount != event.getAmount()) {
             event.setAmount(amount);
+        }
+    }
+
+    /**
+     * Le chiffre qui flotte au-dessus de la cible.
+     *
+     * Il part d'ICI et non de l'evenement precedent, parce que c'est ici que
+     * les degats sont connus APRES armure et resistances -- le chiffre qu'on
+     * montre doit etre celui qu'on a inflige, pas celui qu'on a demande. Le
+     * critique, lui, a ete decide plus tot et note sur la victime : on relit la
+     * note, et l'on ne la garde que si elle date de ce tick-ci.
+     *
+     * Seuls les coups portes par un JOUEUR s'affichent. Un chiffre pour chaque
+     * morsure de zombie sur un villageois noierait le sien.
+     */
+    @SubscribeEvent
+    public static void onDealt(net.neoforged.neoforge.event.entity.living.LivingDamageEvent.Post event) {
+        if (!(event.getSource().getEntity() instanceof Player)
+                || !(event.getEntity().level() instanceof ServerLevel level)) {
+            return;
+        }
+        LivingEntity victim = event.getEntity();
+        float dealt = event.getNewDamage();
+        if (dealt <= 0.0F) {
+            return;
+        }
+        boolean crit = victim.getPersistentData().getLong(TAG_CRIT_AT) == level.getGameTime();
+        victim.getPersistentData().remove(TAG_CRIT_AT);
+
+        com.emerald.network.DamagePopPayload pop = new com.emerald.network.DamagePopPayload(
+                victim.getX(), victim.getY() + victim.getBbHeight() + 0.25, victim.getZ(),
+                dealt, crit);
+        for (net.minecraft.server.level.ServerPlayer near : level.players()) {
+            if (near.distanceToSqr(victim) < 48.0 * 48.0) {
+                net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(near, pop);
+            }
         }
     }
 

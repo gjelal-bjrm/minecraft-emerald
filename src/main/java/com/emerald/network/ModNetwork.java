@@ -39,6 +39,18 @@ public class ModNetwork {
                 (payload, context) -> context.enqueueWork(
                         () -> com.emerald.client.WeatherAtmosphere.accept(payload)));
 
+        registrar.playToClient(RiftSyncPayload.TYPE, RiftSyncPayload.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(
+                        () -> com.emerald.client.RiftRenderer.accept(payload)));
+
+        registrar.playToClient(FissureSyncPayload.TYPE, FissureSyncPayload.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(
+                        () -> com.emerald.client.FissureRenderer.accept(payload)));
+
+        registrar.playToClient(StormStrikePayload.TYPE, StormStrikePayload.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(
+                        () -> com.emerald.client.StormArcRenderer.accept(payload)));
+
         registrar.playToClient(AnchorPulsePayload.TYPE, AnchorPulsePayload.STREAM_CODEC,
                 (payload, context) -> context.enqueueWork(
                         () -> com.emerald.client.AnchorPulseRenderer.accept(payload)));
@@ -46,6 +58,10 @@ public class ModNetwork {
         registrar.playToClient(HeroSyncPayload.TYPE, HeroSyncPayload.STREAM_CODEC,
                 (payload, context) -> context.enqueueWork(
                         () -> com.emerald.client.HeroHudClient.accept(payload)));
+
+        registrar.playToClient(DamagePopPayload.TYPE, DamagePopPayload.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(
+                        () -> com.emerald.client.DamagePopClient.accept(payload)));
 
         registrar.playToServer(HeroSpendPayload.TYPE, HeroSpendPayload.STREAM_CODEC,
                 (payload, context) -> context.enqueueWork(() -> {

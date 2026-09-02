@@ -51,6 +51,13 @@ public class ArcenciumBoltRenderer extends EntityRenderer<ArcenciumBoltEntity> {
         VertexConsumer consumer = buffer.getBuffer(RenderType.lightning());
         Matrix4f matrix = pose.last().pose();
 
+        // la frappe de l'Orage MONTE DU SOL : elle se revele segment par segment
+        // depuis le bas, en deux ticks et demi -- l'inverse d'un eclair qui tombe
+        int reveal = 8;
+        if (entity.variant() == ArcenciumBoltEntity.Variant.ORAGE) {
+            reveal = Math.min(8, (int) Math.ceil((entity.tickCount + partialTick) * 3.2F));
+        }
+
         for (int pass = 0; pass < 4; pass++) {
             RandomSource branchRandom = RandomSource.create(entity.seed);
             for (int branch = 0; branch < 3; branch++) {
@@ -67,6 +74,9 @@ public class ArcenciumBoltRenderer extends EntityRenderer<ArcenciumBoltEntity> {
                     } else {
                         bx += branchRandom.nextInt(31) - 15;
                         bz += branchRandom.nextInt(31) - 15;
+                    }
+                    if (segment >= reveal) {
+                        continue;              // pas encore monte jusque-la
                     }
                     float wTop = (0.1F + pass * 0.2F) * width;
                     if (branch == 0) {

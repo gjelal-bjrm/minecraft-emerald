@@ -51,19 +51,21 @@ public class ModCreativeModeTabs {
                         }
                         // une rune de chaque famille, a chaque rang.
                         //
-                        // Vingt-quatre entrees, et leurs options sont tirees a
-                        // l'ouverture de l'onglet : c'est voulu. On teste ainsi
-                        // des compositions differentes sans avoir a tuer mille
-                        // monstres, et l'on voit du premier coup d'oeil ce que
-                        // chaque rang change au schema.
+                        // Leurs options sont tirees AU HASARD, a chaque
+                        // construction de l'onglet. J'avais d'abord fixe la
+                        // graine pour que les runes de test soient les memes
+                        // d'une session a l'autre -- et le joueur, voyant deux
+                        // fois la meme rune, a conclu que RIEN n'etait
+                        // aleatoire. Un banc d'essai qui fait douter du jeu
+                        // qu'il teste ne sert a rien : l'onglet tire donc
+                        // comme les monstres tirent.
                         for (com.emerald.rune.RuneFamily family
                                 : com.emerald.rune.RuneFamily.values()) {
                             for (int rank = 1;
                                  rank < com.emerald.item.GearRarity.values().length; rank++) {
                                 output.accept(com.emerald.rune.RuneItem.stack(
                                         com.emerald.rune.RuneMark.roll(family, rank,
-                                                net.minecraft.util.RandomSource.create(
-                                                        family.ordinal() * 31L + rank)),
+                                                net.minecraft.util.RandomSource.create()),
                                         ModItems.RUNE.get()));
                             }
                         }

@@ -95,10 +95,10 @@ public class HeroHudClient {
 
         graphics.drawString(mc.font, Component.translatable(
                         "hero.emeraldweapons.hud", sheet.level()),
-                x + 5, y + 4, GOLD, false);
+                x + 5, y + 4, GOLD, true);
         String right = maxed ? "MAX" : percent + "%";
         graphics.drawString(mc.font, right,
-                x + PANEL_W - 5 - mc.font.width(right), y + 4, 0xFFC8C8D4, false);
+                x + PANEL_W - 5 - mc.font.width(right), y + 4, 0xFFC8C8D4, true);
 
         // la jauge
         int bx = x + 5;

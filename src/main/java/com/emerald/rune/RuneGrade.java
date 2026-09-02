@@ -37,7 +37,11 @@ public enum RuneGrade implements net.minecraft.util.StringRepresentable {
         this.colour = colour;
     }
 
-    /** Ce que le grade multiplie. */
+    /**
+     * Un ordre de grandeur, PLUS LA VERITE. Les valeurs par grade sont
+     * desormais propres a chaque option (voir Rune) : ce facteur ne sert plus
+     * qu'a situer les grades entre eux dans une phrase ou un affichage.
+     */
     public double factor() {
         return this.factor;
     }

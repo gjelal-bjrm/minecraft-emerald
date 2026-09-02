@@ -82,6 +82,16 @@ public class GameCommands {
         }
         root.then(weatherNode);
 
+        // ----------------------------------------------------------- fissure
+        // pour l'essai : ouvre une fissure pres du joueur, de la taille voulue ou au sort
+        var fissureNode = Commands.literal("fissure")
+                .executes(ctx -> openFissure(ctx.getSource(), null));
+        for (String size : new String[]{"petite", "moyenne", "grande", "abime"}) {
+            fissureNode.then(Commands.literal(size)
+                    .executes(ctx -> openFissure(ctx.getSource(), size)));
+        }
+        root.then(fissureNode);
+
         root.then(Commands.literal("skip")
                 .then(Commands.argument("minutes",
                                 com.mojang.brigadier.arguments.IntegerArgumentType.integer(1, 60))
@@ -853,6 +863,19 @@ public class GameCommands {
                 "64 pierres et 64 de chaque metal.").withStyle(
                         net.minecraft.ChatFormatting.GOLD), false);
         return 1;
+    }
+
+
+    private static int openFissure(CommandSourceStack source, String size) {
+        if (!(source.getEntity() instanceof net.minecraft.server.level.ServerPlayer player)) {
+            source.sendFailure(Component.literal("Il faut un joueur."));
+            return 0;
+        }
+        boolean opened = com.emerald.weather.WeatherEffects.debugFissure(source.getLevel(), player, size);
+        source.sendSuccess(() -> Component.literal(opened
+                ? "Fissure annoncee : le sol cede dans une seconde et demie."
+                : "Pas de place ici (sous un toit, ou chunk non charge)."), true);
+        return opened ? 1 : 0;
     }
 
 }

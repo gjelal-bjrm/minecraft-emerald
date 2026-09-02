@@ -50,6 +50,15 @@ neoForge {
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
         }
 
+        // Verification automatique : entre directement dans la sauvegarde "test",
+        // pour que les shaders compilent vraiment leurs programmes (cahier, 27).
+        clientWorld {
+            client()
+            programArgument '--quickPlaySingleplayer'
+            programArgument 'test'
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        }
+
         server {
             server()
             programArgument '--nogui'

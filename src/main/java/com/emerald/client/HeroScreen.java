@@ -23,6 +23,14 @@ import java.util.List;
  * cent niveaux un par un serait une corvee, et n'offrir que le gros lot
  * empecherait d'ajuster.
  *
+ * TOUT LE TEXTE PORTE UNE OMBRE, et le panneau est OPAQUE. Ce sont les deux
+ * seules raisons pour lesquelles la fiche paraissait floue : le vide sous mes
+ * glyphes et les sept pour cent de monde flou qui remontaient au travers. Les
+ * boutons, eux, etaient nets -- ils dessinent leur libelle avec ombre, comme
+ * tout le reste de l'interface du jeu, et c'est cet ecart qui a designe la
+ * cause. Une police de seize pixels sans ombre sur un fond sombre n'a plus de
+ * contour : l'oeil ne lit pas un texte mal contraste, il lit un texte flou.
+ *
  * ELLE NE DECIDE DE RIEN. Chaque clic n'est qu'une demande envoyee au serveur ;
  * les chiffres affiches viennent de la derniere fiche recue. On voit donc le
  * resultat reel et non ce que le client aurait aime -- c'est ce qui evite
@@ -124,19 +132,23 @@ public class HeroScreen extends Screen {
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partial) {
         refresh();
-        this.renderBackground(graphics, mouseX, mouseY, partial);
-
-        graphics.fill(this.left, this.top, this.left + PANEL_W, this.top + PANEL_H, 0xEE0A0A12);
-        frame(graphics, this.left, this.top, PANEL_W, PANEL_H, 0x80B98CFF);
+        // LE FOND ET LES BOUTONS D'ABORD, LE TEXTE ENSUITE. Depuis la 1.20.2,
+        // Screen.render() appelle lui-meme renderBackground(), et c'est la que
+        // le flou du menu s'applique a tout ce qui est deja dessine. En
+        // appelant renderBackground moi-meme AVANT mes textes puis super.render
+        // APRES, je floutais deux fois -- et la seconde fois, mon texte etait
+        // deja dans l'image pendant que les boutons ne l'etaient pas encore.
+        // D'ou une fiche floue aux boutons nets. Tout ce qui est dessine ici
+        // vient maintenant apres l'unique passage du fond.
+        super.render(graphics, mouseX, mouseY, partial);
 
         HeroSyncPayload sheet = HeroHudClient.sheet();
-        graphics.drawString(this.font, this.title, this.left + 10, this.top + 9, GOLD, false);
+        graphics.drawString(this.font, this.title, this.left + 10, this.top + 9, GOLD, true);
 
         if (sheet == null) {
             graphics.drawString(this.font,
                     Component.translatable("hero.emeraldweapons.waiting"),
-                    this.left + 10, this.top + 30, DIM, false);
-            super.render(graphics, mouseX, mouseY, partial);
+                    this.left + 10, this.top + 30, DIM, true);
             return;
         }
 
@@ -147,11 +159,11 @@ public class HeroScreen extends Screen {
         // --- le niveau et sa jauge
         graphics.drawString(this.font, Component.translatable(
                         "hero.emeraldweapons.hud", sheet.level()),
-                this.left + 10, this.top + 26, 0xFFFFFFFF, false);
+                this.left + 10, this.top + 26, 0xFFFFFFFF, true);
         String right = maxed ? "MAX" : percent + " %";
         graphics.drawString(this.font, right,
                 this.left + PANEL_W - 10 - this.font.width(right), this.top + 26,
-                0xFFC8C8D4, false);
+                0xFFC8C8D4, true);
 
         int bx = this.left + 10;
         int bw = PANEL_W - 20;
@@ -164,11 +176,11 @@ public class HeroScreen extends Screen {
         }
         String detail = maxed ? Component.translatable("hero.emeraldweapons.capped").getString()
                 : sheet.xp() + " / " + sheet.needed();
-        graphics.drawString(this.font, detail, bx, by + 10, DIM, false);
+        graphics.drawString(this.font, detail, bx, by + 10, DIM, true);
         Component pool = Component.translatable("hero.emeraldweapons.pool", sheet.free());
         graphics.drawString(this.font, pool,
                 this.left + PANEL_W - 10 - this.font.width(pool), by + 10,
-                sheet.free() > 0 ? VIOLET : DIM, false);
+                sheet.free() > 0 ? VIOLET : DIM, true);
 
         // --- les quatre voies
         int rowY = this.top + 68;
@@ -180,9 +192,9 @@ public class HeroScreen extends Screen {
                     0xFF000000 | stat.colour().getColor());
 
             graphics.drawString(this.font, stat.label().copy().withStyle(stat.colour()),
-                    this.left + 19, rowY + 4, 0xFFFFFFFF, false);
+                    this.left + 19, rowY + 4, 0xFFFFFFFF, true);
             String count = level + " / " + HeroStat.MAX_PATH;
-            graphics.drawString(this.font, count, this.left + 92, rowY + 4, 0xFFC8C8D4, false);
+            graphics.drawString(this.font, count, this.left + 92, rowY + 4, 0xFFC8C8D4, true);
             // Les niveaux OFFERTS par les runes, en vert, a cote de l'achete.
             // Les separer est indispensable : le prix du niveau suivant se
             // calcule sur ce qu'on a paye, jamais sur le total.
@@ -190,7 +202,7 @@ public class HeroScreen extends Screen {
             if (gift > 0) {
                 graphics.drawString(this.font, "+" + gift,
                         this.left + 92 + this.font.width(count) + 4, rowY + 4,
-                        0xFF78E8AE, false);
+                        0xFF78E8AE, true);
             }
             // Le PRIX DU PROCHAIN NIVEAU se lit sur la ligne, sans quoi le
             // joueur ne comprend pas pourquoi ses dix points achetent dix
@@ -199,28 +211,41 @@ public class HeroScreen extends Screen {
                     ? Component.translatable("hero.emeraldweapons.full").getString()
                     : Component.translatable("hero.emeraldweapons.next_cost",
                             HeroStat.cost(level)).getString();
-            graphics.drawString(this.font, price, this.left + 138, rowY + 4, DIM, false);
+            graphics.drawString(this.font, price, this.left + 138, rowY + 4, DIM, true);
 
             // La ligne du bas dit ce que la voie DONNE, pas ce qu'elle vaut :
             // "niveau 42" n'apprend rien, "+2,3 degats" se compare.
             graphics.drawString(this.font, stat.summary(level + gift),
-                    this.left + 19, rowY + 15, 0xFFA0A0B4, false);
+                    this.left + 19, rowY + 15, 0xFFA0A0B4, true);
             // Et la derniere ce que les PALIERS ont deja donne : c'est la
             // moitie de ce qu'une voie rapporte, et elle serait invisible.
             graphics.drawString(this.font, stat.tierSummary(level + gift),
-                    this.left + 19, rowY + 26, 0xFF8C9CC0, false);
+                    this.left + 19, rowY + 26, 0xFF8C9CC0, true);
             if (!full) {
                 String tier = Component.translatable("hero.emeraldweapons.next_tier",
                         HeroStat.toNextTier(level)).getString();
                 graphics.drawString(this.font, tier,
-                        this.left + PANEL_W - 14 - this.font.width(tier), rowY + 26, DIM, false);
+                        this.left + PANEL_W - 14 - this.font.width(tier), rowY + 26, DIM, true);
             }
             rowY += 40;
         }
 
         graphics.drawString(this.font, Component.translatable("hero.emeraldweapons.reset_hint"),
-                this.left + 10, this.top + PANEL_H - 14, DIM, false);
-        super.render(graphics, mouseX, mouseY, partial);
+                this.left + 10, this.top + PANEL_H - 14, DIM, true);
+    }
+
+    /**
+     * Le panneau se pose dans le FOND, pas dans le rendu.
+     *
+     * C'est le seul endroit qui soit a la fois apres le flou du menu et avant
+     * les boutons : le panneau y est net, et les boutons se dessinent par-dessus
+     * lui au lieu d'etre recouverts.
+     */
+    @Override
+    public void renderBackground(GuiGraphics graphics, int mouseX, int mouseY, float partial) {
+        super.renderBackground(graphics, mouseX, mouseY, partial);
+        graphics.fill(this.left, this.top, this.left + PANEL_W, this.top + PANEL_H, 0xFF0A0A12);
+        frame(graphics, this.left, this.top, PANEL_W, PANEL_H, 0x80B98CFF);
     }
 
     private static void frame(GuiGraphics graphics, int x, int y, int w, int h, int colour) {
@@ -228,6 +253,23 @@ public class HeroScreen extends Screen {
         graphics.fill(x, y + h - 1, x + w, y + h, colour);
         graphics.fill(x, y, x + 1, y + h, colour);
         graphics.fill(x + w - 1, y, x + w, y + h, colour);
+    }
+
+    /**
+     * AUCUN FLOU DERRIERE CET ECRAN.
+     *
+     * Depuis la 1.20.2, ouvrir un ecran declenche un floutage post-traitement de
+     * toute l'image deja rendue -- le monde, mais aussi l'interface de jeu. Ce
+     * n'est pas un fond, c'est un filtre applique au tampon, et son rayon suit
+     * un reglage du joueur qui peut monter tres haut.
+     *
+     * La fiche s'ouvre en pleine partie, sans mettre le jeu en pause : flouter
+     * le monde pendant qu'on repartit ses points reviendrait a aveugler le
+     * joueur au milieu d'un siege. On rend donc la methode muette, et le decor
+     * reste net derriere le panneau.
+     */
+    @Override
+    protected void renderBlurredBackground(float partialTick) {
     }
 
     @Override

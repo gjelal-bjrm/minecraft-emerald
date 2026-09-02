@@ -52,6 +52,19 @@ public final class WeatherAtmosphere {
         shake = Math.max(shake, payload.shake() / 100.0F);
     }
 
+    /** Un eclat ne du client lui-meme : les eclairs de chaleur de l'Orage. */
+    public static void flashLocal(int color, float strength) {
+        if (strength > flash) {
+            flash = Math.min(1.0F, strength);
+            flashColor = color;
+        }
+    }
+
+    /** L'eclat en cours, 0 -> 1 : la brume s'en sert pour s'allumer. */
+    public static float flash() {
+        return flash;
+    }
+
     /** Le tremblement continu d'une tempete, pose chaque tick par le client. */
     public static void setRumble(float value) {
         rumble = value;

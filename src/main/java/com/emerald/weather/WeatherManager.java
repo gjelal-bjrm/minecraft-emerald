@@ -13,6 +13,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.MobSpawnType;
+import net.minecraft.world.entity.LightningBolt;
 import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.level.Level;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -71,15 +72,22 @@ public final class WeatherManager {
     @SubscribeEvent
     public static void onLevelTick(LevelTickEvent.Post event) {
         if (!(event.getLevel() instanceof ServerLevel level)
-                || !level.dimension().equals(Level.OVERWORLD)
-                || com.emerald.game.ModeSwitch.off()) {
+                || !level.dimension().equals(Level.OVERWORLD)) {
             return;
         }
+        // Mode eteint : on ne PLANIFIE rien, mais une meteo forcee a la commande
+        // vit normalement, et les fissures aussi. Sans cela, le joueur qui teste
+        // en exploration libre voyait la meteo annoncee sans aucun de ses effets
+        // serveur -- ni foudre, ni secousse, ni fissure.
+        boolean off = com.emerald.game.ModeSwitch.off();
+        WeatherEffects.tickFissures(level);      // avec ou sans tempete
         if (current.real()) {
             WeatherEffects.tick(level, current);
             if (--remaining <= 0) {
                 end(level, true);
             }
+        } else if (off) {
+            // rien a planifier hors du mode
         } else if (pending != null) {
             if (warningTicks % 20 == 0) {
                 Component warning = Component.translatable("game.emeraldweapons.weather.incoming",
@@ -144,15 +152,35 @@ public final class WeatherManager {
 
     // -------------------------------------------------------- debut et fin
 
+    /** L'heure que force une meteo, ou -1 : la Nuit a minuit, les Meteores au crepuscule. */
+    private static long clockFor(Weather weather) {
+        return switch (weather) {
+            case NUIT -> 18000L;
+            case METEORES -> 13200L;
+            default -> -1L;
+        };
+    }
+
     private static void begin(ServerLevel level, Weather weather, int duration) {
         current = weather;
         remaining = duration;
         startedAt = level.getGameTime();
-        if (weather == Weather.NUIT) {
-            // la nuit en plein jour : on deplace l'horloge, ce qui declenche
-            // naturellement les apparitions nocturnes, et on la rendra a la fin
+        long clock = clockFor(weather);
+        if (clock >= 0) {
+            // l'horloge bascule : la Nuit a minuit, ce qui declenche naturellement
+            // les apparitions nocturnes ; les Meteores au crepuscule, un ciel
+            // rouge et une lumiere basse -- l'apocalypse ne se joue pas a midi.
+            // On la rendra a la fin.
             savedDayTime = level.getDayTime();
-            level.setDayTime(18000L);
+            level.setDayTime(clock);
+        }
+        if (weather == Weather.NUIT) {
+            level.setWeatherParameters(0, duration, true, true);
+        }
+        if (weather == Weather.ORAGE) {
+            // le ciel se couvre pour de vrai : la pluie et le tonnerre du jeu de
+            // base donnent l'obscurite et la pluie grise -- ses eclairs blancs,
+            // eux, sont bloques (voir onEntityJoin) : seuls les notres frappent
             level.setWeatherParameters(0, duration, true, true);
         }
         WeatherEffects.begin(level, weather);
@@ -166,11 +194,16 @@ public final class WeatherManager {
     private static void end(ServerLevel level, boolean natural) {
         Weather ended = current;
         WeatherEffects.end(level, ended);
-        if (ended == Weather.NUIT && savedDayTime >= 0) {
-            // l'horloge reprend la ou elle serait sans la Nuit
+        if (clockFor(ended) >= 0 && savedDayTime >= 0) {
+            // l'horloge reprend la ou elle serait sans la tempete
             level.setDayTime(savedDayTime + (level.getGameTime() - startedAt));
-            level.setWeatherParameters(12000, 0, false, false);
             savedDayTime = -1;
+        }
+        if (ended == Weather.NUIT) {
+            level.setWeatherParameters(12000, 0, false, false);
+        }
+        if (ended == Weather.ORAGE) {
+            level.setWeatherParameters(12000, 0, false, false);
         }
         if (natural && ended.aggressive) {
             current = Weather.EMBELLIE;
@@ -243,8 +276,16 @@ public final class WeatherManager {
     /** Un eclat de Dechirure qui revient hors tempete retrouve sa gravite. */
     @SubscribeEvent
     public static void onEntityJoin(EntityJoinLevelEvent event) {
-        if (!event.getLevel().isClientSide()) {
-            WeatherEffects.rescueShard(event.getEntity());
+        if (event.getLevel().isClientSide()) {
+            return;
+        }
+        WeatherEffects.rescueShard(event.getEntity());
+        // l'Orage couvre le ciel avec le tonnerre du jeu de base, mais ses
+        // eclairs blancs n'ont rien a y faire : seuls les notres frappent.
+        // Ceux d'un trident (ils ont une cause) restent permis.
+        if (current == Weather.ORAGE && event.getEntity() instanceof LightningBolt bolt
+                && bolt.getCause() == null) {
+            event.setCanceled(true);
         }
     }
 
@@ -260,8 +301,10 @@ public final class WeatherManager {
     @SubscribeEvent
     public static void onServerStopping(ServerStoppingEvent event) {
         ServerLevel level = event.getServer().overworld();
-        if (current == Weather.NUIT && savedDayTime >= 0) {
+        if (clockFor(current) >= 0 && savedDayTime >= 0) {
             level.setDayTime(savedDayTime + (level.getGameTime() - startedAt));
+        }
+        if (current == Weather.NUIT || current == Weather.ORAGE) {
             level.setWeatherParameters(12000, 0, false, false);
         }
         if (current.real()) {

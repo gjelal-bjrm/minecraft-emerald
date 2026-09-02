@@ -104,12 +104,12 @@ public record RuneMark(RuneFamily family, int rank, List<Option> options) {
      *
      * DEUX CONTRAINTES, et l'ordre dans lequel on les honore compte.
      *
-     * D'abord, chaque option a un grade PLANCHER : un emplacement C ne peut
-     * recevoir qu'une option de base, alors qu'un emplacement S accepte tout.
-     * On remplit donc les emplacements du plus bas au plus haut -- l'ordre du
-     * schema -- parce que ce sont les plus bas qui ont le moins de choix. Servir
-     * d'abord le plus contraint est la seule facon de ne jamais se retrouver
-     * coince avec un emplacement C et plus aucune option de base disponible.
+     * D'abord, chaque option a une FOURCHETTE de grades, plancher et plafond :
+     * une case C ne recoit que les options de base, une case S ne recoit que
+     * les options exceptionnelles. On remplit du plus bas au plus haut -- l'ordre
+     * du schema -- et l'on tire sans remise, si bien qu'aucune case ne peut
+     * rester vide : chaque famille garde au moins autant d'options par grade
+     * que le schema le plus exigeant en demande (verifie par le banc d'essai).
      *
      * Ensuite, on tire SANS REMISE : une rune ne porte jamais deux fois la meme
      * ligne. Deux Tranchants sur la meme pierre s'additionneraient en silence et
@@ -125,7 +125,10 @@ public record RuneMark(RuneFamily family, int rank, List<Option> options) {
             RuneGrade grade = RuneGrade.of(shape.charAt(i));
             List<Rune> eligible = new ArrayList<>();
             for (Rune candidate : pool) {
-                if (candidate.floor().ordinal() <= grade.ordinal()) {
+                // PLANCHER ET PLAFOND : une case S ne recoit que ce qui a le
+                // droit d'y etre. C'est ce qui la rend precieuse -- des degats
+                // critiques en S, que NosTale ne fait jamais, la banaliseraient.
+                if (candidate.allows(grade)) {
                     eligible.add(candidate);
                 }
             }

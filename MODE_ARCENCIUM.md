@@ -742,6 +742,52 @@ Deja installes : Gateways, Apotheosis (+ Attributes, Enchanting, Spawners),
 Cataclysm (+ LionfishAPI), Iron's Spellbooks, Curios, GeckoLib, Placebo, Jade,
 Tombstone, JourneyMap, Waystones, Balm.
 
+### Le shader du mode
+
+Le mode se joue avec un shader realiste : **Complementary Unbound r5.5.1 +
+Euphoria Patches 1.6.4**, pris dans l'instance ATM10 du joueur (c'etait deja
+son choix dans son profil principal). Eau realiste, rayons de lumiere,
+ombres et eclairage physiques, et surtout la meilleure compatibilite moddee
+de sa categorie -- ce qui compte pour un mod qui dessine ses propres
+geometries et ses propres brumes. Photon v1.1 (plus lourd, plus strict) reste
+l'alternative si l'on veut plus de realisme brut.
+
+Fichiers en place dans l'environnement de dev : `run/shaderpacks/` (le zip de
+base et le dossier patche), `run/config/iris.properties` (`enableShaders=true`,
+`shaderPack=ComplementaryUnbound_r5.5.1 + EuphoriaPatches_1.6.4`). Dans le
+pack livrable, les memes fichiers vont dans `overrides/`.
+
+**Ce que le lancement a appris** : Iris 1.8.8 NeoForge declare Embeddium
+incompatible (toutes versions) et **exige Sodium 0.6 pour NeoForge au
+demarrage** (`NoClassDefFoundError: net.caffeinemc.mods.sodium...`), bien que
+son descripteur ne le declare pas. Sodium NeoForge n'etait nulle part sur la
+machine : `sodium-neoforge-0.6.13+mc1.21.1.jar` a ete telecharge depuis
+Modrinth avec l'accord du joueur, empreinte SHA-512 verifiee contre celle de
+l'API. `run/mods` contient donc Sodium 0.6.13, Iris 1.8.8 et Euphoria
+Patcher 1.6.4. Pour le pack livrable base sur ATM10, cela veut dire **Sodium
+a la place d'Embeddium** -- a verifier que rien du pack n'exige Embeddium.
+
+### Verifier un lancement sans casser la session du joueur
+
+`runClientWorld` (build.gradle) entre directement dans la sauvegarde `test`
+(`--quickPlaySingleplayer`), ce qui force le pack de shaders a compiler ses
+programmes -- l'ecran-titre ne le fait pas. Le script de verification qui
+l'accompagne obeit a trois regles apprises a la dure :
+
+1. **S'il existe deja une fenetre Minecraft, il ne lance rien.** Le joueur
+   teste souvent depuis le meme dossier `run/` au moment ou l'on travaille ;
+   un premier script a ferme sa session en pleine Nuit d'Arcencium.
+2. **Il ne supprime pas `latest.log`** (le jeu le fait tourner lui-meme) et ne
+   croit une ligne du journal que si son heure est posterieure au lancement.
+3. **Il ne ferme que son propre arbre de processus** (`taskkill /PID /T`),
+   jamais une fenetre par son titre.
+
+**A verifier avec le shader actif** : nos brumes par meteo passent par
+`ViewportEvent.ComputeFogColor` / `RenderFog`, que les packs de shaders
+recalculent a leur maniere ; et nos geometries en `lightning` / `debugQuads`
+(aurore, failles, arcs, fissures) prennent le programme que le pack leur
+attribue. Ce qui serait perdu se voit en jeu, pas dans le code.
+
 **Tombstone** change la penalite de mort pour le mieux : une tombe avec une cle
 plutot que des objets au sol, qui disparaissent au bout de cinq minutes -- fatal
 sur une partie de 45 minutes.
@@ -776,7 +822,9 @@ EmeraldWeapons-Pack.zip
     ├── mods/            notre jar (absent de CurseForge)
     ├── config/          reglages Gateways, Apotheosis, Lootr...
     ├── defaultconfigs/
-    └── resourcepacks/   reskin prismatique des boss (optionnel)
+    ├── resourcepacks/   reskin prismatique des boss (optionnel)
+    ├── shaderpacks/     Complementary Unbound + Euphoria Patches
+    └── config/iris.properties
 ```
 
 Import via *Creer un profil personnalise → Importer*.
@@ -1050,10 +1098,17 @@ valeur. Le vrai système fait tout autrement :
 - une rune porte **plusieurs options** ;
 - **le rang ne multiplie rien** — il décide du *schéma* : combien d'options, et
   de quels grades ;
-- chaque option a un **grade** (C < B < A < S) qui, lui, multiplie sa valeur ;
-- chaque option a un **grade minimal** : « Attaque augmentée » se voit partout,
-  « Ravage » n'apparaît que dans un emplacement S ;
-- chaque option **tire sa valeur** entre un min et un max propres à son grade.
+- chaque option a une **fourchette de grades**, plancher **et plafond** :
+  « Dégâts critiques » n'existe qu'en C, « Attaque augmentée » va de C à A et
+  jamais en S, « Dégâts relatifs » n'existe qu'en S. Une case S ne reçoit que ce
+  qui a le droit d'y être — c'est ce qui la rend précieuse ;
+- chaque option a **ses propres valeurs par grade**, reprises du relevé
+  (attaque 95 / 142 / 190, SL 11 / 17…) et ramenées à l'échelle de Minecraft —
+  pas un multiplicateur unique, qui aplatissait tous les rapports ;
+- chaque option **tire sa valeur** entre un min et un max. **Les minima ne sont
+  pas publics** (le relevé les donne tous « inconnu ») : on prend 60 % du
+  maximum du grade. C'est la seule invention du catalogue, et elle est signalée
+  dans le code pour être remplacée le jour où l'on aura les vrais.
 
 C'est bien meilleur que ce que j'avais posé : deux runes de même rang ne
 diffèrent plus par un chiffre mais par leur **composition**. Une Légendaire aux
@@ -1618,3 +1673,323 @@ n'est pas plus dur a tuer, il est plus **dangereux**.
 
 Ni Legendaire ni Phenomenal sur un monstre : ce sont les deux rangs que le joueur
 poursuit. Leur equipement tombe a 1,5 % -- un butin, pas une source.
+
+
+## 26. L'aura d'amelioration *(fait)*
+
+Ce que l'amelioration MONTRE. Le bareme suit NosTale, tel que le joueur l'a
+decrit et que le releve le confirme : un cycle rouge / vert / blanc, joue deux
+fois, et c'est l'**ampleur** qui separe les deux tours.
+
+| Cran | Couleur | Ampleur |
+|---|---|---|
+| +1 a +4 | blanc froid, faible | croissante -- une presence, pas une teinte |
+| +5 / +6 / +7 | rouge / vert / blanc | courte |
+| +8 / +9 / +10 | rouge / vert / blanc | **longue, constante, large** |
+
+Les crans +1 a +4 n'ont pas de couleur documentee : on ne leur en invente pas.
+Tout passe par une seule table (`UpgradeGlow`), lue cote serveur et cote client,
+pour que l'arme et l'armure ne divergent jamais.
+
+### 26.1 L'arme : quatre effets, un seul systeme
+
+- **Le halo** *(client)* -- l'arme redessinee en lumiere additive, agrandie,
+  deux couches (un corps dense, un voile diffus) et une troisieme tres large au
+  +8. C'est ce qui fait la difference entre une aura et un nuage de points : le
+  halo epouse la silhouette exacte de la lame. Il **respire**, chaque couche a
+  son rythme. Rendu a la premiere personne (le porteur) et a la troisieme (les
+  autres), par deux chemins et une seule routine.
+- **Il y avait une hélice de particules, retirée.** Elle était fausse par
+  construction : le serveur devinait la position de la main, or la main est
+  dessinée par le client, animée par les membres et l'objet. Aucun réglage ne
+  pouvait rattraper ça. La leçon vaut au-delà : *une particule serveur ne peut
+  pas suivre un point qui n'existe que dans le rendu.* Ce qui doit épouser
+  l'arme se fait au rendu — c'est le halo, et il le fait bien.
+- **L'onde** *(serveur)* -- au +8 et plus, chaque coup porte fait partir un
+  anneau de douze particules de la cible vers l'exterieur. C'est le moment
+  qu'on retient : le halo finit par se fondre dans le paysage, l'onde n'existe
+  qu'un instant.
+- Les creatures armees au +5 et plus emettent l'helice : voir un zombie dont
+  l'epee brille rouge dit ce qu'on affronte avant le premier coup.
+
+### 26.2 L'armure : une coque autour, jamais dessus
+
+**La première version effaçait l'armure.** Une lueur additive posée sur la
+pièce à 55 % : du blanc additif à cette force blanchit tout ce qu'il recouvre,
+et un plastron +10 devenait un bloc blanc. La règle qui manquait, dite par le
+joueur : *une amélioration ajoute, elle ne remplace jamais l'apparence de base.*
+
+D'où la **coque** : un maillage gonflé bien au-delà de l'armure (déformation
+1,75 contre 1,0 pour l'armure extérieure), dessiné à 20 % au plus. Vu de front,
+sa face ne teinte la pièce que faiblement — elle reste elle-même, réchauffée de
+sa couleur. Vu à la silhouette, on voit ses flancs, hors du corps, contre le
+décor : c'est là que la couleur fait un liseré, et c'est ce liseré qu'on lit
+comme une aura. Il ne couvre rien puisqu'il est à côté.
+
+- Elle **respire**, chaque pièce à son propre rythme.
+- **Les braises** au +8 : de lentes étincelles montent de chaque pièce.
+
+### 26.3 Ce qu'on n'a pas fait, et pourquoi
+
+- **Pas de halo ni de lueur sur les creatures** : elles n'ont que l'helice.
+  Greffer les calques sur chaque type de rendu du modpack est un chantier a
+  part ; les particules suffisent a les signaler.
+- **Le halo derive de quelques centimetres** sur sa couche la plus large : la
+  transformation propre a l'objet est hors de portee. Sous le seuil de ce que
+  l'oeil distingue sur une lueur diffuse.
+- **La rarete n'influence pas encore l'aura.** Le releve dit que R7 ajoutait
+  historiquement une couche et que la brillance montait avec la rarete, sans
+  decrire comment. A reprendre quand on saura quoi dessiner.
+
+## 27. Les chiffres de dégâts *(fait)*
+
+Un coup qui ne s'affiche pas ne s'évalue pas. Le joueur monte sa fiche, ses
+runes, ses améliorations — sans chiffre, il ne sait jamais si le +8 a changé
+quelque chose. Le chiffre est la seule preuve tangible de tout ce qu'on a bâti.
+
+- **Le chiffre part du serveur, après armure et résistances** : c'est celui
+  qu'on a *infligé*, pas celui qu'on a demandé. Le critique est décidé plus tôt
+  et noté sur la victime le temps d'un tick.
+- **Le critique se voit avant de se lire** : plus gros, doré avec un liseré
+  orange, précédé d'un éclair, et il **bondit** — parabole d'un bloc puis
+  retombée — là où un coup ordinaire monte doucement et s'efface. On le
+  reconnaît du coin de l'œil, au milieu d'une vague, sans lire le nombre.
+- Dessiné face à la caméra, avec la police du jeu, **à travers les murs** : un
+  chiffre caché derrière le monstre qui l'a reçu ne servirait à rien.
+- Seuls les coups portés par un **joueur** s'affichent.
+
+
+## 27. Les meteos, refaites *(fait)*
+
+Le reproche etait juste et mesure : les six meteos puisaient dans les memes
+particules que les armes, le sceptre et les plantes -- la mote de Prisme, la
+tige d'End, la poussiere de redstone -- et tout finissait par se ressembler.
+
+**Regle appliquee : chaque meteo a son vocabulaire, code pour elle, sans rien
+emprunter.** Quinze particules nouvelles (`tools/weather_particles.py`,
+`client/WeatherParticles.java`), deux rendus en geometrie la ou des points ne
+suffisent pas. Mesure apres coup : la seule particule vanilla restante dans la
+meteo est `EXPLOSION_EMITTER` a l'impact d'un meteore, gardee parce qu'une
+explosion est une explosion.
+
+| Meteo | Vocabulaire |
+|---|---|
+| **Brume** | *nappes* qui rampent au sol, doublees dans les creux ; *formes fantomatiques* qui se defont quand on approche (opacite = distance) ; souffle etouffe |
+| **Aurore** | rideaux en geometrie (inchanges) ; *lucioles de cristal* qui montent des filons d'Arcencium -- l'aurore repond aux veines |
+| **Nuit** | *gouttes* fines, chacune d'une couleur d'eclair, qui *se brisent en eclats de cristal* au sol -- presque blancs, un reflet de leur couleur ; l'onde jaune et les cicatrices vertes parlent en eclats aussi (l'anneau colore, juge enfantin, n'existe plus) |
+| **Meteores** | *tete* blanche, *braises* qui refroidissent de l'orange au gris le long de la chute, *cendres* qui tombent en se balancant, *onde de choc* a plat a l'impact, grondement lointain ; **secousses** rares avec *poussiere* qui monte du sol, et **fissures reelles** (voir 27.4) |
+| **Dechirure** | *eclats de terre* et *brins d'herbe* qui decollent en tournant ; les eclats d'Arcencium sont signales par le sol qui monte vers eux ; **failles en geometrie** |
+| **Orage** | ciel vraiment couvert ; *pluie oblique* par **rafales** ; **eclairs de chaleur** qui allument l'horizon, tonnerre qui roule loin ; *etincelles* sur le metal ; **arcs en geometrie** qui courent au sol, **convergent** vers la frappe, eclatent en etoile a l'impact, et courent autour du porteur de Surcharge ; la frappe **monte du sol** |
+
+### 27.1 Les deux rendus en geometrie
+
+- **Les failles** (`RiftRenderer`) : une fente noire dechiquetee bordee d'une
+  lueur violette, face a la camera. Deux types de rendu, et il le faut : le
+  coeur noir en fondu classique (un noir additif est invisible), le bord en
+  additif. La forme est un bruit *seede* sur la position -- stable d'une image a
+  l'autre, sinon elle tremblerait comme un defaut d'affichage. Le serveur
+  n'envoie plus des nuages de portail mais la **position** des failles
+  (`RiftSyncPayload`, toutes les dix ticks).
+- **Les arcs** (`StormArcRenderer`) : entierement client. Un arc n'a aucun
+  effet de jeu ; le synchroniser ne servirait qu'a le retarder. Chaque client
+  tire ses arcs autour de son joueur, en rubans face camera le long d'une ligne
+  brisee, un quart de seconde.
+
+### 27.2 Deux techniques a retenir
+
+- **La particule posee a plat** (`FlatParticle`) : les anneaux d'eclatement et
+  l'onde de choc ecrivent eux-memes leurs quatre sommets dans le plan du sol.
+  Un anneau face camera est un disque qui flotte ; couche, c'est une trace, et
+  c'est cela qu'on lit comme un impact.
+- **La couleur par l'emetteur** : les textures sont blanches ou grises, la
+  teinte vient du code. Une goutte prend la couleur de l'eclair qu'elle annonce
+  sans qu'il faille une image par couleur ; une braise refroidit d'elle-meme.
+
+### 27.3 Les secousses et les fissures des Meteores
+
+Toutes les 45 a 80 secondes (jamais dans les vingt premieres), le sol tremble
+pour tout le monde : deux secondes et demie, une cloche de secousse plafonnee
+a la demi-force, un tonnerre rendu grave, de la poussiere terreuse qui monte
+du sol autour de chaque joueur, la pierre qui craque. **Rare a dessein** : une
+camera qui tremble gene vite.
+
+Une secousse sur deux ouvre une **fissure : une vraie ouverture dans le sol**,
+pas une image. Sa taille est tiree au sort, les grandes bien plus rares :
+
+| Taille | Poids | Largeur | Profondeur | Longueur |
+|---|---|---|---|---|
+| Craquelure | 70 % | 1 bloc | 2-4 | 4-8 |
+| Moyenne | 22 % | 1-2 | 4-7 | 8-14 |
+| Grande | 6 % | 2-3 | 8-14 | 14-22 |
+| Abime | 2 % | 4-5 | 16-30 | 22-34 |
+
+Ce qui la fait paraitre vraie :
+- **une forme de craquelure**, pas de tranchee : une ligne courbee lentement,
+  dentelee finement, avec une ou deux *ramifications* en biais (presque
+  toujours pour les grandes, rarement pour les petites), et des bouts qui
+  finissent en cheveu -- les 18 % extremes ne s'ouvrent jamais ;
+- **des parois en gradins** : chaque colonne est creusee selon un profil en V,
+  profonde au milieu, a peine entamee au bord ;
+- **des gravats** au fond, faits de la matiere otee (pave, pave d'ardoise,
+  terre grossiere, gravier), et quelques pierres deplacees sur la bordure ;
+- **une annonce** : une fente sombre et fine se dessine et se propage depuis
+  le centre, une seconde et demie avant que le sol ne cede -- puis
+  l'effondrement court lui aussi du centre aux bouts, avec la poussiere et
+  le bruit d'eboulis ;
+- **de la chaleur au fond des grandes seulement** : une lueur rouge sourde qui
+  respire, des braises qui montent. Une craquelure de deux blocs n'a pas de
+  magma.
+
+Garde-fous : la meme liste blanche que les meteores (vanilla, sans obsidienne
+ni coffres de mods), jamais l'eau, **jamais sous les pieds d'un joueur** (le
+pont qui reste sous lui vaut mieux qu'une chute), jamais a moins de 48 blocs
+du village, jamais sous un toit, trois fissures au plus a la fois. Le trou
+reste : la tempete a marque la terre, comme les crateres.
+
+La forme (principale et ramifications) est deduite de la position par un bruit
+seede, **a l'identique chez le serveur qui creuse et chez le client qui
+dessine** (`FissureShape`) : la fente annoncee et le trou coincident, et rien
+d'autre que le centre, la direction, la longueur et la largeur ne transite
+(`FissureSyncPayload`).
+
+### 27.4 L'Orage refait : la charge qui rampe au sol
+
+Avant : un orage vanilla recolore en violet, sous un ciel intact -- un cercle
+d'avertissement, un carillon, un eclair copie du jeu de base. Son identite est
+ailleurs : **la Nuit fait tomber des eclairs colores du ciel ; l'Orage fait
+ramper la charge au sol.** Cinq choses :
+
+1. **Le ciel se couvre vraiment** : la pluie et le tonnerre du jeu de base sont
+   declenches (obscurite, pluie grise, son), et ses eclairs blancs sont bloques
+   a la naissance (`EntityJoinLevelEvent`, sauf ceux d'un trident : ils ont
+   une cause). Seules nos frappes tombent.
+2. **Eclairs de chaleur** : le ciel clignote sans que rien ne tombe (un eclat
+   d'ecran doux, ne chez le client), la brume violette s'allume a l'horizon
+   avec l'eclat, et le tonnerre roule a soixante-dix blocs, un peu apres.
+3. **Rafales** : le vent souffle par a-coups ; la pluie s'epaissit et se couche
+   dans la rafale, et on l'entend arriver (les sons de vent de la Brise).
+4. **La frappe se renverse** : plus de cercle, plus de carillon. L'air aspire,
+   un son grave enfle, et chez les clients les **arcs convergent** vers le
+   point, de plus en plus vite, le point gresille ; puis la decharge **monte du
+   sol vers le ciel** (l'eclair se revele par le bas, en deux ticks et demi),
+   claque comme un trident, et les arcs eclatent en etoile. Les points de
+   frappe transitent (`StormStrikePayload`) : c'est un fait de jeu, tous
+   doivent le voir au meme endroit.
+5. **La Surcharge se voit** : celui qui la porte gresille pendant trente
+   secondes, et des arcs lui courent autour du corps.
+
+### 27.5 Ce qui a change apres l'essai
+
+- **Fissures invisibles a l'essai** : le garde-fou du village (48 blocs)
+  rejetait tout pres du refuge, et le rythme etait trop lent. Le garde-fou
+  depend maintenant de la taille (12 blocs + la longueur maximale : 20 pour
+  une craquelure, 46 pour un abime), les secousses viennent toutes les
+  35-65 s (la premiere apres 10-25 s), trois sur quatre ouvrent une fissure,
+  et les fissures vivent leur vie **quelle que soit la meteo** -- meme sans
+  aucune. Commande d'essai : `/arcencium fissure [petite|moyenne|grande|abime]`.
+- **Plus de monstres sous les tempetes agressives** : la pression passe de
+  1-3 monstres toutes les 3 s a 2-4 toutes les 2 s, plafond par joueur
+  12 -> 19.
+- **Derniere particule vanilla** : l'arrivee par une faille (portail inverse)
+  parle desormais en debris de Dechirure. Il ne reste que l'explosion du
+  meteore, gardee parce qu'une explosion est une explosion.
+
+### 27.6 Le voile de ciel : ce que le shader a appris
+
+Deux captures du joueur sous Complementary ont tout dit : une Brume avec « du
+brouillard au sol et nulle part ailleurs » sous un ciel bleu, une Pluie de
+Meteores sous un beau ciel clair. **Un pack de shaders recalcule le
+brouillard et le ciel a sa maniere et ignore `ComputeFogColor` /
+`RenderFog`.** Et meme sans shader, le brouillard vanilla ne touche pas le
+ciel. Toute l'ambiance par meteo tenait a ces evenements : elle disparaissait.
+
+La reponse : **dessiner le ciel couvert nous-memes** (`SkyVeilRenderer`).
+Une coupole autour de la camera, apres le ciel et avant le terrain, en
+geometrie ordinaire avec ecriture de profondeur : le terrain, plus proche,
+passe devant ; le ciel disparait derriere ; et un shader la traite comme un
+objet lointain, pas comme du ciel qu'il repeindrait. Couleur et opacite par
+meteo (`WeatherClient.veilFor`), montee avec l'intensite ; la brume laisse un
+peu de lumiere au zenith, un ciel de cendres non ; le voile de l'Orage
+s'allume avec les eclairs de chaleur.
+
+| Meteo | Voile |
+|---|---|
+| Brume | pastel derivant, 92 %, plus clair au zenith ; et des nappes DANS L'AIR, pas seulement au sol |
+| Aurore | indigo leger, 45 % : les rideaux se lisent meme en plein jour |
+| Nuit | indigo profond, 55 % (la nuit vanilla fait le reste) |
+| Meteores | rouge-brun de cendres, 88 %, et **l'horloge bascule au crepuscule** (13200) comme la Nuit a minuit : ciel rouge, lumiere basse -- l'apocalypse ne se joue pas a midi |
+| Dechirure | violet, 72 % |
+| Orage | pourpre sombre, 85 %, qui s'eclaire a chaque eclair de chaleur |
+
+**Ou le dessiner, vu en capture** : juste apres le ciel, sous Iris, la
+coupole passait par le programme de CIEL du pack (phase « sky »), qui calcule
+sa propre couleur et ignore la notre -- le ciel restait bleu. Dessinee a la
+fin du rendu (apres la meteo), a la distance du mur de brouillard de chaque
+meteo (Brume 56, Orage 84, Nuit 96, Dechirure 140, Meteores 150, Aurore
+210), avec test et ecriture de profondeur, elle est un objet comme un autre :
+le terrain plus proche passe devant, le reste disparait dedans. Le voile EST
+le mur de brouillard, sous shader comme sans. Et la pluie de la Nuit, noyee par la
+pluie grise du pack, passe a vingt-deux gouttes par tick, plus grosses.
+
+**Vu en captures, sous Complementary, dans le monde d'essai** (`runClientWorld`
++ datapack `autotest`, captures F2 automatiques) : la Brume couvre le ciel
+d'un pastel qui derive, le sommet de la pyramide s'y fond, des nappes
+flottent dans l'air ; les Meteores se jouent sous un ciel rouge-orange de
+cendres au crepuscule, silhouettes noires, flocons de cendre -- l'apocalypse
+demandee ; la Nuit est une voute indigo zebree de trente gouttes colorees
+par tick ; l'Orage un ciel bouche pourpre-gris sous la pluie ; la Dechirure
+un ciel lavande, et ses failles en geometrie se voient ; l'Aurore garde ses
+rideaux, lisibles en plein jour sur un ciel a peine assombri. La commande
+d'essai `/arcencium fissure [taille]` ouvre desormais la fissure DEVANT le
+joueur (pour la voir), et chaque ouverture ou refus s'ecrit dans le journal
+du serveur avec sa taille et sa raison.
+
+**Le sanctuaire ne se fend pas -- et c'est un piege d'essai.** Une fissure
+ouverte sur le parvis du sanctuaire d'essai s'annoncait, chauffait, mais
+n'enlevait *zero* bloc : le dallage est en `polished_gangue`, un bloc du mod,
+et la meteo ne casse que du vanilla (voir `fragile`). Voulu -- le sanctuaire
+est un refuge --, mais cela rend tout essai de fissure au sanctuaire
+trompeur. Les essais d'effondrement et de failles se font **dans la nature**
+(`verify_client5.sh` deplace le joueur a 60-200 blocs par `spreadplayers`
+avant de forcer la meteo). Chaque fissure ecrit dans le journal le bloc de
+sa colonne centrale et le nombre de blocs retires : un zero se voit.
+
+**Le premier effondrement en biome naturel a creuse jusqu'au socle.** Une
+grande fissure (3 x 16 x 11) a retire 1012 blocs au lieu de deux cents : les
+disques de creusement se recouvrent le long de la ligne, et chacun repartait
+du NOUVEAU sol, si bien qu'une meme colonne etait creusee six fois, jusqu'a
+y = -1. Corrige : chaque colonne memorise sa surface d'origine et la
+profondeur deja creusee, et ne descend jamais plus bas que le disque le plus
+exigeant qui la touche. Le journal donne le compte de blocs : il doit rester
+de l'ordre de la largeur x la longueur x la moitie de la profondeur.
+
+Vu en captures dans la nature : la faille de la Dechirure (fente noire
+bordee de rose, debris et brins d'herbe en suspension, « step in to travel »)
+se lit parfaitement sous Complementary.
+
+### 27.7 Le mode eteint n'eteint plus la meteo forcee
+
+Le joueur teste en **exploration libre** (mode eteint) : toutes ses sessions
+depuis fin aout le montrent. Or le tick serveur de la meteo s'arretait tout
+entier avec le mode -- une meteo forcee a la commande s'annoncait, le client
+jouait son ambiance, mais rien cote serveur : ni foudre, ni meteore, ni
+secousse, ni fissure. C'est pour cela que `/arcencium fissure` « ne
+marchait pas ». Desormais, mode eteint = **rien n'est planifie**, mais une
+meteo forcee vit entierement, et les fissures aussi.
+
+### 27.8 Une lecon sur le rendu lightning
+
+Le rendu `lightning` (additif) **elimine les faces arriere** ; `debugQuads`
+non. Les arcs de l'Orage etaient ecrits dans un seul sens : la moitie d'entre
+eux -- ceux qui couraient vers la droite de l'ecran -- etaient invisibles.
+Un ruban de lumiere n'a pas de bon cote : on l'ecrit dans les deux sens.
+
+### 27.9 Ce qui reste hors de portee
+
+- **Pas de son custom** : le mod n'a aucun fichier audio. L'ambiance sonore
+  superpose des sons vanilla (hauteur, volume, cadence). Une vraie bande son
+  demanderait des fichiers qu'il faudrait produire.
+- **Le rendu n'a pas ete vu** : tout compile et chaque particule est
+  enregistree, texturee et employee (verifie par script), mais les densites, les
+  vitesses et les couleurs sont des reglages a l'oeil. `/arcencium weather <id>`
+  permet de les eprouver une par une.

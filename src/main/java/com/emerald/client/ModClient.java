@@ -18,6 +18,22 @@ public class ModClient {
         event.registerSpriteSet(ModParticles.CRYSTAL_RED.get(), CrystalParticle.Provider::new);
         event.registerSpriteSet(ModParticles.CRYSTAL_YELLOW.get(), CrystalParticle.Provider::new);
         event.registerSpriteSet(ModParticles.PRISM_MOTE.get(), PrismMoteParticle.Provider::new);
+
+        // les particules des meteos : quatorze, une par usage, voir WeatherParticles
+        event.registerSpriteSet(ModParticles.MIST_SHEET.get(), WeatherParticles.MistSheet.Provider::new);
+        event.registerSpriteSet(ModParticles.MIST_WRAITH.get(), WeatherParticles.MistWraith.Provider::new);
+        event.registerSpriteSet(ModParticles.CRYSTAL_FIREFLY.get(), WeatherParticles.CrystalFirefly.Provider::new);
+        event.registerSpriteSet(ModParticles.PRISM_DROP.get(), WeatherParticles.PrismDrop.Provider::new);
+        event.registerSpriteSet(ModParticles.PRISM_SHARD.get(), WeatherParticles.PrismShard.Provider::new);
+        event.registerSpriteSet(ModParticles.METEOR_HEAD.get(), WeatherParticles.MeteorHead.Provider::new);
+        event.registerSpriteSet(ModParticles.METEOR_EMBER.get(), WeatherParticles.MeteorEmber.Provider::new);
+        event.registerSpriteSet(ModParticles.ASH_FLAKE.get(), WeatherParticles.AshFlake.Provider::new);
+        event.registerSpriteSet(ModParticles.GROUND_SHOCK.get(), WeatherParticles.GroundShock.Provider::new);
+        event.registerSpriteSet(ModParticles.QUAKE_DUST.get(), WeatherParticles.QuakeDust.Provider::new);
+        event.registerSpriteSet(ModParticles.FLOAT_DEBRIS.get(), WeatherParticles.FloatDebris.Provider::new);
+        event.registerSpriteSet(ModParticles.FLOAT_BLADE.get(), WeatherParticles.FloatBlade.Provider::new);
+        event.registerSpriteSet(ModParticles.STATIC_SPARK.get(), WeatherParticles.StaticSpark.Provider::new);
+        event.registerSpriteSet(ModParticles.WIND_RAIN.get(), WeatherParticles.WindRain.Provider::new);
     }
 
     /**

@@ -7,13 +7,18 @@ import com.emerald.effects.ModEffects;
 import com.emerald.game.GamePhase;
 import com.emerald.game.GameState;
 import com.emerald.game.SiegeRoster;
+import com.emerald.network.FissureSyncPayload;
+import com.emerald.network.StormStrikePayload;
 import com.emerald.network.WeatherPulsePayload;
 import com.emerald.game.WorldSetup;
 import com.emerald.item.ModItems;
 import com.emerald.main.EmeraldWeaponsMod;
 import com.emerald.particles.ModParticles;
+import net.minecraft.world.entity.LightningBolt;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
@@ -42,7 +47,6 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.network.PacketDistributor;
-import org.joml.Vector3f;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -130,7 +134,111 @@ public final class WeatherEffects {
         }
     }
 
+    /**
+     * Une fissure : une ouverture REELLE dans le sol, creusee par une secousse.
+     *
+     * Elle a une taille -- de la craquelure d'un bloc de large a l'abime qui
+     * avale une colline -- tiree au sort, les grandes bien plus rares que les
+     * petites (voir FissureTier). Elle s'ANNONCE d'abord : une fente dessinee
+     * au sol par le client (voir FissureRenderer) qui se propage depuis son
+     * centre ; puis, une seconde et demie plus tard, le sol cede, du centre
+     * vers les bouts. La forme -- principale et ramifications -- est partagee
+     * avec le client (voir FissureShape) : la fente annoncee et le trou
+     * coincident.
+     */
+    private static final class Fissure {
+        final double x;
+        final double z;
+        final float dir;
+        final float length;
+        final float width;
+        final int depth;
+        final float shake;
+        final int maxLife;
+        final List<FissureShape.Line> lines;
+        /** Par ligne, les points deja effondres : l'effondrement court du centre aux bouts. */
+        final boolean[][] carved;
+        int life;
+        /** Blocs retires, pour le journal : une fissure qui n'enleve rien est un bug. */
+        int removed;
+        /**
+         * Par colonne (x, z) : la surface d'ORIGINE et la profondeur deja creusee.
+         * Les disques se recouvrent le long de la ligne ; sans cette memoire,
+         * chaque disque repartait du nouveau sol et une grande fissure creusait
+         * jusqu'au socle (mille blocs au lieu de deux cents).
+         */
+        final Map<Long, int[]> columns = new HashMap<>();
+
+        Fissure(double x, double z, float dir, FissureTier tier, RandomSource random) {
+            this.x = x;
+            this.z = z;
+            this.dir = dir;
+            this.length = tier.lengthMin + random.nextFloat() * (tier.lengthMax - tier.lengthMin);
+            this.width = tier.widthMin + random.nextFloat() * (tier.widthMax - tier.widthMin);
+            this.depth = tier.depthMin + random.nextInt(tier.depthMax - tier.depthMin + 1);
+            this.shake = tier.shake;
+            this.maxLife = 500 + random.nextInt(300);
+            this.lines = FissureShape.lines(x, z, dir, this.length, this.width, this.depth);
+            this.carved = new boolean[this.lines.size()][FissureShape.POINTS];
+        }
+    }
+
+    /**
+     * Les tailles de fissure et leur poids : sept sur dix sont des
+     * craquelures, une sur cinquante est un abime. Largeur et longueur en
+     * blocs, profondeur en blocs sous la surface, et la secousse que
+     * l'effondrement envoie.
+     */
+    private enum FissureTier {
+        PETITE(70, 1.0F, 1.4F, 2, 4, 4.0F, 8.0F, 0.6F),
+        MOYENNE(22, 1.4F, 2.2F, 4, 7, 8.0F, 14.0F, 0.9F),
+        GRANDE(6, 2.4F, 3.4F, 8, 14, 14.0F, 22.0F, 1.3F),
+        ABIME(2, 3.6F, 5.0F, 16, 30, 22.0F, 34.0F, 1.7F);
+
+        final int weight;
+        final float widthMin;
+        final float widthMax;
+        final int depthMin;
+        final int depthMax;
+        final float lengthMin;
+        final float lengthMax;
+        final float shake;
+
+        FissureTier(int weight, float widthMin, float widthMax, int depthMin, int depthMax,
+                    float lengthMin, float lengthMax, float shake) {
+            this.weight = weight;
+            this.widthMin = widthMin;
+            this.widthMax = widthMax;
+            this.depthMin = depthMin;
+            this.depthMax = depthMax;
+            this.lengthMin = lengthMin;
+            this.lengthMax = lengthMax;
+            this.shake = shake;
+        }
+
+        static FissureTier roll(RandomSource random) {
+            int total = 0;
+            for (FissureTier t : values()) {
+                total += t.weight;
+            }
+            int pick = random.nextInt(total);
+            for (FissureTier t : values()) {
+                pick -= t.weight;
+                if (pick < 0) {
+                    return t;
+                }
+            }
+            return PETITE;
+        }
+    }
+
+    private static final org.slf4j.Logger LOGGER = com.mojang.logging.LogUtils.getLogger();
+
     private static final List<Meteor> meteors = new ArrayList<>();
+    private static final List<Fissure> fissures = new ArrayList<>();
+    /** Le tick de la prochaine secousse, et ce qu'il reste de celle en cours. */
+    private static long nextQuake = -1;
+    private static int quakeTicks;
     private static final List<Strike> strikes = new ArrayList<>();
     private static final List<Wave> waves = new ArrayList<>();
     private static final Map<BlockPos, Long> scars = new HashMap<>();
@@ -189,14 +297,25 @@ public final class WeatherEffects {
         if (weather == Weather.DECHIRURE) {
             spawnShards(level);
         }
+        if (weather == Weather.METEORES) {
+            // jamais de secousse dans les dix premieres secondes
+            nextQuake = level.getGameTime() + 200 + level.random.nextInt(300);
+            quakeTicks = 0;
+        }
     }
 
     static void end(ServerLevel level, Weather weather) {
         switch (weather) {
             case BRUME -> sweepModifier(level, Attributes.FOLLOW_RANGE, BRUME_ID);
             case DECHIRURE -> endDechirure(level);
-            case METEORES -> meteors.clear();
-            case ORAGE -> strikes.clear();
+            case METEORES -> {
+                meteors.clear();
+                quakeTicks = 0;               // les fissures en cours finissent leur vie
+            }
+            case ORAGE -> {
+                strikes.clear();
+                surcharged.clear();
+            }
             case NUIT -> waves.clear();     // les cicatrices restent minables jusqu'a expiration
             default -> {
             }
@@ -246,7 +365,7 @@ public final class WeatherEffects {
     // --------------------------------------------------- la pression de monstres
 
     /** Au-dela, on cesse d'en ajouter : la tempete presse, elle ne submerge pas. */
-    private static final int PRESSURE_CAP = 12;
+    private static final int PRESSURE_CAP = 19;
 
     /** Marque les monstres nes de la tempete -- ce sont eux qui paieront. */
     public static final String TAG_STORM = "emeraldweapons_storm_born";
@@ -262,7 +381,7 @@ public final class WeatherEffects {
      * pour qu'elle echappe aux regles de lumiere, plafonnee par joueur.
      */
     private static void stormPressure(ServerLevel level, Weather weather) {
-        if (!weather.aggressive || level.getGameTime() % 60 != 0) {
+        if (!weather.aggressive || level.getGameTime() % 40 != 0) {
             return;
         }
         int tier = switch (GameState.get(level).phase(level)) {
@@ -277,7 +396,7 @@ public final class WeatherEffects {
             if (nearby >= PRESSURE_CAP) {
                 continue;
             }
-            int wanted = 1 + level.random.nextInt(3);
+            int wanted = 2 + level.random.nextInt(3);
             for (int i = 0; i < wanted && nearby + i < PRESSURE_CAP; i++) {
                 spawnStormMob(level, player, tier);
             }
@@ -302,9 +421,11 @@ public final class WeatherEffects {
             return;
         }
         mob.addTag(TAG_STORM);
-        // l'arrivee se voit : sans cela les monstres semblent surgir de nulle part
-        level.sendParticles(ModParticles.PRISM_MOTE.get(),
-                mob.getX(), mob.getY() + 1.0, mob.getZ(), 12, 0.3, 0.6, 0.3, 0.06);
+        // l'arrivee se voit : sans cela les monstres semblent surgir de nulle
+        // part. La tempete le CRACHE dans un gresillement d'etincelles -- c'est
+        // elle qui l'envoie, et cela doit se lire.
+        level.sendParticles(ModParticles.STATIC_SPARK.get(),
+                mob.getX(), mob.getY() + 1.0, mob.getZ(), 14, 0.4, 0.7, 0.4, 0.0);
     }
 
     @javax.annotation.Nullable
@@ -426,9 +547,11 @@ public final class WeatherEffects {
                 if (!level.getBlockState(pos).is(ModBlocks.ARCENCIUM_ORE.get())) {
                     continue;
                 }
-                level.sendParticles(ModParticles.PRISM_MOTE.get(),
-                        pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5,
-                        4, 0.4, 0.4, 0.4, 0.02);
+                // les lucioles de cristal montent du filon : c'est ainsi que
+                // l'aurore repond aux veines, et que tous les joueurs les voient
+                level.sendParticles(ModParticles.CRYSTAL_FIREFLY.get(),
+                        pos.getX() + 0.5, pos.getY() + 1.2, pos.getZ() + 0.5,
+                        3, 0.4, 0.3, 0.4, 0.0);
                 if (found == 0) {
                     level.playSound(null, pos, SoundEvents.AMETHYST_BLOCK_CHIME,
                             SoundSource.AMBIENT, 0.7F, 1.4F);
@@ -591,13 +714,18 @@ public final class WeatherEffects {
                 it.remove();
                 continue;
             }
+            // le front de l'onde : le sol se brise en eclats JAUNES le long du
+            // rayon courant -- le vocabulaire de la Nuit, celui de ses gouttes
+            // qui se brisent en cristal. La couleur voyage dans dx.
             for (int i = 0; i < 14; i++) {
                 double a = i / 14.0 * Math.PI * 2;
-                level.sendParticles(ParticleTypes.ELECTRIC_SPARK,
-                        wave.center.x + Math.cos(a) * wave.radius,
-                        wave.center.y + 0.3,
-                        wave.center.z + Math.sin(a) * wave.radius,
-                        1, 0.1, 0.1, 0.1, 0.02);
+                for (int k = 0; k < 2; k++) {
+                    level.sendParticles(ModParticles.PRISM_SHARD.get(),
+                            wave.center.x + Math.cos(a) * wave.radius,
+                            wave.center.y + 0.05,
+                            wave.center.z + Math.sin(a) * wave.radius,
+                            0, 2.0, 0.0, 0.0, 1.0);
+                }
             }
             DamageSource source = level.damageSources().lightningBolt();
             for (LivingEntity entity : level.getEntitiesOfClass(LivingEntity.class,
@@ -627,15 +755,21 @@ public final class WeatherEffects {
                 continue;
             }
             BlockPos pos = entry.getKey();
-            level.sendParticles(new DustParticleOptions(new Vector3f(0.47F, 0.91F, 0.68F), 0.9F),
-                    pos.getX() + 0.5, pos.getY() + 1.1, pos.getZ() + 0.5,
-                    2, 0.3, 0.1, 0.3, 0.0);
+            // des eclats VERTS qui sautent du bloc : la cicatrice signale
+            // qu'elle se mine encore, dans la couleur de l'eclair qui l'a faite
+            if (now % 2 == 0) {
+                level.sendParticles(ModParticles.PRISM_SHARD.get(),
+                        pos.getX() + 0.2 + level.random.nextDouble() * 0.6, pos.getY() + 1.05,
+                        pos.getZ() + 0.2 + level.random.nextDouble() * 0.6,
+                        0, 4.0, 0.0, 0.0, 1.0);
+            }
         }
     }
 
     // --------------------------------------------------- la Pluie de Meteores
 
     private static void tickMeteores(ServerLevel level) {
+        tickQuakes(level);
         if (level.getGameTime() % 20 == 0) {
             for (ServerPlayer player : level.players()) {
                 if (level.random.nextInt(10) >= 3) {
@@ -661,9 +795,9 @@ public final class WeatherEffects {
             if (meteor.ticks % 5 == 0) {
                 for (int i = 0; i < 10; i++) {
                     double a = i / 10.0 * Math.PI * 2;
-                    level.sendParticles(ParticleTypes.FLAME,
+                    level.sendParticles(ModParticles.METEOR_EMBER.get(),
                             t.getX() + 0.5 + Math.cos(a) * 2.5, t.getY() + 0.2,
-                            t.getZ() + 0.5 + Math.sin(a) * 2.5, 1, 0.0, 0.02, 0.0, 0.0);
+                            t.getZ() + 0.5 + Math.sin(a) * 2.5, 1, 0.0, 0.04, 0.0, 1.0);
                 }
             }
             // le sifflement de l'approche : on leve les yeux avant de chercher
@@ -704,27 +838,26 @@ public final class WeatherEffects {
         double hy = t.getY() + FALL_HEIGHT * k;
         double hz = t.getZ() + 0.5 + meteor.driftZ * k;
 
-        // la tete : un noyau dense, visible de loin
-        level.sendParticles(ParticleTypes.FLAME, hx, hy, hz, 12, 0.5, 0.5, 0.5, 0.02);
-        level.sendParticles(ModParticles.CRYSTAL_ORANGE.get(), hx, hy, hz, 6, 0.6, 0.6, 0.6, 0.0);
-        level.sendParticles(ParticleTypes.LAVA, hx, hy, hz, 2, 0.3, 0.3, 0.3, 0.0);
+        // LA TETE : un coeur blanc-jaune, gros et bref -- c'est lui qu'on voit
+        // de loin. Deux par tick, pour qu'il n'y ait jamais de trou.
+        level.sendParticles(ModParticles.METEOR_HEAD.get(), hx, hy, hz, 2, 0.15, 0.15, 0.15, 0.0);
 
-        // la queue : huit points echelonnes vers le haut, qui s'effilent
-        for (int i = 1; i <= 8; i++) {
-            double back = i / (double) FALL_TICKS * 1.4;
-            double bk = Math.min(1.0, k + back);
-            level.sendParticles(ParticleTypes.SMALL_FLAME,
-                    t.getX() + 0.5 + meteor.driftX * bk,
-                    t.getY() + FALL_HEIGHT * bk,
-                    t.getZ() + 0.5 + meteor.driftZ * bk,
-                    1, 0.25, 0.25, 0.25, 0.0);
-            if (i % 3 == 0) {
-                level.sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE,
-                        t.getX() + 0.5 + meteor.driftX * bk,
-                        t.getY() + FALL_HEIGHT * bk,
-                        t.getZ() + 0.5 + meteor.driftZ * bk,
-                        1, 0.3, 0.3, 0.3, 0.0);
-            }
+        // LA TRAINEE : des braises lachees derriere la tete, avec une vitesse
+        // qui pointe VERS L'ARRIERE de la chute. Elles refroidissent d'elles-
+        // memes, de l'orange au gris (voir MeteorEmber) : la trainee n'est pas
+        // un trait mais du feu qui s'eloigne et s'eteint.
+        double bx = meteor.driftX / FALL_TICKS;
+        double by = FALL_HEIGHT / FALL_TICKS;
+        double bz = meteor.driftZ / FALL_TICKS;
+        for (int i = 0; i < 6; i++) {
+            double back = i * 0.35;
+            level.sendParticles(ModParticles.METEOR_EMBER.get(),
+                    hx + bx * back, hy + by * back, hz + bz * back,
+                    0, bx * 0.15, by * 0.15, bz * 0.15, 1.0);
+        }
+        // et de la cendre, plus rare, qui se detache et tombe
+        if (meteor.ticks % 3 == 0) {
+            level.sendParticles(ModParticles.ASH_FLAKE.get(), hx, hy, hz, 2, 0.6, 0.6, 0.6, 0.0);
         }
     }
 
@@ -736,9 +869,22 @@ public final class WeatherEffects {
         pulse(level, target, 0xFF7A2E, 0.85F, 1.6F, 60.0);
         level.sendParticles(ParticleTypes.EXPLOSION_EMITTER,
                 target.getX() + 0.5, target.getY() + 0.5, target.getZ() + 0.5, 1, 0, 0, 0, 0);
-        level.sendParticles(ModParticles.PRISM_MOTE.get(),
-                target.getX() + 0.5, target.getY() + 1.0, target.getZ() + 0.5,
-                20, 1.5, 1.0, 1.5, 0.15);
+        // L'ONDE DE CHOC : un anneau a plat qui s'ecarte du cratere en une
+        // demi-seconde. L'explosion se voit, l'onde se RESSENT -- c'est elle
+        // qui donne son poids au meteore.
+        level.sendParticles(ModParticles.GROUND_SHOCK.get(),
+                target.getX() + 0.5, target.getY() + 0.15, target.getZ() + 0.5, 1, 0, 0, 0, 0);
+        // les braises projetees en gerbe, et la cendre qui retombe longtemps apres
+        for (int i = 0; i < 28; i++) {
+            double a = level.random.nextDouble() * Math.PI * 2;
+            double sp = 0.15 + level.random.nextDouble() * 0.35;
+            level.sendParticles(ModParticles.METEOR_EMBER.get(),
+                    target.getX() + 0.5, target.getY() + 0.8, target.getZ() + 0.5,
+                    0, Math.cos(a) * sp, 0.25 + level.random.nextDouble() * 0.3, Math.sin(a) * sp, 1.0);
+        }
+        level.sendParticles(ModParticles.ASH_FLAKE.get(),
+                target.getX() + 0.5, target.getY() + 3.0, target.getZ() + 0.5,
+                40, 3.0, 2.0, 3.0, 0.0);
 
         for (BlockPos pos : BlockPos.betweenClosed(target.offset(-2, -2, -2),
                 target.offset(2, 1, 2))) {
@@ -773,6 +919,397 @@ public final class WeatherEffects {
             weatherHurt(level, entity, source, damage);
             Vec3 away = entity.position().subtract(center).normalize();
             entity.push(away.x * 0.6, 0.3, away.z * 0.6);
+        }
+    }
+
+    // ------------------------------------------ les secousses et les fissures
+
+    /** Delai entre deux secousses, en ticks : 35 a 65 secondes. Rare, a dessein. */
+    private static final int QUAKE_GAP_MIN = 700;
+    private static final int QUAKE_GAP_SPAN = 600;
+    /** Duree d'une secousse. */
+    private static final int QUAKE_TICKS = 50;
+    /** Trois secousses sur quatre ouvrent une fissure, jamais plus de trois a la fois. */
+    private static final int FISSURE_CHANCE = 75;
+    private static final int FISSURE_CAP = 3;
+    /** Aucune fissure pres du village -- plus loin quand elle est grande : on n'eventre pas le refuge. */
+    private static final double VILLAGE_GUARD_BASE = 12.0;
+
+    /**
+     * Les secousses de la Pluie de Meteores : de temps en temps, le sol tremble
+     * pour tout le monde -- deux secondes et demie, un grondement, et de la
+     * poussiere qui monte de la terre autour de chaque joueur. Parfois la
+     * secousse ouvre une FISSURE (voir openFissure).
+     *
+     * C'est rare, a dessein : une camera qui tremble gene vite certains
+     * joueurs. Une secousse toutes les 35 a 65 secondes, jamais dans les
+     * dix premieres secondes de la meteo, et jamais au-dela d'une demi-
+     * force : on sent le sol, on ne perd pas l'equilibre.
+     */
+    private static void tickQuakes(ServerLevel level) {
+        long time = level.getGameTime();
+        if (nextQuake < 0) {
+            nextQuake = time + 200 + level.random.nextInt(300);
+        }
+        if (time >= nextQuake) {
+            nextQuake = time + QUAKE_GAP_MIN + level.random.nextInt(QUAKE_GAP_SPAN);
+            quakeTicks = QUAKE_TICKS;
+            for (ServerPlayer player : level.players()) {
+                // le grondement : le tonnerre rendu grave, c'est le sol qui parle
+                level.playSound(null, player.blockPosition(), SoundEvents.LIGHTNING_BOLT_THUNDER,
+                        SoundSource.WEATHER, 1.8F, 0.45F);
+            }
+            if (level.random.nextInt(100) < FISSURE_CHANCE && fissures.size() < FISSURE_CAP
+                    && !level.players().isEmpty()) {
+                openFissure(level, level.players().get(level.random.nextInt(level.players().size())),
+                        FissureTier.roll(level.random), false, null);
+            }
+        }
+        if (quakeTicks > 0) {
+            quakeTicks--;
+            // la secousse monte puis retombe : une cloche, pas un mur
+            float k = (float) Math.sin(Math.PI * (QUAKE_TICKS - quakeTicks) / (double) QUAKE_TICKS);
+            if (quakeTicks % 4 == 0) {
+                for (ServerPlayer player : level.players()) {
+                    PacketDistributor.sendToPlayer(player,
+                            new WeatherPulsePayload(0, 0, Math.round(50.0F * k)));
+                }
+            }
+            if (quakeTicks % 2 == 0) {
+                for (ServerPlayer player : level.players()) {
+                    for (int i = 0; i < 3; i++) {
+                        double a = level.random.nextDouble() * Math.PI * 2;
+                        double d = 2.0 + level.random.nextDouble() * 9.0;
+                        int x = (int) Math.floor(player.getX() + Math.cos(a) * d);
+                        int z = (int) Math.floor(player.getZ() + Math.sin(a) * d);
+                        level.sendParticles(ModParticles.QUAKE_DUST.get(),
+                                x + 0.5, WorldSetup.surfaceY(level, x, z) + 0.1, z + 0.5,
+                                1, 0.3, 0.0, 0.3, 0.0);
+                    }
+                    // la pierre qui craque, ici et la
+                    if (level.random.nextInt(5) == 0) {
+                        level.playSound(null, player.blockPosition().offset(
+                                        level.random.nextInt(9) - 4, 0, level.random.nextInt(9) - 4),
+                                SoundEvents.STONE_BREAK, SoundSource.WEATHER, 0.7F,
+                                0.5F + level.random.nextFloat() * 0.2F);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Une fissure s'ouvre pres d'un joueur : a six a quinze blocs -- plus loin
+     * pour les grandes, personne ne doit etre dessus --, dans une direction
+     * quelconque, d'une taille tiree au sort. Jamais sous un toit, jamais
+     * pres du village. Elle s'annonce d'abord : la pierre craque et la fente
+     * se dessine ; le sol ne cede qu'une seconde et demie plus tard.
+     */
+    private static boolean openFissure(ServerLevel level, ServerPlayer near, FissureTier tier,
+                                       boolean force, @javax.annotation.Nullable Double angle) {
+        // au hasard autour du joueur ; ou droit devant lui, pour l'essai
+        double a = angle != null ? angle : level.random.nextDouble() * Math.PI * 2;
+        double d = angle != null ? 8.0 + tier.widthMax
+                : 6.0 + tier.widthMax + level.random.nextDouble() * 9.0;
+        double x = near.getX() + Math.cos(a) * d;
+        double z = near.getZ() + Math.sin(a) * d;
+        int sx = (int) Math.floor(x);
+        int sz = (int) Math.floor(z);
+        BlockPos at = new BlockPos(sx, WorldSetup.surfaceY(level, sx, sz), sz);
+        if (!level.isLoaded(at) || !level.canSeeSky(at)) {
+            LOGGER.info("Fissure {} refusee en {} : sous un toit ou hors des chunks charges", tier, at);
+            return false;
+        }
+        BlockPos village = GameState.get(level).village();
+        double guard = VILLAGE_GUARD_BASE + tier.lengthMax;
+        if (!force && village != null && village.distSqr(at) < guard * guard) {
+            LOGGER.info("Fissure {} refusee en {} : trop pres du village", tier, at);
+            return false;
+        }
+        Fissure f = new Fissure(x, z, (float) (level.random.nextDouble() * Math.PI * 2), tier,
+                level.random);
+        fissures.add(f);
+        LOGGER.info("Fissure {} ouverte en {} : largeur {}, longueur {}, profondeur {}, {} ligne(s)",
+                tier, at, String.format("%.1f", f.width), String.format("%.1f", f.length), f.depth,
+                f.lines.size());
+        level.playSound(null, at, SoundEvents.STONE_BREAK, SoundSource.WEATHER, 2.0F, 0.4F);
+        level.playSound(null, at, SoundEvents.GENERIC_EXPLODE.value(), SoundSource.WEATHER,
+                0.7F, 0.35F);
+        syncFissures(level);
+        return true;
+    }
+
+    /**
+     * Pour l'essai : ouvre une fissure pres du joueur, de la taille demandee
+     * (petite, moyenne, grande, abime) ou tiree au sort, sans egard pour le
+     * village. C'est la seule facon d'en voir une a coup sur.
+     */
+    public static boolean debugFissure(ServerLevel level, ServerPlayer player,
+                                       @javax.annotation.Nullable String size) {
+        FissureTier tier = null;
+        if (size != null) {
+            for (FissureTier t : FissureTier.values()) {
+                if (t.name().equalsIgnoreCase(size)) {
+                    tier = t;
+                }
+            }
+        }
+        // droit devant le joueur : la commande sert a VOIR la fissure
+        double yaw = Math.toRadians(player.getYRot());
+        double ahead = Math.atan2(Math.cos(yaw), -Math.sin(yaw));
+        return openFissure(level, player, tier == null ? FissureTier.roll(level.random) : tier, true,
+                ahead);
+    }
+
+    /**
+     * Les fissures vivent leur vie quelle que soit la meteo -- y compris
+     * quand il n'y en a aucune : c'est WeatherManager qui appelle ceci a
+     * chaque tick, avant meme de savoir s'il y a une tempete. Une fissure
+     * ouverte a la fin des Meteores finit de s'effondrer ; celle de la
+     * commande d'essai aussi.
+     */
+    static void tickFissures(ServerLevel level) {
+        if (fissures.isEmpty()) {
+            return;
+        }
+        boolean changed = false;
+        Iterator<Fissure> it = fissures.iterator();
+        while (it.hasNext()) {
+            Fissure f = it.next();
+            f.life++;
+            if (f.life >= f.maxLife) {
+                it.remove();
+                changed = true;
+                continue;
+            }
+            int bx = (int) Math.floor(f.x);
+            int bz = (int) Math.floor(f.z);
+            BlockPos at = new BlockPos(bx, WorldSetup.surfaceY(level, bx, bz), bz);
+            if (f.life == FissureShape.COLLAPSE_AT) {
+                // le sol cede : le grondement, et la secousse a la mesure de la taille
+                level.playSound(null, at, SoundEvents.LIGHTNING_BOLT_THUNDER, SoundSource.WEATHER,
+                        2.2F, 0.4F);
+                pulse(level, at, 0xFF7A2E, 0.0F, f.shake, 30.0 + f.width * 10.0);
+            }
+            if (f.life >= FissureShape.COLLAPSE_AT
+                    && f.life <= FissureShape.COLLAPSE_AT + FissureShape.CARVE_TICKS) {
+                carve(level, f);
+                if (f.life == FissureShape.COLLAPSE_AT + FissureShape.CARVE_TICKS) {
+                    LOGGER.info("Fissure en {} : effondrement termine, {} bloc(s) retire(s)", at, f.removed);
+                }
+            }
+            boolean deep = f.width >= 2.4F;
+            if (deep && f.life > FissureShape.COLLAPSE_AT && f.life % 3 == 0
+                    && f.maxLife - f.life > 40) {
+                // les grandes chauffent : des braises montent du fond
+                FissureShape.Line line = f.lines.get(0);
+                double[] p = line.point(level.random.nextInt(FissureShape.POINTS));
+                int px = (int) Math.floor(p[0]);
+                int pz = (int) Math.floor(p[1]);
+                level.sendParticles(ModParticles.METEOR_EMBER.get(),
+                        p[0], WorldSetup.surfaceY(level, px, pz) + 0.15, p[1],
+                        0, (level.random.nextDouble() - 0.5) * 0.02,
+                        0.08 + level.random.nextDouble() * 0.06,
+                        (level.random.nextDouble() - 0.5) * 0.02, 1.0);
+            }
+            if (deep && f.life > FissureShape.COLLAPSE_AT && f.life % 40 == 0) {
+                level.playSound(null, at, SoundEvents.LAVA_AMBIENT, SoundSource.WEATHER, 0.8F, 0.6F);
+            }
+        }
+        if (changed || level.getGameTime() % 20 == 0) {
+            syncFissures(level);
+        }
+    }
+
+    /**
+     * L'effondrement : du centre vers les bouts, sur CARVE_TICKS, ligne par
+     * ligne. Chaque point atteint creuse le sol autour de lui -- plus large et
+     * plus profond au milieu de la fente qu'a ses bouts, et les bouts ne
+     * s'ouvrent pas du tout : une vraie fissure finit en cheveu. On ne touche
+     * qu'aux blocs que la meteo a le droit de briser (voir fragile), jamais a
+     * l'eau, et jamais sous les pieds d'un joueur : le pont qui reste sous lui
+     * vaut mieux qu'une chute qu'il n'a pas vue venir.
+     */
+    private static void carve(ServerLevel level, Fissure f) {
+        double reach = (f.life - FissureShape.COLLAPSE_AT) / (double) FissureShape.CARVE_TICKS;
+        for (int li = 0; li < f.lines.size(); li++) {
+            FissureShape.Line line = f.lines.get(li);
+            for (int i = 0; i < FissureShape.POINTS; i++) {
+                double prog = line.progress(i);
+                if (f.carved[li][i] || prog > reach || prog > FissureShape.CARVED_SPAN) {
+                    continue;
+                }
+                f.carved[li][i] = true;
+                double radius = line.width() * 0.5 * line.taper(i);
+                if (radius < 0.35) {
+                    continue;                  // trop fin pour s'ouvrir : reste une fente
+                }
+                radius = Math.max(0.5, radius);
+                int depth = Math.max(1, (int) Math.round(line.depth() * line.depthAt(i)));
+                // la ligne d'ici au point suivant, par pas d'un demi-bloc
+                double[] p0 = line.point(i);
+                double[] p1 = line.point(Math.min(i + 1, FissureShape.POINTS - 1));
+                double segLen = Math.hypot(p1[0] - p0[0], p1[1] - p0[1]);
+                int steps = Math.max(1, (int) Math.ceil(segLen / 0.5));
+                for (int st = 0; st <= steps; st++) {
+                    double k = st / (double) steps;
+                    f.removed += carveDisc(level, f, p0[0] + (p1[0] - p0[0]) * k,
+                            p0[1] + (p1[1] - p0[1]) * k, radius, depth);
+                }
+                if (i == FissureShape.POINTS / 2 && li == 0) {
+                    int cx = (int) Math.floor(p0[0]);
+                    int cz = (int) Math.floor(p0[1]);
+                    int top = WorldSetup.surfaceY(level, cx, cz) - 1;
+                    BlockPos tp = new BlockPos(cx, top, cz);
+                    LOGGER.info("Fissure : colonne centrale {} -> sommet {} ({}), fragile={}, rayon {}, profondeur {}",
+                            tp, top, level.getBlockState(tp).getBlock(), fragile(level, tp),
+                            String.format("%.2f", radius), depth);
+                }
+                // la poussiere qui monte du trou, et l'eboulis qu'on entend
+                int px = (int) Math.floor(p0[0]);
+                int pz = (int) Math.floor(p0[1]);
+                level.sendParticles(ModParticles.QUAKE_DUST.get(),
+                        p0[0], WorldSetup.surfaceY(level, px, pz) + 0.5, p0[1],
+                        4, radius, 0.3, radius, 0.0);
+                if (level.random.nextInt(3) == 0) {
+                    level.playSound(null, new BlockPos(px, WorldSetup.surfaceY(level, px, pz), pz),
+                            SoundEvents.GRAVEL_BREAK, SoundSource.WEATHER, 1.2F,
+                            0.6F + level.random.nextFloat() * 0.3F);
+                }
+            }
+        }
+    }
+
+    /**
+     * Un disque de sol qui cede, en V : profond au milieu, a peine entame au
+     * bord, si bien que les parois sont des gradins et non des murs. Des
+     * gravats restent au fond, faits de ce qu'on vient d'oter ; quelques
+     * pierres deplacees se posent sur la bordure.
+     */
+    private static int carveDisc(ServerLevel level, Fissure f, double cx, double cz, double radius,
+                                 int depth) {
+        int total = 0;
+        int r = (int) Math.ceil(radius) + 1;
+        int bcx = (int) Math.floor(cx);
+        int bcz = (int) Math.floor(cz);
+        for (int dx = -r; dx <= r; dx++) {
+            for (int dz = -r; dz <= r; dz++) {
+                int bx = bcx + dx;
+                int bz = bcz + dz;
+                double d = Math.hypot(bx + 0.5 - cx, bz + 0.5 - cz);
+                if (d > radius) {
+                    if (d <= radius + 1.0 && level.random.nextInt(14) == 0) {
+                        rimStone(level, bx, bz);
+                    }
+                    continue;
+                }
+                if (underfoot(level, bx, bz)) {
+                    continue;
+                }
+                long key = BlockPos.asLong(bx, 0, bz);
+                int[] col = f.columns.get(key);
+                if (col == null) {
+                    int top = WorldSetup.surfaceY(level, bx, bz) - 1;
+                    if (!level.getBlockState(new BlockPos(bx, top, bz)).getFluidState().isEmpty()) {
+                        f.columns.put(key, new int[]{top, Integer.MAX_VALUE});   // jamais l'eau
+                        continue;
+                    }
+                    // ce qui COUVRE le sol sans le porter -- couche de neige, herbe,
+                    // fleurs -- tombe avec lui : sinon une nappe de neige restait
+                    // suspendue au-dessus du trou et le cachait tout entier
+                    for (int y = top + 1; y <= top + 2; y++) {
+                        BlockPos over = new BlockPos(bx, y, bz);
+                        BlockState cover = level.getBlockState(over);
+                        if (cover.isAir() || !fragile(level, over)) {
+                            break;
+                        }
+                        if (cover.canBeReplaced() || !cover.isCollisionShapeFullBlock(level, over)) {
+                            level.removeBlock(over, false);
+                        } else {
+                            break;
+                        }
+                    }
+                    col = new int[]{top, 0};
+                    f.columns.put(key, col);
+                }
+                // le profil en V : profond au milieu, a peine entame au bord --
+                // et une colonne ne descend jamais plus bas que le disque le plus
+                // exigeant qui la touche, mesure depuis sa surface d'origine
+                int wanted = Math.max(1, (int) Math.ceil(depth * (1.0 - Math.pow(d / radius, 1.6))));
+                if (wanted <= col[1]) {
+                    continue;
+                }
+                int origTop = col[0];
+                BlockState lowest = null;
+                int removed = 0;
+                for (int y = origTop - col[1]; y > origTop - wanted; y--) {
+                    BlockPos pos = new BlockPos(bx, y, bz);
+                    if (!fragile(level, pos)) {
+                        break;                 // on s'arrete sur ce qu'on ne casse pas
+                    }
+                    BlockState state = level.getBlockState(pos);
+                    if (level.random.nextInt(12) == 0) {
+                        level.levelEvent(2001, pos, Block.getId(state));
+                    }
+                    level.removeBlock(pos, false);
+                    lowest = state;
+                    removed++;
+                }
+                col[1] = wanted;
+                if (removed >= 2 && lowest != null && level.random.nextInt(5) == 0) {
+                    level.setBlock(new BlockPos(bx, origTop - wanted + 1, bz), rubble(level, lowest), 3);
+                }
+                total += removed;
+            }
+        }
+        return total;
+    }
+
+    /** Les gravats : de la matiere qu'on vient d'oter, sous sa forme brisee. */
+    private static BlockState rubble(ServerLevel level, BlockState from) {
+        if (from.is(Blocks.DEEPSLATE) || from.is(BlockTags.DEEPSLATE_ORE_REPLACEABLES)) {
+            return Blocks.COBBLED_DEEPSLATE.defaultBlockState();
+        }
+        if (from.is(BlockTags.BASE_STONE_OVERWORLD) || from.is(BlockTags.STONE_ORE_REPLACEABLES)) {
+            return Blocks.COBBLESTONE.defaultBlockState();
+        }
+        if (from.is(BlockTags.SAND)) {
+            return from;
+        }
+        return level.random.nextBoolean() ? Blocks.COARSE_DIRT.defaultBlockState()
+                : Blocks.GRAVEL.defaultBlockState();
+    }
+
+    /** Une pierre deplacee sur la bordure : posee sur un sol plein, et vanilla. */
+    private static void rimStone(ServerLevel level, int bx, int bz) {
+        BlockPos pos = new BlockPos(bx, WorldSetup.surfaceY(level, bx, bz), bz);
+        BlockPos below = pos.below();
+        if (!level.getBlockState(pos).isAir() || !fragile(level, below)
+                || !level.getBlockState(below).isCollisionShapeFullBlock(level, below)) {
+            return;
+        }
+        level.setBlock(pos, level.random.nextBoolean() ? Blocks.COBBLESTONE_SLAB.defaultBlockState()
+                : Blocks.GRAVEL.defaultBlockState(), 3);
+    }
+
+    private static boolean underfoot(ServerLevel level, int bx, int bz) {
+        for (ServerPlayer player : level.players()) {
+            if (Math.hypot(player.getX() - (bx + 0.5), player.getZ() - (bz + 0.5)) < 2.5) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static void syncFissures(ServerLevel level) {
+        List<FissureSyncPayload.Entry> entries = new ArrayList<>(fissures.size());
+        for (Fissure f : fissures) {
+            entries.add(new FissureSyncPayload.Entry(f.x, f.z, f.dir, f.length, f.width,
+                    f.life, f.maxLife));
+        }
+        FissureSyncPayload payload = new FissureSyncPayload(entries);
+        for (ServerPlayer player : level.players()) {
+            PacketDistributor.sendToPlayer(player, payload);
         }
     }
 
@@ -859,18 +1396,19 @@ public final class WeatherEffects {
                 it.remove();   // cueilli ou detruit : celui-la ne reviendra pas
                 continue;
             }
-            // un halo et une colonne jusqu'au sol : un objet de trente
-            // centimetres a huit blocs de haut ne se remarque pas tout seul,
-            // et c'est pour cela qu'on ne les trouvait pas
-            level.sendParticles(ModParticles.PRISM_MOTE.get(),
-                    entity.getX(), entity.getY() + 0.3, entity.getZ(), 6, 0.5, 0.5, 0.5, 0.02);
-            level.sendParticles(ParticleTypes.END_ROD,
-                    entity.getX(), entity.getY() + 0.3, entity.getZ(), 2, 0.35, 0.35, 0.35, 0.0);
-            for (int h = 1; h <= 6; h++) {
-                level.sendParticles(ParticleTypes.ELECTRIC_SPARK,
-                        entity.getX(), entity.getY() - h * 0.8, entity.getZ(),
-                        1, 0.05, 0.05, 0.05, 0.0);
+            // Un objet de trente centimetres a huit blocs de haut ne se
+            // remarque pas tout seul. On le signale par ce que la Dechirure
+            // fait de mieux : le SOL QUI MONTE VERS LUI -- une colonne de terre
+            // et d'herbe qui decolle sous l'eclat et s'eleve jusqu'a lui. C'est
+            // le vocabulaire de la meteo, pas un halo emprunte a une autre.
+            double ground = WorldSetup.surfaceY(level, entity.getBlockX(), entity.getBlockZ());
+            for (int i = 0; i < 3; i++) {
+                level.sendParticles(ModParticles.FLOAT_DEBRIS.get(),
+                        entity.getX(), ground + 0.2 + level.random.nextDouble() * 0.5, entity.getZ(),
+                        1, 0.6, 0.0, 0.6, 0.0);
             }
+            level.sendParticles(ModParticles.FLOAT_BLADE.get(),
+                    entity.getX(), ground + 0.3, entity.getZ(), 2, 0.8, 0.0, 0.8, 0.0);
         }
     }
 
@@ -882,7 +1420,7 @@ public final class WeatherEffects {
             double dist = 15 + level.random.nextDouble() * 20;
             int x = (int) Math.round(player.getX() + Math.cos(angle) * dist);
             int z = (int) Math.round(player.getZ() + Math.sin(angle) * dist);
-            rifts.add(new Rift(new BlockPos(x, WorldSetup.surfaceY(level, x, z), z), 900));
+            rifts.add(new Rift(new BlockPos(x, WorldSetup.surfaceY(level, x, z), z), RIFT_LIFE));
         }
         Iterator<Rift> it = rifts.iterator();
         while (it.hasNext()) {
@@ -896,6 +1434,7 @@ public final class WeatherEffects {
             if (level.getGameTime() % 10 != 0) {
                 continue;
             }
+            syncRifts(level);
             for (LivingEntity entity : level.getEntitiesOfClass(LivingEntity.class,
                     new AABB(pos).inflate(1.2, 2.0, 1.2))) {
                 travelRift(level, entity);
@@ -916,34 +1455,18 @@ public final class WeatherEffects {
         double cx = pos.getX() + 0.5;
         double cy = pos.getY() + 1.6;
         double cz = pos.getZ() + 0.5;
-        double spin = level.getGameTime() * 0.08;
 
-        // le contour de la porte, dessine plein pour qu'il se lise comme un bord
-        for (int i = 0; i < 22; i++) {
-            double a = i / 22.0 * Math.PI * 2;
-            level.sendParticles(new DustParticleOptions(
-                            new Vector3f(0.85F, 0.45F, 1.0F), 1.5F),
-                    cx + Math.cos(a) * 1.15, cy + Math.sin(a) * 1.6, cz,
-                    1, 0.02, 0.02, 0.02, 0.0);
-            level.sendParticles(new DustParticleOptions(
-                            new Vector3f(0.55F, 0.85F, 1.0F), 1.5F),
-                    cx, cy + Math.sin(a) * 1.6, cz + Math.cos(a) * 1.15,
-                    1, 0.02, 0.02, 0.02, 0.0);
-        }
-        // le tourbillon interieur : c'est lui qui donne l'impression du gouffre
-        for (int i = 0; i < 6; i++) {
-            double a = spin + i / 6.0 * Math.PI * 2;
-            double r = 0.25 + (i % 3) * 0.3;
-            level.sendParticles(ParticleTypes.PORTAL,
-                    cx + Math.cos(a) * r, cy + Math.sin(a * 1.7) * 0.8, cz + Math.sin(a) * r,
+        // LA FAILLE ELLE-MEME EST DESSINEE PAR LE CLIENT, en geometrie : une
+        // fente noire bordee d'une lueur (voir RiftRenderer). Le serveur ne
+        // lui envoie plus des nuages de portail -- il lui envoie sa POSITION,
+        // toutes les dix ticks (voir syncRifts). Ce qui reste ici est ce que
+        // le sol fait autour : il se souleve, aspire vers la dechirure.
+        if (level.getGameTime() % 3 == 0) {
+            double a = level.random.nextDouble() * Math.PI * 2;
+            double r = 1.2 + level.random.nextDouble() * 2.0;
+            level.sendParticles(ModParticles.FLOAT_DEBRIS.get(),
+                    cx + Math.cos(a) * r, pos.getY() + 0.2, cz + Math.sin(a) * r,
                     1, 0.0, 0.0, 0.0, 0.0);
-        }
-        // la colonne : on doit pouvoir la reperer d'un versant a l'autre
-        if (level.getGameTime() % 4 == 0) {
-            for (int h = 0; h < 22; h += 2) {
-                level.sendParticles(ParticleTypes.END_ROD,
-                        cx, pos.getY() + h, cz, 1, 0.08, 0.1, 0.08, 0.0);
-            }
         }
         if (level.getGameTime() % 60 == 0) {
             level.playSound(null, pos, SoundEvents.PORTAL_AMBIENT, SoundSource.AMBIENT,
@@ -958,6 +1481,32 @@ public final class WeatherEffects {
                             .withStyle(net.minecraft.ChatFormatting.LIGHT_PURPLE), true);
                 }
             }
+        }
+    }
+
+    /** Duree de vie d'une faille, en ticks. Sert au fondu chez le client. */
+    private static final int RIFT_LIFE = 900;
+
+    /**
+     * Envoie les failles au client, qui les dessine.
+     *
+     * La liste entiere, toutes les dix ticks, a tous les joueurs : quelques
+     * failles a cinq nombres chacune, le cout est nul. Le client fait le fondu
+     * a partir de l'age ; l'age est ce qui reste a vivre soustrait de la duree
+     * totale, puisque le serveur compte a rebours.
+     */
+    private static void syncRifts(ServerLevel level) {
+        java.util.List<com.emerald.network.RiftSyncPayload.Entry> entries =
+                new java.util.ArrayList<>(rifts.size());
+        for (Rift rift : rifts) {
+            entries.add(new com.emerald.network.RiftSyncPayload.Entry(
+                    rift.pos.getX() + 0.5, rift.pos.getY() + 1.6, rift.pos.getZ() + 0.5,
+                    RIFT_LIFE - rift.life, RIFT_LIFE));
+        }
+        com.emerald.network.RiftSyncPayload payload =
+                new com.emerald.network.RiftSyncPayload(entries);
+        for (ServerPlayer player : level.players()) {
+            net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player, payload);
         }
     }
 
@@ -1002,8 +1551,10 @@ public final class WeatherEffects {
             entity.teleportTo(dest.getX() + 0.5, dest.getY(), dest.getZ() + 0.5);
         }
         level.playSound(null, dest, SoundEvents.ENDERMAN_TELEPORT, SoundSource.AMBIENT, 1.0F, 1.2F);
-        level.sendParticles(ParticleTypes.REVERSE_PORTAL,
-                dest.getX() + 0.5, dest.getY() + 1.0, dest.getZ() + 0.5, 30, 0.5, 1.0, 0.5, 0.1);
+        // l'arrivee : la terre decolle autour de qui vient d'etre recrache --
+        // le vocabulaire de la Dechirure, pas celui d'un portail
+        level.sendParticles(ModParticles.FLOAT_DEBRIS.get(),
+                dest.getX() + 0.5, dest.getY() + 0.2, dest.getZ() + 0.5, 24, 0.9, 0.2, 0.9, 0.0);
     }
 
     private static void endDechirure(ServerLevel level) {
@@ -1025,13 +1576,23 @@ public final class WeatherEffects {
     // --------------------------------------------------- l'Orage Prismatique
 
     /**
-     * L'Orage : des frappes annoncees, de gros degats -- et la Surcharge pour
-     * qui encaisse. C'est la seule meteo ou l'on CHERCHE a etre touche. Le
-     * Filtre de Brume annule les degats mais laisse la Surcharge : s'exposer
-     * aux frappes devient alors un style de jeu.
+     * L'Orage : la charge qui rampe au sol, et la Surcharge pour qui encaisse.
+     *
+     * Son identite, par opposition a la Nuit : la Nuit fait tomber des eclairs
+     * colores du ciel ; l'Orage fait monter la decharge DU SOL. Une frappe
+     * s'annonce par l'air qui se charge -- un souffle qui aspire, un son grave
+     * qui enfle -- et, chez les clients, par des arcs qui convergent vers le
+     * point, de plus en plus vite (voir StormArcRenderer). Pas de cercle, pas
+     * de carillon : on lit ou ca va tomber a ce que l'electricite y court.
+     *
+     * C'est la seule meteo ou l'on CHERCHE a etre touche. Le Filtre de Brume
+     * annule les degats mais laisse la Surcharge : s'exposer aux frappes
+     * devient alors un style de jeu. Et la Surcharge se voit : celui qui la
+     * porte gresille, et l'orage lui court autour du corps.
      */
     private static void tickOrage(ServerLevel level) {
-        if (level.getGameTime() % 40 == 0) {
+        long now = level.getGameTime();
+        if (now % 40 == 0) {
             for (ServerPlayer player : level.players()) {
                 if (level.random.nextInt(10) >= 4) {
                     continue;
@@ -1043,6 +1604,11 @@ public final class WeatherEffects {
                 BlockPos pos = new BlockPos(x, WorldSetup.surfaceY(level, x, z), z);
                 if (level.canSeeSky(pos)) {
                     strikes.add(new Strike(pos, 50));
+                    // l'annonce : l'air aspire, et les arcs convergent
+                    level.playSound(null, pos, SoundEvents.BREEZE_CHARGE, SoundSource.WEATHER,
+                            1.6F, 0.55F);
+                    tell(level, pos, new StormStrikePayload(pos.getX() + 0.5, pos.getY(),
+                            pos.getZ() + 0.5, StormStrikePayload.WARN, 50), 96.0);
                 }
             }
         }
@@ -1050,39 +1616,45 @@ public final class WeatherEffects {
         while (it.hasNext()) {
             Strike strike = it.next();
             strike.ticks--;
-            BlockPos pos = strike.pos;
-            if (strike.ticks == 50) {
-                // le signal de depart : sans lui, le cercle passait pour un
-                // decor de plus et personne ne comprenait qu'il annoncait
-                level.playSound(null, pos, SoundEvents.BEACON_ACTIVATE,
-                        SoundSource.WEATHER, 1.6F, 1.8F);
-            }
-            if (strike.ticks % 2 == 0) {
-                double ring = 4.0 * (strike.ticks / 50.0);
-                int points = 20;
-                for (int i = 0; i < points; i++) {
-                    double a = i / (double) points * Math.PI * 2;
-                    level.sendParticles(new DustParticleOptions(
-                                    new Vector3f(0.85F, 0.45F, 1.0F), 1.6F),
-                            pos.getX() + 0.5 + Math.cos(a) * ring, pos.getY() + 0.2,
-                            pos.getZ() + 0.5 + Math.sin(a) * ring, 1, 0.0, 0.03, 0.0, 0.0);
-                }
-                // la colonne qui monte : elle designe la cible depuis loin
-                for (int h = 0; h < 10; h += 2) {
-                    level.sendParticles(ParticleTypes.ELECTRIC_SPARK,
-                            pos.getX() + 0.5, pos.getY() + h, pos.getZ() + 0.5,
-                            1, 0.15, 0.3, 0.15, 0.0);
-                }
-                // le tic-tac s'accelere a mesure que le cercle se referme
-                if (strike.ticks % Math.max(2, strike.ticks / 6) == 0) {
-                    level.playSound(null, pos, SoundEvents.NOTE_BLOCK_CHIME.value(),
-                            SoundSource.WEATHER, 0.7F,
-                            1.2F + (50 - strike.ticks) / 50.0F);
-                }
+            if (strike.ticks == 24) {
+                // la charge monte d'un cran : le son grave qui enfle
+                level.playSound(null, strike.pos, SoundEvents.RESPAWN_ANCHOR_CHARGE,
+                        SoundSource.WEATHER, 1.2F, 1.5F);
             }
             if (strike.ticks <= 0) {
                 it.remove();
-                orageStrike(level, pos);
+                orageStrike(level, strike.pos);
+            }
+        }
+        // la Surcharge se voit : etincelles sur le corps, arcs autour
+        Iterator<Map.Entry<UUID, Long>> su = surcharged.entrySet().iterator();
+        while (su.hasNext()) {
+            Map.Entry<UUID, Long> e = su.next();
+            ServerPlayer player = level.getServer().getPlayerList().getPlayer(e.getKey());
+            if (player == null || now > e.getValue() || player.level() != level) {
+                su.remove();
+                continue;
+            }
+            if (now % 2 == 0) {
+                level.sendParticles(ModParticles.STATIC_SPARK.get(),
+                        player.getX(), player.getY() + 1.0, player.getZ(), 2, 0.35, 0.6, 0.35, 0.0);
+            }
+            if (now % 12 == 0) {
+                tell(level, player.blockPosition(), new StormStrikePayload(player.getX(),
+                        player.getY(), player.getZ(), StormStrikePayload.CRACKLE, 0), 48.0);
+            }
+        }
+    }
+
+    /** Les joueurs en Surcharge, et jusqu'a quel tick. */
+    private static final Map<UUID, Long> surcharged = new HashMap<>();
+
+    /** Dit quelque chose aux clients assez pres pour que ca les concerne. */
+    private static void tell(ServerLevel level, BlockPos at, StormStrikePayload payload,
+                             double radius) {
+        for (ServerPlayer player : level.players()) {
+            if (player.distanceToSqr(at.getX(), at.getY(), at.getZ()) <= radius * radius) {
+                PacketDistributor.sendToPlayer(player, payload);
             }
         }
     }
@@ -1091,9 +1663,15 @@ public final class WeatherEffects {
         level.addFreshEntity(new ArcenciumBoltEntity(level,
                 pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5,
                 ArcenciumBoltEntity.Variant.ORAGE));
+        // la decharge : le claquement du trident, puis le tonnerre
+        level.playSound(null, pos, SoundEvents.TRIDENT_THUNDER.value(), SoundSource.WEATHER,
+                2.0F, 0.7F);
         level.playSound(null, pos, SoundEvents.LIGHTNING_BOLT_THUNDER, SoundSource.WEATHER,
                 2.5F, 0.7F);
         pulse(level, pos, 0xE0B0FF, 1.0F, 1.2F, 55.0);
+        // chez les clients : les arcs eclatent en etoile depuis le point
+        tell(level, pos, new StormStrikePayload(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5,
+                StormStrikePayload.IMPACT, 0), 96.0);
 
         DamageSource source = level.damageSources().lightningBolt();
         for (LivingEntity entity : level.getEntitiesOfClass(LivingEntity.class,
@@ -1105,10 +1683,13 @@ public final class WeatherEffects {
                 player.displayClientMessage(net.minecraft.network.chat.Component
                         .translatable("game.emeraldweapons.surcharge")
                         .withStyle(net.minecraft.ChatFormatting.LIGHT_PURPLE), true);
-                level.sendParticles(ModParticles.PRISM_MOTE.get(),
+                level.sendParticles(ModParticles.STATIC_SPARK.get(),
                         player.getX(), player.getY() + 1.0, player.getZ(),
-                        25, 0.4, 0.8, 0.4, 0.12);
+                        30, 0.5, 0.9, 0.5, 0.0);
+                // et il gresille pendant toute la Surcharge (voir tickOrage)
+                surcharged.put(player.getUUID(), level.getGameTime() + 600);
             }
         }
     }
+
 }
