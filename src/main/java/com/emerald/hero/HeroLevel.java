@@ -199,6 +199,15 @@ public final class HeroLevel {
     }
 
     /**
+     * Des points de specialisation venus d'ailleurs que de l'experience :
+     * les paliers d'ailes en rendent a chaque reussite (voir Specialization).
+     */
+    public static void grantPoints(Player player, int points) {
+        CompoundTag tag = tag(player);
+        tag.putInt(TAG_FREE, tag.getInt(TAG_FREE) + Math.max(0, points));
+    }
+
+    /**
      * Monte une voie de tant de NIVEAUX, au prix courant.
      *
      * On achete des niveaux et non de la valeur : c'est le modele reel de

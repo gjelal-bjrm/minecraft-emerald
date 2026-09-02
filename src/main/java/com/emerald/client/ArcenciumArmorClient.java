@@ -75,6 +75,8 @@ public class ArcenciumArmorClient {
                 // entiere. Une amelioration ajoute, elle ne remplace pas.
                 renderer.addLayer(new UpgradeArmorLayer<>(renderer, shell));
                 renderer.addLayer(new UpgradeHandLayer<>(renderer));
+                // les ailes de specialisation, dans le dos
+                renderer.addLayer(new WingsLayer<>(renderer));
             }
         }
         armMonsters(event);

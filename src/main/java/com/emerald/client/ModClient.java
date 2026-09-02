@@ -10,6 +10,12 @@ import net.neoforged.neoforge.client.event.RegisterParticleProvidersEvent;
 
 public class ModClient {
 
+    /** La Plume d'apparence : une texture grise, teintee de l'apparence qu'elle porte. */
+    public static void onItemColors(net.neoforged.neoforge.client.event.RegisterColorHandlersEvent.Item event) {
+        event.register((stack, tintIndex) -> 0xFF000000 | com.emerald.item.SkinFeatherItem.color(stack),
+                com.emerald.item.ModItems.SKIN_FEATHER.get());
+    }
+
     public static void onRegisterParticles(RegisterParticleProvidersEvent event) {
         event.registerSpriteSet(ModParticles.CRYSTALLINE_FISSURE.get(), FissureParticle.Provider::new);
         event.registerSpriteSet(ModParticles.CRYSTAL_GREEN.get(), CrystalParticle.Provider::new);

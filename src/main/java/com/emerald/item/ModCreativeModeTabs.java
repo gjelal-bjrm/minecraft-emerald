@@ -41,6 +41,12 @@ public class ModCreativeModeTabs {
                                     artifact, ModItems.ARTIFACT.get()));
                         }
                         output.accept(ModItems.FORGE_STONE);
+                        // les plumes de la specialisation : le materiau, puis une apparence de chaque
+                        output.accept(ModItems.ARCENCIUM_FEATHER);
+                        for (com.emerald.specialization.WingSkin skin
+                                : com.emerald.specialization.WingSkin.values()) {
+                            output.accept(SkinFeatherItem.stack(skin, ModItems.SKIN_FEATHER.get()));
+                        }
                         // les quatre cristaux elementaires
                         for (com.emerald.element.Element element
                                 : com.emerald.element.Element.values()) {

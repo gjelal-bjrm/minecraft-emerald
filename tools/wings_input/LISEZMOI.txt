@@ -1,0 +1,4 @@
+Deposez ici les PNG generes par ChatGPT (voir tools/prompts/ailes_specialisation.md) :
+wing_prismatiques.png, wing_rubis.png, wing_aurore.png, wing_pierres_precieuses.png,
+wing_braise.png, wing_tempete.png, wing_emeraude.png, wing_obscures.png, wing_givre.png,
+wing_papillon.png -- une aile DROITE, 1024x1024, fond transparent.

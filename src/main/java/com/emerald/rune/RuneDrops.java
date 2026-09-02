@@ -69,6 +69,26 @@ public final class RuneDrops {
         // Pas de bonus de Butin : depuis la 1.21 il ne passe plus par un
         // niveau lisible sur l'evenement mais par un effet d'enchantement
         // applique en amont. Plutot que de deviner une API, on s'en passe --
+        // LA PLUME D'ARCENCIUM : le materiau de la specialisation, qui survit
+        // a la partie -- donc rare sur le menu fretin, presque sure sur un
+        // puissant. Elle se tire AVANT la porte des runes : c'est un butin a part.
+        double featherChance = 0.06 + 0.22 * Math.min(1.0, health / 200.0);
+        if (random.nextDouble() < featherChance) {
+            event.getDrops().add(new net.minecraft.world.entity.item.ItemEntity(
+                    victim.level(), victim.getX(), victim.getY(), victim.getZ(),
+                    new ItemStack(com.emerald.item.ModItems.ARCENCIUM_FEATHER.get(),
+                            health >= 150.0 ? 1 + random.nextInt(2) : 1)));
+        }
+        // LA PLUME D'APPARENCE : sur les puissants seulement, selon leur element
+        // et la meteo du moment (voir SkinFeatherItem.pickDrop). Jamais le Rubis.
+        if (health >= 300.0 && random.nextDouble() < 0.35) {
+            event.getDrops().add(new net.minecraft.world.entity.item.ItemEntity(
+                    victim.level(), victim.getX(), victim.getY(), victim.getZ(),
+                    com.emerald.item.SkinFeatherItem.stack(
+                            com.emerald.item.SkinFeatherItem.pickDrop(victim, random),
+                            com.emerald.item.ModItems.SKIN_FEATHER.get())));
+        }
+
         // et le taux ci-dessous est cale sans elle.
         double chance = CHANCE + CHANCE_BONUS * Math.min(1.0, health / TOUGH);
         if (random.nextDouble() >= chance) {

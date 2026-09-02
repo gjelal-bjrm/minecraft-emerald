@@ -92,6 +92,35 @@ public class GameCommands {
         }
         root.then(fissureNode);
 
+        // -------------------------------------------------------------- ailes
+        // pour l'essai : le palier de specialisation (0-20) et l'apparence des ailes
+        var wingsNode = Commands.literal("ailes")
+                .then(Commands.argument("palier",
+                                com.mojang.brigadier.arguments.IntegerArgumentType.integer(0, 20))
+                        .executes(ctx -> setWings(ctx.getSource(),
+                                com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(ctx, "palier"), null)));
+        for (com.emerald.specialization.WingSkin skin : com.emerald.specialization.WingSkin.values()) {
+            wingsNode.then(Commands.argument("palier_",
+                            com.mojang.brigadier.arguments.IntegerArgumentType.integer(0, 20))
+                    .then(Commands.literal(skin.id())
+                            .executes(ctx -> setWings(ctx.getSource(),
+                                    com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(ctx, "palier_"),
+                                    skin))));
+        }
+        // l'essai de la mecanique : une tentative, des plumes, une plume d'apparence
+        wingsNode.then(Commands.literal("tenter").executes(ctx -> attemptWings(ctx.getSource())));
+        wingsNode.then(Commands.literal("plumes")
+                .then(Commands.argument("nombre",
+                                com.mojang.brigadier.arguments.IntegerArgumentType.integer(1, 999))
+                        .executes(ctx -> giveFeathers(ctx.getSource(),
+                                com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(ctx, "nombre")))));
+        var skinNode = Commands.literal("apparence");
+        for (com.emerald.specialization.WingSkin skin : com.emerald.specialization.WingSkin.values()) {
+            skinNode.then(Commands.literal(skin.id()).executes(ctx -> giveSkinFeather(ctx.getSource(), skin)));
+        }
+        wingsNode.then(skinNode);
+        root.then(wingsNode);
+
         root.then(Commands.literal("skip")
                 .then(Commands.argument("minutes",
                                 com.mojang.brigadier.arguments.IntegerArgumentType.integer(1, 60))
@@ -876,6 +905,55 @@ public class GameCommands {
                 ? "Fissure annoncee : le sol cede dans une seconde et demie."
                 : "Pas de place ici (sous un toit, ou chunk non charge)."), true);
         return opened ? 1 : 0;
+    }
+
+
+    private static int setWings(CommandSourceStack source, int level,
+                                com.emerald.specialization.WingSkin skin) {
+        if (!(source.getEntity() instanceof net.minecraft.server.level.ServerPlayer player)) {
+            source.sendFailure(Component.literal("Il faut un joueur."));
+            return 0;
+        }
+        com.emerald.specialization.WingSkin chosen = skin != null ? skin
+                : com.emerald.specialization.Specialization.skin(player);
+        com.emerald.specialization.Specialization.set(player, level, chosen);
+        source.sendSuccess(() -> Component.literal("Ailes +" + level + " (" + chosen.id() + ")"), true);
+        return 1;
+    }
+
+
+    private static int attemptWings(CommandSourceStack source) {
+        if (!(source.getEntity() instanceof net.minecraft.server.level.ServerPlayer player)) {
+            source.sendFailure(Component.literal("Il faut un joueur."));
+            return 0;
+        }
+        com.emerald.specialization.Specialization.Attempt result =
+                com.emerald.specialization.Specialization.tryUpgrade(player);
+        source.sendSuccess(() -> Component.literal("Tentative : " + result + ", palier "
+                + com.emerald.specialization.Specialization.level(player)), true);
+        return result == com.emerald.specialization.Specialization.Attempt.SUCCESS ? 1 : 0;
+    }
+
+    private static int giveFeathers(CommandSourceStack source, int count) {
+        if (!(source.getEntity() instanceof net.minecraft.server.level.ServerPlayer player)) {
+            source.sendFailure(Component.literal("Il faut un joueur."));
+            return 0;
+        }
+        player.getInventory().placeItemBackInInventory(
+                new net.minecraft.world.item.ItemStack(com.emerald.item.ModItems.ARCENCIUM_FEATHER.get(), count));
+        source.sendSuccess(() -> Component.literal(count + " plume(s) d'Arcencium"), true);
+        return 1;
+    }
+
+    private static int giveSkinFeather(CommandSourceStack source, com.emerald.specialization.WingSkin skin) {
+        if (!(source.getEntity() instanceof net.minecraft.server.level.ServerPlayer player)) {
+            source.sendFailure(Component.literal("Il faut un joueur."));
+            return 0;
+        }
+        player.getInventory().placeItemBackInInventory(com.emerald.item.SkinFeatherItem.stack(
+                skin, com.emerald.item.ModItems.SKIN_FEATHER.get()));
+        source.sendSuccess(() -> Component.literal("Plume d'ailes : " + skin.id()), true);
+        return 1;
     }
 
 }

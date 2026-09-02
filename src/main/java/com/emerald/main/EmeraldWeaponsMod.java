@@ -30,6 +30,7 @@ public class EmeraldWeaponsMod {
         com.emerald.effects.ModEffects.EFFECTS.register(modEventBus);
         com.emerald.particles.ModParticles.PARTICLES.register(modEventBus);
         modEventBus.addListener(ModClient::onRegisterParticles);
+        modEventBus.addListener(ModClient::onItemColors);
         modEventBus.addListener(ModDataGenerators::gatherData);
         ModCreativeModeTabs.register(modEventBus);
         ModBlocks.register(modEventBus);

@@ -51,6 +51,10 @@ public class ModNetwork {
                 (payload, context) -> context.enqueueWork(
                         () -> com.emerald.client.StormArcRenderer.accept(payload)));
 
+        registrar.playToClient(WingsSyncPayload.TYPE, WingsSyncPayload.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(
+                        () -> com.emerald.client.WingsClient.accept(payload)));
+
         registrar.playToClient(AnchorPulsePayload.TYPE, AnchorPulsePayload.STREAM_CODEC,
                 (payload, context) -> context.enqueueWork(
                         () -> com.emerald.client.AnchorPulseRenderer.accept(payload)));

@@ -70,7 +70,8 @@ public final class HeroCombat {
             // plus dire au joueur quelle esquive il possede vraiment.
             double dodge = HeroStat.DEFENSE.bonus(HeroBonus.DODGE,
                     HeroLevel.effective(defender, HeroStat.DEFENSE))
-                    + com.emerald.rune.RuneEvents.dodge(defender);
+                    + com.emerald.rune.RuneEvents.dodge(defender)
+                    + com.emerald.specialization.SkinBonus.dodge(defender);
             if (dodge > 0.0 && defender.getRandom().nextDouble() * 100.0 < dodge) {
                 event.setCanceled(true);
                 if (defender.level() instanceof ServerLevel level) {
@@ -95,12 +96,14 @@ public final class HeroCombat {
             net.minecraft.world.item.ItemStack held = attacker.getMainHandItem();
             double chance = com.emerald.element.WeaponProfile.critChance(held)
                     + HeroStat.ATTAQUE.bonus(HeroBonus.CRIT_CHANCE, level)
-                    + com.emerald.rune.RuneEvents.critChance(attacker);
+                    + com.emerald.rune.RuneEvents.critChance(attacker)
+                    + com.emerald.specialization.SkinBonus.critChance(attacker);
             if (chance > 0.0 && attacker.getRandom().nextDouble() * 100.0 < chance) {
                 double multiplier = CRIT_BASE
                         + (com.emerald.element.WeaponProfile.critDamage(held)
                            + HeroStat.ATTAQUE.bonus(HeroBonus.CRIT_DAMAGE, level)
-                           + com.emerald.rune.RuneEvents.critDamage(attacker)) / 100.0;
+                           + com.emerald.rune.RuneEvents.critDamage(attacker)
+                           + com.emerald.specialization.SkinBonus.critDamage(attacker)) / 100.0;
 
                 // La victime peut REPRENDRE une part du critique. C'est le seul
                 // endroit ou les deux fiches se rencontrent, et il fallait bien
@@ -118,6 +121,8 @@ public final class HeroCombat {
                 // c'est la que le paquet part, et il doit savoir si ce coup-ci
                 // etait critique.
                 victim.getPersistentData().putLong(TAG_CRIT_AT, victim.level().getGameTime());
+                // ce que les ailes posent sur un critique : brulure de la Braise, givre du Givre
+                com.emerald.specialization.SkinBonus.onCrit(attacker, victim);
                 if (attacker.level() instanceof ServerLevel world) {
                     world.playSound(null, victim.blockPosition(),
                             SoundEvents.PLAYER_ATTACK_CRIT, SoundSource.PLAYERS, 0.9F, 1.1F);
@@ -135,8 +140,13 @@ public final class HeroCombat {
         // magie, projectiles, explosions, feu -- lui evite d'etre une seconde
         // armure, role qui appartient a la Defense.
         if (victim instanceof Player defender) {
-            double resist = HeroStat.ELEMENT.bonus(HeroBonus.RESISTANCE,
-                    HeroLevel.effective(defender, HeroStat.ELEMENT)) / 100.0;
+            double resist = (HeroStat.ELEMENT.bonus(HeroBonus.RESISTANCE,
+                    HeroLevel.effective(defender, HeroStat.ELEMENT))
+                    + com.emerald.specialization.SkinBonus.resistance(defender)) / 100.0;
+            // les ailes d'Aurore de l'attaquant percent une part de cette resistance
+            if (source.getEntity() instanceof Player piercer) {
+                resist -= com.emerald.specialization.SkinBonus.pierce(piercer) / 100.0;
+            }
             if (resist > 0.0 && indirect(source)) {
                 amount *= (float) Math.max(0.0, 1.0 - resist);
             }
@@ -150,7 +160,8 @@ public final class HeroCombat {
         if (source.getEntity() instanceof Player surger) {
             net.minecraft.world.item.ItemStack held2 = surger.getMainHandItem();
             double surge = com.emerald.element.WeaponProfile.surge(held2, surger.getRandom())
-                    * com.emerald.element.SecondaryProfile.surge(surger, surger.getRandom());
+                    * com.emerald.element.SecondaryProfile.surge(surger, surger.getRandom())
+                    * com.emerald.specialization.SkinBonus.surge(surger, surger.getRandom());
             amount *= (float) surge;
         }
 
@@ -165,6 +176,8 @@ public final class HeroCombat {
             net.minecraft.world.item.ItemStack weapon = striker.getMainHandItem();
             float element = com.emerald.element.ElementCombat.bonus(
                     striker, victim, weapon, event.getAmount());
+            // les ailes : plus d'element (la Braise pour le Feu seulement), et le givre subi
+            element *= (float) com.emerald.specialization.SkinBonus.elementMultiplier(striker, victim);
             if (element > 0.0F) {
                 amount += element;
             }

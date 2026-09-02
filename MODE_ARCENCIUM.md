@@ -1993,3 +1993,254 @@ Un ruban de lumiere n'a pas de bon cote : on l'ecrit dans les deux sens.
   enregistree, texturee et employee (verifie par script), mais les densites, les
   vitesses et les couleurs sont des reglages a l'oeil. `/arcencium weather <id>`
   permet de les eprouver une par une.
+
+
+## 28. La specialisation du personnage *(en conception, valide en partie)*
+
+Le personnage s'ameliore comme une arme, de **+1 a +20**. De +1 a +15 il
+gagne des **ailes de cristal prismatique** qui grandissent a CHAQUE palier ;
+de +16 a +20 les ailes ne changent plus, chaque palier ajoute une animation
+autour du corps (motes en orbite, anneau au sol, trainee, arcs, onde) --
+jamais rien au-dessus de la tete. Chaque palier donne des **points de heros**
+a repartir dans les voies existantes : **120 points** au total (3 par palier
+de +1 a +5, 5 de +6 a +10, 7 de +11 a +15, 9 de +16 a +20).
+
+**Les ailes** : un eventail de lames de cristal qui part de l'epaule, releve
+-- davantage de lames vers le haut, peu sous l'horizontale --, avec une
+seconde rangee plus courte derriere a partir de +6 ; a +15 les lames du haut
+se rapprochent au-dessus de la tete. Couleurs sobres, base argentee. Deux
+apparences (Obscures, Givre) utilisent un second motif, a plumes pendantes.
+Ecarte par le joueur : les eventails de fee trop colores, le motif « os et
+plumes pendantes » pour la base, toute couronne au-dessus de la tete, et des
+ailes qui retombent.
+
+**Le materiau** : un objet existant recolore et renomme (une plume, ou un
+eclat), jamais un objet fait de zero. Chances de succes decroissantes,
+**jamais de retrogradation**, l'echec consomme le materiau.
+
+**Les apparences** se debloquent a +15 par des objets rares (boss puissants,
+coffres rares) et changent totalement les ailes. Bonus valides par le joueur :
+
+| Apparence | Comment on l'obtient | Bonus |
+|---|---|---|
+| **Prismatiques** | les ailes de base, a +15 | +5 % degats elementaires, +5 % vitesse |
+| **Obscures** | boss d'element Obscur | +6 % chance critique, +15 % degats critiques, +5 % vitesse |
+| **Rubis** | coffres rares seulement, les plus rares | +10 % attaque, +7 % vitesse |
+| **Pierres precieuses** | boss puissants | +4 % attaque, defense, vie et element, +5 % vitesse |
+| **Aurore** | coffres de sanctuaire | +7 resistance elementaire, -5 % resistances elementaires de l'ennemi, regeneration lente hors combat, +3 % vitesse |
+| **Tempete** | boss tue pendant un Orage | +10 % cadence (tir ou corps a corps), +5 % chance de deferlement, +3 % vitesse |
+| **Braise** | boss tue pendant les Meteores | +10 % degats de Feu, brulure sur coup critique, +5 % vitesse |
+| **Givre** | boss d'element Eau | +6 % esquive, +8 % defense, givre sur coup critique (ralentit, +15 % degats d'Eau subis), +5 % vitesse |
+| **Emeraude** | boss final ou coffre ultime | +12 % points de vie, +7 % defense, +8 % vitesse |
+
+### 28.1 Ce qui est construit *(fait, en attente des textures)*
+
+- **Les donnees** : palier (0-20) et apparence dans les donnees persistantes
+  du joueur (`Specialization`), copiees a la mort, envoyees a la connexion, a
+  chaque nouveau spectateur et a chaque changement (`WingsSyncPayload`, vers
+  tous ceux qui voient le joueur -- les ailes se regardent de l'exterieur).
+- **Le rendu** (`WingsLayer`) : deux plans textures attaches au torse,
+  derriere les omoplates, ouverts vers l'arriere et l'exterieur, qui battent
+  lentement et plus vite en mouvement ; envergure de 12 % a +1 a 1,7 bloc a
+  +15 (vu en capture : 1,7 bloc faisait des ailes de la taille de la tete ;
+  2,6 blocs, racine un peu plus basse et plus ouverte, donne l'envergure
+  voulue). Apparences de lumiere en emissif plein feu, Obscures et Papillon
+  eclairees par le monde. Verifie en jeu sous Complementary, de dos et de
+  face, pour rubis et prismatiques (`verify_wings.sh`, F5 puis F2). La texture est une aile DROITE, racine a 12 % du
+  bord gauche et 78 % du haut ; l'aile gauche est son miroir.
+- **Les textures** viennent de ChatGPT (`tools/prompts/ailes_specialisation.md`),
+  deposees dans `tools/wings_input/wing_<apparence>.png` et importees par
+  `tools/wings_import.py` (512 px, detourage d'un fond blanc ou vert si le PNG
+  n'est pas transparent). Trois sont peintes et validees : prismatiques,
+  rubis, aurore.
+- **Commande d'essai** : `/arcencium ailes <palier> [apparence]`.
+
+Abandonne en route, et pourquoi : sept maquettes dessinees par code (eventails,
+plumes, coupoles, gemmes, papillon, dragon) et les seize sprites 32x32 de
+Placebo recolores -- aucune n'approchait les ailes peintes que le joueur
+voulait ; les prompts ChatGPT y sont arrives du premier coup.
+
+### 28.2 La mecanique *(faite)*
+
+Tranche par le joueur : **la specialisation se garde d'une partie a
+l'autre**, et le materiau est **la Plume d'Arcencium**.
+
+- **Ou elle vit** : hors de la sauvegarde du monde, qu'une nouvelle partie
+  remplace -- dans `<serveur>/emeraldweapons/specialization.json`, par
+  joueur (`SpecializationStore`) : palier, apparence, apparences
+  debloquees, echecs. Chargee au demarrage du serveur, ecrite a chaque
+  changement.
+- **La Plume d'Arcencium** (`ArcenciumFeatherItem`, la plume vanilla
+  recoloree en prisme) : clic droit = une tentative du palier suivant. Cout
+  et chance par palier vise :
+
+  | Palier | +1..+5 | +6..+10 | +11..+15 | +16 | +17 | +18 | +19 | +20 |
+  |---|---|---|---|---|---|---|---|---|
+  | plumes | 1,1,2,2,3 | 3,4,4,5,5 | 6,6,7,7,8 | 10 | 12 | 14 | 16 | 18 |
+  | chance | 100..80 % | 75..55 % | 50..30 % | 25 % | 22 % | 19 % | 16 % | 13 % |
+
+  Jamais de retrogradation ; l'echec consomme les plumes. Esperance : ~130
+  plumes pour +15, ~540 pour +20 -- une progression de compte, sur
+  plusieurs parties. Chaque reussite rend ses **points de heros** (3, 5, 7,
+  9 par tranche de cinq paliers : 120 en tout) directement dans la cagnotte
+  de la fiche.
+- **Le butin** : la plume tombe des monstres, 6 % + 22 % x (PV / 200), une
+  ou deux sur les gros ; la **Plume d'apparence** tombe des puissants (300 PV
+  et plus, 35 %) selon leur element (Obscur -> Obscures, Eau -> Givre) ou la
+  meteo (Orage -> Tempete, Meteores -> Braise), sinon parmi Pierres
+  precieuses, Emeraude, Papillon, Aurore. Le Rubis ne tombe d'aucun monstre :
+  coffres rares seulement (a brancher dans les tables de butin).
+- **Les apparences** (`SkinFeatherItem`, la meme plume teintee par l'apparence
+  qu'elle porte) : clic droit a +15 ou plus debloque et pose l'apparence ;
+  une apparence debloquee se reprend librement. Les bonus (section 28,
+  tableau valide) s'appliquent a +15 et au-dela (`SkinBonus`) : attaque,
+  defense, vie, vitesse et cadence par modificateurs d'attribut ; critique,
+  esquive, resistance, percee, declenchement et element au meme endroit que
+  la fiche et les runes (`HeroCombat`) ; brulure et givre sur coup critique ;
+  regeneration de l'Aurore hors combat.
+- **Commandes d'essai** : `/arcencium ailes <palier> [apparence]`,
+  `/arcencium ailes tenter`, `/arcencium ailes plumes <n>`,
+  `/arcencium ailes apparence <id>`.
+- **Les dix ailes sont peintes** (ChatGPT, prompts de
+  `tools/prompts/ailes_specialisation.md`) et importees ; envergure 3,4
+  blocs a +15 (le joueur voulait +30 %).
+
+Reste : les animations de +16 a +20, le Rubis dans les coffres, la fiche de
+heros qui montre le palier, et la vitesse de tir des arcs (la cadence ne
+joue que sur les armes de corps a corps).
+
+## 29. Distant Horizons et les animations *(installes en dev, verifies en jeu)*
+
+Le joueur veut l'horizon lointain pour l'immersion. Ce qui a ete mesure avant
+de choisir :
+
+- **ATM10 livre deja Distant Horizons 2.2.1-a** (`DistantHorizons-2.2.1-a-1.21.1-neo-fabric.jar`),
+  present dans l'instance CUSTOM avec Iris 1.8.8 et Complementary. Le pack le
+  livre **rendu desactive** (`rendererMode = DISABLED`, rayon 256) ; l'instance
+  CUSTOM l'a active a la main (rayon 512, le 13 juin 2026).
+- **Client ou serveur ?** Le rendu et la generation des LOD sont **cote client**.
+  En solo, le serveur integre genere le terrain lointain lui-meme. Sur un serveur
+  dedie, la 2.2.1 ne genere rien : le client ne voit que ce qu'il a deja explore.
+  A partir de la **2.3**, le meme jar installe **aussi sur le serveur** genere les
+  LOD et les envoie aux clients. Pour le mode multijoueur, il faut donc DH >= 2.3
+  des deux cotes ; sinon, client seul suffit.
+- **Iris 1.8.8 accepte toute DH >= 2.0.4** (chaine dans `DHCompat` : "Iris
+  requires DH [2.0.4] or DH API version [1.1.0] or newer"), et se branche par
+  reflexion sur l'API. Journal du test : "DH Ready, binding Iris event
+  handlers... DH Iris events bound". Complementary r5.5.1 a ses programmes
+  `dh_terrain` / `dh_water`. Les DH 3.x (2026) changent le moteur de rendu et
+  notent elles-memes qu'Iris ne les suit pas encore : a eviter.
+- **Versions Modrinth NeoForge 1.21.1** : 2.2.1-a (sept. 2024, celle du pack),
+  2.3.6-b (oct. 2025 : support serveur, "fix neoforge server startup crash"),
+  2.4.5-b (dec. 2025 : corrections Iris sur NeoForge), 3.0 a 3.2 (2026).
+
+### 29.1 Les reglages, et pourquoi
+
+Machine : Ryzen 7 5800X (8 coeurs / 16 threads), 128 Go de RAM, RTX 3080 Ti
+12 Go, 2560x1440. Ce que DH consomme : **du CPU** (il fait tourner le vrai
+worldgen sans structures pour le terrain lointain, puis compresse en LOD) et
+**de la VRAM** (les mailles). La RAM n'est pas un levier : les LOD vivent dans
+une base SQLite par dimension (`saves/<monde>/data/DistantHorizons.sqlite`).
+
+`run/config/DistantHorizons.toml` (copie de la config CUSTOM, meme version,
+memes cles) :
+
+| Cle | Valeur | Pourquoi |
+|---|---|---|
+| `lodChunkRenderDistanceRadius` | 256 | chaque partie se joue sur un monde neuf : ~200 000 chunks a produire, l'horizon s'etend du proche au loin pendant la premiere demi-heure. 512 ne se remplirait jamais en 60 min ; garder 512 pour l'exploration libre sur un monde qui persiste |
+| `verticalQuality` / `horizontalQuality` | HIGH / HIGH | 12 Go de VRAM, large |
+| `maxHorizontalResolution`, `transparency` | BLOCK, COMPLETE | detail max, eau et verre transparents |
+| `distantGeneratorMode` | FEATURES | arbres et vegetation, sans structures (comme le pack) |
+| `numberOfWorldGenerationThreads` / ratio | 8 / 0.8 | la moitie des 16 threads, le jeu garde le reste pour son tick et Sodium |
+| `numberOfLodBuilderThreads` / ratio | 4 / 0.5 | |
+| propagateur / fichiers | 2 / 0.5 chacun | |
+| `enableAutoUpdater` | false | DH ne doit pas se mettre a jour seul et casser la compat Iris |
+| `rendererMode` | DEFAULT | le pack le livre DISABLED |
+
+Le rayon et la charge CPU se changent a chaud dans le menu DH (touche du mod),
+sans redemarrer.
+
+### 29.2 Le test en jeu
+
+`verify_dh.sh` : entre dans la sauvegarde `test`, monte le joueur a y=140 en
+spectateur, attend 150 s, capture. Resultat avec Complementary Unbound : les
+reliefs au-dela des 12 chunks vanilla sont bien des LOD, rendus par le shader
+(fond de brume coherent). En 2 min 30, 693 sections de niveau 0 ecrites dans la
+base.
+
+**Le seul bruit** : 260 erreurs `ServerTickEvent error: NullPointerException
+LocalPlayer.blockPosition()` pendant les 13 s ou le client compile le shader a
+l'entree du monde (le serveur integre tique deja, `Minecraft.player` est encore
+null). Bug de la 2.2.1, sans effet : la generation demarre des que le joueur
+existe. L'instance CUSTOM n'en a aucune dans son journal du 13 juin (compilation
+du shader plus rapide, fenetre plus courte). La 2.4.5-b devrait l'oter ; a
+verifier si le joueur accepte le telechargement.
+
+### 29.3 Animations de combat : rien dans ATM10
+
+Le scan des 443 mods de l'instance CUSTOM ne trouve **aucun mod d'animation de
+combat ou de deplacement** : `player-animation-lib` n'est qu'une bibliotheque
+(Iron's Spellbooks s'en sert) et `cleanswing` empeche juste de frapper l'herbe
+a la place du creeper. Les candidats existants pour NeoForge 1.21.1, tous a
+telecharger (Modrinth, verifie le 2 sept. 2026) :
+
+| Mod | Ce que ca change | Cote | Poids |
+|---|---|---|---|
+| Fresh Animations 1.10.4 (pack de ressources) + Entity Model Features 3.3.3 + Entity Texture Features 7.2.1 | les monstres et villageois bougent de facon realiste (marche, tete, membres) | client seul | 2,3 Mo |
+| Not Enough Animations 1.12.4 | le joueur : arc, manger, grimper, ramer, carte, objets tenus | client seul | 1,9 Mo |
+| First Person Model 2.7.2 | on voit son corps (et ses ailes) a la premiere personne | client seul | 1,6 Mo |
+| Better Combat 2.4.0 (+ playerAnimator 2.0.4) | animations d'attaque par type d'arme, allonge, combos ; nos glaive et sceptre demandent un JSON `weapon_attributes` | les deux | 1,2 Mo |
+| ParCool 4.0.0.3 | deplacements : roulade, saut de haie, escalade, ramper, saut mural | les deux | 1,1 Mo |
+| Camera Overhaul 2.1.1 | inclinaison et inertie de la camera | client seul | 0,1 Mo |
+| Epic Fight 21.17.3.1 | refonte totale du combat, monstres re-animes ; lourd, change tout l'equilibre, nos armes a decrire | les deux | 8,6 Mo |
+| Physics Mod 3.0.32 | ragdolls a la mort, tissus | client seul | 61,8 Mo |
+
+### 29.4 Ce qui est installe (2 sept. 2026, accord du joueur)
+
+Telecharges depuis Modrinth, SHA-512 verifiees, dans `run/mods` (et
+`run/resourcepacks` pour le pack) :
+
+| Fichier | Role | Cote |
+|---|---|---|
+| `DistantHorizons-2.4.5-b-1.21.1-fabric-neoforge.jar` | remplace la 2.2.1 du pack | client ; **aussi serveur** pour le multijoueur |
+| `entity_model_features-3.3.3-1.21-neoforge.jar` + `entity_texture_features-7.2.1-1.21-neoforge.jar` | moteur des modeles animes (EMF exige ETF >= 7.2.0) | client |
+| `FreshAnimations_v1.10.4.zip` | pack de ressources : monstres, villageois, animaux animes | client, **a activer** dans `options.txt` (`resourcePacks`) |
+| `notenoughanimations-neoforge-1.12.4-mc1.21.1.jar` | animations du joueur (arc, manger, grimper, ramer, carte) | client |
+| `bettercombat-neoforge-2.4.0+1.21.1.jar` + `player-animation-lib-forge-2.0.4+1.21.1.jar` (remplace la 2.0.1) + `cloth-config-15.0.140-neoforge.jar` (deja dans ATM10) | animations d'attaque par arme, allonge, enchainements | les deux |
+
+Ecartes par le joueur : First Person Model, ParCool ; par moi : Epic Fight
+(refonte totale, equilibre du mode a refaire), Physics Mod (61 Mo, lourd).
+
+**Better Combat et nos armes** : `data/emeraldweapons/weapon_attributes/` declare
+`arcencium_glaive` (`parent: bettercombat:glaive`, deux mains, trois coups) et
+`oath_blade` (`bettercombat:sword`). **Le sceptre n'a volontairement pas de
+fichier** : son tir part du clic gauche (`ArcenciumScepterClient.onAttackInput`),
+et Better Combat ne prend le clic que des objets qu'il connait ; son repli par nom
+reconnait `sceptre`, `wand`, `staff`, `rod`, pas `scepter`. L'arc reste vanilla
+(le repli ne vise que `two_handed_bow`).
+
+**DH 2.4.5 : la config a change de forme** (`_version = 3`) : les threads sont un
+seul reglage `[common.multiThreading] numberOfThreads = 8`, ratio 0.8 ; la
+generation est dans `[common.worldGenerator]` (donc valable aussi sur un serveur
+dedie) ; une section `[server]` regle l'envoi des LOD aux clients (500 Ko/s par
+joueur par defaut). La migration a garde le rayon et l'auto-updater mais a remis
+la qualite en MEDIUM : HIGH/HIGH reappliques.
+
+**Mesure** : 8 threads, mode FEATURES, sur le monde `test` : 51 puis 72, 81 et
+89 chunks/s en montee de regime. A ce rythme un rayon de 64 chunks est plein en
+2 min 30, 128 en 10 min, 256 en 45 a 55 min : le bon reglage pour un monde neuf
+de 60 minutes. L'erreur `LocalPlayer.blockPosition()` de la 2.2.1 a disparu.
+Reste dans le journal, sans effet sur les LOD : `[Supplementaries] Failed to get
+Road Sign Block Entity during generation` quand le worldgen de DH pose un panneau
+de route dans sa region sans entites de bloc (une dizaine par session).
+
+**Verification en jeu** (`verify_anim.sh`, `verify_anim2.sh`) : tout charge sans
+avertissement, pack actif (`Reloading ResourceManager: ... file/FreshAnimations`),
+registre d'armes Better Combat synchronise, un zombie tue au glaive (progres
+« Chasseur de monstres »), horizon DH a 256 sous Complementary en capture.
+
+**Pour l'instance CUSTOM** (le modpack joue) : memes fichiers a poser, retirer
+`DistantHorizons-2.2.1-a` et `player-animation-lib-forge-2.0.1`, activer le pack
+dans `options.txt`, reprendre `run/config/DistantHorizons.toml`. Attention :
+CUSTOM tourne avec Embeddium et non Sodium ; Iris y est present mais le journal
+du 13 juin ne montre pas ses mixins Sodium appliques.

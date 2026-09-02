@@ -132,6 +132,14 @@ public class ModItems {
     public static final DeferredItem<Item> FORGE_STONE =
             ITEMS.register("forge_stone", () -> new Item(new Item.Properties()));
 
+    /** La Plume d'Arcencium : le materiau de la specialisation du personnage (voir Specialization). */
+    public static final DeferredItem<ArcenciumFeatherItem> ARCENCIUM_FEATHER =
+            ITEMS.register("arcencium_feather", () -> new ArcenciumFeatherItem(new Item.Properties()));
+
+    /** La Plume d'apparence : une apparence d'ailes, pour des ailes a +15 ou plus. */
+    public static final DeferredItem<SkinFeatherItem> SKIN_FEATHER =
+            ITEMS.register("skin_feather", () -> new SkinFeatherItem(new Item.Properties()));
+
     public static final DeferredItem<com.emerald.element.ElementStoneItem> ELEMENT_STONE =
             ITEMS.register("element_stone", () ->
                     new com.emerald.element.ElementStoneItem(new Item.Properties()));
