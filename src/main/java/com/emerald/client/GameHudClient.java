@@ -57,6 +57,8 @@ public class GameHudClient {
     private static int anchors;
     private static java.util.List<Long> anchorPositions = java.util.List.of();
     private static int heldMask;
+    /** L'arene finale, ou 0 tant que l'Arc-en-ciel n'est pas leve. */
+    private static long finalePos;
 
     public static void accept(GameSyncPayload payload) {
         status = payload.status();
@@ -65,6 +67,15 @@ public class GameHudClient {
         anchors = payload.anchors();
         anchorPositions = payload.anchorPositions();
         heldMask = payload.heldMask();
+        finalePos = payload.finalePos();
+    }
+
+    public static long finalePos() {
+        return finalePos;
+    }
+
+    public static int statusOrdinal() {
+        return status;
     }
 
     @EventBusSubscriber(modid = EmeraldWeaponsMod.MODID, value = Dist.CLIENT,
@@ -103,9 +114,20 @@ public class GameHudClient {
         String time = current == GameState.Status.RUNNING ? formatTime(remaining) : "--:--";
         graphics.drawCenteredString(mc.font, time, x + PANEL_W / 2, y + 5, color);
 
-        Component label = Component.translatable(
-                GamePhase.values()[Math.floorMod(phase, GamePhase.values().length)].translationKey());
-        graphics.drawCenteredString(mc.font, label, x + PANEL_W / 2, y + 16, 0xFF9AA0A6);
+        // la partie finie, le panneau dit le verdict plutot qu'une phase
+        Component label;
+        int labelColor = 0xFF9AA0A6;
+        if (current == GameState.Status.WON) {
+            label = Component.translatable("game.emeraldweapons.hud.won");
+            labelColor = 0xFFFFD36B;
+        } else if (current == GameState.Status.LOST) {
+            label = Component.translatable("game.emeraldweapons.hud.lost");
+            labelColor = 0xFFB98CFF;
+        } else {
+            label = Component.translatable(
+                    GamePhase.values()[Math.floorMod(phase, GamePhase.values().length)].translationKey());
+        }
+        graphics.drawCenteredString(mc.font, label, x + PANEL_W / 2, y + 16, labelColor);
 
         anchorPips(graphics, x + PANEL_W / 2, y + PANEL_H - 5);
         anchorList(graphics, mc, x, y + PANEL_H + 2);
@@ -116,6 +138,9 @@ public class GameHudClient {
             if ((heldMask & (1 << i)) == 0) {
                 rows++;
             }
+        }
+        if (finalePos != 0L && current == GameState.Status.RUNNING) {
+            rows++;                                   // la ligne de l'Arc-en-ciel
         }
         weatherPanel(graphics, mc, x,
                 y + PANEL_H + 2 + (rows > 0 ? rows * 10 + 4 : 0));
@@ -157,9 +182,12 @@ public class GameHudClient {
      * d'etre un objectif.
      */
     private static void anchorList(GuiGraphics graphics, Minecraft mc, int x, int y) {
-        if (anchorPositions.isEmpty() || mc.player == null) {
+        if (mc.player == null) {
             return;
         }
+        GameState.Status current = GameState.Status.values()[
+                Math.floorMod(status, GameState.Status.values().length)];
+        boolean arena = finalePos != 0L && current == GameState.Status.RUNNING;
         // UNE ANCRE PRISE DISPARAIT DE LA LISTE.
         //
         // Elle restait affichee avec un losange plein au lieu d'un losange
@@ -173,12 +201,23 @@ public class GameHudClient {
                 todo.add(i);
             }
         }
-        if (todo.isEmpty()) {
+        if (todo.isEmpty() && !arena) {
             return;
         }
-        int rows = todo.size();
+        int rows = todo.size() + (arena ? 1 : 0);
         graphics.fill(x, y, x + PANEL_W, y + 2 + rows * 10, 0x8C060608);
-        for (int r = 0; r < rows; r++) {
+        if (arena) {
+            // l'Arc-en-ciel en derniere ligne, dans sa couleur qui tourne : c'est l'objectif
+            net.minecraft.core.BlockPos pos = net.minecraft.core.BlockPos.of(finalePos);
+            double dx = pos.getX() - mc.player.getX();
+            double dz = pos.getZ() - mc.player.getZ();
+            int distance = (int) Math.sqrt(dx * dx + dz * dz);
+            long time = mc.level == null ? 0L : mc.level.getGameTime();
+            int color = 0xFF000000 | java.awt.Color.HSBtoRGB((time % 120L) / 120F, 0.55F, 1.0F);
+            String label = String.format(Locale.ROOT, "%s %s  %dm", "◈", cardinal(dx, dz), distance);
+            graphics.drawString(mc.font, label, x + 4, y + 2 + (rows - 1) * 10, color, false);
+        }
+        for (int r = 0; r < todo.size(); r++) {
             int i = todo.get(r);
             net.minecraft.core.BlockPos pos =
                     net.minecraft.core.BlockPos.of(anchorPositions.get(i));

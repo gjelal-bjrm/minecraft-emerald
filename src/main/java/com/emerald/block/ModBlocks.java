@@ -71,6 +71,12 @@ public class ModBlocks {
             () -> new SocketBenchBlock(BlockBehaviour.Properties.of()
                     .strength(2.5F).sound(SoundType.WOOD)));
 
+    /** Forge d'Arcencium : l'amelioration +1 a +10, montree en entier. Voir ArcenciumForgeBlock. */
+    public static final DeferredBlock<ArcenciumForgeBlock> ARCENCIUM_FORGE = registerBlock("arcencium_forge",
+            () -> new ArcenciumForgeBlock(BlockBehaviour.Properties.of()
+                    .strength(4.0F, 6.0F).requiresCorrectToolForDrops()
+                    .sound(SoundType.ANVIL).lightLevel(s -> 6)));
+
     /**
      * Le Sceau du Tombeau.
      *

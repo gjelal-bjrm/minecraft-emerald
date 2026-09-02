@@ -17,6 +17,10 @@ public class ModMenus {
             MENUS.register("socket_bench", () -> new MenuType<>(
                     SocketBenchMenu::new, FeatureFlags.DEFAULT_FLAGS));
 
+    public static final DeferredHolder<MenuType<?>, MenuType<ArcenciumForgeMenu>> ARCENCIUM_FORGE =
+            MENUS.register("arcencium_forge", () -> new MenuType<>(
+                    ArcenciumForgeMenu::new, FeatureFlags.DEFAULT_FLAGS));
+
     public static void register(IEventBus eventBus) {
         MENUS.register(eventBus);
     }

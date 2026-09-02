@@ -107,7 +107,9 @@ public final class PrismaticTide {
             return;
         }
         updateBar(level, radius);
-        BlockPos center = GameState.get(level).village();
+        // l'Arc-en-ciel leve, tout se referme sur l'arene et non plus sur le village
+        GameState state = GameState.get(level);
+        BlockPos center = state.finale().equals(BlockPos.ZERO) ? state.village() : state.finale();
         if (center.equals(BlockPos.ZERO)) {
             return;
         }

@@ -1,0 +1,25 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "AAA",
+    "INI",
+    "DDD"
+  ],
+  "key": {
+    "A": {
+      "item": "emeraldweapons:arcencium_ingot"
+    },
+    "I": {
+      "item": "minecraft:iron_ingot"
+    },
+    "N": {
+      "item": "minecraft:anvil"
+    },
+    "D": {
+      "item": "minecraft:deepslate_bricks"
+    }
+  },
+  "result": {
+    "id": "emeraldweapons:arcencium_forge"
+  }
+}

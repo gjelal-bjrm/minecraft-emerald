@@ -92,6 +92,38 @@ public class GameCommands {
         }
         root.then(fissureNode);
 
+        // ------------------------------------------------------------- finale
+        // pour l'essai : leve l'Arc-en-ciel devant le joueur, avec le boss voulu
+        // ou tire au sort ; "win" et "lose" jouent les deux fins sans attendre
+        var finaleNode = Commands.literal("finale")
+                .executes(ctx -> raiseFinale(ctx.getSource(), null))
+                .then(Commands.literal("win").executes(ctx -> {
+                    Finale.victory(ctx.getSource().getServer().overworld());
+                    return 1;
+                }))
+                .then(Commands.literal("lose").executes(ctx -> {
+                    Finale.defeat(ctx.getSource().getServer().overworld());
+                    return 1;
+                }))
+                .then(Commands.argument("boss",
+                                com.mojang.brigadier.arguments.StringArgumentType.string())
+                        .executes(ctx -> raiseFinale(ctx.getSource(),
+                                com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "boss"))));
+        root.then(finaleNode);
+
+        // -------------------------------------------------------------- forge
+        // pour l'essai : ouvre la Forge d'Arcencium sans avoir a poser le bloc
+        root.then(Commands.literal("forge").executes(ctx -> {
+            if (ctx.getSource().getEntity() instanceof net.minecraft.server.level.ServerPlayer player) {
+                player.openMenu(new net.minecraft.world.SimpleMenuProvider((id, inventory, p) ->
+                        new com.emerald.menu.ArcenciumForgeMenu(id, inventory,
+                                net.minecraft.world.inventory.ContainerLevelAccess.NULL),
+                        com.emerald.block.ArcenciumForgeBlock.TITLE));
+                return 1;
+            }
+            return 0;
+        }));
+
         // -------------------------------------------------------------- ailes
         // pour l'essai : le palier de specialisation (0-20) et l'apparence des ailes
         var wingsNode = Commands.literal("ailes")
@@ -956,4 +988,25 @@ public class GameCommands {
         return 1;
     }
 
+    /** L'Arc-en-ciel se leve a 120 blocs devant le joueur : on le voit se poser. */
+    private static int raiseFinale(CommandSourceStack source, @javax.annotation.Nullable String boss) {
+        ServerLevel level = source.getServer().overworld();
+        BlockPos site = null;
+        if (source.getEntity() != null) {
+            var look = source.getEntity().getLookAngle();
+            double len = Math.max(0.05, Math.hypot(look.x, look.z));
+            site = BlockPos.containing(source.getPosition().x + look.x / len * 120.0, 0,
+                    source.getPosition().z + look.z / len * 120.0);
+        }
+        BlockPos center = Finale.begin(level, site, boss);
+        if (center == null) {
+            source.sendFailure(Component.translatable("command.emeraldweapons.finale.unknown",
+                    boss == null ? "?" : boss));
+            return 0;
+        }
+        String chosen = GameState.get(level).finaleBoss();
+        source.sendSuccess(() -> Component.translatable("command.emeraldweapons.finale",
+                center.getX(), center.getY(), center.getZ(), chosen), true);
+        return 1;
+    }
 }

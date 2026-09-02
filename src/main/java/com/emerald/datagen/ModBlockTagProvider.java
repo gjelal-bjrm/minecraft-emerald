@@ -40,6 +40,8 @@ public class ModBlockTagProvider extends BlockTagsProvider {
                 ModBlocks.VERDIGRIS_CARPET.get(), ModBlocks.OCHRE_CARPET.get(), ModBlocks.OLD_ROSE_CARPET.get(),
                 ModBlocks.SLATE_BLUE_CARPET.get(), ModBlocks.ECRU_CARPET.get());
         tag(BlockTags.MINEABLE_WITH_AXE).add(ModBlocks.SOCKET_BENCH.get());
+        tag(BlockTags.MINEABLE_WITH_PICKAXE).add(ModBlocks.ARCENCIUM_FORGE.get());
+        tag(BlockTags.NEEDS_IRON_TOOL).add(ModBlocks.ARCENCIUM_FORGE.get());
         tag(BlockTags.MINEABLE_WITH_SHOVEL).add(ModBlocks.PRISMATIC_GRASS_BLOCK.get());
         tag(BlockTags.MINEABLE_WITH_HOE).add(ModBlocks.PRISM_LEAVES.get());
         for (DeferredBlock<? extends Block> holder : ModBlocks.VILLAGE_BLOCKS) {

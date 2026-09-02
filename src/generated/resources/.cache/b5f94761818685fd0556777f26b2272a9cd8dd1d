@@ -1,4 +1,4 @@
-// 1.21.1	2026-08-25T18:20:43.9101238	Block States: emeraldweapons
+// 1.21.1	2026-09-02T21:22:20.8219808	Block States: emeraldweapons
 79bcfe9c75df893083557c0e372753d0161158a1 assets/emeraldweapons/blockstates/arcencium_bricks.json
 1c9b7e9314813773c0e963f24cbc25f0900352c8 assets/emeraldweapons/blockstates/arcencium_brick_slab.json
 50d1973b3dbf82792d2f541e19f3e32a29aa5938 assets/emeraldweapons/blockstates/arcencium_brick_stairs.json
@@ -135,7 +135,7 @@ efbf9e2927c73a7ee57f2cd5640a033fbed8fbed assets/emeraldweapons/models/item/arcen
 a2a34fffcd9ef70fcd6f0d734a8d873a2da74621 assets/emeraldweapons/models/item/arcencium_brick_slab.json
 de77cc5ddda253b74a6e130ebcc4a3084a94129c assets/emeraldweapons/models/item/arcencium_brick_stairs.json
 1924583de5eb48b870d63a67a0aa20814679d465 assets/emeraldweapons/models/item/arcencium_brick_wall.json
-b15f66d108a60afcbfc92e659ae69cb9674168e2 assets/emeraldweapons/models/item/arcencium_lantern.json
+ce156d4f88320f3052d839e624b2f4b32265b0a3 assets/emeraldweapons/models/item/arcencium_lantern.json
 8668c2751a4f7a0c8787a8a8cfe0bbb135e9d7ec assets/emeraldweapons/models/item/chiseled_arcencium.json
 ac74c1f4d4f2a3a5d6ec8b1033e56801e3e8c0e6 assets/emeraldweapons/models/item/corrupted_bricks.json
 6e47bfb22f0040922a012db5196ebab27c3fede0 assets/emeraldweapons/models/item/corrupted_brick_slab.json

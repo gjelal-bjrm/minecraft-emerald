@@ -15,23 +15,33 @@ import net.minecraft.resources.ResourceLocation;
  * en deduire qu'il ne verrait pas deja a l'ecran.
  */
 public record GameSyncPayload(int status, long remaining, int phase, int anchors,
-                              java.util.List<Long> anchorPositions, int heldMask)
+                              java.util.List<Long> anchorPositions, int heldMask,
+                              long finalePos)
         implements CustomPacketPayload {
 
     public static final CustomPacketPayload.Type<GameSyncPayload> TYPE =
             new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(
                     EmeraldWeaponsMod.MODID, "game_sync"));
 
-    public static final StreamCodec<ByteBuf, GameSyncPayload> STREAM_CODEC =
-            StreamCodec.composite(
-                    ByteBufCodecs.VAR_INT, GameSyncPayload::status,
-                    ByteBufCodecs.VAR_LONG, GameSyncPayload::remaining,
-                    ByteBufCodecs.VAR_INT, GameSyncPayload::phase,
-                    ByteBufCodecs.VAR_INT, GameSyncPayload::anchors,
-                    ByteBufCodecs.VAR_LONG.apply(ByteBufCodecs.list()),
-                    GameSyncPayload::anchorPositions,
-                    ByteBufCodecs.VAR_INT, GameSyncPayload::heldMask,
-                    GameSyncPayload::new);
+    // sept champs : composite s'arrete a six, on ecrit le codec a la main
+    public static final StreamCodec<ByteBuf, GameSyncPayload> STREAM_CODEC = StreamCodec.of(
+            (buf, p) -> {
+                ByteBufCodecs.VAR_INT.encode(buf, p.status());
+                ByteBufCodecs.VAR_LONG.encode(buf, p.remaining());
+                ByteBufCodecs.VAR_INT.encode(buf, p.phase());
+                ByteBufCodecs.VAR_INT.encode(buf, p.anchors());
+                ByteBufCodecs.VAR_LONG.apply(ByteBufCodecs.list()).encode(buf, p.anchorPositions());
+                ByteBufCodecs.VAR_INT.encode(buf, p.heldMask());
+                ByteBufCodecs.VAR_LONG.encode(buf, p.finalePos());
+            },
+            buf -> new GameSyncPayload(
+                    ByteBufCodecs.VAR_INT.decode(buf),
+                    ByteBufCodecs.VAR_LONG.decode(buf),
+                    ByteBufCodecs.VAR_INT.decode(buf),
+                    ByteBufCodecs.VAR_INT.decode(buf),
+                    ByteBufCodecs.VAR_LONG.apply(ByteBufCodecs.list()).decode(buf),
+                    ByteBufCodecs.VAR_INT.decode(buf),
+                    ByteBufCodecs.VAR_LONG.decode(buf)));
 
     @Override
     public CustomPacketPayload.Type<GameSyncPayload> type() {

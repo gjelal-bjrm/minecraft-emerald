@@ -28,7 +28,7 @@ public class GameTicker {
         }
         GameState state = GameState.get(level);
         if (state.status() == GameState.Status.RUNNING && state.remaining(level) <= 0L) {
-            state.finish(false);
+            Finale.defeat(level);
         }
         if (level.getGameTime() % SYNC_INTERVAL != 0) {
             return;
@@ -56,7 +56,9 @@ public class GameTicker {
                 state.remaining(level),
                 state.phase(level).ordinal(),
                 state.anchorsActive(),
-                packed, held);
+                packed, held,
+                state.finale().equals(net.minecraft.core.BlockPos.ZERO)
+                        ? 0L : state.finale().asLong());
         for (ServerPlayer player : level.players()) {
             PacketDistributor.sendToPlayer(player, payload);
         }

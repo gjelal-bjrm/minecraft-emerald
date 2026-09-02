@@ -2244,3 +2244,123 @@ registre d'armes Better Combat synchronise, un zombie tue au glaive (progres
 dans `options.txt`, reprendre `run/config/DistantHorizons.toml`. Attention :
 CUSTOM tourne avec Embeddium et non Sodium ; Iris y est present mais le journal
 du 13 juin ne montre pas ses mixins Sodium appliques.
+
+## 30. La derniere partie : l'Arc-en-ciel, le boss, la fin *(fait, verifie en jeu)*
+
+Ce que le cahier promettait des la premiere page : trois ancres, l'Arc-en-ciel,
+le boss a son sommet, la Maree qui referme tout. Le joueur l'a demande en ces
+mots : « quand on a detruit les trois sanctuaires, l'apparition de la derniere
+zone qu'on avait choisie avec le boss et les monstres, et le message de
+victoire et/ou de defaite ».
+
+### 30.1 Ce qui se passe
+
+1. **La troisieme ancre tenue** (`GameManager.resolveAnchor`) appelle
+   `Finale.begin`. Le titre « L'Arc-en-ciel se leve » reste cinq secondes ; le
+   chat donne la distance et la direction, puis le nom du boss.
+2. **L'arene** est la **Prison Givree** de Cataclysm (`cataclysm:frosted_prison`,
+   choisie par le joueur), posee par le chemin de `/place structure` :
+   `Structure.generate` assemble les pieces (103 a l'essai, emprise
+   142 x 139 x 174), puis `StructureStart.placeInChunk` les deverse. **Six chunks
+   par tick** : d'un seul coup, la pose figeait le serveur 5,2 s (« Running
+   5238ms or 104 ticks behind »). Le boss et les gardes viennent quand le
+   dernier chunk est pose. Sans Cataclysm : une butte de deepslate.
+3. **Le site** : a 300 blocs du village, sur la bissectrice de deux
+   sanctuaires, jamais a moins de 200 d'un sanctuaire ; plein est a defaut.
+   La commande d'essai le leve a 120 blocs devant le joueur.
+4. **Le boss**, tire au sort parmi ce qui est installe : Ignis, Ender Guardian
+   (Cataclysm), Liche (Twilight Forest) ; Wither sinon. Il nait au point le
+   plus haut pres du centre de l'arene (« a son sommet »), marque
+   `emeraldweapons_final_boss`, persistant.
+5. **Les gardes** : le Sculk de Deeper and Darker, reserve a l'arene depuis le
+   cahier (snapper, centipede, leech, shattered), plus **un seul Traqueur** en
+   sentinelle -- il a sa propre barre de boss, dix Traqueurs auraient couvert
+   l'ecran. Dix au lever, puis tant que le boss vit, 2 a 3 de plus pres des
+   joueurs presents dans l'arene toutes les 45 s (plafond 10). Sans le mod :
+   le repli vanilla du palier 3.
+6. **La Maree se recentre sur l'arene** (`PrismaticTide` prend `finale()`
+   comme centre) : le village est englouti, le dernier quart d'heure se joue
+   dans la prison.
+7. **Victoire** : le boss meurt (`LivingDeathEvent` sur l'etiquette). Titre
+   VICTOIRE en or cinq secondes, son de defi, trois feux d'artifice par joueur,
+   le temps de la partie dans le chat, les gardes se dissipent en ames de
+   sculk. **Defaite** : le chrono a zero (`GameTicker`) -> `Finale.defeat` :
+   titre DEFAITE violet, souffle du Wither, « la Maree a tout recouvert ».
+   Cinq secondes apres, le rappel `/arcencium stop`.
+
+### 30.2 L'Arc-en-ciel dans le ciel
+
+L'arene est a 300 blocs : hors distance de rendu, et une balise ne se voit
+pas de si loin. L'Arc-en-ciel est donc **dessine sur la coupole**, comme le
+voile de meteo (`RainbowArchRenderer`, AFTER_WEATHER, `debugQuads`) : sept
+bandes de teinte, un arc dont l'ouverture depend de la distance -- etroit et
+bas de loin, au-dessus de la tete quand on est dessous. Ce n'est pas un objet,
+c'est une direction : on marche vers l'arc. Le client le sait par
+`GameSyncPayload.finalePos` (septieme champ : `composite` s'arrete a six, codec
+ecrit a la main). Le panneau des objectifs montre aussi une ligne « ◈ direction
+distance » en couleur tournante, et dit « Victoire » ou « Defaite » a la fin.
+
+### 30.3 Essai
+
+`/arcencium finale [boss]` leve l'arene devant le joueur ; `finale win` et
+`finale lose` jouent les deux fins. `verify_finale.sh` (scratchpad) : Prison
+posee, Ignis au sommet, chat « The Rainbow rises 120 m away, to the S. / Ignis
+guards its summit. », « Victory in 7:22 » puis « Time is up », aucune erreur.
+Deux pieges rencontres : l'avertissement **« reglages experimentaux »** bloque le
+client des que Twilight Forest ou Deeper and Darker entrent dans `run/mods`
+(`confirmedExperimentalSettings` mis a 1 dans `level.dat` de la sauvegarde
+test) ; et **tuer le client de test ne sauve pas le monde** -- l'etat de partie
+sur disque reste celui du dernier arret propre.
+
+`verify_arch.sh` : l'arc vu de 450 m (etroit, au-dessus de la prison), de 250 m
+(plus large) et de 69 m (il passe au-dessus de la tete), avec la ligne
+« ◈ N 450m » du panneau. La pose par morceaux a pris 6 s sans figer le
+serveur (« 103 pieces sur 108 chunks »).
+
+Reste ouvert : le boss tombe-t-il bien du sommet vers la cour ? (Ignis fait
+quatre blocs de large ; a voir en jouant.) Et la Liche n'a pas encore ete vue.
+
+## 31. La Forge d'Arcencium *(faite, a valider en jeu)*
+
+Le joueur voulait « un etabli specifique pour monter le stuff, qui montre
+clairement les materiaux necessaires selon le niveau d'amelioration et la
+probabilite de reussir ». L'Etabli de Sertissage savait forger, mais en
+cachant tout : la pierre dans la case d'artefact, le metal pris dans le sac
+sans qu'on sache lequel, le tirage au moment de prendre la piece.
+
+### 31.1 Ce que fait la forge
+
+- **Bloc** `arcencium_forge` (`ArcenciumForgeBlock`) : enclume de fer sombre
+  au foyer de braises, textures derivees de l'etabli par recoloration
+  (`tools` : aucun, c'est un script PIL d'une fois ; voir la texture). Se
+  mine a la pioche de fer, eclaire faiblement. Recette : trois lingots
+  d'Arcencium, fer / enclume / fer, trois briques de deepslate.
+- **Une seule case** (`ArcenciumForgeMenu`). On y vient l'arme en main : elle
+  **monte d'elle-meme** sur la forge a l'ouverture (cote serveur, le client
+  recoit le contenu). Le metal et la Pierre de Forge restent dans le sac.
+- **L'ecran** (`ArcenciumForgeScreen`, 176 x 240) montre tout : le cran
+  actuel et le suivant avec sa chance, les pierres portees, puis
+  **l'echelle entiere des dix crans** -- metal (icone), `porte/requis` en vert
+  ou rouge, nom du metal, chance -- la ligne du prochain cran en surbrillance
+  doree, les crans passes coches. Un bouton **Forger** ; le verdict s'affiche
+  sous le bouton (reussi +N, echec, materiaux manquants).
+- **Le bouton** passe par `clickMenuButton`, le mecanisme vanilla des menus :
+  aucun paquet a ecrire, et le serveur revalide piece, cran, pierre et metal
+  avant de tirer. On paie d'abord (pierre puis metal), on tire ensuite --
+  la regle de l'etabli, inchangee. Le verdict voyage par `ContainerData`.
+- **Les regles ne changent pas** : bareme, chances, materiaux et absence de
+  retrogradation sont ceux de `Upgrade` (section 22). L'etabli sait toujours
+  forger ; la forge est le chemin clair.
+
+### 31.2 Essai
+
+`/arcencium forge` ouvre la forge sans bloc ; `/arcencium upgrade <n>` pose
+un cran sur la piece en main. `verify_forge.sh` (scratchpad) : glaive +3, fer,
+or, trois pierres, ouverture, deux clics sur Forger par la souris (position
+calculee depuis la fenetre), puis le bloc pose.
+
+**Piege du generateur de donnees** : `runData` echoue avec `run/mods` tel
+quel -- ce n'est pas nous, c'est **Lootr**, dont le generateur de compat copie
+un `logo.png` inexistant (`LootrCompatDataGenerators.gatherData`) des qu'il
+recoit `GatherDataEvent`. Il faut sortir `lootr-neoforge-*.jar` de `run/mods`
+le temps de la generation, puis le remettre.

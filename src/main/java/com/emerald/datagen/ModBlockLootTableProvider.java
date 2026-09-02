@@ -23,7 +23,8 @@ public class ModBlockLootTableProvider extends BlockLootSubProvider {
 
     /** Blocs hors palette du village, a traiter a part. */
     private static final java.util.List<DeferredBlock<? extends Block>> EXTRA =
-            java.util.List.of(ModBlocks.ARCENCIUM_CHEST, ModBlocks.SOCKET_BENCH);
+            java.util.List.of(ModBlocks.ARCENCIUM_CHEST, ModBlocks.SOCKET_BENCH,
+                    ModBlocks.ARCENCIUM_FORGE);
 
     @Override
     protected void generate() {

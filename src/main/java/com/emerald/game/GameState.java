@@ -43,6 +43,10 @@ public class GameState extends SavedData {
     private boolean prepared;
     private final List<BlockPos> anchors = new ArrayList<>();
     private final List<BlockPos> activated = new ArrayList<>();
+    /** L'arene finale : ZERO tant que l'Arc-en-ciel n'est pas leve. */
+    private BlockPos finale = BlockPos.ZERO;
+    private String finaleBoss = "";
+    private long finaleTick;
 
     public static GameState get(ServerLevel level) {
         return level.getServer().overworld().getDataStorage().computeIfAbsent(
@@ -57,6 +61,9 @@ public class GameState extends SavedData {
         state.anchorsInProgress = tag.getInt("AnchorsInProgress");
         state.village = BlockPos.of(tag.getLong("Village"));
         state.prepared = tag.getBoolean("Prepared");
+        state.finale = BlockPos.of(tag.getLong("Finale"));
+        state.finaleBoss = tag.getString("FinaleBoss");
+        state.finaleTick = tag.getLong("FinaleTick");
         for (long packed : tag.getLongArray("Anchors")) {
             state.anchors.add(BlockPos.of(packed));
         }
@@ -74,6 +81,9 @@ public class GameState extends SavedData {
         tag.putInt("AnchorsInProgress", this.anchorsInProgress);
         tag.putLong("Village", this.village.asLong());
         tag.putBoolean("Prepared", this.prepared);
+        tag.putLong("Finale", this.finale.asLong());
+        tag.putString("FinaleBoss", this.finaleBoss);
+        tag.putLong("FinaleTick", this.finaleTick);
         tag.putLongArray("Anchors", this.anchors.stream().mapToLong(BlockPos::asLong).toArray());
         tag.putLongArray("Activated", this.activated.stream().mapToLong(BlockPos::asLong).toArray());
         return tag;
@@ -99,6 +109,26 @@ public class GameState extends SavedData {
 
     public void markPrepared() {
         this.prepared = true;
+        setDirty();
+    }
+
+    /** Le centre de l'arene finale, ou ZERO tant qu'elle n'est pas levee. */
+    public BlockPos finale() {
+        return this.finale;
+    }
+
+    public String finaleBoss() {
+        return this.finaleBoss;
+    }
+
+    public long finaleTick() {
+        return this.finaleTick;
+    }
+
+    public void beginFinale(BlockPos pos, String boss, long tick) {
+        this.finale = pos;
+        this.finaleBoss = boss;
+        this.finaleTick = tick;
         setDirty();
     }
 
@@ -184,6 +214,9 @@ public class GameState extends SavedData {
         this.anchorsActive = 0;
         this.anchorsInProgress = 0;
         this.activated.clear();
+        this.finale = BlockPos.ZERO;
+        this.finaleBoss = "";
+        this.finaleTick = 0L;
         setDirty();
     }
 
@@ -231,6 +264,9 @@ public class GameState extends SavedData {
         this.anchorsInProgress = 0;
         this.anchors.clear();
         this.activated.clear();
+        this.finale = BlockPos.ZERO;
+        this.finaleBoss = "";
+        this.finaleTick = 0L;
         setDirty();
     }
 }

@@ -11,6 +11,7 @@ import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundSetTitleTextPacket;
 import net.minecraft.network.protocol.game.ClientboundSetSubtitleTextPacket;
+import net.minecraft.network.protocol.game.ClientboundSetTitlesAnimationPacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
@@ -795,9 +796,8 @@ public class GameManager {
             com.emerald.hero.HeroEvents.awardLevels(player, reward);
         }
 
-        if (state.anchorsActive() >= 3) {
-            announce(level, "game.emeraldweapons.rainbow",
-                    "game.emeraldweapons.rainbow.sub", 0xB98CFF);
+        if (state.anchorsActive() >= 3 && state.finale().equals(BlockPos.ZERO)) {
+            Finale.begin(level, null, null);
         }
     }
 
@@ -808,6 +808,18 @@ public class GameManager {
         announce(level,
                 Component.translatable(title).withStyle(style -> style.withColor(color)),
                 Component.translatable(subtitle).withStyle(ChatFormatting.GRAY));
+    }
+
+    /** Titre qui reste a l'ecran le temps voulu : les fins de partie se lisent, elles ne clignotent pas. */
+    public static void announce(ServerLevel level, String title, String subtitle, int color, int stay) {
+        for (ServerPlayer player : level.players()) {
+            player.connection.send(new ClientboundSetTitlesAnimationPacket(10, stay, 20));
+        }
+        announce(level, title, subtitle, color);
+        for (ServerPlayer player : level.players()) {
+            // le vanilla garde ses durees pour les titres suivants
+            player.connection.send(new ClientboundSetTitlesAnimationPacket(10, 70, 20));
+        }
     }
 
     /** Variante a composants deja construits, pour les titres parametres (meteo). */
@@ -821,6 +833,7 @@ public class GameManager {
 
     /** Abandonne tout siege en cours : arret de partie, ou rechargement du monde. */
     public static void clear() {
+        Finale.clear();
         if (prologue != null) {
             prologue.cancel();
             prologue = null;
