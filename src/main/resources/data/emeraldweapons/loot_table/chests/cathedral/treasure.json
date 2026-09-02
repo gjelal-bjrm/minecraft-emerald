@@ -10,13 +10,13 @@
         {
           "type": "minecraft:item",
           "name": "emeraldweapons:arcencium_ingot",
-          "weight": 1,
+          "weight": 4,
           "functions": [
             {
               "function": "minecraft:set_count",
               "count": {
-                "min": 3,
-                "max": 8
+                "min": 5,
+                "max": 10
               }
             }
           ]

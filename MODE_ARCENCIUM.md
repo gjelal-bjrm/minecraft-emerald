@@ -2364,3 +2364,85 @@ quel -- ce n'est pas nous, c'est **Lootr**, dont le generateur de compat copie
 un `logo.png` inexistant (`LootrCompatDataGenerators.gatherData`) des qu'il
 recoit `GatherDataEvent`. Il faut sortir `lootr-neoforge-*.jar` de `run/mods`
 le temps de la generation, puis le remettre.
+
+## 32. Le premier vrai essai, et ce qu'il a corrige *(2 sept. 2026)*
+
+Quarante minutes de jeu, **premier sanctuaire toujours pas tenu**. Le joueur a
+tout releve d'un coup ; chaque point est mesure ci-dessous avant d'etre corrige.
+
+### 32.1 L'Arcencium etait introuvable — quatre goulots, pas un
+
+C'est la monnaie de TOUT le mode (ancres, equipement, runes, amelioration).
+Quatre choses le rendaient rare a la fois :
+
+| Goulot | Avant | Apres |
+|---|---|---|
+| **Le poids en coffre** | l'entree pesait **1 contre 14** dans son lot : une chance sur quinze qu'elle sorte, quelle que soit la pile promise | poids 6 au sanctuaire, 4 ailleurs (aussi frequent que le meilleur du lot) |
+| **La pioche** | `needs_diamond_tool` : on trouve un filon a la dixieme minute sans pouvoir le casser | `needs_iron_tool`, et une pioche de fer dans le kit |
+| **Le filon** | 4 veines/chunk, taille 6, de -32 a 48 | **9 veines**, taille 8, de -48 a **64** (les grottes de surface comptent) |
+| **Les monstres** | n'en lachaient **aucun** | un sur huit, **un sur trois** sous tempete ou Maree (1-2) |
+
+Quantites en coffre relevees : sanctuaire 1-3 → 3-6 / 4-8 / 5-10 selon le
+palier ; cathedrale et citadelle 1-3 → 2-5 et jusqu'a 5-10 au tresor. Meteo :
+cratere 1-2 → 3-5, cicatrice 1-2 → 2-4, eclats d'orage 2-3 → 4-6.
+
+**La lecon** : quand une ressource semble rare, regarder le POIDS avant la
+quantite. Un lot bien dote qui ne sort jamais ne dote rien.
+
+### 32.2 Quatre-vingt-dix minutes
+
+`GAME_MINUTES` 60 → 90, et les phases gardent leurs proportions :
+Montee 18 → **27**, Pression 36 → **54**, Assaut 48 → **72**, Fin 60 → **90**.
+La Maree part avec la Pression, donc a 54 minutes.
+
+### 32.3 Le confort : ce qu'on ne doit jamais avoir a fabriquer
+
+Le joueur testait dans l'environnement de DEV, ou aucun mod de confort n'etait
+installe : ni JEI (donc **aucun moyen de voir les recettes**), ni sac a dos, ni
+poubelle, ni tri. Ils sont tous dans le modpack ; ils sont maintenant dans
+`run/mods` aussi (`tools/dev_mods.py jei sophisticatedbackpacks trashslot
+invtweaks craftingtweaks inventoryessentials actuallyadditions`).
+
+Le kit de depart (`GameManager.equipStarter`) donne en plus :
+
+- **Sac a dos en netherite** (`sophisticatedbackpacks:netherite_backpack`) : le
+  plus grand du pack, tous les emplacements ;
+- **Etabli de poche** (`actuallyadditions:crafter_on_a_stick`) ;
+- **pioche de fer** Efficacite I et **32 torches**.
+
+Resolus par identifiant (`BuiltInRegistries.ITEM.getOptional`) : sans le mod,
+on n'a rien et rien ne casse.
+
+**La poubelle** existait deja : c'est **TrashSlot**, une case sous l'inventaire.
+**Le tri au clic du milieu** ne marchait plus parce que TROIS mods se
+disputaient le clic : les tris de Sophisticated Backpacks et Sophisticated
+Storage, et celui d'InvTweaks. Les deux premiers sont debranches, InvTweaks
+garde le clic du milieu (« trier ce qui est sous le curseur ») dans `run/` et
+dans l'instance CUSTOM.
+
+### 32.4 Les reperes, enfin trouvables
+
+La Cathedrale et la Citadelle existaient depuis longtemps et **n'apparaissaient
+jamais** : trois biomes seulement (marais, marais de paletuviers, foret sombre)
+et 96 chunks d'ecart, soit 1536 blocs — la zone de jeu fait 750 de rayon.
+
+- biomes : 3 → **28 terres** (plaines, forets, taigas, savanes, jungles, deserts…) ;
+- ecart : cathedrale 96/40 → **40/16** (~640 blocs), citadelle 60/24 → **28/11** ;
+- a l'ouverture du jeu, `GameManager.announceLandmarks` annonce la distance et
+  la direction de chacune (tags `emeraldweapons:arcencium_cathedral` /
+  `arcencium_citadel`, recherche a 6 chunks de rayon).
+
+Ce sont des objectifs **optionnels**, plus faciles qu'un sanctuaire, et le
+meilleur rendement en Arcencium du mode.
+
+### 32.5 Les lags
+
+Mesure dans le journal de SA partie (`run/logs`, monde `Try1`, 22h45–23h25) :
+**27 « Can't keep up »**, dont deux de 10 et 12 secondes, et des arrets de 2 a
+4 secondes toutes les minutes. Entre eux, les lignes des threads de generation
+de Distant Horizons.
+
+C'est ma faute : j'avais regle DH sur **8 threads a 0,8** de temps de calcul —
+la moitie du processeur, en permanence, pendant que le serveur integre tique.
+Ramene a **4 threads a 0,35**, rayon **192** au lieu de 256. L'horizon se
+remplit un peu moins vite ; le jeu reste fluide. Config recopiee dans CUSTOM.

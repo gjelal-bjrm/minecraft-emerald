@@ -23,7 +23,15 @@ public class GameState extends SavedData {
     public static final String KEY = "emeraldweapons_game";
 
     /** Duree d'une partie, du retrait de la lame a la defaite par le temps. */
-    public static final long GAME_MINUTES = 60L;
+    /**
+     * QUATRE-VINGT-DIX MINUTES, ET NON SOIXANTE.
+     *
+     * A l'essai, quarante minutes ne suffisaient pas a tenir le PREMIER
+     * sanctuaire : le temps d'equiper, de miner de quoi payer une ancre et de
+     * traverser 450 blocs, la moitie de la partie etait passee. Les phases
+     * gardent leurs proportions (voir GamePhase).
+     */
+    public static final long GAME_MINUTES = 90L;
     public static final long GAME_TICKS = GAME_MINUTES * 60L * 20L;
 
     /** Rayon de la zone de jeu, en blocs. */

@@ -908,7 +908,7 @@ public final class WeatherEffects {
         }
         Vec3 center = Vec3.atCenterOf(target);
         ItemEntity drop = new ItemEntity(level, center.x, center.y + 0.5, center.z,
-                new ItemStack(ModItems.RAW_ARCENCIUM.get(), 1 + level.random.nextInt(2)));
+                new ItemStack(ModItems.RAW_ARCENCIUM.get(), 3 + level.random.nextInt(3)));
         level.addFreshEntity(drop);
 
         DamageSource source = level.damageSources().explosion(null, null);
@@ -1361,7 +1361,7 @@ public final class WeatherEffects {
             // juste au-dessus de ce qu'un saut normal atteint -- inaccessibles
             // sans la tempete, accessibles avec, ce qui est tout leur interet.
             int y = WorldSetup.surfaceY(level, x, z) + 4 + level.random.nextInt(4);
-            int count = 2 + level.random.nextInt(2);
+            int count = 4 + level.random.nextInt(3);
             for (int i = 0; i < count; i++) {
                 ItemEntity shard = new ItemEntity(level,
                         x + level.random.nextDouble() * 3 - 1.5,

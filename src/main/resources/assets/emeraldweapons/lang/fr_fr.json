@@ -421,5 +421,7 @@
   "forge.emeraldweapons.metal.gold": "Or",
   "forge.emeraldweapons.metal.diamond": "Diamant",
   "forge.emeraldweapons.metal.netherite": "Netherite",
-  "forge.emeraldweapons.metal.arcencium": "Arcencium"
+  "forge.emeraldweapons.metal.arcencium": "Arcencium",
+  "game.emeraldweapons.landmark.cathedral": "Une Cathédrale d'Arcencium se dresse à %s m, vers le %s. Ses coffres paient une ancre.",
+  "game.emeraldweapons.landmark.citadel": "Une Citadelle se tient à %s m, vers le %s. Moins gardée qu'un sanctuaire."
 }

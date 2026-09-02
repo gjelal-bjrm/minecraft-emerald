@@ -47,7 +47,7 @@ public final class PrismaticTide {
     public static final int MIN_RADIUS = 120;
 
     /** La Maree se met en mouvement au debut de la phase Pression. */
-    private static final long START_TICKS = 36L * 60L * 20L;
+    private static final long START_TICKS = 54L * 60L * 20L;
 
     private static ServerBossEvent bar;
 

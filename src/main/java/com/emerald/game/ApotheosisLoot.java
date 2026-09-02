@@ -321,6 +321,20 @@ public final class ApotheosisLoot {
                         level, entity.getX(), entity.getY() + 0.5, entity.getZ(),
                         new ItemStack(com.emerald.item.ModItems.FATE_SHARD.get())));
             }
+            // L'ARCENCIUM TOMBE AUSSI DES MONSTRES.
+            //
+            // La mine seule ne suffit pas : elle demande de descendre, de
+            // s'eclairer et de remonter, quand le reste du mode se joue en
+            // surface. Un monstre sur huit en donne un morceau, un sur trois
+            // sous la tempete ou dans la Maree -- de quoi payer une ancre en
+            // se battant, ce qui est la facon de jouer que le mode recompense.
+            int oreOdds = storm || tide ? 3 : 8;
+            if (level.random.nextInt(oreOdds) == 0) {
+                int amount = storm || tide ? 1 + level.random.nextInt(2) : 1;
+                event.getDrops().add(new net.minecraft.world.entity.item.ItemEntity(
+                        level, entity.getX(), entity.getY() + 0.5, entity.getZ(),
+                        new ItemStack(com.emerald.item.ModItems.RAW_ARCENCIUM.get(), amount)));
+            }
         }
 
         if (!storm && !tide) {

@@ -27,7 +27,7 @@ public class ModBlockTagProvider extends BlockTagsProvider {
 
     @Override
     protected void addTags(HolderLookup.Provider provider) {
-        tag(BlockTags.NEEDS_DIAMOND_TOOL).add(ModBlocks.ARCENCIUM_ORE.get());
+        tag(BlockTags.NEEDS_IRON_TOOL).add(ModBlocks.ARCENCIUM_ORE.get());
         tag(BlockTags.MINEABLE_WITH_PICKAXE).add(ModBlocks.ARCENCIUM_ORE.get(),
                 ModBlocks.ARCENCIUM_BLOCK.get(), ModBlocks.ARCENCIUM_CHEST.get());
 
@@ -41,6 +41,12 @@ public class ModBlockTagProvider extends BlockTagsProvider {
                 ModBlocks.SLATE_BLUE_CARPET.get(), ModBlocks.ECRU_CARPET.get());
         tag(BlockTags.MINEABLE_WITH_AXE).add(ModBlocks.SOCKET_BENCH.get());
         tag(BlockTags.MINEABLE_WITH_PICKAXE).add(ModBlocks.ARCENCIUM_FORGE.get());
+        // LA PIOCHE DE FER SUFFIT POUR L'ARCENCIUM.
+        //
+        // Le diamant en prealable rendait la mine inutilisable : on tombe sur
+        // un filon a la dixieme minute sans pouvoir le casser, et il faut
+        // remonter chercher autre chose. La rarete du minerai suffit a le
+        // rendre precieux ; sa pioche n'a pas a s'y ajouter.
         tag(BlockTags.NEEDS_IRON_TOOL).add(ModBlocks.ARCENCIUM_FORGE.get());
         tag(BlockTags.MINEABLE_WITH_SHOVEL).add(ModBlocks.PRISMATIC_GRASS_BLOCK.get());
         tag(BlockTags.MINEABLE_WITH_HOE).add(ModBlocks.PRISM_LEAVES.get());

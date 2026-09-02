@@ -267,7 +267,7 @@ public final class WeatherManager {
         if (WeatherEffects.claimScar(level, event.getPos())) {
             net.minecraft.world.level.block.Block.popResource(level, event.getPos(),
                     new net.minecraft.world.item.ItemStack(ModItems.RAW_ARCENCIUM.get(),
-                            1 + level.random.nextInt(2)));
+                            2 + level.random.nextInt(3)));
             level.playSound(null, event.getPos(), SoundEvents.AMETHYST_BLOCK_BREAK,
                     SoundSource.BLOCKS, 1.0F, 1.5F);
         }

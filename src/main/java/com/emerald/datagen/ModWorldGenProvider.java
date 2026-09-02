@@ -68,7 +68,7 @@ public class ModWorldGenProvider extends DatapackBuiltinEntriesProvider {
                                 ModBlocks.ARCENCIUM_ORE.get().defaultBlockState()),
                         OreConfiguration.target(new TagMatchTest(BlockTags.DEEPSLATE_ORE_REPLACEABLES),
                                 ModBlocks.ARCENCIUM_ORE.get().defaultBlockState())
-                ), 6))); // veine de 6 blocs
+                ), 8))); // veine de 8 blocs
 
         // Arbre de Prisme : tronc qui se courbe + feuillage en nuage irregulier
         // (silhouette azalee), plus organique qu'un chene droit
@@ -89,11 +89,19 @@ public class ModWorldGenProvider extends DatapackBuiltinEntriesProvider {
         ctx.register(ARCENCIUM_ORE_PF, new PlacedFeature(
                 cfLookup.getOrThrow(ARCENCIUM_ORE_CF),
                 List.of(
-                        CountPlacement.of(4),        // 4 veines par chunk
+                        // NEUF VEINES PAR CHUNK, ET NON QUATRE.
+                        //
+                        // L'Arcencium paie les ancres, l'equipement, les runes
+                        // ET l'amelioration : c'est la seule monnaie du mode.
+                        // A quatre veines par chunk, quarante minutes de jeu ne
+                        // suffisaient pas a tenir le premier sanctuaire. La
+                        // plage monte aussi jusqu'a la surface des grottes, pour
+                        // qu'on en trouve sans descendre au fond du monde.
+                        CountPlacement.of(9),
                         InSquarePlacement.spread(),
                         HeightRangePlacement.triangle(
-                                VerticalAnchor.absolute(-32),
-                                VerticalAnchor.absolute(48)),
+                                VerticalAnchor.absolute(-48),
+                                VerticalAnchor.absolute(64)),
                         BiomeFilter.biome()
                 )));
     }

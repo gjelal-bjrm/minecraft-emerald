@@ -494,6 +494,29 @@ public class GameManager {
         }
     }
 
+    /**
+     * Le confort du mode : ce qu'on ne doit JAMAIS avoir a fabriquer.
+     *
+     * Le sac le plus grand du modpack et l'etabli de poche. Ce mode dure une
+     * heure et demie et son propos est de ramasser puis de trier, pas de
+     * refaire l'echelle des sacs a dos ; et un joueur qui doit poser une table
+     * de craft au sol pour assembler une arme perd du temps sur ce qui fait
+     * le mode. Resolus par leur identifiant : sans le mod, on n'a rien, et
+     * rien ne casse.
+     */
+    private static void giveComfort(ServerPlayer player) {
+        String[] wanted = {
+                "sophisticatedbackpacks:netherite_backpack",   // tous les emplacements
+                "actuallyadditions:crafter_on_a_stick",        // l'etabli de poche
+        };
+        for (String id : wanted) {
+            net.minecraft.core.registries.BuiltInRegistries.ITEM
+                    .getOptional(net.minecraft.resources.ResourceLocation.parse(id))
+                    .filter(item -> item != net.minecraft.world.item.Items.AIR)
+                    .ifPresent(item -> player.getInventory().add(new ItemStack(item)));
+        }
+    }
+
     /** Fer complet, bouclier, epee : assez pour tenir, pas pour se croire invincible. */
     public static void equipStarter(ServerPlayer player) {
         player.getInventory().clearContent();
@@ -517,6 +540,15 @@ public class GameManager {
         // joueur au pied d'une falaise reste bloque. L'echafaudage sert a ca et
         // a rien d'autre -- il ne se transforme en aucune ressource.
         player.getInventory().add(new ItemStack(net.minecraft.world.item.Items.SCAFFOLDING, 32));
+        // LA PIOCHE FAIT PARTIE DU NECESSAIRE.
+        //
+        // La mine est l'une des trois activites du mode, et l'Arcencium se
+        // casse desormais au fer : partir sans pioche fermait cette voie
+        // pendant les dix premieres minutes, le temps d'en fabriquer une.
+        player.getInventory().add(enchanted(player, net.minecraft.world.item.Items.IRON_PICKAXE,
+                net.minecraft.world.item.enchantment.Enchantments.EFFICIENCY, 1));
+        player.getInventory().add(new ItemStack(net.minecraft.world.item.Items.TORCH, 32));
+        giveComfort(player);
     }
 
     /** Protection I et Tranchant I, comme prevu au cahier. */
@@ -639,6 +671,7 @@ public class GameManager {
         state.begin(level);
         announce(level, "game.emeraldweapons.anchors_risen",
                 "game.emeraldweapons.anchors_risen.sub", 0x9CE8FF);
+        announceLandmarks(level, center);
         // le titre passe ; les coordonnees restent dans le journal du chat, et
         // l'interface les rappelle en permanence
         int index = 1;
@@ -798,6 +831,43 @@ public class GameManager {
 
         if (state.anchorsActive() >= 3 && state.finale().equals(BlockPos.ZERO)) {
             Finale.begin(level, null, null);
+        }
+    }
+
+    // ------------------------------------------------------------ les reperes
+
+    /**
+     * La Cathedrale et la Citadelle, annoncees des l'ouverture.
+     *
+     * Elles existaient deja mais restaient introuvables : trois biomes
+     * seulement les acceptaient et 96 chunks les separaient, si bien qu'aucune
+     * ne tombait dans la zone de jeu. Rapprochees et ouvertes a toutes les
+     * terres, elles deviennent ce qu'elles auraient toujours du etre : deux
+     * objectifs OPTIONNELS, plus faciles qu'un sanctuaire, et le meilleur
+     * rendement en Arcencium du mode. Encore faut-il savoir qu'elles sont la.
+     */
+    private static void announceLandmarks(ServerLevel level, BlockPos from) {
+        hintLandmark(level, from, "arcencium_cathedral", "game.emeraldweapons.landmark.cathedral");
+        hintLandmark(level, from, "arcencium_citadel", "game.emeraldweapons.landmark.citadel");
+    }
+
+    private static void hintLandmark(ServerLevel level, BlockPos from, String path, String key) {
+        var tag = net.minecraft.tags.TagKey.create(
+                net.minecraft.core.registries.Registries.STRUCTURE,
+                net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(
+                        EmeraldWeaponsMod.MODID, path));
+        // recherche courte : le repere est cense etre dans la zone de jeu, pas
+        // a l'autre bout du monde -- et un rayon large coute cher en generation
+        BlockPos found = level.findNearestMapStructure(tag, from, 6, false);
+        if (found == null) {
+            return;                        // le relief n'en a pas voulu : on se tait
+        }
+        double dx = found.getX() - from.getX();
+        double dz = found.getZ() - from.getZ();
+        for (ServerPlayer player : level.players()) {
+            player.sendSystemMessage(Component.translatable(key,
+                            (int) Math.sqrt(dx * dx + dz * dz), Finale.cardinal(dx, dz))
+                    .withStyle(ChatFormatting.AQUA));
         }
     }
 
