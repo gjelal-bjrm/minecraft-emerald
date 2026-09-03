@@ -56,11 +56,8 @@ public final class SanctuaryGarrison {
                     place(level, centre, pool,
                             centre.offset(sx * half, towerTop + 1, sz * half), 3);
                 }
-                // et des gardes aux etages, ou ils surprennent
-                for (int floor = 6; floor < towerTop; floor += 12) {
-                    place(level, centre, pool,
-                            centre.offset(sx * half, floor + 1, sz * half), 3);
-                }
+                // les etages sont tenus par les gardes de coffre, poses avec
+                // les coffres eux-memes (voir postGuard, appele par Sanctuary)
             }
         }
         // le chemin de ronde, un garde tous les huit blocs
@@ -86,6 +83,27 @@ public final class SanctuaryGarrison {
         BlockPos at = spot.offset(
                 level.random.nextInt(spread * 2 + 1) - spread, 0,
                 level.random.nextInt(spread * 2 + 1) - spread);
+        spawnGuard(level, pool, at, 12);
+    }
+
+    /**
+     * Un garde POSTE, attache a son poste et non au sanctuaire.
+     *
+     * C'etait la faille : tous les defenseurs etaient retenus dans un rayon de
+     * quarante blocs autour du CENTRE, et leur MoveTowardsRestrictionGoal les y
+     * ramenait. Ils quittaient donc les tours pour s'agglutiner dans la cour,
+     * et l'on montait vider les coffres sans croiser personne. Chacun garde
+     * maintenant l'endroit ou on l'a mis.
+     */
+    public static void postGuard(ServerLevel level, BlockPos at, int radius) {
+        List<EntityType<?>> pool = pool(level);
+        if (!pool.isEmpty()) {
+            spawnGuard(level, pool, at, radius);
+        }
+    }
+
+    private static void spawnGuard(ServerLevel level, List<EntityType<?>> pool,
+                                   BlockPos at, int radius) {
         EntityType<?> type = pool.get(level.random.nextInt(pool.size()));
         Entity mob = type.spawn(level, at, MobSpawnType.STRUCTURE);
         if (mob == null) {
@@ -93,8 +111,7 @@ public final class SanctuaryGarrison {
         }
         mob.addTag(TAG_GUARD);
         if (mob instanceof PathfinderMob guard) {
-            // attaches au lieu : le rayon couvre le sanctuaire et rien de plus
-            guard.restrictTo(centre, 40);
+            guard.restrictTo(at, radius);
             guard.goalSelector.addGoal(6, new MoveTowardsRestrictionGoal(guard, 1.0));
             guard.setPersistenceRequired();
         }

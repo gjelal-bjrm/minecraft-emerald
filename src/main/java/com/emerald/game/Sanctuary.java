@@ -1429,6 +1429,14 @@ public final class Sanctuary {
                     Direction.NORTH);
             lootChest(level, tx - offX, chestY, tz - offZ, sanctuaryTable(rank),
                     Direction.SOUTH);
+            // UN GARDIEN PAR PALIER, ATTACHE A SON PALIER.
+            //
+            // Sans lui, la tour etait un libre-service : on entrait par la
+            // porte, on montait la vis, on vidait quatorze coffres et l'on
+            // ressortait sans avoir combattu -- le joueur a trouve la faille en
+            // une partie. Le rayon de cinq le garde a son etage : il ne descend
+            // pas rejoindre la cour, et il ne peut pas etre attire dehors.
+            SanctuaryGarrison.postGuard(level, new BlockPos(tx, chestY, tz), 5);
 
             int reach = (int) inner - 1;
             for (int i = 0; i < storey; i++) {
@@ -1981,6 +1989,10 @@ public final class Sanctuary {
         lootChest(level, cx + 2, y + 1, z, sanctuaryTable(rank), Direction.SOUTH);
         lootChest(level, cx, y + 1, z - 2, sanctuaryTable(rank), Direction.SOUTH);
         lootChest(level, cx, y + 1, z + 2, sanctuaryTable(rank), Direction.SOUTH);
+        // la salle du tresor est le meilleur lot du sanctuaire : trois gardiens
+        for (int i = 0; i < 3; i++) {
+            SanctuaryGarrison.postGuard(level, new BlockPos(cx, y + 1, z), 6);
+        }
     }
 
     /**

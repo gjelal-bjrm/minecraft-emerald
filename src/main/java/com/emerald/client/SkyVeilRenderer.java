@@ -75,7 +75,17 @@ public final class SkyVeilRenderer {
         // le rayon est la distance du voile : plus pres que le terrain lointain,
         // qui disparait derriere lui comme dans un brouillard
         double radius = Math.min(veil[5], mc.gameRenderer.getRenderDistance() * 0.9);
-        draw(event.getPoseStack(), veil[0], veil[1], veil[2], alpha, veil[4], radius);
+        // LA CLARTE DU CIEL. getStarBrightness vaut zero en plein jour et un en
+        // pleine nuit : le voile suit, avec un plancher pour qu'il reste lisible.
+        // Sans cela, la Brume Prismatique devenait des taches blanches
+        // lumineuses la nuit, surtout sous un shader qui assombrit tout le reste.
+        float night = mc.level.getStarBrightness(partial);
+        float lit = 0.16F + 0.84F * (1.0F - Math.min(1.0F, Math.max(0.0F, night)));
+        if (w == Weather.ORAGE) {
+            lit = Math.max(lit, WeatherAtmosphere.flash());   // l'eclair allume la nuit aussi
+        }
+        draw(event.getPoseStack(), veil[0] * lit, veil[1] * lit, veil[2] * lit,
+                alpha, veil[4], radius);
     }
 
     /**

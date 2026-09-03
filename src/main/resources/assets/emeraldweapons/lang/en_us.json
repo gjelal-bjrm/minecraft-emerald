@@ -358,7 +358,7 @@
   "element.emeraldweapons.granted.title": "Element: %s",
   "element.emeraldweapons.granted.sub": "Find an Elemental Stone to change",
   "item.emeraldweapons.arcencium_feather": "Arcencium Feather",
-  "item.emeraldweapons.arcencium_feather.desc": "Right-click: attempt the next specialization tier.",
+  "item.emeraldweapons.arcencium_feather.desc": "The material of specialization. Spent at the Altar.",
   "item.emeraldweapons.arcencium_feather.next": "Tier +%s: %s feather(s), %s%% success.",
   "item.emeraldweapons.skin_feather": "Wing Feather",
   "item.emeraldweapons.skin_feather.named": "Wing Feather: %s",
@@ -442,5 +442,6 @@
   "celebrate.emeraldweapons.upgrade.sub": "Upgrade succeeded",
   "celebrate.emeraldweapons.rarity.sub": "New rarity reached",
   "celebrate.emeraldweapons.spec": "Specialization +%s",
-  "celebrate.emeraldweapons.spec.sub": "+%s hero points"
+  "celebrate.emeraldweapons.spec.sub": "+%s hero points",
+  "item.emeraldweapons.arcencium_feather.altar": "Feathers are spent at the Specialization Altar."
 }

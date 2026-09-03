@@ -31,10 +31,14 @@ public class ArcenciumFeatherItem extends Item {
     @Override
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
+        // La plume ne monte plus rien a elle seule : elle renvoie a l'autel,
+        // ou l'on voit ce qu'on depense, ce qu'on risque et ce qu'on gagne.
         if (player instanceof ServerPlayer server) {
-            Specialization.tryUpgrade(server);
+            server.displayClientMessage(Component.translatable(
+                            "item.emeraldweapons.arcencium_feather.altar")
+                    .withStyle(ChatFormatting.LIGHT_PURPLE), true);
         }
-        return InteractionResultHolder.sidedSuccess(stack, level.isClientSide);
+        return InteractionResultHolder.fail(stack);
     }
 
     @Override

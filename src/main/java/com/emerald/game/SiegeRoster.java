@@ -39,6 +39,13 @@ public final class SiegeRoster {
         return List.of("minecraft:zombie", "minecraft:skeleton", "minecraft:husk");
     }
 
+    /**
+     * ATTENTION AU VIVIER D'IRON'S SPELLBOOKS : le Pretre, le Pyromancien et
+     * l'Apothicaire heritent de NeutralWizard -- ce sont des MARCHANDS, ils ne
+     * se battent pas. Le joueur les a vus rester plantes au milieu d'un siege.
+     * N'utiliser que ceux qui implementent Enemy : cultist, keeper, cryomancer,
+     * necromancer, archevoker.
+     */
     public static List<String> forTier(int tier) {
         return switch (tier) {
             case 1 -> List.of(
@@ -48,8 +55,8 @@ public final class SiegeRoster {
             case 2 -> List.of(
                     "cataclysm:deepling_brute", "cataclysm:deepling_angler",
                     "cataclysm:elite_draugr", "cataclysm:koboleton",
-                    "irons_spellbooks:pyromancer", "irons_spellbooks:cryomancer",
-                    "irons_spellbooks:priest", "undergarden:rotwalker",
+                    "irons_spellbooks:cultist", "irons_spellbooks:cryomancer",
+                    "irons_spellbooks:keeper", "undergarden:rotwalker",
                     "twilightforest:blockchain_goblin",
                     "minecraft:vindicator", "minecraft:witch", "minecraft:stray");
             default -> List.of(

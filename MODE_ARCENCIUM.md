@@ -2594,3 +2594,56 @@ recadree et agrandie. Une vraie prise en 1920x1080, interface cachee (F1),
 demande `overrideWidth`/`overrideHeight` dans `run/options.txt` et un client
 libre -- `shoot_menu.sh` (scratchpad) le fait, il refuse tant qu'une partie
 tourne.
+
+## 34. Trois bugs de jeu, et la plume *(3 sept. 2026)*
+
+### 34.1 La Brume Prismatique brillait la nuit
+
+Sous le shader, en pleine nuit, la brume devenait des **taches blanches
+lumineuses** entre les arbres. Le voile se dessine en geometrie SANS lumiere
+(`debugQuads`) : sa couleur est la meme a midi et a minuit. De jour, un pastel
+clair passe pour de la brume ; la nuit, il devient une lampe.
+
+`SkyVeilRenderer` multiplie desormais la couleur du voile par la clarte du
+ciel : `1 - getStarBrightness()`, avec un plancher a 0,16 pour qu'il reste
+lisible. L'Orage garde son eclat d'eclair (`max(clarte, flash)`), sinon la
+foudre ne se verrait plus la nuit.
+
+**La lecon** : tout ce qu'on dessine sans lumiere doit suivre le ciel a la main,
+sinon il brille la nuit.
+
+### 34.2 Les pretres et les pyromanciens ne se battaient pas
+
+Chez Iron's Spellbooks, **`PriestEntity`, `PyromancerEntity` et
+`ApothecaristEntity` heritent de `NeutralWizard`** : ce sont des MARCHANDS. Ils
+ne sont pas passifs par accident, ils sont concus pour commercer. Deux des
+trois sorciers du palier 2 etaient donc des figurants.
+
+Verifie dans le jar : implementent `Enemy` -- `cultist`, `keeper`,
+`cryomancer`, `necromancer`, `archevoker`, `fire_boss`. Le vivier du palier 2
+prend maintenant `cultist` et `keeper` a la place du pyromancien et du pretre.
+La garnison des sanctuaires, qui tire du palier 2, en profite.
+
+### 34.3 Les coffres des tours n'etaient pas defendus
+
+Le joueur a trouve la faille : entrer dans le sanctuaire, monter la vis d'une
+tour, vider quatorze coffres, ressortir -- sans un combat.
+
+La cause tient en une ligne : `restrictTo(centre, 40)`. **Tous** les
+defenseurs etaient attaches au CENTRE du sanctuaire, et leur
+`MoveTowardsRestrictionGoal` les y ramenait ; ils quittaient donc les tours
+pour s'agglutiner dans la cour. Un garde retenu par le centre n'est pas un
+garde de tour.
+
+- `SanctuaryGarrison.spawnGuard` attache chacun a SON poste (rayon 12) ;
+- `postGuard(level, pos, rayon)` pose un gardien attache de pres ;
+- `Sanctuary.towerInterior` en pose **un par palier** avec les deux coffres,
+  rayon 5 : il ne descend pas, et on ne peut pas l'attirer dehors ;
+- la salle du tresor en recoit **trois**, rayon 6.
+
+### 34.4 La plume ne monte plus rien toute seule
+
+Demande deja faite, mal appliquee : la Plume d'Arcencium montait un palier au
+clic droit, sans montrer ni le cout, ni la chance, ni le gain. Elle renvoie
+maintenant a l'**Autel de Specialisation** (section 33.4), qui est le seul
+chemin -- comme la Forge l'est pour les armes.
