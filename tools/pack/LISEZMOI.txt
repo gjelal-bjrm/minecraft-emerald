@@ -1,0 +1,10 @@
+L'image du profil CurseForge se depose ICI, sous le nom exact : icon.png
+Format : PNG carre, 1024 x 1024 (CurseForge la reduit lui-meme).
+
+Le prompt a donner au generateur est dans tools/prompts/image_du_mode.md.
+Une fois le fichier depose, refaire le pack :
+
+    python tools/export_modpack.py --slim
+
+L'image est alors placee a la racine du zip. Dans CurseForge elle se regle
+a la main : profil -> les trois points -> Change Image.

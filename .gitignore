@@ -29,3 +29,6 @@ repo
 # l'auteur, sources des textures de buches, briques et gangue.
 tools/preview
 tools/__pycache__
+
+# le pack CurseForge exporte (gros, et refabricable par tools/export_modpack.py)
+dist

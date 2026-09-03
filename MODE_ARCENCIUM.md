@@ -829,7 +829,37 @@ EmeraldWeapons-Pack.zip
 
 Import via *Creer un profil personnalise → Importer*.
 
-A ecrire : `tools/export_modpack.py`.
+### 13.1 `tools/export_modpack.py` *(ecrit, verifie)*
+
+```
+python tools/export_modpack.py            # pack complet
+python tools/export_modpack.py --slim     # sans kubejs/assets, ~145 Mo de moins
+```
+
+Il lit le `minecraftinstance.json` de l'instance CUSTOM -- **on n'invente aucun
+identifiant**, on prend ceux que CurseForge tient a jour -- et separe les mods
+en deux : ceux que CurseForge sait retrouver seul (439, nommes dans le
+manifeste) et ceux qui n'y sont pas (8, embarques dans `overrides/mods`) :
+Distant Horizons 2.4.5, Better Combat, CC:Tweaked, EMF, ETF, Not Enough
+Animations, playerAnimator, et **notre jar**, pris dans `build/libs` pour que
+le pack porte toujours la derniere compilation.
+
+Les overrides emportent `config` (donc la config DH reglee et `iris.properties`),
+`defaultconfigs`, `kubejs`, `resourcepacks` (Fresh Animations), `datapacks`,
+`options.txt` (donc les touches de tri corrigees) et **le seul shader retenu**,
+Complementary Unbound + Euphoria Patches. Jamais les sauvegardes, les journaux
+ni les captures. Le manifeste annonce `recommendedRam: 16384`.
+
+Mesure : 439 mods references, 8 embarques, 80 Mo d'overrides, **65 Mo** de zip
+en `--slim`. Sortie dans `dist/`, ignore par git (refabricable).
+
+### 13.2 L'image du profil
+
+Prompt dans `tools/prompts/image_du_mode.md` : paysage voxel, **aucun etre
+vivant**, une pyramide a degres coiffee d'une ancre prismatique, l'Arc-en-ciel
+derriere, le mur de brume au loin. Le fichier se depose en `tools/pack/icon.png`
+(1024x1024) ; l'export le place a la racine du zip. CurseForge ne lit pas
+l'icone d'un pack importe : elle se regle a la main sur le profil.
 
 ---
 
