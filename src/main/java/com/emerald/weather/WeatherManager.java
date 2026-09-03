@@ -264,6 +264,16 @@ public final class WeatherManager {
                 || !level.dimension().equals(Level.OVERWORLD)) {
             return;         // une cicatrice n'existe que la ou la meteo se joue
         }
+        // L'AURORE PAIE LA MINE : un morceau de plus par filon casse pendant
+        // qu'elle dure. C'est ce qui fait d'elle une fenetre qu'on attend, et
+        // non un simple decor -- le joueur ne voyait « rien de bien, rien de mal ».
+        if (current() == Weather.AURORE
+                && event.getState().is(com.emerald.block.ModBlocks.ARCENCIUM_ORE.get())
+                && !event.getPlayer().isCreative()) {
+            net.minecraft.world.level.block.Block.popResource(level, event.getPos(),
+                    new net.minecraft.world.item.ItemStack(ModItems.RAW_ARCENCIUM.get(),
+                            1 + level.random.nextInt(2)));
+        }
         if (WeatherEffects.claimScar(level, event.getPos())) {
             net.minecraft.world.level.block.Block.popResource(level, event.getPos(),
                     new net.minecraft.world.item.ItemStack(ModItems.RAW_ARCENCIUM.get(),

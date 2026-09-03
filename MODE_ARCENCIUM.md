@@ -2647,3 +2647,31 @@ Demande deja faite, mal appliquee : la Plume d'Arcencium montait un palier au
 clic droit, sans montrer ni le cout, ni la chance, ni le gain. Elle renvoie
 maintenant a l'**Autel de Specialisation** (section 33.4), qui est le seul
 chemin -- comme la Forge l'est pour les armes.
+
+### 34.5 L'Aurore servait a rien
+
+« Elle est jolie, mais elle n'apporte rien de bien et rien de mal », et c'est
+l'une des deux seules meteos du debut de partie : une fenetre sur cinq gaspillee.
+
+Le cahier lui donnait pourtant un role -- « les veines d'Arcencium proches
+scintillent : sous terre, c'est un detecteur, le moment de descendre miner ».
+Le code faisait bien quelque chose, mais deux details le rendaient invisible :
+
+1. la sonde cherchait dans un **cube de douze blocs**, donc il fallait deja
+   etre sur la veine ;
+2. elle posait ses lucioles **sur le filon**, c'est-a-dire DANS la pierre, ou
+   personne ne les voit.
+
+Refait : la sonde balaie **quarante blocs** autour du joueur et envoie un **rai
+de lumiere du filon jusqu'a six blocs au-dessus du sol**. Depuis la surface, on
+voit des colonnes prismatiques sortir de terre, et l'on sait ou creuser. Six au
+plus par joueur, une par colonne, rafraichies toutes les trois secondes.
+
+**Le cout tenu** : parcourir 80x64x80 blocs par joueur et par seconde serait
+cent mille lectures. On interroge d'abord la **palette de chaque section de
+chunk** (`LevelChunkSection.maybeHas`) : une section sans Arcencium repond non
+sans qu'on l'ouvre, et il n'en reste qu'une poignee a lire.
+
+Et pour recompenser celui qui creuse, pas seulement celui qui regarde : **un
+morceau d'Arcencium brut de plus (1-2) par filon casse pendant l'Aurore**.
+Sous-titre refait : « Les veines d'Arcencium percent le sol. Descendez miner. »

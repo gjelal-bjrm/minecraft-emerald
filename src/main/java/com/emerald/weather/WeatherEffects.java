@@ -16,6 +16,10 @@ import com.emerald.main.EmeraldWeaponsMod;
 import com.emerald.particles.ModParticles;
 import net.minecraft.world.entity.LightningBolt;
 import net.minecraft.util.RandomSource;
+import net.minecraft.core.SectionPos;
+import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.chunk.LevelChunk;
+import net.minecraft.world.level.chunk.LevelChunkSection;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.core.BlockPos;
@@ -535,31 +539,120 @@ public final class WeatherEffects {
      * scintillent et carillonnent. En surface c'est un spectacle ; sous terre,
      * c'est un detecteur -- c'est le moment de descendre miner.
      */
+    /** Rayon de la sonde, en blocs : deux chunks et demi autour du joueur. */
+    private static final int AURORE_RANGE = 40;
+    /** Autant de colonnes au plus par joueur : au-dela, le paysage devient une foret de rais. */
+    private static final int AURORE_BEAMS = 6;
+
+    /**
+     * L'AURORE EST LA FENETRE DE LA MINE.
+     *
+     * Elle ne faisait rien d'utile : la sonde cherchait dans un cube de douze
+     * blocs et posait ses lucioles SUR le filon -- c'est-a-dire dans la pierre,
+     * ou personne ne les voit. Il fallait deja avoir trouve la veine pour
+     * qu'elle vous la signale.
+     *
+     * Elle envoie maintenant un RAI DE LUMIERE du filon jusqu'au-dessus du sol :
+     * depuis la surface on voit des colonnes prismatiques qui sortent de terre,
+     * et l'on sait ou creuser. C'est ce que le cahier promettait -- « le moment
+     * de descendre miner » -- et ce qui donne enfin sa raison d'etre a la seule
+     * meteo douce du debut de partie.
+     *
+     * La recherche passe par les SECTIONS de chunk : demander a la palette si
+     * elle contient seulement notre minerai coute quelques comparaisons, la ou
+     * parcourir 40x64x40 blocs par joueur et par seconde en couterait cent mille.
+     */
     private static void tickAurore(ServerLevel level) {
         if (level.getGameTime() % 60 != 0) {
             return;
         }
         for (ServerPlayer player : level.players()) {
-            BlockPos center = player.blockPosition();
-            int found = 0;
-            for (BlockPos pos : BlockPos.betweenClosed(center.offset(-12, -12, -12),
-                    center.offset(12, 12, 12))) {
-                if (!level.getBlockState(pos).is(ModBlocks.ARCENCIUM_ORE.get())) {
-                    continue;
+            List<BlockPos> veins = findVeins(level, player.blockPosition());
+            for (BlockPos pos : veins) {
+                beam(level, pos);
+            }
+            if (!veins.isEmpty()) {
+                level.playSound(null, veins.get(0), SoundEvents.AMETHYST_BLOCK_CHIME,
+                        SoundSource.AMBIENT, 0.7F, 1.4F);
+            }
+        }
+    }
+
+    /** Les filons les plus proches, un par colonne, du plus proche au plus loin. */
+    private static List<BlockPos> findVeins(ServerLevel level, BlockPos center) {
+        List<BlockPos> found = new ArrayList<>();
+        int minY = Math.max(level.getMinBuildHeight(), center.getY() - 48);
+        int maxY = Math.min(level.getMaxBuildHeight() - 1, center.getY() + 16);
+        int chunkRange = AURORE_RANGE >> 4;
+        for (int cx = -chunkRange; cx <= chunkRange; cx++) {
+            for (int cz = -chunkRange; cz <= chunkRange; cz++) {
+                ChunkPos cp = new ChunkPos(SectionPos.blockToSectionCoord(center.getX()) + cx,
+                        SectionPos.blockToSectionCoord(center.getZ()) + cz);
+                if (!level.hasChunk(cp.x, cp.z)) {
+                    continue;                       // jamais de generation forcee
                 }
-                // les lucioles de cristal montent du filon : c'est ainsi que
-                // l'aurore repond aux veines, et que tous les joueurs les voient
-                level.sendParticles(ModParticles.CRYSTAL_FIREFLY.get(),
-                        pos.getX() + 0.5, pos.getY() + 1.2, pos.getZ() + 0.5,
-                        3, 0.4, 0.3, 0.4, 0.0);
-                if (found == 0) {
-                    level.playSound(null, pos, SoundEvents.AMETHYST_BLOCK_CHIME,
-                            SoundSource.AMBIENT, 0.7F, 1.4F);
-                }
-                if (++found >= 6) {
-                    break;
+                LevelChunk chunk = level.getChunk(cp.x, cp.z);
+                LevelChunkSection[] sections = chunk.getSections();
+                for (int i = 0; i < sections.length; i++) {
+                    LevelChunkSection section = sections[i];
+                    int baseY = chunk.getMinBuildHeight() + (i << 4);
+                    if (section.hasOnlyAir() || baseY + 15 < minY || baseY > maxY) {
+                        continue;
+                    }
+                    // la palette repond sans qu'on ouvre la section
+                    if (!section.maybeHas(state -> state.is(ModBlocks.ARCENCIUM_ORE.get()))) {
+                        continue;
+                    }
+                    scanSection(level, section, cp, baseY, minY, maxY, center, found);
                 }
             }
+        }
+        found.sort((a, b) -> Double.compare(a.distSqr(center), b.distSqr(center)));
+        return found.size() > AURORE_BEAMS ? found.subList(0, AURORE_BEAMS) : found;
+    }
+
+    /** Un filon par colonne : quatre-vingts rais pour une seule veine ne diraient rien de plus. */
+    private static void scanSection(ServerLevel level, LevelChunkSection section, ChunkPos cp,
+                                    int baseY, int minY, int maxY, BlockPos center,
+                                    List<BlockPos> found) {
+        java.util.Set<Long> columns = new java.util.HashSet<>();
+        for (BlockPos pos : found) {
+            columns.add(ChunkPos.asLong(pos.getX(), pos.getZ()));
+        }
+        for (int y = 0; y < 16; y++) {
+            int wy = baseY + y;
+            if (wy < minY || wy > maxY) {
+                continue;
+            }
+            for (int x = 0; x < 16; x++) {
+                for (int z = 0; z < 16; z++) {
+                    if (!section.getBlockState(x, y, z).is(ModBlocks.ARCENCIUM_ORE.get())) {
+                        continue;
+                    }
+                    int wx = cp.getMinBlockX() + x;
+                    int wz = cp.getMinBlockZ() + z;
+                    double dx = wx - center.getX();
+                    double dz = wz - center.getZ();
+                    if (dx * dx + dz * dz > (double) AURORE_RANGE * AURORE_RANGE) {
+                        continue;
+                    }
+                    if (columns.add(ChunkPos.asLong(wx, wz))) {
+                        found.add(new BlockPos(wx, wy, wz));
+                    }
+                }
+            }
+        }
+    }
+
+    /** Le rai : du filon jusqu'a six blocs au-dessus du sol, visible de loin. */
+    private static void beam(ServerLevel level, BlockPos vein) {
+        level.sendParticles(ModParticles.CRYSTAL_FIREFLY.get(),
+                vein.getX() + 0.5, vein.getY() + 1.2, vein.getZ() + 0.5,
+                3, 0.4, 0.3, 0.4, 0.0);
+        int surface = WorldSetup.surfaceY(level, vein.getX(), vein.getZ());
+        for (int y = vein.getY() + 1; y <= surface + 6; y += 2) {
+            level.sendParticles(ModParticles.PRISM_MOTE.get(),
+                    vein.getX() + 0.5, y, vein.getZ() + 0.5, 1, 0.06, 0.25, 0.06, 0.0);
         }
     }
 
