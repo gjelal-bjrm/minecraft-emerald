@@ -2446,3 +2446,11 @@ C'est ma faute : j'avais regle DH sur **8 threads a 0,8** de temps de calcul —
 la moitie du processeur, en permanence, pendant que le serveur integre tique.
 Ramene a **4 threads a 0,35**, rayon **192** au lieu de 256. L'horizon se
 remplit un peu moins vite ; le jeu reste fluide. Config recopiee dans CUSTOM.
+Verifie apres coup : **zero** « Can't keep up » sur la session d'essai.
+
+Second levier, valide par le joueur : l'instance CUSTOM allouait **60 Go** de
+tas Java. Un tas enorme n'accelere rien -- Minecraft n'en utilise qu'une
+fraction -- mais allonge les pauses du ramasse-miettes, qui se voient comme des
+saccades. Ramene a **16 Go** (`minecraftinstance.json`, `allocatedMemory`
+60000 → 16384 ; l'ancien fichier est garde en `.bak-60go`). A faire **CurseForge
+ferme**, sinon l'application reecrit le fichier en quittant.
