@@ -2675,3 +2675,24 @@ sans qu'on l'ouvre, et il n'en reste qu'une poignee a lire.
 Et pour recompenser celui qui creuse, pas seulement celui qui regarde : **un
 morceau d'Arcencium brut de plus (1-2) par filon casse pendant l'Aurore**.
 Sous-titre refait : « Les veines d'Arcencium percent le sol. Descendez miner. »
+
+### 34.6 Le niveau de Heros se perdait a la mort
+
+Une heure de jeu effacee par une chute. La cause est vieille comme les mods :
+**a la mort, Minecraft ne ressuscite pas le joueur, il en construit un autre**
+et ne recopie qu'une poignee de choses. Le niveau de Heros, son experience, ses
+points places et son element vivent dans `player.getPersistentData()` -- qui
+reste sur le cadavre.
+
+`util/PlayerPersistence` ecoute `PlayerEvent.Clone` et recopie le compose
+entier, cle par cle, sans ecraser ce que le jeu a deja copie. Tout y passe : la
+Rage du Glaive, la Surcharge, les refroidissements -- ils sont tous dates, ce
+qui doit expirer expirera seul. Les attributs se remettent d'eux-memes :
+`HeroEvents.onTick` reapplique la fiche et la renvoie au client periodiquement.
+
+**La regle, deja notee pour la synchronisation, se double d'une seconde :**
+`getPersistentData()` ne traverse ni le RESEAU (il faut un paquet) ni la MORT
+(il faut `PlayerEvent.Clone`).
+
+**Pour reparer une partie en cours** : `/arcencium hero level <niveaux>` rend
+les niveaux perdus, `/arcencium hero xp <montant>` l'experience.
