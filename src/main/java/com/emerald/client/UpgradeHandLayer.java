@@ -58,6 +58,10 @@ public class UpgradeHandLayer<T extends LivingEntity, M extends EntityModel<T> &
         pose.mulPose(Axis.YP.rotationDegrees(180.0F));
         boolean left = arm == HumanoidArm.LEFT;
         pose.translate((left ? -1 : 1) / 16.0F, 0.125F, -0.625F);
+        // Better Combat et playerAnimator deplacent l'objet APRES ces
+        // transformations, par l'os « rightItem » de l'animation : sans le
+        // rejouer, la lame etait en travers de la poitrine et son halo a la hanche.
+        com.emerald.client.compat.AnimatedHand.apply(entity, arm, pose);
         UpgradeHaloRenderer.renderHalo(entity, stack,
                 left ? ItemDisplayContext.THIRD_PERSON_LEFT_HAND
                         : ItemDisplayContext.THIRD_PERSON_RIGHT_HAND,

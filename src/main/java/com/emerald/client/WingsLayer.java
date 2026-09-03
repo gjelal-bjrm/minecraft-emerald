@@ -27,9 +27,13 @@ import net.minecraft.util.Mth;
  * +15 ; au-dela, les ailes ne changent plus, ce sont les animations autour
  * du corps qui s'ajoutent (a venir).
  *
- * Deux rendus : les apparences de LUMIERE en emissif, plein feu, pour
- * qu'elles luisent la nuit et sous un pack de shaders ; les apparences de
- * MATIERE (Obscures, Papillon) prennent la lumiere du monde.
+ * TOUTES LES AILES SONT DE LA MATIERE. Elles se rendent d'abord en decoupe
+ * opaque, eclairees par le monde : c'est ce qui leur donne une ombre sous un
+ * pack de shaders et un corps quand on les regarde. Les apparences de LUMIERE
+ * recoivent PAR-DESSUS une seconde passe emissive, translucide, qui les fait
+ * luire la nuit sans les rendre fantomatiques -- le joueur l'a dit : « chaque
+ * aile doit etre cent pour cent materialisee », et les ailes emissives seules
+ * etaient des vitres sans ombre.
  */
 public class WingsLayer<T extends AbstractClientPlayer, M extends PlayerModel<T>> extends RenderLayer<T, M> {
 
@@ -68,17 +72,22 @@ public class WingsLayer<T extends AbstractClientPlayer, M extends PlayerModel<T>
         pose.pushPose();
         getParentModel().body.translateAndRotate(pose);
         pose.translate(0.0F, 0.0F, 0.15F);            // juste derriere le dos
-        VertexConsumer vc = buffer.getBuffer(skin.emissive
-                ? RenderType.entityTranslucentEmissive(skin.texture())
-                : RenderType.entityTranslucent(skin.texture()));
-        int packed = skin.emissive ? LightTexture.FULL_BRIGHT : light;
+        // la matiere : decoupe opaque, lumiere du monde -- et donc une ombre
+        VertexConsumer body = buffer.getBuffer(RenderType.entityCutoutNoCull(skin.texture()));
+        // la lueur des apparences de lumiere, posee par-dessus, un peu en avant
+        VertexConsumer glow = skin.emissive
+                ? buffer.getBuffer(RenderType.entityTranslucentEmissive(skin.texture())) : null;
         for (int side = -1; side <= 1; side += 2) {
             pose.pushPose();
             // l'omoplate : dans l'espace du modele, +y descend, -x est la droite du joueur
             pose.translate(side * 0.14F, 0.17F, 0.0F);
             pose.mulPose(Axis.YP.rotationDegrees(side * (-24.0F - flap)));
             pose.mulPose(Axis.ZP.rotationDegrees(-side * (6.0F + lift)));   // les pointes montent
-            quad(pose, vc, side, size, packed, skin.emissive ? skin.tint : 1.0F);
+            quad(pose, body, side, size, light, 1.0F, 255);
+            if (glow != null) {
+                pose.translate(0.0F, 0.0F, -0.004F);
+                quad(pose, glow, side, size, LightTexture.FULL_BRIGHT, skin.tint, GLOW_ALPHA);
+            }
             pose.popPose();
         }
         pose.popPose();
@@ -89,7 +98,11 @@ public class WingsLayer<T extends AbstractClientPlayer, M extends PlayerModel<T>
      * est -x dans l'espace du modele, on y pose la texture telle quelle, et
      * on la miroite pour la gauche.
      */
-    private static void quad(PoseStack pose, VertexConsumer vc, int side, float size, int light, float tint) {
+    /** Opacite de la passe de lueur : assez pour luire la nuit, pas assez pour blanchir le jour. */
+    private static final int GLOW_ALPHA = 150;
+
+    private static void quad(PoseStack pose, VertexConsumer vc, int side, float size, int light,
+                             float tint, int alpha) {
         float x0 = side * (-ROOT_U * size);          // bord de la racine
         float x1 = side * ((1.0F - ROOT_U) * size);  // bord de la pointe
         float yTop = -(ROOT_V * size);               // le haut de la texture (y monte vers le negatif)
@@ -101,16 +114,16 @@ public class WingsLayer<T extends AbstractClientPlayer, M extends PlayerModel<T>
         float uTip = 1.0F;
         PoseStack.Pose last = pose.last();
         int c = (int) (255 * tint);
-        vertex(vc, last, x0, yBot, uRoot, 1.0F, light, c);
-        vertex(vc, last, x1, yBot, uTip, 1.0F, light, c);
-        vertex(vc, last, x1, yTop, uTip, 0.0F, light, c);
-        vertex(vc, last, x0, yTop, uRoot, 0.0F, light, c);
+        vertex(vc, last, x0, yBot, uRoot, 1.0F, light, c, alpha);
+        vertex(vc, last, x1, yBot, uTip, 1.0F, light, c, alpha);
+        vertex(vc, last, x1, yTop, uTip, 0.0F, light, c, alpha);
+        vertex(vc, last, x0, yTop, uRoot, 0.0F, light, c, alpha);
     }
 
     private static void vertex(VertexConsumer vc, PoseStack.Pose pose, float x, float y, float u, float v,
-                               int light, int c) {
+                               int light, int c, int alpha) {
         vc.addVertex(pose.pose(), x, y, 0.0F)
-                .setColor(c, c, c, 255)
+                .setColor(c, c, c, alpha)
                 .setUv(u, v)
                 .setOverlay(OverlayTexture.NO_OVERLAY)
                 .setLight(light)

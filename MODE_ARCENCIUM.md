@@ -2696,3 +2696,46 @@ qui doit expirer expirera seul. Les attributs se remettent d'eux-memes :
 
 **Pour reparer une partie en cours** : `/arcencium hero level <niveaux>` rend
 les niveaux perdus, `/arcencium hero xp <montant>` l'experience.
+
+### 34.7 Le halo de l'arme restait a la hanche
+
+Depuis Better Combat, l'arme se tient en travers du corps et sa lueur restait
+la ou le vanilla met la main. Cause mesuree dans le jar de playerAnimator :
+`HeldItemMixin.changeItemLocation` se greffe sur le calque vanilla de l'objet
+tenu et applique, juste avant de dessiner, l'os **« rightItem » /
+« leftItem »** de l'animation -- echelle, position (en seiziemes), rotations
+Z, Y, X (radians). Notre calque de halo rejouait les transformations vanilla et
+s'arretait la.
+
+`client/compat/AnimatedHand` lit le meme os **par reflexion** (playerAnimator
+n'est pas une dependance) et `UpgradeHandLayer` l'applique apres ses
+retournements de bras. Sans playerAnimator, sans animation active, ou sur un
+porteur qu'il n'anime pas (monstre), rien ne change.
+
+### 34.8 Les ailes fantomatiques
+
+« Certaines sont tres belles, on voit leur ombre ; la majorite sont vitreuses,
+sans ombre. » Les deux « belles » sont Obscures et Papillon : les seules
+rendues en MATIERE. Les huit autres etaient en `entityTranslucentEmissive` --
+plein feu et translucide, ce qui, par construction, ne projette pas d'ombre
+sous un shader et laisse voir a travers.
+
+Desormais **toutes** les ailes se rendent d'abord en decoupe opaque eclairee
+par le monde (`entityCutoutNoCull`) : un corps, une ombre. Les apparences de
+lumiere recoivent par-dessus une seconde passe emissive translucide (alpha
+150, teinte de la peau) qui les fait luire la nuit sans les rendre
+fantomatiques.
+
+### 34.9 Deux choses qui ne sont pas a nous
+
+- **Plantage en recherche creative** : `PerkItem.appendHoverText` d'**Ars
+  Nouveau 5.8.3** appelle `InputConstants.isKeyDown` (GLFW) depuis le thread
+  ou Minecraft construit l'index de recherche des infobulles -- « GL error
+  off-thread ». Pas une ligne a nous dans la trace. Mettre Ars Nouveau a jour
+  (5.13.1) est risque : sept extensions Ars et six mods en dependent, tous
+  epingles par ATM10. **Contournement** : chercher avec JEI (panneau de
+  droite), pas avec l'onglet de recherche de l'inventaire creatif.
+- **« All The Mods 10 » en bas a gauche** : ce n'est pas BCC (corrige pour
+  rien) mais **AllTheTweaks**, qui l'ecrit en dur selon son « pack mode ». Le
+  mod ne fournit que cela, Discord et quelques blocs-logos ; rien n'en depend.
+  Il sort du profil des que le jeu est ferme (jar verrouille tant qu'il tourne).
