@@ -4,41 +4,37 @@ import com.emerald.item.UpgradeGlow;
 import com.emerald.main.EmeraldWeaponsMod;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FastColor;
-import net.minecraft.util.Mth;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * L'aura de l'ARMURE amelioree : une coque AUTOUR du corps, pas une lueur dessus.
+ * Le LISERE de l'armure amelioree : un trait de lumiere sur la silhouette.
  *
- * LA PREMIERE VERSION EFFACAIT L'ARMURE. Elle posait une lueur additive sur la
- * piece, a cinquante-cinq pour cent ; du blanc additif a cette force blanchit
- * tout ce qu'il recouvre, et un plastron +10 devenait un bloc blanc. Le joueur
- * a dit la regle qui manquait : une amelioration AJOUTE quelque chose, elle ne
- * remplace jamais l'apparence de base.
+ * DEUX VERSIONS ONT ECHOUE AVANT CELLE-CI. La premiere posait une lueur
+ * additive sur la piece : du blanc a moitie effacait le dessin. La seconde
+ * gonflait une coque translucide autour du corps qui « respirait » : en 3D,
+ * cela se lisait comme du cellophane colore, et le joueur l'a dit -- pas beau
+ * du tout. Une aura de sprite 2D, celle de NosTale, ne se traduit pas en
+ * maillage gonfle.
  *
- * D'ou la coque : un maillage gonfle bien au-dela de l'armure, dessine tres
- * translucide. Vu de FRONT, sa face ne teinte l'armure que d'un cinquieme --
- * la piece reste elle-meme, juste rechauffee de sa couleur. Vu A LA
- * SILHOUETTE, on voit ses flancs, qui sont hors du corps : la, contre le decor,
- * la couleur fait un lisere. C'est ce lisere qu'on lit comme une aura, et il
- * ne couvre rien puisqu'il est a cote.
+ * Ici on ne dessine que le CONTOUR (voir {@link ModRenderTypes#rim}) : la
+ * coque n'expose que ses faces arriere, et il n'en survit qu'un trait au bord
+ * de la silhouette. La piece reste elle-meme ; le trait est a cote.
  *
- * Elle RESPIRE, et chaque piece a son propre rythme -- casque, plastron,
- * jambieres et bottes ne battent jamais ensemble. Quatre pieces a l'unisson
- * font un clignotement ; quatre rythmes decales font une lumiere qui court sur
- * le corps.
+ * L'echelle se lit en deux questions. L'EPAISSEUR d'abord -- trois coques,
+ * fine, moyenne, large -- puis la COULEUR. Au second tour (+8 et plus), deux
+ * traits : un fin et net contre la piece, un large et doux au-dela ; et la
+ * PULSATION, une onde qui monte des pieds a la tete, comme la vague de la
+ * lame. Le +10 tourne dans toutes les teintes.
  */
 public class UpgradeArmorLayer<T extends LivingEntity, M extends HumanoidModel<T>>
         extends RenderLayer<T, M> {
@@ -47,22 +43,21 @@ public class UpgradeArmorLayer<T extends LivingEntity, M extends HumanoidModel<T
     private static final ResourceLocation SHELL = ResourceLocation.fromNamespaceAndPath(
             EmeraldWeaponsMod.MODID, "textures/models/armor/upgrade_glow_1.png");
 
-    /**
-     * Ce qu'une piece de +10 atteint au sommet de sa respiration.
-     *
-     * Un peu plus d'un quart -- et ce chiffre AGIT, ce qui n'etait pas le cas
-     * avant : sans premultiplication, il aurait pu valoir un centieme sans que
-     * la piece cesse d'etre blanche. C'est le seuil en dessous duquel l'armure
-     * reste lisible sous la coque ; au-dessus, le blanc du +10 recommence a
-     * manger le dessin.
-     */
-    private static final float PEAK = 0.28F;
+    /** Opacite du trait net a pleine intensite ; le voile large est plus discret. */
+    private static final float LINE_ALPHA = 0.85F;
+    private static final float VEIL_ALPHA = 0.30F;
 
-    private final HumanoidModel<T> shell;
+    /** La place de chaque piece sur le corps, de zero (pieds) a un (tete) : pour l'onde. */
+    private static final float[] HEIGHT = {0.0F, 0.3F, 0.65F, 1.0F};
+    private static final EquipmentSlot[] SLOTS = {
+            EquipmentSlot.FEET, EquipmentSlot.LEGS, EquipmentSlot.CHEST, EquipmentSlot.HEAD};
 
-    public UpgradeArmorLayer(RenderLayerParent<T, M> parent, HumanoidModel<T> shell) {
+    /** Les trois coques : fine, moyenne, large. */
+    private final HumanoidModel<T>[] shells;
+
+    public UpgradeArmorLayer(RenderLayerParent<T, M> parent, HumanoidModel<T>[] shells) {
         super(parent);
-        this.shell = shell;
+        this.shells = shells;
     }
 
     @Override
@@ -70,49 +65,51 @@ public class UpgradeArmorLayer<T extends LivingEntity, M extends HumanoidModel<T
                        float limbSwing, float limbSwingAmount, float partialTick,
                        float ageInTicks, float netHeadYaw, float headPitch) {
         float time = entity.tickCount + partialTick;
-        renderSlot(pose, buffer, entity, EquipmentSlot.FEET, time, 0.0F);
-        renderSlot(pose, buffer, entity, EquipmentSlot.LEGS, time, 1.6F);
-        renderSlot(pose, buffer, entity, EquipmentSlot.CHEST, time, 3.2F);
-        renderSlot(pose, buffer, entity, EquipmentSlot.HEAD, time, 4.8F);
+        for (int i = 0; i < SLOTS.length; i++) {
+            renderSlot(pose, buffer, entity, SLOTS[i], HEIGHT[i], time);
+        }
     }
 
     private void renderSlot(PoseStack pose, MultiBufferSource buffer, T entity,
-                            EquipmentSlot slot, float time, float phase) {
+                            EquipmentSlot slot, float height, float time) {
         ItemStack stack = entity.getItemBySlot(slot);
         if (!(stack.getItem() instanceof ArmorItem armor) || armor.getEquipmentSlot() != slot) {
             return;
         }
         UpgradeGlow.Aura aura = UpgradeGlow.of(stack);
-        if (aura.intensity() <= 0.0F) {
+        if (aura.intensity() <= 0.0F || aura.width() <= 0) {
             return;
         }
-        HumanoidModel<T> model = this.shell;
+        float[] tint = aura.tint(time);
+        // la pulsation n'existe qu'au second tour : elle ajoute a l'opacite au passage de l'onde
+        float pulse = aura.large() ? UpgradeGlow.pulse(height, time) : 0.0F;
+
+        if (aura.large()) {
+            // le voile large et doux, derriere le trait
+            drawShell(pose, buffer, entity, slot, this.shells[2], tint,
+                    VEIL_ALPHA * aura.intensity() * (1.0F + 0.8F * pulse));
+            // le trait net, sur la coque moyenne
+            drawShell(pose, buffer, entity, slot, this.shells[1], tint,
+                    LINE_ALPHA * aura.intensity() * (0.85F + 0.15F * pulse));
+        } else {
+            drawShell(pose, buffer, entity, slot, this.shells[aura.width() - 1], tint,
+                    LINE_ALPHA * aura.intensity());
+        }
+    }
+
+    private void drawShell(PoseStack pose, MultiBufferSource buffer, T entity, EquipmentSlot slot,
+                           HumanoidModel<T> model, float[] tint, float alpha) {
         this.getParentModel().copyPropertiesTo(model);
         setPartVisibility(model, slot);
-
-        // La respiration : lente, decalee par piece, plus ample sur une aura
-        // large -- un +8 ne se contente pas d'etre plus fort qu'un +5, il bat
-        // plus fort.
-        float depth = aura.large() ? 0.30F : 0.18F;
-        float breath = (1.0F - depth) + depth * Mth.sin(time * 0.09F + phase);
-        float alpha = PEAK * aura.intensity() * breath;
-
-        // PREMULTIPLIE, et c'est toute la correction. Le type de rendu des yeux
-        // melange en additif ONE/ONE : l'alpha n'entre pas dans l'equation,
-        // image = image + couleur. Passer un alpha faible ne dimmait donc rien
-        // -- la coque ajoutait l'aura PLEINE, et du blanc plein sur n'importe
-        // quoi donne du blanc. On attenue la couleur elle-meme, et l'alpha
-        // reste a fond puisqu'il n'a aucun effet.
-        int colour = FastColor.ARGB32.color(255,
-                (int) (aura.red() * alpha * 255), (int) (aura.green() * alpha * 255),
-                (int) (aura.blue() * alpha * 255));
-        VertexConsumer vc = buffer.getBuffer(RenderType.eyes(SHELL));
+        int colour = FastColor.ARGB32.color((int) (Math.min(1.0F, alpha) * 255),
+                (int) (tint[0] * 255), (int) (tint[1] * 255), (int) (tint[2] * 255));
+        VertexConsumer vc = buffer.getBuffer(ModRenderTypes.rim(SHELL));
         model.renderToBuffer(pose, vc, 0xF000F0, OverlayTexture.NO_OVERLAY, colour);
     }
 
     /** Meme decoupage que HumanoidArmorLayer : chaque piece n'eclaire que ses parties. */
-    private static <T extends LivingEntity> void setPartVisibility(HumanoidModel<T> model,
-                                                                   EquipmentSlot slot) {
+    static <T extends LivingEntity> void setPartVisibility(HumanoidModel<T> model,
+                                                           EquipmentSlot slot) {
         model.setAllVisible(false);
         switch (slot) {
             case HEAD -> {

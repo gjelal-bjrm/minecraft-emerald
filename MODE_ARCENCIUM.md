@@ -2739,3 +2739,56 @@ fantomatiques.
   rien) mais **AllTheTweaks**, qui l'ecrit en dur selon son « pack mode ». Le
   mod ne fournit que cela, Discord et quelques blocs-logos ; rien n'en depend.
   Il sort du profil des que le jeu est ferme (jar verrouille tant qu'il tourne).
+
+## 35. L'armure amelioree, troisieme version : le lisere et la gravure *(3 sept. 2026)*
+
+### 35.1 Pourquoi la deuxieme a echoue
+
+La coque gonflee et translucide de la section 26 « respirait » autour du
+corps. En 3D, cela se lit comme du **cellophane colore**, et le blanc pur des
++7 et +10 ecrasait la piece. Le joueur : « pas beau du tout ». L'aura de
+NosTale est un sprite 2D ; un maillage gonfle n'en est pas la traduction.
+
+### 35.2 Le lisere (`client/ModRenderTypes.rim`, `UpgradeArmorLayer`)
+
+On ne dessine que le **contour**. La coque est rendue en ne gardant que ses
+**faces arriere** : elles sont de l'autre cote du corps, le test de profondeur
+les cache partout ou le corps est devant, et il n'en survit qu'un trait au bord
+de la silhouette, large comme le debord de la coque. Aucun shader : on inverse
+le sens d'elimination dans le creneau de superposition du type de rendu
+(`glCullFace(GL_FRONT)`), et on le remet en sortant.
+
+Trois coques, pour trois epaisseurs (debord sur l'armure exterieure gonflee
+d'un) : fine 1,35, moyenne 1,7, large 2,5. Translucide et non additif : le
+trait se voit sur la neige comme dans le noir.
+
+### 35.3 La palette, et l'echelle
+
+Le joueur a choisi la palette du mode plutot que le cycle de NosTale :
+
+| Cran | Couleur | Trait | En plus |
+|---|---|---|---|
+| +1, +2 | blanc froid | fin | -- |
+| +3, +4 | blanc froid | moyen | -- |
+| +5 / +6 / +7 | or / turquoise / violet | moyen | -- |
+| +8 / +9 | or / turquoise | **double** : trait moyen net + voile large | **pulsation** |
+| +10 | **prismatique** (la teinte tourne en 6 s) | double | pulsation |
+
+La **pulsation** n'est pas une respiration : une seule onde part des pieds et
+gagne la tete en 2,2 s (`UpgradeGlow.pulse`), chaque piece s'allume a son
+passage. C'est la vague de la lame, portee au corps.
+
+`item/UpgradeGlow` reste la table unique : le halo de la lame, ses particules
+et l'armure suivent la meme palette -- une lame +10 tourne aussi.
+
+### 35.4 La gravure (armure d'Arcencium seulement)
+
+Les **jointures des plaques**, relevees dans la texture de l'armure elle-meme
+(`tools/armor_engraving.py` : saut de luminance entre texels voisins, bord
+exterieur des pieces), en blanc sur fond transparent. `ArcenciumArmorLayer`
+les rend apres les fissures, emissives et translucides, dans la couleur du
+cran : faibles de +1 a +4, franches de +5 a +7, pleines et au passage de l'onde
+a partir de +8. Une amelioration ajoute ; la piece reste dessous.
+
+Les autres armures du modpack n'ont pas de gravure -- il faudrait un calque par
+texture -- et gardent le lisere seul.

@@ -40,6 +40,22 @@ public class ArcenciumArmorLayer extends RenderLayer<AbstractClientPlayer, Playe
     private static final int TICKS_PER_FRAME = 3;
 
     private static final ResourceLocation[][] CRACKS = new ResourceLocation[2][FRAMES];
+    /** La gravure : les jointures des plaques, blanches sur fond transparent (tools/armor_engraving.py). */
+    private static final ResourceLocation[] ENGRAVING = {
+            ResourceLocation.fromNamespaceAndPath(EmeraldWeaponsMod.MODID,
+                    "textures/models/armor/arcencium_engraving_1.png"),
+            ResourceLocation.fromNamespaceAndPath(EmeraldWeaponsMod.MODID,
+                    "textures/models/armor/arcencium_engraving_2.png")};
+
+    /** La place de chaque piece sur le corps, pour l'onde de la gravure. */
+    private static float heightOf(EquipmentSlot slot) {
+        return switch (slot) {
+            case FEET -> 0.0F;
+            case LEGS -> 0.3F;
+            case CHEST -> 0.65F;
+            default -> 1.0F;
+        };
+    }
 
     static {
         for (int layer = 1; layer <= 2; layer++) {
@@ -92,6 +108,39 @@ public class ArcenciumArmorLayer extends RenderLayer<AbstractClientPlayer, Playe
         ResourceLocation texture = CRACKS[inner ? 1 : 0][frame];
         VertexConsumer vc = buffer.getBuffer(RenderType.eyes(texture));
         model.renderToBuffer(pose, vc, 0xF000F0, OverlayTexture.NO_OVERLAY);
+        renderEngraving(pose, buffer, player, stack, slot, model, inner);
+    }
+
+    /**
+     * LA GRAVURE S'ALLUME AVEC LE CRAN.
+     *
+     * L'armure d'Arcencium est la notre : elle merite mieux qu'un contour.
+     * Ses jointures de plaques, relevees dans sa propre texture, s'eclairent
+     * de la couleur du cran -- faiblement en blanc de +1 a +4, franchement en
+     * couleur de +5 a +7, pleinement et au passage de l'onde a partir de +8.
+     * Une amelioration AJOUTE : les lignes sont posees sur la piece, la piece
+     * reste dessous.
+     */
+    private void renderEngraving(PoseStack pose, MultiBufferSource buffer, AbstractClientPlayer player,
+                                 ItemStack stack, EquipmentSlot slot,
+                                 HumanoidModel<AbstractClientPlayer> model, boolean inner) {
+        com.emerald.item.UpgradeGlow.Aura aura = com.emerald.item.UpgradeGlow.of(stack);
+        if (aura.intensity() <= 0.0F) {
+            return;
+        }
+        float time = player.tickCount + net.minecraft.client.Minecraft.getInstance()
+                .getTimer().getGameTimeDeltaPartialTick(true);
+        float[] tint = aura.tint(time);
+        float alpha = 0.30F + 0.65F * aura.intensity();
+        if (aura.large()) {
+            alpha = Math.min(1.0F, alpha * (0.7F + 0.6F
+                    * com.emerald.item.UpgradeGlow.pulse(heightOf(slot), time)));
+        }
+        int colour = net.minecraft.util.FastColor.ARGB32.color((int) (alpha * 255),
+                (int) (tint[0] * 255), (int) (tint[1] * 255), (int) (tint[2] * 255));
+        VertexConsumer vc = buffer.getBuffer(
+                RenderType.entityTranslucentEmissive(ENGRAVING[inner ? 1 : 0]));
+        model.renderToBuffer(pose, vc, 0xF000F0, OverlayTexture.NO_OVERLAY, colour);
     }
 
     /** Meme decoupage que HumanoidArmorLayer : chaque piece n'eclaire que ses parties. */

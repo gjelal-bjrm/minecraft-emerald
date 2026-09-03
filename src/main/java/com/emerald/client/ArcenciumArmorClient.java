@@ -44,6 +44,15 @@ public class ArcenciumArmorClient {
      * la silhouette, on voit ses flancs, hors du corps, contre le decor.
      */
     public static final ModelLayerLocation AURA_SHELL = new ModelLayerLocation(MODEL, "aura");
+    /**
+     * LES TROIS COQUES DU LISERE. L'armure exterieure est gonflee d'un ; le
+     * lisere ne montre que ce qui DEBORDE d'elle (voir ModRenderTypes.rim).
+     * Le debord est donc la difference : un tiers, deux tiers, un et demi
+     * -- un trait fin, un trait moyen, un voile large.
+     */
+    public static final ModelLayerLocation RIM_THIN = new ModelLayerLocation(MODEL, "rim_thin");
+    public static final ModelLayerLocation RIM_MID = new ModelLayerLocation(MODEL, "rim_mid");
+    public static final ModelLayerLocation RIM_WIDE = new ModelLayerLocation(MODEL, "rim_wide");
 
     @SubscribeEvent
     public static void onRegisterLayerDefinitions(EntityRenderersEvent.RegisterLayerDefinitions event) {
@@ -53,6 +62,12 @@ public class ArcenciumArmorClient {
                 HumanoidModel.createMesh(new CubeDeformation(0.65F), 0.0F), 64, 32));
         event.registerLayerDefinition(AURA_SHELL, () -> LayerDefinition.create(
                 HumanoidModel.createMesh(new CubeDeformation(1.75F), 0.0F), 64, 32));
+        event.registerLayerDefinition(RIM_THIN, () -> LayerDefinition.create(
+                HumanoidModel.createMesh(new CubeDeformation(1.35F), 0.0F), 64, 32));
+        event.registerLayerDefinition(RIM_MID, () -> LayerDefinition.create(
+                HumanoidModel.createMesh(new CubeDeformation(1.7F), 0.0F), 64, 32));
+        event.registerLayerDefinition(RIM_WIDE, () -> LayerDefinition.create(
+                HumanoidModel.createMesh(new CubeDeformation(2.5F), 0.0F), 64, 32));
     }
 
     @SubscribeEvent
@@ -61,8 +76,11 @@ public class ArcenciumArmorClient {
                 new HumanoidModel<>(event.getEntityModels().bakeLayer(GLOW_INNER));
         HumanoidModel<AbstractClientPlayer> outer =
                 new HumanoidModel<>(event.getEntityModels().bakeLayer(GLOW_OUTER));
-        HumanoidModel<AbstractClientPlayer> shell =
-                new HumanoidModel<>(event.getEntityModels().bakeLayer(AURA_SHELL));
+        @SuppressWarnings("unchecked")
+        HumanoidModel<AbstractClientPlayer>[] rims = new HumanoidModel[]{
+                new HumanoidModel<>(event.getEntityModels().bakeLayer(RIM_THIN)),
+                new HumanoidModel<>(event.getEntityModels().bakeLayer(RIM_MID)),
+                new HumanoidModel<>(event.getEntityModels().bakeLayer(RIM_WIDE))};
 
         for (var skin : event.getSkins()) {
             LivingEntityRenderer<AbstractClientPlayer, PlayerModel<AbstractClientPlayer>> renderer =
@@ -73,7 +91,7 @@ public class ArcenciumArmorClient {
                 // d'abord reutilise les maillages des fissures, poses sur la piece :
                 // en additif a cinquante-cinq pour cent, du blanc effacait l'armure
                 // entiere. Une amelioration ajoute, elle ne remplace pas.
-                renderer.addLayer(new UpgradeArmorLayer<>(renderer, shell));
+                renderer.addLayer(new UpgradeArmorLayer<>(renderer, rims));
                 renderer.addLayer(new UpgradeHandLayer<>(renderer));
                 // les ailes de specialisation, dans le dos
                 renderer.addLayer(new WingsLayer<>(renderer));

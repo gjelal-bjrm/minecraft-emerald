@@ -162,7 +162,7 @@ public final class UpgradeHaloRenderer {
             float alpha = base * aura.intensity() * breath;
 
             renderScaled(holder, stack, context, leftHand, pose,
-                    new GlowSource(buffer, aura, alpha), light, scale);
+                    new GlowSource(buffer, aura.tint(time), alpha), light, scale);
         }
     }
 
@@ -348,13 +348,13 @@ public final class UpgradeHaloRenderer {
      * l'objet restent valables puisqu'elles pointent dans ce meme atlas ; seule
      * la couleur est remplacee, au moment ou les faces sont ecrites.
      */
-    private record GlowSource(MultiBufferSource inner, UpgradeGlow.Aura aura, float alpha)
+    private record GlowSource(MultiBufferSource inner, float[] tint, float alpha)
             implements MultiBufferSource {
 
         @Override
         public VertexConsumer getBuffer(RenderType ignored) {
             return new Tinted(this.inner.getBuffer(
-                    RenderType.eyes(TextureAtlas.LOCATION_BLOCKS)), this.aura, this.alpha);
+                    RenderType.eyes(TextureAtlas.LOCATION_BLOCKS)), this.tint, this.alpha);
         }
     }
 
@@ -365,14 +365,14 @@ public final class UpgradeHaloRenderer {
      * avec une couleur : c'est la qu'on substitue la notre. Tout le reste est
      * delegue tel quel.
      */
-    private record Tinted(VertexConsumer inner, UpgradeGlow.Aura aura, float alpha)
+    private record Tinted(VertexConsumer inner, float[] tint, float alpha)
             implements VertexConsumer {
 
         @Override
         public void putBulkData(PoseStack.Pose pose, BakedQuad quad, float r, float g, float b,
                                 float a, int light, int overlay, boolean readAlpha) {
-            this.inner.putBulkData(pose, quad, this.aura.red(), this.aura.green(),
-                    this.aura.blue(), this.alpha, light, overlay, readAlpha);
+            this.inner.putBulkData(pose, quad, this.tint[0], this.tint[1],
+                    this.tint[2], this.alpha, light, overlay, readAlpha);
         }
 
         @Override
@@ -382,8 +382,8 @@ public final class UpgradeHaloRenderer {
 
         @Override
         public VertexConsumer setColor(int r, int g, int b, int a) {
-            return this.inner.setColor((int) (this.aura.red() * 255), (int) (this.aura.green() * 255),
-                    (int) (this.aura.blue() * 255), (int) (this.alpha * 255));
+            return this.inner.setColor((int) (this.tint[0] * 255), (int) (this.tint[1] * 255),
+                    (int) (this.tint[2] * 255), (int) (this.alpha * 255));
         }
 
         @Override
