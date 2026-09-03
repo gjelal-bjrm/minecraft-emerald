@@ -40,6 +40,11 @@ SHADERPACK = "ComplementaryUnbound_r5.5.1 + EuphoriaPatches_1.6.4"
 # `packmenu` porte le menu principal (fond, logo, boutons) : il voyage aussi.
 FOLDERS = ["config", "defaultconfigs", "kubejs", "resourcepacks", "datapacks", "packmenu"]
 FILES = ["options.txt"]
+# Mods d'ATM10 que le profil N'EMPORTE PAS. AllTheTweaks n'est que la marque
+# d'ATM : la ligne « All The Mods 10 » en bas du menu (chaine ecrite en dur,
+# aucune config), la presence Discord « joue a ATM10 », et les blocs de la
+# chaine de l'ATM Star, que le mode n'emploie pas. Rien n'en depend.
+SKIP_MODS = {"allthetweaks"}
 # Jamais : sauvegardes, journaux, caches, captures -- et le grenier de CurseForge.
 SKIP_DIRS = {"logs", "crash-reports", "saves", "screenshots", "backups", "local",
              "downloads", "debug", ".mixin.out"}
@@ -81,6 +86,8 @@ def collect(instance: Path, version: str, slim: bool, out_dir: Path):
     present = sorted(p.name for p in mods_dir.glob("*.jar"))
     files, loose = [], []
     for jar in present:
+        if any(jar.lower().startswith(skip) for skip in SKIP_MODS):
+            continue
         if jar in by_file:
             project, file_id = by_file[jar]
             files.append({"projectID": project, "fileID": file_id, "required": True})
