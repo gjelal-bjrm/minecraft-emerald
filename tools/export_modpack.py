@@ -37,7 +37,8 @@ AUTHOR = "Gjelal"
 # Le shader retenu au cahier (§27) ; les autres packs de l'instance ne suivent pas.
 SHADERPACK = "ComplementaryUnbound_r5.5.1 + EuphoriaPatches_1.6.4"
 # Ce qu'on recopie tel quel dans overrides/.
-FOLDERS = ["config", "defaultconfigs", "kubejs", "resourcepacks", "datapacks"]
+# `packmenu` porte le menu principal (fond, logo, boutons) : il voyage aussi.
+FOLDERS = ["config", "defaultconfigs", "kubejs", "resourcepacks", "datapacks", "packmenu"]
 FILES = ["options.txt"]
 # Jamais : sauvegardes, journaux, caches, captures -- et le grenier de CurseForge.
 SKIP_DIRS = {"logs", "crash-reports", "saves", "screenshots", "backups", "local",

@@ -2565,3 +2565,32 @@ du ramasse-miettes qui se voient quand on frappe. `build.gradle` fixe desormais
 
 Un serveur local n'y changerait rien : le serveur integre tourne deja sur son
 propre thread ; le probleme etait la memoire du client.
+
+### 13.3 Le menu principal *(refait)*
+
+Le profil importe affichait le menu d'ATM10 : « Modpack Background (Please
+Change Me) », « LOGO TEXT HERE Est. 2019 », un « Custom Button » et un bouton
+d'affiliation Akliz. Tout cela vit dans **`packmenu/resources`** de l'instance
+-- un pack de ressources ordinaire lu par le mod PackMenu :
+
+| Quoi | Ou |
+|---|---|
+| Le fond | `assets/packmenu/textures/gui/background.png` (1920x1080) |
+| Le logo | `assets/packmenu/textures/gui/logo.png` (300x300, dessine a 100x100) |
+| Les boutons | un JSON par bouton dans `assets/packmenu/buttons/` |
+| Leurs textes | `assets/packmenu/lang/en_us.json` |
+| Le titre, le panorama, la position du logo | `config/packmenu.cfg` |
+| **Le nom en bas a gauche** | ailleurs : `config/bcc-common.toml`, `modpackName` |
+
+Fait : fond = une vraie image du mode (le village et l'horizon sous Distant
+Horizons, recadree hors de l'interface) ; logo = l'embleme du mode (pyramide a
+degres, ancre prismatique, arc-en-ciel, `tools/pack/packmenu/`) ; les deux
+boutons de demonstration supprimes ; `modpackName = "Mode Arcencium"`,
+version 1.1.0. `tools/export_modpack.py` emporte desormais le dossier
+`packmenu`, donc le menu voyage avec le profil.
+
+**A refaire quand le jeu sera ferme** : le fond vient d'une capture 854x480
+recadree et agrandie. Une vraie prise en 1920x1080, interface cachee (F1),
+demande `overrideWidth`/`overrideHeight` dans `run/options.txt` et un client
+libre -- `shoot_menu.sh` (scratchpad) le fait, il refuse tant qu'une partie
+tourne.
