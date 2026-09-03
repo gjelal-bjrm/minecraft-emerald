@@ -1,0 +1,25 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "AAA",
+    "FMF",
+    "DDD"
+  ],
+  "key": {
+    "A": {
+      "item": "emeraldweapons:arcencium_ingot"
+    },
+    "F": {
+      "item": "emeraldweapons:arcencium_feather"
+    },
+    "M": {
+      "item": "minecraft:amethyst_block"
+    },
+    "D": {
+      "item": "minecraft:deepslate_bricks"
+    }
+  },
+  "result": {
+    "id": "emeraldweapons:specialization_altar"
+  }
+}

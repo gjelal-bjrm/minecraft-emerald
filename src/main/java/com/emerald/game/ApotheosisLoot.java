@@ -294,6 +294,17 @@ public final class ApotheosisLoot {
      * butin ordinaire ne rendrait presque rien, et le systeme resterait un
      * decor qu'on n'a jamais les moyens d'utiliser.
      */
+    /** La chance d'artefact par monstre, selon les ancres tenues (cahier 9.3). */
+    private static final int[] ARTIFACT_PCT = {4, 8, 14, 22};
+
+    /** Les meteos qui font tomber les artefacts : celles qui ne sont pas des faveurs. */
+    private static boolean aggressive(com.emerald.weather.Weather weather) {
+        return switch (weather) {
+            case NUIT, METEORES, DECHIRURE, ORAGE -> true;
+            default -> false;
+        };
+    }
+
     @SubscribeEvent
     public static void onDrops(LivingDropsEvent event) {
         Entity entity = event.getEntity();
@@ -337,6 +348,39 @@ public final class ApotheosisLoot {
             }
         }
 
+        // LES ARTEFACTS, DES MONSTRES. La table de la section 9.3 n'avait jamais
+        // ete ecrite : les artefacts ne sortaient que des coffres de sanctuaire.
+        // Sous une meteo agressive et a ciel ouvert -- la regle du cahier --
+        // tout monstre en lache un avec une chance qui monte avec les ancres
+        // tenues (4, 8, 14, 22 %), doublee pour les puissants. Les accessoires
+        // du modpack (Artifacts, Relics) suivent, avec la meme chance.
+        boolean openSky = level.canSeeSky(entity.blockPosition().above());
+        boolean rough = aggressive(com.emerald.weather.WeatherManager.current());
+        if ((storm || tide || (rough && openSky))
+                && event.getSource().getEntity() instanceof net.minecraft.world.entity.player.Player
+                && entity instanceof net.minecraft.world.entity.Mob
+                && !(entity instanceof net.minecraft.world.entity.npc.AbstractVillager)
+                && !(entity instanceof net.minecraft.world.entity.animal.Animal)) {
+            int anchors = Math.min(3, GameState.get(level).anchorsActive());
+            int pct = ARTIFACT_PCT[anchors];
+            if (entity instanceof net.minecraft.world.entity.LivingEntity living && living.getMaxHealth() >= 150.0F) {
+                pct *= 2;
+            }
+            if (level.random.nextInt(100) < pct) {
+                com.emerald.artifact.Artifact[] all = com.emerald.artifact.Artifact.values();
+                event.getDrops().add(new net.minecraft.world.entity.item.ItemEntity(
+                        level, entity.getX(), entity.getY() + 0.5, entity.getZ(),
+                        com.emerald.artifact.ArtifactItem.stack(all[level.random.nextInt(all.length)],
+                                com.emerald.item.ModItems.ARTIFACT.get())));
+            }
+            if (level.random.nextInt(100) < pct) {
+                ItemStack accessory = com.emerald.compat.ModAccessories.random(level.random);
+                if (accessory != null) {
+                    event.getDrops().add(new net.minecraft.world.entity.item.ItemEntity(
+                            level, entity.getX(), entity.getY() + 0.5, entity.getZ(), accessory));
+                }
+            }
+        }
         if (!storm && !tide) {
             return;
         }

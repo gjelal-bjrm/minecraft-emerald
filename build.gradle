@@ -43,6 +43,18 @@ neoForge {
     // Default run configurations.
     // These can be tweaked, removed, or duplicated as needed.
     runs {
+        // LE TAS DU CLIENT DE DEV EST FIXE A 16 GO.
+        //
+        // Sans -Xmx, la JVM prend le quart de la machine : 32 Go ici. Un tas
+        // enorme n'accelere rien, mais chaque passage du ramasse-miettes le
+        // parcourt en entier, et ces pauses se voient comme des saccades au
+        // combat. Memes reglages que l'instance CurseForge du joueur.
+        configureEach {
+            jvmArguments.addAll('-Xms8G', '-Xmx16G', '-XX:+UseG1GC', '-XX:MaxGCPauseMillis=40',
+                    '-XX:+UnlockExperimentalVMOptions', '-XX:G1NewSizePercent=20',
+                    '-XX:G1ReservePercent=20', '-XX:G1HeapRegionSize=32M')
+        }
+
         client {
             client()
 

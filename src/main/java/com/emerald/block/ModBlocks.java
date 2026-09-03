@@ -71,6 +71,12 @@ public class ModBlocks {
             () -> new SocketBenchBlock(BlockBehaviour.Properties.of()
                     .strength(2.5F).sound(SoundType.WOOD)));
 
+    /** Autel de Specialisation : les vingt paliers du personnage, montres en entier. */
+    public static final DeferredBlock<SpecializationAltarBlock> SPECIALIZATION_ALTAR =
+            registerBlock("specialization_altar", () -> new SpecializationAltarBlock(
+                    BlockBehaviour.Properties.of().strength(4.0F, 6.0F).requiresCorrectToolForDrops()
+                            .sound(SoundType.AMETHYST).lightLevel(s -> 9)));
+
     /** Forge d'Arcencium : l'amelioration +1 a +10, montree en entier. Voir ArcenciumForgeBlock. */
     public static final DeferredBlock<ArcenciumForgeBlock> ARCENCIUM_FORGE = registerBlock("arcencium_forge",
             () -> new ArcenciumForgeBlock(BlockBehaviour.Properties.of()

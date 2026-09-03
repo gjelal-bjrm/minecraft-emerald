@@ -2484,3 +2484,84 @@ fraction -- mais allonge les pauses du ramasse-miettes, qui se voient comme des
 saccades. Ramene a **16 Go** (`minecraftinstance.json`, `allocatedMemory`
 60000 → 16384 ; l'ancien fichier est garde en `.bak-60go`). A faire **CurseForge
 ferme**, sinon l'application reecrit le fichier en quittant.
+
+## 33. Le deuxieme retour du joueur *(3 sept. 2026)*
+
+### 33.1 Le profil importe plantait : c'etait nous
+
+`Mod 'architectury' is not available!` en tete du rapport -- un leurre. Plus
+haut dans le journal : **`Failed to register class ArcenciumBowClient with
+@EventBusSubscriber`** : la classe ecoute `FMLClientSetupEvent`, un evenement
+du **bus de mod**, sans `bus = Bus.MOD`. NeoForge **21.1.193** (le dev) devine le
+bus tout seul ; **21.1.174** (celui de CurseForge et de l'instance CUSTOM)
+refuse, notre mod ne se construit pas, et le premier mod qui parle a
+Architectury tombe sur un chargement casse. Corrige d'un mot ; les neuf autres
+abonnes au bus de mod l'ecrivaient deja.
+
+**La lecon** : le dev tourne sur un NeoForge plus recent que le pack. Un
+plantage qui n'apparait QUE dans l'instance CurseForge vient de la, avant
+toute autre hypothese.
+
+### 33.2 « Le jeu est en anglais »
+
+Le joueur joue en **fr_ch**. Minecraft ne retombe pas sur `fr_fr` pour une
+autre variante du francais : il retombe sur l'anglais. `fr_ch.json` et
+`fr_ca.json` sont des copies de `fr_fr.json`, et soixante-dix cles qui etaient
+restees en anglais dans `fr_fr` (les blocs, quelques raretes) sont traduites.
+
+### 33.3 La fete (`util/Celebration`)
+
+Une reussite ne disait rien : une ligne grise et un son d'enclume. Maintenant,
+partout la meme chose -- **titre plein ecran** dans la couleur de l'evenement,
+gerbe de particules autour du joueur, deux sons, et un **feu d'artifice** pour
+les grandes marches : +8 et au-dela a la forge et a l'etabli, rang 5 et plus
+pour la rarete, paliers ronds (+5, +10, +15, +20) pour la specialisation.
+
+### 33.4 L'Autel de Specialisation
+
+Le pendant de la Forge pour le personnage : bloc `specialization_altar`
+(forge teintee violet, cristal pale au centre), menu sans case -- les plumes
+restent dans le sac -- et bouton **Tenter** qui appelle `Specialization.tryUpgrade`,
+la meme routine que la plume en clic droit : une regle, deux portes. L'ecran
+montre les **vingt paliers en deux colonnes** (plumes portees / requises,
+chance), le prochain surligne. Recette : Arcencium, plumes autour d'un bloc
+d'amethyste, deepslate. `/arcencium autel` pour l'essai.
+
+**L'economie**, comme le joueur l'a voulu : « facile parce qu'on en ramasse
+beaucoup, pas parce qu'il en faut peu ». Couts ×2,5 (296 plumes de +0 a +20 a
+100 %) ; drops de 6 %+22 %·pv/200 a **25 %+40 %·pv/200**, 1 a 3 plumes sur les
+puissants. Mesure : ~70 plumes attendues pour +10, ~190 pour +15, ~650 pour +20,
+et une partie en rapporte 150 a 180. Le +20 se gagne sur plusieurs parties. La
+Pierre de Forge passe de 12 a 20 %, 1 a 3.
+
+### 33.5 Les artefacts, enfin
+
+- **Les notres tombent des monstres** : la table de la section 9.3 n'avait
+  jamais ete ecrite. Sous meteo agressive et a ciel ouvert, 4 / 8 / 14 / 22 %
+  selon les ancres tenues, double pour les puissants ; les monstres de tempete
+  et de Maree y ont droit sans condition. En coffre, le lot « vide » passe de
+  96 a 40 : 44 % d'artefact par coffre au lieu de 25.
+- **Ceux du modpack** (`compat/ModAccessories`) : Artifacts (49) et Relics (30)
+  tires dans le registre par espace de noms, meme chance. Aucune classe des
+  deux mods n'est citee.
+- **Les reliques arrivent etudiees** (`compat/RelicResearch`) : Relics
+  verrouille chaque capacite derriere une enigme d'etoiles a relier. Par
+  reflexion sur `IRelicItem.setAbilityResearched`, tout ce que le joueur porte
+  est marque etudie une fois par seconde, d'ou que cela vienne.
+
+### 33.6 Les reperes colles au village
+
+`random_spread` ne connait pas le village. Une **zone d'exclusion** de 12
+chunks autour de `arcencium_villages` sur les deux ensembles : la cathedrale et
+la citadelle se trouvent, mais a une marche.
+
+### 33.7 Les lags au combat
+
+Le journal de sa session ne montre que deux arrets, a la mise en place. Le reste
+est cote client, et le client de dev tournait avec le **tas par defaut : 32 Go**
+(le quart de la machine), le meme mal que l'instance a 60 Go : de longues pauses
+du ramasse-miettes qui se voient quand on frappe. `build.gradle` fixe desormais
+**8 a 16 Go** avec G1 regle court pour toutes les configurations de lancement.
+
+Un serveur local n'y changerait rien : le serveur integre tourne deja sur son
+propre thread ; le probleme etait la memoire du client.

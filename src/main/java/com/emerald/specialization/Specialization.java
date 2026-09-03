@@ -46,7 +46,14 @@ public final class Specialization {
     public static final int WINGS_FULL = 15;
 
     /** Plumes qu'il faut pour tenter le palier vise (indice = palier vise). */
-    public static final int[] COST = {0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 10, 12, 14, 16, 18};
+    /**
+     * Le cout en plumes, PALIER PAR PALIER : 296 plumes de +0 a +20 si tout
+     * reussissait. Avec les chances, il en faut environ 70 pour +10, 190 pour
+     * +15 et 650 pour +20 -- et une partie en rapporte 150 a 180. Le joueur
+     * l'a demande ainsi : facile parce qu'on en ramasse beaucoup, pas parce
+     * qu'il en faut peu. Le +20 se gagne sur plusieurs parties, et il se garde.
+     */
+    public static final int[] COST = {0, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 12, 14, 16, 18, 20};
     /** Chance de reussite du palier vise, en pour cent. */
     public static final int[] ODDS = {0, 100, 95, 90, 85, 80, 75, 70, 65, 60, 55, 50, 45, 40, 35, 30, 25, 22, 19, 16, 13};
 
@@ -145,6 +152,7 @@ public final class Specialization {
                     SoundSource.PLAYERS, 1.0F, 1.1F);
             player.level().playSound(null, player.blockPosition(), SoundEvents.AMETHYST_BLOCK_CHIME,
                     SoundSource.PLAYERS, 1.2F, 0.8F);
+            com.emerald.util.Celebration.specialization(player, target, points);
             return Attempt.SUCCESS;
         }
         entry.failures++;

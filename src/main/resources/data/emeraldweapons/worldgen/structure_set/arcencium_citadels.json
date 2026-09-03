@@ -9,6 +9,10 @@
     "type": "minecraft:random_spread",
     "spacing": 28,
     "separation": 11,
-    "salt": 402318877
+    "salt": 402318877,
+    "exclusion_zone": {
+      "other_set": "emeraldweapons:arcencium_villages",
+      "chunk_count": 12
+    }
   }
 }

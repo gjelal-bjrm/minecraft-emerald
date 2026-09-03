@@ -89,6 +89,7 @@ public class ModCreativeModeTabs {
                         output.accept(ModBlocks.ARCENCIUM_CHEST);
                         output.accept(ModBlocks.SOCKET_BENCH);
                         output.accept(ModBlocks.ARCENCIUM_FORGE);
+                        output.accept(ModBlocks.SPECIALIZATION_ALTAR);
                         // toute la palette du village, dans l'ordre de declaration
                         for (var block : ModBlocks.VILLAGE_BLOCKS) {
                             output.accept(block.get());

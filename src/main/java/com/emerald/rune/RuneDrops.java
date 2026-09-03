@@ -30,7 +30,7 @@ import net.neoforged.neoforge.event.entity.living.LivingDropsEvent;
 public final class RuneDrops {
 
     /** Chance qu'une creature laisse une Pierre de Forge. */
-    private static final double STONE_CHANCE = 0.12;
+    private static final double STONE_CHANCE = 0.20;
 
     /** Chance qu'une creature laisse un cristal de son element. */
     private static final double STONE_DROP_CHANCE = 0.22;
@@ -72,12 +72,12 @@ public final class RuneDrops {
         // LA PLUME D'ARCENCIUM : le materiau de la specialisation, qui survit
         // a la partie -- donc rare sur le menu fretin, presque sure sur un
         // puissant. Elle se tire AVANT la porte des runes : c'est un butin a part.
-        double featherChance = 0.06 + 0.22 * Math.min(1.0, health / 200.0);
+        double featherChance = 0.25 + 0.40 * Math.min(1.0, health / 200.0);
         if (random.nextDouble() < featherChance) {
             event.getDrops().add(new net.minecraft.world.entity.item.ItemEntity(
                     victim.level(), victim.getX(), victim.getY(), victim.getZ(),
                     new ItemStack(com.emerald.item.ModItems.ARCENCIUM_FEATHER.get(),
-                            health >= 150.0 ? 1 + random.nextInt(2) : 1)));
+                            health >= 150.0 ? 1 + random.nextInt(3) : 1)));
         }
         // LA PLUME D'APPARENCE : sur les puissants seulement, selon leur element
         // et la meteo du moment (voir SkinFeatherItem.pickDrop). Jamais le Rubis.
@@ -122,7 +122,7 @@ public final class RuneDrops {
             event.getDrops().add(new net.minecraft.world.entity.item.ItemEntity(
                     victim.level(), victim.getX(), victim.getY(), victim.getZ(),
                     new ItemStack(com.emerald.item.ModItems.FORGE_STONE.get(),
-                            1 + random.nextInt(2))));
+                            1 + random.nextInt(3))));
         }
 
         RuneFamily[] families = RuneFamily.values();

@@ -136,6 +136,10 @@ public class SocketBenchMenu extends AbstractContainerMenu {
                                     : net.minecraft.sounds.SoundEvents.PLAYER_LEVELUP,
                             net.minecraft.sounds.SoundSource.PLAYERS, 0.8F,
                             0.7F + after.rank() * 0.08F);
+                    if (after != before) {
+                        com.emerald.util.Celebration.rarity(player, after.label(),
+                                after.colour(), after.rank());
+                    }
                 }
                 if (fee.is(com.emerald.item.ModItems.FORGE_STONE.get())) {
                     // ON PAIE D'ABORD, ON TIRE ENSUITE. Un tirage qui se
@@ -164,6 +168,9 @@ public class SocketBenchMenu extends AbstractContainerMenu {
                                         : net.minecraft.sounds.SoundEvents.ANVIL_LAND,
                                 net.minecraft.sounds.SoundSource.PLAYERS, 0.9F,
                                 won ? 0.9F + after * 0.06F : 0.6F);
+                        if (won) {
+                            com.emerald.util.Celebration.upgrade(player, after);
+                        }
                     }
                 }
                 com.emerald.rune.RuneMark graved =

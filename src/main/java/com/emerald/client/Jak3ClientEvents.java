@@ -19,6 +19,7 @@ public class Jak3ClientEvents {
     public static void registerScreens(net.neoforged.neoforge.client.event.RegisterMenuScreensEvent event) {
         event.register(com.emerald.menu.ModMenus.SOCKET_BENCH.get(), SocketBenchScreen::new);
         event.register(com.emerald.menu.ModMenus.ARCENCIUM_FORGE.get(), ArcenciumForgeScreen::new);
+        event.register(com.emerald.menu.ModMenus.SPECIALIZATION_ALTAR.get(), SpecializationAltarScreen::new);
     }
 
     @SubscribeEvent

@@ -111,6 +111,19 @@ public class GameCommands {
                                 com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "boss"))));
         root.then(finaleNode);
 
+        // -------------------------------------------------------------- autel
+        // pour l'essai : ouvre l'Autel de Specialisation sans avoir a poser le bloc
+        root.then(Commands.literal("autel").executes(ctx -> {
+            if (ctx.getSource().getEntity() instanceof net.minecraft.server.level.ServerPlayer player) {
+                player.openMenu(new net.minecraft.world.SimpleMenuProvider((id, inventory, p) ->
+                        new com.emerald.menu.SpecializationAltarMenu(id, inventory,
+                                net.minecraft.world.inventory.ContainerLevelAccess.NULL),
+                        com.emerald.block.SpecializationAltarBlock.TITLE));
+                return 1;
+            }
+            return 0;
+        }));
+
         // -------------------------------------------------------------- forge
         // pour l'essai : ouvre la Forge d'Arcencium sans avoir a poser le bloc
         root.then(Commands.literal("forge").executes(ctx -> {

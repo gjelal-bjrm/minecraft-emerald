@@ -163,6 +163,9 @@ public class ArcenciumForgeMenu extends AbstractContainerMenu {
         Upgrade.set(gear, after);
         this.input.setItem(SLOT_GEAR, gear);            // le nom a change : on le re-annonce
         boolean won = after > before;
+        if (won) {
+            com.emerald.util.Celebration.upgrade(player, after);
+        }
         this.data.set(DATA_RESULT, won ? RESULT_WON : RESULT_KEPT);
         this.data.set(DATA_LEVEL, after);
         player.displayClientMessage(Component.translatable(

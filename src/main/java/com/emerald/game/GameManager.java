@@ -882,19 +882,20 @@ public class GameManager {
 
     /** Titre qui reste a l'ecran le temps voulu : les fins de partie se lisent, elles ne clignotent pas. */
     public static void announce(ServerLevel level, String title, String subtitle, int color, int stay) {
-        for (ServerPlayer player : level.players()) {
-            player.connection.send(new ClientboundSetTitlesAnimationPacket(10, stay, 20));
-        }
-        announce(level, title, subtitle, color);
-        for (ServerPlayer player : level.players()) {
-            // le vanilla garde ses durees pour les titres suivants
-            player.connection.send(new ClientboundSetTitlesAnimationPacket(10, 70, 20));
-        }
+        announce(level,
+                Component.translatable(title).withStyle(style -> style.withColor(color)),
+                Component.translatable(subtitle).withStyle(ChatFormatting.GRAY), stay);
     }
 
     /** Variante a composants deja construits, pour les titres parametres (meteo). */
     public static void announce(ServerLevel level, Component top, Component bottom) {
+        announce(level, top, bottom, 70);
+    }
+
+    /** Les durees se fixent AVANT le titre ; les remettre apres ecrasait celles qu'on venait de choisir. */
+    public static void announce(ServerLevel level, Component top, Component bottom, int stay) {
         for (ServerPlayer player : level.players()) {
+            player.connection.send(new ClientboundSetTitlesAnimationPacket(10, stay, 20));
             player.connection.send(new ClientboundSetTitleTextPacket(top));
             player.connection.send(new ClientboundSetSubtitleTextPacket(bottom));
             player.playNotifySound(SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.MASTER, 0.8F, 1.2F);

@@ -48,6 +48,8 @@ public class ModBlockTagProvider extends BlockTagsProvider {
         // remonter chercher autre chose. La rarete du minerai suffit a le
         // rendre precieux ; sa pioche n'a pas a s'y ajouter.
         tag(BlockTags.NEEDS_IRON_TOOL).add(ModBlocks.ARCENCIUM_FORGE.get());
+        tag(BlockTags.MINEABLE_WITH_PICKAXE).add(ModBlocks.SPECIALIZATION_ALTAR.get());
+        tag(BlockTags.NEEDS_IRON_TOOL).add(ModBlocks.SPECIALIZATION_ALTAR.get());
         tag(BlockTags.MINEABLE_WITH_SHOVEL).add(ModBlocks.PRISMATIC_GRASS_BLOCK.get());
         tag(BlockTags.MINEABLE_WITH_HOE).add(ModBlocks.PRISM_LEAVES.get());
         for (DeferredBlock<? extends Block> holder : ModBlocks.VILLAGE_BLOCKS) {

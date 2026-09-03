@@ -21,6 +21,10 @@ public class ModMenus {
             MENUS.register("arcencium_forge", () -> new MenuType<>(
                     ArcenciumForgeMenu::new, FeatureFlags.DEFAULT_FLAGS));
 
+    public static final DeferredHolder<MenuType<?>, MenuType<SpecializationAltarMenu>> SPECIALIZATION_ALTAR =
+            MENUS.register("specialization_altar", () -> new MenuType<>(
+                    SpecializationAltarMenu::new, FeatureFlags.DEFAULT_FLAGS));
+
     public static void register(IEventBus eventBus) {
         MENUS.register(eventBus);
     }

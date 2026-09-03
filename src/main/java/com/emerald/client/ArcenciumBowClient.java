@@ -17,7 +17,7 @@ import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
  * et non sur les 20 ticks vanilla : c'est lui qui selectionne les 5
  * textures de tension (une par cristal) via les overrides du modele.
  */
-@EventBusSubscriber(modid = EmeraldWeaponsMod.MODID, value = Dist.CLIENT)
+@EventBusSubscriber(modid = EmeraldWeaponsMod.MODID, value = Dist.CLIENT, bus = EventBusSubscriber.Bus.MOD)
 public class ArcenciumBowClient {
 
     @SubscribeEvent
