@@ -2754,9 +2754,16 @@ NosTale est un sprite 2D ; un maillage gonfle n'en est pas la traduction.
 On ne dessine que le **contour**. La coque est rendue en ne gardant que ses
 **faces arriere** : elles sont de l'autre cote du corps, le test de profondeur
 les cache partout ou le corps est devant, et il n'en survit qu'un trait au bord
-de la silhouette, large comme le debord de la coque. Aucun shader : on inverse
-le sens d'elimination dans le creneau de superposition du type de rendu
-(`glCullFace(GL_FRONT)`), et on le remet en sortant.
+de la silhouette, large comme le debord de la coque. Aucun shader.
+
+**Premiere tentative, ratee** : inverser l'elimination dans l'etat GL
+(`glCullFace(GL_FRONT)` dans le creneau de superposition du type de rendu). En
+jeu la coque s'est dessinee PLEINE : l'ordre n'a pas survecu au pipeline --
+Sodium et Iris tiennent l'etat de rendu a leur compte. **Ce qui marche** : ne
+pas toucher au pilote et retourner les faces elles-memes. `ModRenderTypes.flipped`
+enveloppe le tampon et rejoue les quatre sommets de chaque quad a l'envers ;
+une face avant retournee est une face arriere, et l'elimination ordinaire fait
+le reste, quel que soit le moteur.
 
 Trois coques, pour trois epaisseurs (debord sur l'armure exterieure gonflee
 d'un) : fine 1,35, moyenne 1,7, large 2,5. Translucide et non additif : le

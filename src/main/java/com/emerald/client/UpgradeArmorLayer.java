@@ -103,8 +103,11 @@ public class UpgradeArmorLayer<T extends LivingEntity, M extends HumanoidModel<T
         setPartVisibility(model, slot);
         int colour = FastColor.ARGB32.color((int) (Math.min(1.0F, alpha) * 255),
                 (int) (tint[0] * 255), (int) (tint[1] * 255), (int) (tint[2] * 255));
-        VertexConsumer vc = buffer.getBuffer(ModRenderTypes.rim(SHELL));
+        // les faces retournees : seules les faces arriere de la coque survivent,
+        // et il n'en reste qu'un trait au bord de la silhouette
+        VertexConsumer vc = ModRenderTypes.flipped(buffer.getBuffer(ModRenderTypes.rim(SHELL)));
         model.renderToBuffer(pose, vc, 0xF000F0, OverlayTexture.NO_OVERLAY, colour);
+        ModRenderTypes.finish(vc);
     }
 
     /** Meme decoupage que HumanoidArmorLayer : chaque piece n'eclaire que ses parties. */
