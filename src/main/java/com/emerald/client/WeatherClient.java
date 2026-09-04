@@ -174,13 +174,25 @@ public final class WeatherClient {
                 || event.getCamera().getFluidInCamera() != FogType.NONE) {
             return;
         }
+        // NOTRE BROUILLARD ETOUFFAIT DISTANT HORIZONS.
+        //
+        // Mesure : DH affiche 4 096 blocs, et l'on coupait a 56-210 -- deux a
+        // sept pour cent de ce qu'il sait montrer. Le joueur voyait « pas si
+        // loin que ca malgre Distant Horizons », et il avait raison : ce
+        // n'etait pas DH, c'etait nous.
+        //
+        // Une seule meteo est VRAIMENT un brouillard, et c'est son nom qui le
+        // dit : la Brume Prismatique. Elle garde sa vue courte, c'est tout son
+        // propos. Les autres teintent le ciel et assombrissent -- elles n'ont
+        // aucune raison de fermer l'horizon, et leurs distances passent donc a
+        // l'echelle du terrain lointain.
         float far = switch (current()) {
-            case BRUME -> 56.0F;
-            case AURORE -> 210.0F;        // a peine une brume : on voit loin
-            case NUIT -> 96.0F;
-            case ORAGE -> 84.0F;
-            case DECHIRURE -> 140.0F;
-            case METEORES -> 180.0F;       // une brume de cendre, legere
+            case BRUME -> 72.0F;           // le vrai brouillard : on ne voit rien, c'est voulu
+            case ORAGE -> 420.0F;
+            case NUIT -> 520.0F;           // il fait NOIR, il n'y a pas de brouillard
+            case DECHIRURE -> 620.0F;
+            case METEORES -> 780.0F;       // une brume de cendre, legere
+            case AURORE -> 1400.0F;        // a peine une brume : on voit loin
             default -> -1.0F;
         };
         if (far < 0.0F) {

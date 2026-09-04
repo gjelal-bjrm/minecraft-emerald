@@ -2952,3 +2952,61 @@ Les trois derniers crans valent toujours a eux seuls plus que les sept premiers
 reunis (240 contre 139) : c'est bien a partir du +8 qu'on gagne gros. Et
 l'equipement vanilla, plafonne a +7, s'arrete a +39 % -- l'ecart avec les armes
 du mode se creuse au bon endroit.
+
+## 38. Voir loin : ce qui etouffait Distant Horizons *(4 sept. 2026)*
+
+« Dans certaines videos on voit vraiment tres loin, et dans mon mode pas tant
+que ca. » Trois causes, mesurees -- et **deux ne venaient pas de DH**.
+
+### 38.1 Notre propre brouillard (la cause principale)
+
+`WeatherClient.onRenderFog` fixait le plan lointain a **56 a 210 blocs** selon
+la meteo. DH en affiche **4 096**. On coupait donc a **2 a 7 %** de ce qu'il
+sait montrer -- et comme une meteo du mode tourne presque en permanence apres
+l'Exploration, on ne voyait quasiment jamais loin. Ce n'etait pas DH, c'etait
+nous.
+
+Une seule meteo est vraiment un brouillard, et son nom le dit : la **Brume
+Prismatique** (72 blocs, c'est tout son propos). Les autres teintent le ciel et
+assombrissent ; elles n'ont aucune raison de fermer l'horizon :
+
+| Meteo | Avant | Maintenant |
+|---|---|---|
+| Brume Prismatique | 56 | **72** *(c'est un brouillard)* |
+| Orage Prismatique | 84 | **420** |
+| Nuit d'Arcencium | 96 | **520** *(il fait noir, ce n'est pas du brouillard)* |
+| Dechirure | 140 | **620** |
+| Meteores | 180 | **780** |
+| Aurore | 210 | **1 400** |
+
+### 38.2 Le brouillard propre a DH
+
+`farFogStart` valait **0,4** : DH commencait a voiler des 40 % de sa portee,
+en exponentiel carre a densite 2,5. La moitie lointaine s'effacait toute
+seule. Et le brouillard de HAUTEUR, a densite **20** sous y=80, effacait les
+plaines basses -- exactement les « structures mal chargees au loin ».
+
+Profil pose (`tools/dh_profile.py`, applique aux trois configurations) :
+`farFogStart` 0,75 · `farFogDensity` 1,0 · `heightFogDensity` 3,0 ·
+`heightFogEnd` 0,9.
+
+### 38.3 La generation etait bridee -- par moi
+
+Quatre fils a 35 % du temps : reglage pris le soir ou l'on cherchait la cause
+des lags. **Cette cause etait le tas de 32 Go**, corrige depuis (§33.7). Le
+brida est donc reste sans raison, et le relief lointain mettait un temps fou a
+se construire.
+
+Sur un Ryzen 5800X (seize fils) : **8 fils a 70 %**, limite de requetes 20 →
+50, portee 192 → **256 chunks (4 096 blocs)**, qualite verticale et horizontale
+en EXTREME.
+
+### 38.4 Ce que le profil ne peut pas faire
+
+DH **n'affiche que ce qu'il a deja genere**. Un monde neuf montre peu, quel que
+soit le reglage ; les videos ou l'on voit a perte de vue sont tournees sur des
+mondes ou DH a tourne des heures, ou pre-generes. Deux remedes possibles, si le
+rendu ne suffit toujours pas :
+
+- laisser une partie tourner une fois : la generation continue en fond ;
+- pre-generer avec Chunky autour du village avant de jouer.
