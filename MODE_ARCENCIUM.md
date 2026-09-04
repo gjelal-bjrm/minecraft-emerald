@@ -3428,3 +3428,85 @@ ou l'Aurore tombe. On donnait une clef a qui possedait deja la serrure.
 La veine d'Arcencium qu'on voit briller a quarante blocs devient atteignable
 dans la meme fenetre : la meteo ne montre plus une porte fermee, elle donne la
 clef et la porte.
+
+---
+
+## 43. Le gel de fin de siege *(4 sept. 2026)*
+
+### 43.1 La mesure
+
+Journal du joueur, instance « Mode Arcencium », 4 septembre :
+
+```
+18:54:11  Can't keep up! Running 3506ms or 70 ticks behind
+18:56:25  Can't keep up! Running 6996ms or 139 ticks behind
+18:56:45  Can't keep up! Running 5800ms or 116 ticks behind
+18:58:12  Can't keep up! Running 7104ms or 142 ticks behind
+```
+
+Quatre gels de 3,5 a 7,1 secondes, tous juste apres la defense du village --
+« je ne peux ni manger ni rien faire, je ne peux meme pas ouvrir l'inventaire ».
+Ce sont les TROIS SANCTUAIRES. Le fil serveur est unique : tant qu'il batit, il
+ne repond plus, et le client attend ses reponses (l'inventaire est une requete
+serveur ; manger aussi).
+
+**Pourquoi c'est si lourd**, en arithmetique et non en intuition : l'emprise
+deblayee fait `2*(HALF + TOWER_RADIUS) + 1 = 211` colonnes de cote, soit
+**44 521 colonnes**, chacune lue sur une cinquantaine de blocs vers le haut et
+treize vers le bas -- plus de **deux millions de lectures**, avant la moindre
+pose.
+
+### 43.2 Le chantier s'etale
+
+`Sanctuary.Job` : le corps de `build()` devient une **file d'etapes**, consommee
+sur un **budget de douze millisecondes par tique** (sur les cinquante d'une
+tique serveur), un seul chantier a la fois. Le deblaiement est coupe en bandes
+de deux colonnes -- cent six etapes a lui seul.
+
+**L'ordre est intouche.** Il porte des annees de corrections : la cour avant la
+pyramide, le couloir avant l'ascension, le calque avant-dernier, la garnison en
+dernier quand plus un bloc ne bouge. Seul le MOMENT change. `build()` existe
+toujours et vide la file d'un coup : c'est la voie des commandes et des essais.
+
+Les trois sanctuaires mettent alors une minute ou deux a se dresser, a 450
+blocs de la, pendant qu'on s'equipe au village. Personne ne les regarde monter.
+
+**Et l'on mesure desormais** : chaque chantier ecrit dans le journal son temps
+total de fil serveur ET **sa pire etape**. Si une etape unique -- une tour, la
+pyramide -- depasse encore la tique, le chiffre le dira et on la coupera a son
+tour. C'est ce qui manquait pour trancher sans deviner.
+
+### 43.3 Un coffre rase ne doit pas vomir son contenu
+
+Dans le meme journal, dix fois :
+
+```
+Failed to create block entity minecraft:barrel ... got Block{minecraft:air}
+    at BarrelBlock.onRemove -> Containers.dropContentsOnDestroy
+    at Sanctuary.set -> Sanctuary.clearSite
+```
+
+Le deblaiement passe sur des villages et des structures. Chaque coffre et
+chaque tonneau appelait son `onRemove`, qui **fait tomber tout son inventaire
+au sol** : des centaines d'entites-objets a nourrir, et une entite de bloc
+recreee sur de l'air. On retire l'entite de bloc AVANT de poser l'air : plus
+rien a laisser tomber, plus rien a recreer.
+
+### 43.4 Un serveur dedie n'aurait rien change a CE gel
+
+La question s'est posee -- Docker, beaucoup de RAM. La machine a **128 Go et un
+Ryzen 7 5800X** : la RAM n'a jamais ete la contrainte, et un gel de tique ne
+s'achete pas en giga-octets. Le travail est **mono-fil** ; un serveur dedie
+l'aurait fait exactement au meme rythme, en deconnectant le client au lieu de
+le figer.
+
+Ce qu'un serveur dedie apporte reellement : deux JVM au lieu d'une, donc les
+pauses de ramasse-miettes du client ne s'ajoutent plus a celles du serveur, et
+l'on peut regler les deux separement. C'est un gain sur le lag DE FOND, pas sur
+les pics de generation. A garder pour quand les pics auront disparu.
+
+En attendant, un reglage concret : le client tourne en `-Xms256m -Xmx16384m`.
+Un tas qui part de 256 Mo pour monter a 16 Go se redimensionne sans arret. Un
+tas FIXE de 10 a 12 Go (`-Xms10240m -Xmx10240m`) supprime ces redimensionnements
+-- et au-dela de 12 Go, les pauses de ramasse-miettes s'allongent au lieu de
+raccourcir.

@@ -178,151 +178,209 @@ public final class Sanctuary {
      * @param tier 1 a 3 : la difficulte de l'ancre, donc la richesse du butin
      * @return la position de l'ancre
      */
+    /**
+     * UN SANCTUAIRE NE SE BATIT PLUS D'UN SEUL COUP.
+     *
+     * Mesure du 4 septembre, journal du joueur : quatre gels de 3,5 a 7,1
+     * secondes juste apres la defense du village -- « je ne peux ni manger ni
+     * rien faire, je ne peux meme pas ouvrir l'inventaire ». C'etaient les
+     * trois sanctuaires. Le fil serveur est unique : tant qu'il batit, il ne
+     * fait rien d'autre, et le client attend ses reponses.
+     *
+     * Le deblaiement seul explique l'essentiel : l'emprise fait 211 colonnes
+     * de cote -- 44 521 colonnes -- et chacune est lue sur une cinquantaine de
+     * blocs. Deux millions de lectures, plus les poses. On ne peut pas les
+     * rendre gratuites ; on peut les ETALER.
+     *
+     * Le chantier devient donc une file d'etapes qu'on consomme sur un budget
+     * de temps par tique. L'ORDRE EST INTOUCHE -- il porte des annees de
+     * corrections : la cour avant la pyramide, le couloir avant l'ascension,
+     * le calque avant-dernier, la garnison en dernier quand plus un bloc ne
+     * bouge. Seul le moment change.
+     */
+    public static final class Job {
+
+        private final ServerLevel level;
+        @Nullable
+        private final CommandSourceStack source;
+        private final int cx;
+        private final int y;
+        private final int cz;
+        private final int rank;
+        private final int[] bounds;
+        private final java.util.ArrayDeque<Runnable> steps = new java.util.ArrayDeque<>();
+
+        private int apex = -1;
+        private int repainted;
+        private int calque;
+        private BlockPos anchor;
+        /** Pour le compte rendu : temps total, et la pire etape. */
+        private long spentNanos;
+        private long worstNanos;
+
+        private Job(ServerLevel level, @Nullable CommandSourceStack source,
+                    BlockPos ground, int tier) {
+            this.level = level;
+            this.source = source;
+            this.rank = Math.max(1, Math.min(3, tier));
+            this.cx = ground.getX();
+            this.y = ground.getY();
+            this.cz = ground.getZ();
+            // On POSE la pyramide au centre, on ne la cherche plus : les quatre
+            // quadrants font 47 et 42 de large sur 47 de profond, et leur
+            // jonction tombe a (44, 47) de l'angle.
+            this.bounds = new int[]{cx - PYRAMID_CX, cz - PYRAMID_CZ,
+                    cx - PYRAMID_CX + PYRAMID_W, cz - PYRAMID_CZ + PYRAMID_D};
+            plan();
+        }
+
+        /** La file, dans l'ordre exact de l'ancien corps de `build`. */
+        private void plan() {
+            steps.add(() -> {
+                // Le registre s'ouvre AVANT la premiere pose : il note, pour
+                // chaque bloc, la routine qui l'a mis et sa position relative au
+                // centre -- c'est ce qui permet de designer un defaut a l'ecran
+                // et de retrouver la ligne qui en est responsable.
+                SanctuaryLedger.begin(new BlockPos(cx, y, cz));
+                chestsPlaced = 0;             // on COMPTE, on ne suppose plus
+            });
+            // LE DEBLAIEMENT, EN BANDES. C'est la partie la plus lourde du
+            // chantier : deux colonnes par etape, cent six etapes.
+            int from = -HALF - TOWER_RADIUS;
+            int to = HALF + TOWER_RADIUS;
+            for (int band = from; band <= to; band += CLEAR_BAND) {
+                final int a = band;
+                final int b = Math.min(to, band + CLEAR_BAND - 1);
+                steps.add(() -> clearSite(level, cx, y, cz, bounds, a, b));
+            }
+            // LA COUR D'ABORD, LA PYRAMIDE ENSUITE : l'ordre inverse laissait
+            // une ceinture de terre autour d'elle et une marche d'un bloc.
+            steps.add(() -> courtyard(level, cx, y, cz));
+            steps.add(() -> apex = greatPyramid(level, source, cx, y, cz));
+            steps.add(() -> repainted = reskin(level, bounds, y));
+            steps.add(() -> curtainWall(level, cx, y, cz));
+            for (int sx = -1; sx <= 1; sx += 2) {
+                for (int sz = -1; sz <= 1; sz += 2) {
+                    final int fx = sx;
+                    final int fz = sz;
+                    steps.add(() -> cornerTower(level, cx, cz, cx + fx * HALF, y,
+                            cz + fz * HALF, rank));
+                }
+            }
+            // QUATRE portes, une par cote : la pyramide est posee par la
+            // commande du jeu, qui choisit elle-meme sa rotation.
+            for (int side = 0; side < 4; side++) {
+                final int face = side;
+                steps.add(() -> gatehouse(level, cx, y, cz, face, rank));
+            }
+            steps.add(() -> {
+                // Le sommet du modele n'est pas au milieu de son emprise : il
+                // tombe a (44, 44) de l'angle, la jonction des quadrants a
+                // (44, 47). Les quatre morceaux hauts font quarante blocs et
+                // sont poses a y+1 : le faite est donc CONNU.
+                int apexZ = cz - (PYRAMID_CZ - 44);
+                int summit = apex >= 0 ? apex : summitOf(level, cx, y, apexZ);
+                anchor = crown(level, cx, summit, apexZ, rank);
+                // Le couloir d'abord, l'ascension PAR-DESSUS lui : empiler
+                // plutot que croiser, le toit du couloir sert de chemin.
+                tombEntrance(level, cx, y, cz, rank, anchor);
+                causewayRamps(level, cx, y, cz);
+                summitStair(level, cx, y, cz, apexZ, summit);
+                SanctuaryMist.register(new BlockPos(cx, y, cz), HALF, anchor);
+                SanctuaryLedger.part("fini");
+            });
+            // LE CALQUE EN DERNIER : il rejoue, telles quelles, les corrections
+            // relevees a la Sonde, et ecrase ce qui le gene.
+            steps.add(() -> calque = SanctuaryOverlay.apply(level, cx, y, cz));
+            steps.add(() -> {
+                // L'INSTANTANE NE SE PREND QU'EN TEST : quatre millions de
+                // cases, le prix d'un outil de mise au point.
+                if (source != null) {
+                    SanctuaryLedger.capture(level, new BlockPos(cx, y, cz), HALF + 12, 24, 72);
+                }
+                linkWalls(level);
+            });
+            // La garnison EN DERNIER, quand plus un bloc ne bouge : posee avant
+            // le parvis, l'escalier et le couloir, ces trois-la l'etouffaient.
+            steps.add(() -> SanctuaryGarrison.populate(level, new BlockPos(cx, y, cz),
+                    HALF, WALK, TOWER_TOP));
+            steps.add(this::report);
+        }
+
+        private void report() {
+            BlockState found = level.getBlockState(anchor);
+            String occupant = BuiltInRegistries.BLOCK.getKey(found.getBlock()).toString();
+            org.slf4j.LoggerFactory.getLogger(EmeraldWeaponsMod.MODID).info(
+                    "Sanctuaire palier {} : {} coffres poses, bati en {} ms de fil serveur "
+                            + "(pire etape {} ms)",
+                    rank, chestsPlaced, spentNanos / 1_000_000L, worstNanos / 1_000_000L);
+            if (source == null) {
+                return;                  // bati par la partie : rien a dire
+            }
+            source.sendSuccess(() -> Component.literal(String.format(
+                    "Sol %d | sommet %d | pyramide %s | %d blocs rhabilles | calque %d | %s "
+                            + "| %d coffres | %d ms | a l'ancre : %s",
+                    y, anchor.getY(), apex >= 0 ? "dressee" : "ABSENTE", repainted, calque,
+                    sealReport, chestsPlaced, spentNanos / 1_000_000L, occupant)), false);
+        }
+
+        public boolean done() {
+            return steps.isEmpty();
+        }
+
+        /** L'ancre, une fois le chantier fini ; null avant. */
+        @Nullable
+        public BlockPos anchor() {
+            return this.anchor;
+        }
+
+        /**
+         * Consomme des etapes tant que le budget n'est pas epuise.
+         *
+         * Toujours au moins une : un budget trop maigre ne doit pas figer le
+         * chantier pour toujours. Une etape peut donc depasser le budget -- on
+         * mesure la pire et on la rapporte, c'est ainsi qu'on saura s'il faut
+         * la couper en deux a son tour.
+         */
+        public void advance(long budgetNanos) {
+            long start = System.nanoTime();
+            do {
+                Runnable step = steps.poll();
+                if (step == null) {
+                    return;
+                }
+                long at = System.nanoTime();
+                step.run();
+                long took = System.nanoTime() - at;
+                spentNanos += took;
+                worstNanos = Math.max(worstNanos, took);
+            } while (!steps.isEmpty() && System.nanoTime() - start < budgetNanos);
+        }
+    }
+
+    /** Le chantier d'un sanctuaire, a faire avancer tique par tique. */
+    public static Job job(ServerLevel level, @Nullable CommandSourceStack source,
+                          BlockPos ground, int tier) {
+        return new Job(level, source, ground, tier);
+    }
+
+    /**
+     * Bâtit le sanctuaire d'un seul coup. La pyramide vient de Cataclysm, le
+     * reste est a nous.
+     *
+     * Reserve aux commandes et aux essais : en partie, on passe par {@link Job}
+     * pour ne pas figer le serveur plusieurs secondes.
+     *
+     * @param tier 1 a 3 : la difficulte de l'ancre, donc la richesse du butin
+     * @return la position de l'ancre
+     */
     public static BlockPos build(ServerLevel level, CommandSourceStack source,
                                  BlockPos ground, int tier) {
-        int rank = Math.max(1, Math.min(3, tier));
-        int y = ground.getY();
-
-        int cx = ground.getX();
-        int cz = ground.getZ();
-
-        // On POSE la pyramide au centre, on ne la cherche plus.
-        //
-        // Deux methodes ont echoue avant celle-ci. Deviner un decalage la
-        // faisait tomber a cote. Mesurer apres coup marchait en theorie, mais
-        // le balayage accrochait le sanctuaire d'a cote quand on en batissait
-        // deux -- et l'enceinte se centrait alors entre les deux.
-        //
-        // La bonne facon etait de lire les modeles. Les quatre quadrants font
-        // 47 et 42 de large sur 47 de profond, et leur jonction -- le centre de
-        // la pyramide -- tombe a (44, 47) de l'angle. On connait donc l'endroit
-        // exact ou poser chaque morceau pour que le sommet vienne sur le
-        // centre voulu, sans rien mesurer.
-        int[] bounds = {cx - PYRAMID_CX, cz - PYRAMID_CZ,
-                cx - PYRAMID_CX + PYRAMID_W, cz - PYRAMID_CZ + PYRAMID_D};
-
-        // LA COUR D'ABORD, LA PYRAMIDE ENSUITE.
-        //
-        // L'ordre inverse expliquait la ceinture de terre autour d'elle et la
-        // marche d'un bloc. On epargnait son emprise au moment de paver, mais
-        // cette emprise est un RECTANGLE, alors que la pyramide n'en occupe
-        // que le centre : les quatre coins du rectangle restaient donc en
-        // terrain naturel, un cran plus bas que la cour, et le rhabillage
-        // venait ensuite les peindre en briques corrompues -- d'ou l'anneau
-        // brun. En pavant tout d'abord, la pyramide se pose PAR-DESSUS et
-        // remplace ce qu'elle recouvre, sans laisser de trou autour.
-        // Le registre s'ouvre AVANT la premiere pose : il note, pour chaque
-        // bloc, la routine qui l'a mis et sa position relative au centre --
-        // c'est ce qui permet ensuite de designer un defaut a l'ecran et de
-        // retrouver la ligne qui en est responsable.
-        SanctuaryLedger.begin(new BlockPos(cx, y, cz));
-        chestsPlaced = 0;                 // on COMPTE, on ne suppose plus
-        clearSite(level, cx, y, cz, bounds);
-        courtyard(level, cx, y, cz);
-        int apex = greatPyramid(level, source, cx, y, cz);
-        int repainted = reskin(level, bounds, y);
-        curtainWall(level, cx, y, cz);
-        for (int sx = -1; sx <= 1; sx += 2) {
-            for (int sz = -1; sz <= 1; sz += 2) {
-                cornerTower(level, cx, cz, cx + sx * HALF, y, cz + sz * HALF, rank);
-            }
+        Job job = job(level, source, ground, tier);
+        while (!job.done()) {
+            job.advance(Long.MAX_VALUE);
         }
-        // QUATRE portes, une par cote.
-        //
-        // La pyramide est posee par la commande du jeu, qui choisit elle-meme
-        // sa rotation : impossible de savoir a l'avance vers ou son entree
-        // regarde, et une porte unique tombait donc de travers une fois sur
-        // quatre... ou trois. Quatre portes reglent la question par
-        // construction, et une forteresse a quatre portes n'a rien d'absurde.
-        for (int side = 0; side < 4; side++) {
-            gatehouse(level, cx, y, cz, side, rank);
-        }
-
-        // Le sommet du modele n'est pas au milieu de son emprise : il tombe a
-        // (44, 44) de l'angle, alors que la jonction des quadrants est a
-        // (44, 47). L'ancre etait donc bien au centre de la PLACE, mais trois
-        // blocs a cote du faite de la pyramide.
-        int apexZ = cz - (PYRAMID_CZ - 44);
-        // Le faite est CONNU, on ne le cherche plus.
-        //
-        // Le sondage a echoue de trois facons differentes -- carte des hauteurs
-        // pas encore a jour, sanctuaire voisin accroche, pyramide absente sans
-        // le dire -- et chaque fois l'ancre finissait ailleurs. Or les quatre
-        // morceaux hauts font quarante blocs et sont poses a y+1 : leur sommet
-        // est donc a y+40, sans rien a mesurer. On ne sonde plus qu'en dernier
-        // recours, quand on a du se rabattre sur notre propre pyramide.
-        int summit = apex >= 0 ? apex : summitOf(level, cx, y, apexZ);
-        BlockPos anchor = crown(level, cx, summit, apexZ, rank);
-        // Le couloir d'abord, l'ascension PAR-DESSUS lui.
-        //
-        // Les deux tenaient la ligne centrale de la face sud et se disputaient
-        // le sol : ecartee, la volee laissait le porche tranquille mais devenait
-        // deux rampes de biais qui n'allaient nulle part. La bonne reponse est
-        // d'EMPILER plutot que de croiser -- le couloir passe au ras du sol, et
-        // son toit sert de chemin d'ascension. Rien ne se gene plus, et l'on
-        // gagne un parvis surelu au lieu d'une rampe posee a cote.
-        //
-        // L'ordre compte donc : le toit doit exister avant qu'on marche dessus.
-        tombEntrance(level, cx, y, cz, rank, anchor);
-        causewayRamps(level, cx, y, cz);
-        summitStair(level, cx, y, cz, apexZ, summit);
-        SanctuaryMist.register(new BlockPos(cx, y, cz), HALF, anchor);
-        SanctuaryLedger.part("fini");
-        // L'instantane se prend UNE FOIS TOUT POSE : c'est lui qui permettra
-        // de relever, plus tard, ce que le joueur aura change -- y compris ce
-        // qu'il aura ajoute la ou nous n'avions rien mis.
-        // LE CALQUE EN DERNIER.
-        //
-        // Il rejoue, telles quelles, les corrections relevees a la Sonde : la
-        // position exacte, le bloc exact, l'orientation exacte. Il s'applique
-        // apres tout le reste et ecrase ce qui le gene -- c'est bien ce qu'on
-        // lui demande.
-        //
-        // C'est la lecon de dix allers-retours. Je lisais le releve, j'en
-        // tirais une regle -- « il veut des blocs pleins sur les paliers », «
-        // il veut une bordure » -- et je reecrivais le generateur d'apres cette
-        // regle. Chaque traduction perdait quelque chose. Le calque supprime la
-        // traduction.
-        int calque = SanctuaryOverlay.apply(level, cx, y, cz);
-
-        // L'INSTANTANE NE SE PREND QU'EN TEST.
-        //
-        // Il releve quatre millions de cases pour permettre le releve des
-        // corrections a la main. C'est le prix d'un outil de mise au point, pas
-        // celui d'une partie : en jeu on batit trois sanctuaires d'affilee, et
-        // douze millions de lectures figeraient le serveur pour rien.
-        if (source != null) {
-            SanctuaryLedger.capture(level, new BlockPos(cx, y, cz), HALF + 12, 24, 72);
-        }
-
-        // Un compte rendu, plutot qu'une devinette de plus.
-        //
-        // « le bloc manque » s'est repete trois fois sans que rien, ni dans le
-        // journal ni a l'ecran, ne dise POURQUOI. On rapporte donc les trois
-        // faits qui separent les hypotheses : la pyramide s'est-elle dressee,
-        // a quelle hauteur le sommet a ete trouve, et quel bloc occupe
-        // reellement la case de l'ancre.
-        linkWalls(level);
-
-        // La garnison EN DERNIER, quand plus un bloc ne bouge.
-        //
-        // Elle etait posee avant le parvis, l'escalier du sommet et le couloir
-        // du tombeau : ces trois-la lui tombaient dessus et l'etouffaient.
-        SanctuaryGarrison.populate(level, new BlockPos(cx, y, cz), HALF, WALK, TOWER_TOP);
-
-        BlockState found = level.getBlockState(anchor);
-        String occupant = BuiltInRegistries.BLOCK.getKey(found.getBlock()).toString();
-        org.slf4j.LoggerFactory.getLogger(com.emerald.main.EmeraldWeaponsMod.MODID).info(
-                "Sanctuaire palier {} : {} coffres poses", rank, chestsPlaced);
-        if (source == null) {
-            return anchor;                  // bati par la partie : rien a dire
-        }
-        source.sendSuccess(() -> Component.literal(String.format(
-                "Sol %d | sommet %d | pyramide %s | %d blocs rhabilles | calque %d | %s "
-                        + "| %d coffres | a l'ancre : %s",
-                y, summit, apex >= 0 ? "dressee" : "ABSENTE", repainted, calque,
-                sealReport, chestsPlaced, occupant)), false);
-        return anchor;
+        return job.anchor();
     }
 
     /**
@@ -593,9 +651,17 @@ public final class Sanctuary {
 
     // ------------------------------------------------------------- l'enceinte
 
+    /** Largeur d'une bande de deblaiement, en colonnes : de quoi tenir dans une tique. */
+    private static final int CLEAR_BAND = 2;
+
     private static void clearSite(ServerLevel level, int cx, int y, int cz, int[] keep) {
+        clearSite(level, cx, y, cz, keep, -HALF - TOWER_RADIUS, HALF + TOWER_RADIUS);
+    }
+
+    private static void clearSite(ServerLevel level, int cx, int y, int cz, int[] keep,
+                                  int fromDx, int toDx) {
         SanctuaryLedger.part("clearSite");
-        for (int dx = -HALF - TOWER_RADIUS; dx <= HALF + TOWER_RADIUS; dx++) {
+        for (int dx = fromDx; dx <= toDx; dx++) {
             for (int dz = -HALF - TOWER_RADIUS; dz <= HALF + TOWER_RADIUS; dz++) {
                 // ON DEBLAIE AUSSI SOUS LA PYRAMIDE.
                 //
@@ -636,7 +702,21 @@ public final class Sanctuary {
                     BlockPos pos = new BlockPos(cx + dx, y + dy, cz + dz);
                     // on ne PAIE que le plein : une case vide coute une lecture
                     // et rien d'autre, ce qui rend le balayage haut abordable
-                    if (!level.getBlockState(pos).isAir()) {
+                    BlockState existing = level.getBlockState(pos);
+                    if (!existing.isAir()) {
+                        // UN COFFRE RASE NE DOIT PAS VOMIR SON CONTENU.
+                        //
+                        // Le deblaiement passe sur des villages et des
+                        // structures : chaque tonneau, chaque coffre appelait
+                        // son onRemove, qui fait tomber tout son inventaire au
+                        // sol. Des centaines d'entites-objets, et dans le
+                        // journal du joueur dix « Failed to create block entity
+                        // minecraft:barrel ... got Block{minecraft:air} ». On
+                        // retire l'entite de bloc AVANT : plus rien a laisser
+                        // tomber, plus rien a recreer.
+                        if (existing.hasBlockEntity()) {
+                            level.removeBlockEntity(pos);
+                        }
                         set(level, cx + dx, y + dy, cz + dz, Blocks.AIR.defaultBlockState());
                     }
                 }

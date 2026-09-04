@@ -62,7 +62,13 @@ public class GameManager {
 
     /** Les sites de sanctuaire encore a batir, un par seconde. */
     private static final List<BlockPos> pending = new ArrayList<>();
-    private static final int BUILD_EVERY = 20;
+    /** Le chantier en cours, ou null : un sanctuaire a la fois. */
+    @Nullable
+    private static Sanctuary.Job site;
+    /** Le sol vise par ce chantier : l'ancre finale sera plus haut. */
+    private static BlockPos siteAt = BlockPos.ZERO;
+    /** Ce qu'on s'autorise a batir par tique : douze des cinquante millisecondes. */
+    private static final long BUILD_BUDGET_NANOS = 12L * 1_000_000L;
 
     /** Golems mis de cote le temps du siege, a rendre au village ensuite. */
     private static int borrowedGolems;
@@ -122,25 +128,7 @@ public class GameManager {
                 && GameState.get(level).status() != GameState.Status.PROLOGUE) {
             dissolveCeremonial(level);
         }
-        // un sanctuaire par seconde, tant qu'il en reste
-        if (!pending.isEmpty() && level.getGameTime() % BUILD_EVERY == 0) {
-            GameState state = GameState.get(level);
-            BlockPos site = pending.remove(0);
-            int tier = 3 - pending.size();
-            BlockPos raised = Sanctuary.build(level, null, site, tier);
-            // L'ancre BOUGE : elle coiffe le faite de la pyramide, non le sol
-            // vise. Sans cette mise a jour, l'interface et la boussole
-            // montreraient le pied du monument et le siege ne saurait pas ou se
-            // declencher.
-            if (raised != null && !raised.equals(site)) {
-                List<BlockPos> updated = new ArrayList<>(state.anchors());
-                int at = updated.indexOf(site);
-                if (at >= 0) {
-                    updated.set(at, raised);
-                    state.setAnchors(updated);
-                }
-            }
-        }
+        tickBuilds(level);
         if (prologue != null) {
             sustainOath(level);
             prologue.tick();
@@ -163,6 +151,52 @@ public class GameManager {
             }
         }
         tickAnchorSieges(level);
+    }
+
+    /**
+     * LE CHANTIER, PAR PETITES BOUCHEES.
+     *
+     * On batissait un sanctuaire ENTIER dans une tique, un par seconde. Mesure
+     * du journal du joueur : quatre gels de 3,5 a 7,1 secondes juste apres la
+     * defense du village -- « je ne peux ni manger ni rien faire, je ne peux
+     * meme pas ouvrir l'inventaire ». Le fil serveur etait pris, et le client
+     * attendait ses reponses.
+     *
+     * Un seul chantier a la fois, et douze millisecondes de fil serveur par
+     * tique -- moins d'un quart des cinquante disponibles. Les trois
+     * sanctuaires mettent alors une minute ou deux a se dresser, a quatre cent
+     * cinquante blocs de la, pendant qu'on s'equipe au village : personne ne
+     * les regarde monter, et personne ne sent le serveur travailler.
+     */
+    private static void tickBuilds(ServerLevel level) {
+        if (site == null) {
+            if (pending.isEmpty()) {
+                return;
+            }
+            siteAt = pending.remove(0);
+            site = Sanctuary.job(level, null, siteAt, 3 - pending.size());
+            return;                       // le chantier commence a la tique suivante
+        }
+        site.advance(BUILD_BUDGET_NANOS);
+        if (!site.done()) {
+            return;
+        }
+        BlockPos raised = site.anchor();
+        BlockPos asked = siteAt;
+        site = null;
+        siteAt = BlockPos.ZERO;
+        // L'ancre BOUGE : elle coiffe le faite de la pyramide, non le sol vise.
+        // Sans cette mise a jour, l'interface et la boussole montreraient le
+        // pied du monument et le siege ne saurait pas ou se declencher.
+        if (raised != null && !raised.equals(asked)) {
+            GameState state = GameState.get(level);
+            List<BlockPos> updated = new ArrayList<>(state.anchors());
+            int at = updated.indexOf(asked);
+            if (at >= 0) {
+                updated.set(at, raised);
+                state.setAnchors(updated);
+            }
+        }
     }
 
     private static void tickAnchorSieges(ServerLevel level) {
@@ -980,6 +1014,8 @@ public class GameManager {
     /** Abandonne tout siege en cours : arret de partie, ou rechargement du monde. */
     public static void clear() {
         Finale.clear();
+        site = null;                      // un chantier abandonne ne reprend pas
+        siteAt = BlockPos.ZERO;
         if (prologue != null) {
             prologue.cancel();
             prologue = null;
