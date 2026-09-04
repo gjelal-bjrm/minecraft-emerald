@@ -3053,20 +3053,32 @@ matiere sont IDENTIQUES a celles du Givre et des Prismatiques, qui rendent tres
 bien -- centre de masse a (0,47 ; 0,50) contre (0,51 ; 0,51), meme part de
 matiere dans le tiers haut. Ce n'est donc ni un decalage, ni un centrage.
 
-Ce qui differe est la **silhouette** :
+**J'ai d'abord accuse les branches separees. C'etait faux** : elles sont
+voulues, et le Givre a exactement les memes en rendant tres bien. La mesure a
+tranche autrement. En relevant sur les dix ailes l'**etalement de teinte**
+(0 = une seule couleur, 1 = arc-en-ciel) et la **saturation moyenne** :
 
-| | Givre / Prismatiques | Pierres Precieuses |
+| Aile | Etalement | Saturation |
 |---|---|---|
-| Forme | **un** eventail plein | **deux** branches ecartees |
-| Structure | plumes larges qui se recouvrent | resille doree fine, ajouree |
-| Detail | quelques gros elements | beaucoup de tres petites pierres |
-| Vides | presque aucun | grands vides entre les branches |
+| Givre, Rubis, Tempete, Braise | 0,01 - 0,02 | 0,47 - 0,80 |
+| Obscures, Papillon | 0,06 - 0,09 | 0,20 - 0,69 |
+| Emeraude, Aurore | 0,16 - 0,17 | 0,44 - 0,71 |
+| Prismatiques | 0,33 | **0,16** *(pastel)* |
+| **Pierres Precieuses** | **0,56** | **0,71** |
 
-**L'epreuve qui tranche** : reduire les trois images a 64 pixels, ce que le jeu
-fait de fait quand l'aile occupe un bloc de large. Le Givre et les Prismatiques
-restent des ailes lisibles ; les Pierres Precieuses deviennent un gribouillis
-colore. La regle a retenir pour toute aile future : **ce qui compte n'est pas la
-finesse du dessin mais la lisibilite de la silhouette reduite**.
+Le jeu d'ailes suit donc une regle que personne n'avait formulee : **soit une
+famille de teintes, meme tres saturee ; soit beaucoup de teintes, mais pales**.
+Les Pierres Precieuses enfreignent les deux a la fois, et a un bloc de large
+l'oeil ne peut plus GROUPER les plumes en un objet -- chacune devient une tache,
+et l'ensemble se lit comme des confettis.
+
+**L'epreuve qui tranche** : reduire l'image a 64 pixels, ce que le jeu en fait.
+Le Givre et les Prismatiques restent des ailes ; les Pierres Precieuses
+deviennent un gribouillis. **Corollaire** : la variete d'une aile a l'autre doit
+passer par le PATRON, pas par la couleur -- quatre patrons proposes dans
+`tools/prompts/ailes_pierres_precieuses.md` (vitrail, geode, lames, eclats
+suspendus). Retouche mesuree sur le fichier actuel : regrouper les teintes en
+trois zones fait tomber l'etalement de 0,56 a 0,35.
 
 En attendant une repeinture (prompt dans `tools/prompts/ailes_pierres_precieuses.md`) :
 
