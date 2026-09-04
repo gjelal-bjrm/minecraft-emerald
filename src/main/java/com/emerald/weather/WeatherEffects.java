@@ -298,6 +298,9 @@ public final class WeatherEffects {
     // ---------------------------------------------------------- cycle de vie
 
     static void begin(ServerLevel level, Weather weather) {
+        // Les jalons d'une Aurore precedente -- un serveur arrete en pleine
+        // meteo, par exemple -- ne doivent jamais survivre a la suivante.
+        sweepMarks(level);
         if (weather == Weather.AURORE) {
             // chaque Aurore reparle : ce qu'on a dit la fois d'avant est loin
             auroreTold.clear();
@@ -314,6 +317,9 @@ public final class WeatherEffects {
     }
 
     static void end(ServerLevel level, Weather weather) {
+        if (weather == Weather.AURORE) {
+            sweepMarks(level);
+        }
         switch (weather) {
             case BRUME -> sweepModifier(level, Attributes.FOLLOW_RANGE, BRUME_ID);
             case DECHIRURE -> endDechirure(level);
@@ -544,8 +550,19 @@ public final class WeatherEffects {
      * scintillent et carillonnent. En surface c'est un spectacle ; sous terre,
      * c'est un detecteur -- c'est le moment de descendre miner.
      */
-    /** Rayon de la sonde, en blocs : deux chunks et demi autour du joueur. */
-    private static final int AURORE_RANGE = 40;
+    /**
+     * Rayon de la sonde, en blocs : QUATRE chunks autour du joueur.
+     *
+     * Quarante ne suffisaient pas. Le joueur a mine dix minutes sans jamais
+     * etre guide : a quarante blocs, il faut deja etre presque dessus, et une
+     * galerie ordinaire en fait cent. Soixante-quatre couvre le champ dans
+     * lequel on creuse reellement.
+     */
+    private static final int AURORE_RANGE = 64;
+    /** Marque les jalons de l'Aurore : on les balaie tous a chaque rafraichissement. */
+    private static final String TAG_VEIN = "emeraldweapons_vein";
+    /** Autant de jalons lumineux que de filons trouves, au plus. */
+    private static final int AURORE_MARKS = 6;
     /** Autant de colonnes au plus par joueur : au-dela, le paysage devient une foret de rais. */
     private static final int AURORE_BEAMS = 6;
 
@@ -606,28 +623,136 @@ public final class WeatherEffects {
      * elle contient seulement notre minerai coute quelques comparaisons, la ou
      * parcourir 40x64x40 blocs par joueur et par seconde en couterait cent mille.
      */
+    /**
+     * L'AURORE GUIDE, ELLE NE SUGGERE PLUS.
+     *
+     * Verdict du joueur apres dix minutes de minage sous une Aurore : « je
+     * n'etais pas du tout guide, c'est moi qui l'ai trouve par hasard ». Il
+     * avait raison, et la cause etait entierement de notre cote :
+     *
+     *  - le rai de lumiere montait du filon jusqu'au-dessus du sol. Une
+     *    particule est dessinee avec le test de profondeur : SOUS TERRE, elle
+     *    est derriere vingt blocs de roche, donc elle n'existe pas. Or c'est
+     *    sous terre qu'on a besoin d'etre guide ;
+     *  - `sendParticles` n'envoie qu'aux joueurs a moins de TRENTE-DEUX blocs,
+     *    alors que la sonde en cherchait quarante : les filons lointains --
+     *    ceux qu'on n'aurait pas trouves seul, les seuls qui comptent --
+     *    n'affichaient rien du tout.
+     *
+     * Trois canaux la remplacent, et aucun ne se cache derriere la pierre :
+     *
+     *  1. LE PANNEAU (VeinHudClient) : fleche relative au regard, distance et
+     *     profondeur. Sur le HUD, donc insensible a la roche comme aux shaders ;
+     *  2. LES JALONS : une silhouette lumineuse posee sur chaque filon. La
+     *     lueur d'entite se voit A TRAVERS LES MURS -- c'est tout son objet ;
+     *  3. LE CARILLON, dont la hauteur monte quand on approche.
+     *
+     * Et l'Aurore fait enfin ce qu'elle promet : elle MINE MIEUX. Hate II,
+     * Vitesse, et la faim qui descend deux fois moins vite.
+     */
     private static void tickAurore(ServerLevel level) {
-        if (level.getGameTime() % 60 != 0) {
+        if (level.getGameTime() % 40 != 0) {
             return;
         }
+        sweepMarks(level);
         for (ServerPlayer player : level.players()) {
+            boons(player);
             List<BlockPos> veins = findVeins(level, player.blockPosition());
-            for (BlockPos pos : veins) {
-                beam(level, pos);
-            }
-            if (!veins.isEmpty()) {
-                level.playSound(null, veins.get(0), SoundEvents.AMETHYST_BLOCK_CHIME,
-                        SoundSource.AMBIENT, 0.7F, 1.4F);
-                if (auroreTold.add(player.getUUID())) {
-                    BlockPos nearest = veins.get(0);
-                    player.sendSystemMessage(net.minecraft.network.chat.Component.translatable(
-                                    "weather.emeraldweapons.aurore.veins", veins.size(),
-                                    (int) Math.sqrt(player.blockPosition().distSqr(nearest)),
-                                    com.emerald.game.Finale.cardinal(
-                                            nearest.getX() - player.getX(),
-                                            nearest.getZ() - player.getZ()))
-                            .withStyle(style -> style.withColor(Weather.AURORE.color)));
+            int kinds = 0;
+            List<Long> packed = new ArrayList<>();
+            for (int i = 0; i < veins.size(); i++) {
+                packed.add(veins.get(i).asLong());
+                if (!level.getBlockState(veins.get(i)).is(ModBlocks.ARCENCIUM_ORE.get())) {
+                    kinds |= 1 << i;                       // ce n'est pas de l'Arcencium : diamant
                 }
+            }
+            net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player,
+                    new com.emerald.network.VeinSyncPayload(packed, kinds));
+            if (veins.isEmpty()) {
+                continue;
+            }
+            markVeins(level, veins);
+            BlockPos nearest = veins.get(0);
+            double near = Math.sqrt(player.blockPosition().distSqr(nearest));
+            // LE CARILLON MONTE QUAND ON APPROCHE : chaud, froid, sans regarder
+            // l'ecran. C'est le seul des trois canaux qui marche les mains sur
+            // la pioche et les yeux sur la paroi.
+            float pitch = 0.8F + 1.0F * (float) (1.0 - Math.min(1.0, near / AURORE_RANGE));
+            player.playNotifySound(SoundEvents.AMETHYST_BLOCK_CHIME,
+                    SoundSource.AMBIENT, 0.5F, pitch);
+            // un eclat SUR le filon : quand on perce enfin la paroi, il scintille
+            level.sendParticles(player, ModParticles.CRYSTAL_FIREFLY.get(), true,
+                    nearest.getX() + 0.5, nearest.getY() + 0.9, nearest.getZ() + 0.5,
+                    2, 0.35, 0.35, 0.35, 0.0);
+            if (auroreTold.add(player.getUUID())) {
+                player.sendSystemMessage(net.minecraft.network.chat.Component.translatable(
+                                "weather.emeraldweapons.aurore.veins", veins.size(),
+                                (int) Math.round(near))
+                        .withStyle(style -> style.withColor(Weather.AURORE.color)));
+            }
+        }
+    }
+
+    /**
+     * CE QUE L'AURORE DONNE AU CORPS.
+     *
+     * « Elle n'aide pas du tout a miner. » Elle le fait desormais : Hate II
+     * pour la pioche, Vitesse pour la galerie, et la faim qui descend deux fois
+     * moins vite -- c'est ce dernier point qui rend une longue descente
+     * possible sans remonter manger. Une fenetre de minage doit se sentir dans
+     * les mains, pas seulement se lire dans le ciel.
+     */
+    private static void boons(ServerPlayer player) {
+        player.addEffect(new MobEffectInstance(MobEffects.DIG_SPEED, 100, 1, true, false, false));
+        player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, 100, 0, true, false, false));
+        // La faim ne se met pas en pause -- ce serait une invulnerabilite
+        // deguisee -- on lui reprend la moitie de ce qu'elle vient de prendre.
+        player.getFoodData().setExhaustion(player.getFoodData().getExhaustionLevel() * 0.5F);
+    }
+
+    /**
+     * LES JALONS : une silhouette lumineuse dans la roche, a l'endroit du filon.
+     *
+     * La lueur d'entite est dessinee A TRAVERS les murs -- c'est exactement ce
+     * qu'il fallait, et rien d'autre dans le jeu ne le fait pour un BLOC. Un
+     * porte-armure minuscule, invisible, sans collision ni hitbox : invisible
+     * et luisant, le rendu ne dessine plus que son contour.
+     */
+    private static void markVeins(ServerLevel level, List<BlockPos> veins) {
+        int made = 0;
+        for (BlockPos pos : veins) {
+            if (made++ >= AURORE_MARKS) {
+                return;
+            }
+            net.minecraft.world.entity.decoration.ArmorStand mark =
+                    new net.minecraft.world.entity.decoration.ArmorStand(level,
+                            pos.getX() + 0.5, pos.getY() + 0.1, pos.getZ() + 0.5);
+            mark.setInvisible(true);
+            mark.setNoGravity(true);
+            mark.setSilent(true);
+            mark.setInvulnerable(true);
+            mark.setNoBasePlate(true);
+            mark.setGlowingTag(true);
+            mark.addTag(TAG_VEIN);
+            // PETIT ET SANS CORPS. `setSmall` et `setMarker` sont prives ; on
+            // passe donc par la sauvegarde, qui est publique et complete -- on
+            // relit le jalon avec les deux drapeaux poses. Sans « Marker », le
+            // porte-armure garde sa boite de collision : on s'y cognerait en
+            // percant la paroi, sur un obstacle qu'on ne voit pas.
+            net.minecraft.nbt.CompoundTag tag = new net.minecraft.nbt.CompoundTag();
+            mark.saveWithoutId(tag);
+            tag.putBoolean("Marker", true);
+            tag.putBoolean("Small", true);
+            mark.load(tag);
+            level.addFreshEntity(mark);
+        }
+    }
+
+    /** On efface les jalons avant d'en reposer : ils ne doivent jamais s'accumuler. */
+    static void sweepMarks(ServerLevel level) {
+        for (net.minecraft.world.entity.Entity entity : level.getEntities().getAll()) {
+            if (entity.getTags().contains(TAG_VEIN)) {
+                entity.discard();
             }
         }
     }

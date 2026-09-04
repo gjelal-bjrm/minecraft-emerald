@@ -173,7 +173,7 @@
   "weather.emeraldweapons.brume": "Prismatic Mist",
   "weather.emeraldweapons.brume.sub": "Sight fades — yours, and theirs.",
   "weather.emeraldweapons.aurore": "Aurora",
-  "weather.emeraldweapons.aurore.sub": "Diamond and Arcencium break the ground. Go and mine.",
+  "weather.emeraldweapons.aurore.sub": "Haste, speed, and the veins show themselves. Go and mine.",
   "weather.emeraldweapons.nuit": "Arcencium Night",
   "weather.emeraldweapons.nuit.sub": "Night falls at noon. The lightning picks its colours.",
   "weather.emeraldweapons.meteores": "Arcencium Meteor Rain",
@@ -478,7 +478,9 @@
   "weather.emeraldweapons.omen.embellie": "The calm returns.",
   "weather.emeraldweapons.omen.clear": "Nothing is coming.",
   "specialization.emeraldweapons.legacy": "An older character exists, shared by every world. /arcencium personnage importer to take it over here.",
-  "weather.emeraldweapons.aurore.veins": "The Aurora sets %s vein(s) singing — the nearest %s blocks away, to the %s. Follow the pillars of light: diamond pays more, Arcencium ore pays double.",
+  "weather.emeraldweapons.aurore.veins": "The Aurora lights %s vein(s) around you — the nearest %s blocks away. Follow the arrows top-left: the markers glow through the rock.",
   "weather.emeraldweapons.aurore.double": "The Aurora doubles the Arcencium vein",
-  "weather.emeraldweapons.aurore.diamond": "The Aurora enriches diamond, and sometimes mixes Arcencium in"
+  "weather.emeraldweapons.aurore.diamond": "The Aurora enriches diamond, and sometimes mixes Arcencium in",
+  "weather.emeraldweapons.vein.diamond": "Diamond",
+  "weather.emeraldweapons.vein.arcencium": "Arcencium"
 }

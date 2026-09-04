@@ -105,6 +105,7 @@ public class GameHudClient {
             // declenche aussi en lobby (/arcencium weather) et se voit deja par
             // son brouillard : la laisser sans etiquette n'aurait pas de sens
             weatherPanel(graphics, mc, MARGIN, MARGIN);
+            VeinHudClient.render(graphics, mc, MARGIN, MARGIN + 14);
             return;
         }
 
@@ -160,8 +161,12 @@ public class GameHudClient {
         if (finalePos != 0L && current == GameState.Status.RUNNING) {
             rows++;                                   // la ligne de l'Arc-en-ciel
         }
-        weatherPanel(graphics, mc, x,
-                y + PANEL_H + 2 + (rows > 0 ? rows * 10 + 4 : 0));
+        int weatherY = y + PANEL_H + 2 + (rows > 0 ? rows * 10 + 4 : 0);
+        weatherPanel(graphics, mc, x, weatherY);
+        // LES FILONS SOUS LA METEO : c'est une information de meteo, elle
+        // appartient a la meme colonne. Quatorze pixels sous elle -- douze de
+        // panneau et deux de respiration.
+        VeinHudClient.render(graphics, mc, x, weatherY + 14);
     }
 
     /**

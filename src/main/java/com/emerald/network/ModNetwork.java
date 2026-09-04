@@ -31,6 +31,10 @@ public class ModNetwork {
                 (payload, context) -> context.enqueueWork(
                         () -> com.emerald.client.GameHudClient.accept(payload)));
 
+        registrar.playToClient(VeinSyncPayload.TYPE, VeinSyncPayload.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(
+                        () -> com.emerald.client.VeinHudClient.accept(payload)));
+
         registrar.playToClient(WeatherSyncPayload.TYPE, WeatherSyncPayload.STREAM_CODEC,
                 (payload, context) -> context.enqueueWork(
                         () -> com.emerald.client.WeatherClient.accept(payload)));

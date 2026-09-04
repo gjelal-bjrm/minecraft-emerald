@@ -3510,3 +3510,75 @@ Un tas qui part de 256 Mo pour monter a 16 Go se redimensionne sans arret. Un
 tas FIXE de 10 a 12 Go (`-Xms10240m -Xmx10240m`) supprime ces redimensionnements
 -- et au-dela de 12 Go, les pauses de ramasse-miettes s'allongent au lieu de
 raccourcir.
+
+---
+
+## 44. L'Aurore guide vraiment *(4 sept. 2026)*
+
+### 44.1 Pourquoi elle ne guidait rien
+
+Verdict du joueur apres dix minutes de minage sous une Aurore : « je n'etais
+pas du tout guide, c'est moi qui l'ai trouve par hasard ». Deux causes, toutes
+deux de notre cote, et aucune n'etait une question de dosage :
+
+1. **une particule se cache derriere la pierre.** Le rai montait du filon
+   jusqu'au-dessus du sol ; sous terre, il traverse vingt blocs de roche, et
+   les particules sont dessinees avec le test de profondeur. Or c'est SOUS
+   TERRE qu'on a besoin d'etre guide -- en surface il n'y a rien a miner ;
+2. **`sendParticles` ne quitte pas trente-deux blocs.** Le serveur ne l'envoie
+   qu'aux joueurs a moins de 32 blocs, alors que la sonde en cherchait 40 : les
+   filons lointains -- les seuls qu'on n'aurait pas trouves seul -- etaient
+   precisement ceux qui n'affichaient rien.
+
+### 44.2 Trois canaux, dont aucun ne se cache
+
+| Canal | Ce qu'il donne | Ou il vit |
+|---|---|---|
+| **Le panneau** (`VeinHudClient`) | fleche **relative au regard**, distance, profondeur (▲/▼), trois filons | HUD -- insensible a la roche ET aux shaders |
+| **Les jalons** | une silhouette lumineuse **a travers les murs**, sur chaque filon | lueur d'entite (porte-armure marqueur, invisible) |
+| **Le carillon** | la hauteur du son monte quand on approche | audio -- marche les yeux sur la paroi |
+
+La fleche est **relative** et non cardinale : « sud-ouest » demande de savoir ou
+est le sud, « en haut a droite » se suit sans reflechir. Le signe de l'angle
+compte -- l'angle croit vers l'est puis le sud, c'est-a-dire vers la GAUCHE du
+joueur ; sans ce moins, la boussole envoie exactement a l'oppose.
+
+Les jalons sont des porte-armures **invisibles et luisants** : le rendu ne
+dessine alors que leur contour, et le contour de lueur traverse les murs -- rien
+d'autre dans le jeu ne le fait pour un BLOC. `setSmall` et `setMarker` etant
+prives, on les pose par la sauvegarde (`saveWithoutId` puis `load`) ; sans
+« Marker », le jalon garde sa boite de collision et l'on s'y cognerait en
+percant la paroi, sur un obstacle invisible. Ils sont balayes a chaque
+rafraichissement, a la fin de l'Aurore et au debut de toute meteo.
+
+**La portee passe de 40 a 64 blocs** : a quarante, il faut deja etre presque
+dessus, et une galerie ordinaire en fait cent.
+
+### 44.3 Ce que l'Aurore donne au corps
+
+« Elle n'aide pas du tout a miner. » Desormais, tant qu'elle dure :
+
+- **Hate II** -- la pioche ;
+- **Vitesse I** -- la galerie ;
+- **la faim descend deux fois moins vite** : on reprend la moitie de
+  l'epuisement a chaque passage. Pas une pause -- ce serait une invulnerabilite
+  deguisee -- mais de quoi tenir une longue descente sans remonter manger ;
+- **le diamant rend 1 a 2 de plus**, et une fois sur deux un Arcencium brut ;
+- **le minerai d'Arcencium rend le double**.
+
+Une fenetre de minage doit se sentir dans les mains, pas seulement se lire dans
+le ciel.
+
+### 44.4 Le reglage de la machine
+
+`tools/java_args.py`. Le client tournait en `-Xmx16384m -Xms256m` : un tas qui
+part de 256 Mo pour monter a 16 Go se redimensionne sans cesse, et au-dela de
+douze gigaoctets les pauses de ramasse-miettes s'ALLONGENT -- le collecteur a
+plus de memoire a parcourir, pas moins de travail. La machine a 128 Go et un
+Ryzen 7 5800X : la RAM n'a jamais ete la contrainte, le reglage l'etait.
+
+Tas **fixe de 10 Go** et jeu d'options G1 eprouve sur Minecraft moddé : des
+pauses courtes et regulieres plutot que rares et longues, ce qu'il faut a un jeu
+qui dessine soixante images par seconde. Le script refuse toute instance dont le
+jeu tourne -- CurseForge reecrit `minecraftinstance.json` a la fermeture et
+effacerait le reglage.
