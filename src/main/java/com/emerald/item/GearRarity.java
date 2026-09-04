@@ -151,7 +151,8 @@ public enum GearRarity {
 
         tag.putInt(TAG_SPENT, spent + Math.max(1, shards));
         stack.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
-        return values()[Math.min(values().length - 1, best)];
+        // l'equipement vanilla s'arrete a l'Ancestral (voir GearEligibility)
+        return values()[Math.min(GearEligibility.rarityMax(stack), best)];
     }
 
     /**

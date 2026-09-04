@@ -341,6 +341,8 @@ public class GameManager {
         BlockPos ground = WorldSetup.findOpenGround(level, center, 24);
         state.setVillage(ground);
         plantBlade(level, ground);
+        // l'atelier -- Forge, etabli, Autel -- a douze blocs de la Lame
+        Workshop.place(level, ground);
         surroundWithVillagers(level, ground);
 
         List<BlockPos> anchors = new ArrayList<>();

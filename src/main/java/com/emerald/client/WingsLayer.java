@@ -64,7 +64,8 @@ public class WingsLayer<T extends AbstractClientPlayer, M extends PlayerModel<T>
         WingSkin skin = WingsClient.skin(player);
         float size = sizeFor(level);
         // le battement : lent au repos, plus ample et plus rapide en mouvement
-        boolean moving = player.isFallFlying() || limbSwingAmount > 0.15F;
+        boolean moving = player.isFallFlying() || limbSwingAmount > 0.15F
+                || WingsFlightClient.gliding(player);
         float flap = Mth.sin(ageInTicks * 0.07F) * 7.0F
                 + (moving ? Mth.sin(ageInTicks * 0.32F) * 12.0F : 0.0F);
         float lift = Mth.sin(ageInTicks * 0.07F + 1.2F) * 3.0F;

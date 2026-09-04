@@ -2799,3 +2799,77 @@ a partir de +8. Une amelioration ajoute ; la piece reste dessous.
 
 Les autres armures du modpack n'ont pas de gravure -- il faudrait un calque par
 texture -- et gardent le lisere seul.
+
+## 36. Le debut de partie, deuxieme lot *(4 sept. 2026)*
+
+### 36.1 L'atelier du village (`game/Workshop`)
+
+Les trois stations -- Forge d'Arcencium, etabli de sertissage, Autel de
+Specialisation -- sont posees a la mise en place, a **douze blocs plein est
+de la Lame**, sur une dalle de briques de gangue avec deux lanternes. Le joueur
+l'a voulu pour donner une raison de REVENIR au village : sans lui, les stations
+se fabriquent (Arcencium, plumes, amethyste) et personne ne les a avant la
+deuxieme moitie de partie.
+
+### 36.2 L'equipement vanilla (`item/GearEligibility`)
+
+Toutes les **epees** et toutes les **armures** de l'espace de noms `minecraft`
+passent par les trois systemes, avec des plafonds :
+
+| | Pieces du mode | Pieces vanilla |
+|---|---|---|
+| Amelioration | +10 | **+7** -- puis « Trop faible pour aller au-dela » |
+| Rarete | Phenomenal (8) | **Ancestral (5)** -- l'eclat ne fait rien, rien n'est consomme |
+| Runes | rang ≤ rarete | rang ≤ rarete, donc **5 au plus** |
+
+Les pieces des autres mods ne passent pas : on ne connait ni leur force ni
+leur equilibre. Le bonus de rarete et d'amelioration s'appliquait deja a tout
+ce qui porte des degats ou de l'armure (`RarityStats`) ; seules les portes
+etaient fermees.
+
+### 36.3 Les runes, comme le joueur les voulait
+
+Le rang donnait un **schema fixe** : une Legendaire avait toujours cinq
+options et toujours un S. Maintenant :
+
+- le **nombre d'options est tire** entre le schema moins deux (une au moins)
+  et le schema entier -- une Legendaire en a 3, 4 ou 5 ; une Phenomenale 4 a 6 ;
+- les **grades sont tires sans remise dans le vivier du rang** : « CBAAS »
+  n'est plus une suite imposee mais cinq lettres dont on en prend `count`. Le
+  S n'est plus garanti, il est possible ;
+- chaque option tire sa valeur entre **68 %** du maximum et le maximum (les
+  degats critiques : +39 a +57 %, les chiffres du joueur) ;
+- **les runes tombent facilement** : 9 % de base (3 % avant), +11 % sur les
+  betes coriaces ;
+- **le rang suit l'heure** : Exploration ≤ 3, Montee ≤ 5, tout ouvert des la
+  Pression -- combine au plafond par points de vie ; sous le plafond un rang
+  pese `plafond - rang + 2`, et les boss tirent deux fois en gardant le
+  meilleur. **Mesure** (483 monstres, trois boss, 3 000 parties simulees) :
+  63 runes par partie, un rang 7+ dans 25 % des parties, un rang 8 dans 2 %.
+  Avec le 8 reserve a l'Assaut et un poids en `+1`, il ne sortait dans AUCUNE
+  partie : un rang qu'on ne voit jamais n'est pas rare, il est absent.
+
+### 36.4 Les ailes portent (`client/WingsFlightClient`, `specialization/WingsFlight`)
+
+En l'air, touche Saut tenue : des +5 la chute se freine, des +10 on plane
+(une poussee vers le regard), a +15 presque une elytre, a **+20 le double
+saut** (le meme que les Bottes d'Eclair). Le plane se calcule sur le CLIENT --
+le mouvement d'un joueur est pilote par son client -- et le serveur efface les
+degats de chute a proportion (67 % pardonnes a +5, tout a +15). On ne monte
+jamais : un plane descend toujours, c'est ce qui le laisse honnete.
+
+### 36.5 Les chiffres de degats, enfin visibles
+
+Ils existaient (`DamagePopClient`) mais etaient dessines DANS le monde, a
+l'etape « apres les particules » -- que le pipeline d'Iris ne rend pas. Ils
+sont maintenant projetes sur l'**interface** : on retient les matrices de la
+camera a chaque image, on projette la position du coup a l'ecran, on ecrit
+le chiffre la. Le HUD est dessine apres le shader, quel que soit le shader.
+Le critique reste plus gros, dore, precede d'un eclair, et il bondit.
+
+### 36.6 Les Ailes du Souverain Astral
+
+Trois propositions dans `tools/prompts/ailes_souverain_astral.md` (Couronne
+d'Astres, Firmament Brise, Aurore Souveraine) : apparence, bonus, animation
+ajoutee par le mod, prompt. Le joueur choisit ; l'apparence, son bonus et son
+animation viendront ensuite.

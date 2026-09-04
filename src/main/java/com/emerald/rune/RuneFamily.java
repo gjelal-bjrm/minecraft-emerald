@@ -37,10 +37,14 @@ public enum RuneFamily implements net.minecraft.util.StringRepresentable {
      * declenchement que le releve NosTale range lui aussi ici (syncope,
      * saignement, regeneration par victoire).
      */
-    WEAPON(stack -> isModWeapon(stack) || isArcenciumArmor(stack, EquipmentSlot.HEAD)),
+    WEAPON(stack -> isModWeapon(stack) || isArcenciumArmor(stack, EquipmentSlot.HEAD)
+            // et l'equipement vanilla, plafonne par sa rarete (voir GearEligibility)
+            || com.emerald.item.GearEligibility.isVanillaSword(stack)
+            || com.emerald.item.GearEligibility.isVanillaArmor(stack, EquipmentSlot.HEAD)),
 
     /** Les quatre pieces d'Arcencium : le defensif. */
-    ARMOR(stack -> isArcenciumArmor(stack, null));
+    ARMOR(stack -> isArcenciumArmor(stack, null)
+            || com.emerald.item.GearEligibility.isVanillaArmor(stack, null));
 
     private final java.util.function.Predicate<ItemStack> accepts;
 

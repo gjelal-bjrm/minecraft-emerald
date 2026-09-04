@@ -36,6 +36,7 @@ import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
  */
 @EventBusSubscriber(modid = EmeraldWeaponsMod.MODID)
 public final class HeroCombat {
+    private static final org.slf4j.Logger LOGGER = com.mojang.logging.LogUtils.getLogger();
 
     /**
      * Ce qu'un critique multiplie AVANT tout bonus de palier.
@@ -222,6 +223,7 @@ public final class HeroCombat {
                 net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(near, pop);
             }
         }
+        LOGGER.debug("Chiffre de degats envoye : {} sur {} (critique {})", dealt, victim.getName().getString(), crit);
     }
 
     /** Ce qui ne vient pas d'un coup porte de la main : magie, projectile, souffle, feu. */

@@ -443,5 +443,9 @@
   "celebrate.emeraldweapons.rarity.sub": "New rarity reached",
   "celebrate.emeraldweapons.spec": "Specialization +%s",
   "celebrate.emeraldweapons.spec.sub": "+%s hero points",
-  "item.emeraldweapons.arcencium_feather.altar": "Feathers are spent at the Specialization Altar."
+  "item.emeraldweapons.arcencium_feather.altar": "Feathers are spent at the Specialization Altar.",
+  "forge.emeraldweapons.weak": "Too weak to go beyond +%s. Only the mode's weapons reach +10.",
+  "socket.emeraldweapons.rarity.weak": "Too weak to rise above %s. Only the mode's gear goes higher.",
+  "wings.emeraldweapons.glide": "Your wings carry you: hold Jump in the air.",
+  "wings.emeraldweapons.doublejump": "Wings at max: double jump."
 }

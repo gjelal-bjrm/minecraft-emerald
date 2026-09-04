@@ -119,10 +119,23 @@ public record RuneMark(RuneFamily family, int rank, List<Option> options) {
     public static RuneMark roll(RuneFamily family, int rank, RandomSource random) {
         String shape = pattern(rank);
         List<Rune> pool = new ArrayList<>(Rune.of(family));
-        List<Option> options = new ArrayList<>(shape.length());
+        // LE NOMBRE D'OPTIONS EST TIRE : entre le schema moins deux (une au
+        // moins) et le schema entier. Une Legendaire (cinq) en a trois, quatre
+        // ou cinq ; une Phenomenale (six) en a quatre a six.
+        int most = shape.length();
+        int least = Math.max(1, most - 2);
+        int count = least + random.nextInt(most - least + 1);
+        // LES GRADES SONT TIRES SANS REMISE DANS LE VIVIER DU RANG : le
+        // schema « CBAAS » n'est plus une suite imposee mais cinq lettres dont
+        // on prend `count`. Le S n'est donc plus garanti, il est possible.
+        List<Character> letters = new ArrayList<>();
+        for (char c : shape.toCharArray()) {
+            letters.add(c);
+        }
+        List<Option> options = new ArrayList<>(count);
 
-        for (int i = 0; i < shape.length(); i++) {
-            RuneGrade grade = RuneGrade.of(shape.charAt(i));
+        for (int i = 0; i < count && !letters.isEmpty(); i++) {
+            RuneGrade grade = RuneGrade.of(letters.remove(random.nextInt(letters.size())));
             List<Rune> eligible = new ArrayList<>();
             for (Rune candidate : pool) {
                 // PLANCHER ET PLAFOND : une case S ne recoit que ce qui a le

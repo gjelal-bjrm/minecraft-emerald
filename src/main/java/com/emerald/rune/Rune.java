@@ -45,8 +45,8 @@ public enum Rune implements StringRepresentable {
     TRANCHANT(RuneFamily.WEAPON, RuneGrade.C, RuneGrade.A, 0.95, 1.42, 1.90, 0),
     /** Chance de critique : C seulement, 9. */
     CHANCE(RuneFamily.WEAPON, RuneGrade.C, RuneGrade.C, 6.0, 0, 0, 0),
-    /** Degats critiques : C seulement, 57. */
-    FUREUR(RuneFamily.WEAPON, RuneGrade.C, RuneGrade.C, 30.0, 0, 0, 0),
+    /** Degats critiques : C seulement, +39 a +57 % -- les chiffres donnes par le joueur. */
+    FUREUR(RuneFamily.WEAPON, RuneGrade.C, RuneGrade.C, 57.0, 0, 0, 0),
     /** Vitesse d'attaque. Sans equivalent : de notre cru, B a A. */
     CADENCE(RuneFamily.WEAPON, RuneGrade.B, RuneGrade.A, 0, 0.09, 0.14, 0),
     /** Portee, en blocs. Sans equivalent : B a A. */
@@ -114,7 +114,7 @@ public enum Rune implements StringRepresentable {
      * superieur reste toujours meilleur qu'un tirage chanceux du grade
      * inferieur.
      */
-    private static final double FLOOR = 0.60;
+    private static final double FLOOR = 0.68;      // 39 / 57 : l'exemple du joueur
 
     private final RuneFamily family;
     private final RuneGrade lowest;

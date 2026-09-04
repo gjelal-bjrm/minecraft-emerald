@@ -36,7 +36,9 @@ public final class ArtifactActions {
      * un joueur depuis le serveur.
      */
     public static void doubleJump(ServerPlayer player) {
-        if (!Artifacts.wearing(player, Artifact.BOTTES_D_ECLAIR)
+        boolean wings = com.emerald.specialization.Specialization.level(player)
+                >= com.emerald.specialization.Specialization.MAX;
+        if ((!Artifacts.wearing(player, Artifact.BOTTES_D_ECLAIR) && !wings)
                 || player.onGround() || player.isInWater()) {
             return;
         }

@@ -90,7 +90,8 @@ public class ArtifactInputClient {
         } else {
             airTicks++;
             if (jumpDown && !jumpWasDown && jumpAvailable && airTicks > AIR_GRACE
-                    && Artifacts.wearing(player, Artifact.BOTTES_D_ECLAIR)) {
+                    && (Artifacts.wearing(player, Artifact.BOTTES_D_ECLAIR)
+                        || WingsClient.level(player) >= com.emerald.specialization.Specialization.MAX)) {
                 // un seul saut supplementaire par passage en l'air : sans ce
                 // verrou, maintenir la touche ferait voler
                 jumpAvailable = false;

@@ -206,9 +206,7 @@ public class SocketBenchMenu extends AbstractContainerMenu {
         super.slotsChanged(container);
         this.result.setItem(0, socket(this.inputs.getItem(SLOT_GEAR),
                                       this.inputs.getItem(SLOT_ARTIFACT),
-                                      this.inputs.getItem(SLOT_ARTIFACT)
-                                              .is(com.emerald.item.ModItems.FORGE_STONE.get())
-                                              ? this.owner : null));
+                                      this.owner));
         this.broadcastChanges();
     }
 
@@ -221,7 +219,7 @@ public class SocketBenchMenu extends AbstractContainerMenu {
         // serait un mensonge, et afficher le +7 actuel dit exactement la
         // verite -- voila ce que vous posez, voila ce que vous risquez.
         if (forge != null && !gear.isEmpty()
-                && com.emerald.item.Upgrade.of(gear) < com.emerald.item.Upgrade.MAX
+                && com.emerald.item.Upgrade.of(gear) < com.emerald.item.GearEligibility.upgradeMax(gear)
                 && com.emerald.item.Upgrade.affordable(forge, gear)) {
             return gear.copy();
         }
@@ -231,6 +229,18 @@ public class SocketBenchMenu extends AbstractContainerMenu {
         // tirer, et faire semblant serait pire que ne rien montrer : le rang
         // se decide au moment ou l'on prend.
         if (artifactStack.is(com.emerald.item.ModItems.FATE_SHARD.get()) && !gear.isEmpty()) {
+            int max = com.emerald.item.GearEligibility.rarityMax(gear);
+            if (com.emerald.item.GearRarity.of(gear).rank() >= max
+                    && com.emerald.item.GearEligibility.isVanillaGear(gear)) {
+                // TROP FAIBLE POUR MONTER PLUS HAUT : pas de resultat, donc rien
+                // a prendre et rien de consomme -- et l'on dit pourquoi
+                if (forge instanceof net.minecraft.server.level.ServerPlayer sp) {
+                    sp.displayClientMessage(net.minecraft.network.chat.Component.translatable(
+                            "socket.emeraldweapons.rarity.weak",
+                            com.emerald.item.GearRarity.values()[max].label()), true);
+                }
+                return ItemStack.EMPTY;
+            }
             return gear.copy();
         }
         // LA GRAVURE, elle, se montre en entier : contrairement au tirage de

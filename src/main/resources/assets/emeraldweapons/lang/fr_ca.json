@@ -443,5 +443,9 @@
   "celebrate.emeraldweapons.rarity.sub": "Nouvelle rareté atteinte",
   "celebrate.emeraldweapons.spec": "Spécialisation +%s",
   "celebrate.emeraldweapons.spec.sub": "+%s points de héros",
-  "item.emeraldweapons.arcencium_feather.altar": "Les plumes s'emploient à l'Autel de Spécialisation."
+  "item.emeraldweapons.arcencium_feather.altar": "Les plumes s'emploient à l'Autel de Spécialisation.",
+  "forge.emeraldweapons.weak": "Trop faible pour aller au-delà de +%s. Seules les armes du mode vont à +10.",
+  "socket.emeraldweapons.rarity.weak": "Trop faible pour dépasser %s. Seules les pièces du mode vont plus haut.",
+  "wings.emeraldweapons.glide": "Vos ailes vous portent : maintenez Saut en l'air.",
+  "wings.emeraldweapons.doublejump": "Ailes au maximum : double saut."
 }

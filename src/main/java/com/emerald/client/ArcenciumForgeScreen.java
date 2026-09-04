@@ -78,7 +78,8 @@ public class ArcenciumForgeScreen extends AbstractContainerScreen<ArcenciumForge
     protected void containerTick() {
         super.containerTick();
         ItemStack gear = this.menu.gear();
-        this.forge.active = ArcenciumForgeMenu.isGear(gear) && Upgrade.of(gear) < Upgrade.MAX;
+        this.forge.active = ArcenciumForgeMenu.isGear(gear)
+                && Upgrade.of(gear) < com.emerald.item.GearEligibility.upgradeMax(gear);
     }
 
     @Override
@@ -102,6 +103,12 @@ public class ArcenciumForgeScreen extends AbstractContainerScreen<ArcenciumForge
         if (!placed) {
             graphics.drawString(this.font, Component.translatable("forge.emeraldweapons.empty"),
                     tx, 19, PALE, false);
+        } else if (level >= com.emerald.item.GearEligibility.upgradeMax(gear)
+                && com.emerald.item.GearEligibility.isVanillaGear(gear)) {
+            // TROP FAIBLE POUR ALLER PLUS LOIN : on le dit, plutot que de
+            // laisser un bouton gris sans explication
+            graphics.drawString(this.font, Component.translatable("forge.emeraldweapons.weak",
+                    com.emerald.item.GearEligibility.VANILLA_UPGRADE_MAX), tx, 19, INK, false);
         } else if (level >= Upgrade.MAX) {
             graphics.drawString(this.font, Component.translatable("forge.emeraldweapons.max"),
                     tx, 19, GOLD, false);

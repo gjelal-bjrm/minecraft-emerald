@@ -140,7 +140,7 @@ public class ArcenciumForgeMenu extends AbstractContainerMenu {
         }
         ItemStack gear = gear();
         int before = Upgrade.of(gear);
-        if (!isGear(gear) || before >= Upgrade.MAX) {
+        if (!isGear(gear) || before >= com.emerald.item.GearEligibility.upgradeMax(gear)) {
             return false;
         }
         // ON PAIE D'ABORD, ON TIRE ENSUITE : pierre puis metal. Un tirage qui
