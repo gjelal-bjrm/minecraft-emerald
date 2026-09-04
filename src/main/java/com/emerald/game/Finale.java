@@ -540,12 +540,20 @@ public final class Finale {
     }
 
     private static void dissolveGuards(ServerLevel level) {
+        // ON RELEVE D'ABORD, ON EFFACE ENSUITE : la meme faute que dans le
+        // balayage des jalons de l'Aurore, qui a fait tomber le serveur en une
+        // minute. Retirer une entite pendant qu'on parcourt la vue troue ses
+        // sections, et la vue rend alors des nulls.
+        List<Entity> doomed = new ArrayList<>();
         for (Entity entity : level.getEntities().getAll()) {
-            if (entity.getTags().contains(TAG_GUARD) && entity.isAlive()) {
-                level.sendParticles(ParticleTypes.SCULK_SOUL, entity.getX(), entity.getY() + 0.8,
-                        entity.getZ(), 16, 0.4, 0.6, 0.4, 0.03);
-                entity.discard();
+            if (entity != null && entity.getTags().contains(TAG_GUARD) && entity.isAlive()) {
+                doomed.add(entity);
             }
+        }
+        for (Entity entity : doomed) {
+            level.sendParticles(ParticleTypes.SCULK_SOUL, entity.getX(), entity.getY() + 0.8,
+                    entity.getZ(), 16, 0.4, 0.6, 0.4, 0.03);
+            entity.discard();
         }
     }
 

@@ -28,7 +28,7 @@ public class GameTicker {
         }
         GameState state = GameState.get(level);
         // La defaite par le temps n'existe QUE la ou le temps compte.
-        if (state.timed() && state.status() == GameState.Status.RUNNING
+        if (state.timed() && !state.paused() && state.status() == GameState.Status.RUNNING
                 && state.remaining(level) <= 0L) {
             Finale.defeat(level);
         }
@@ -61,7 +61,7 @@ public class GameTicker {
                 packed, held,
                 state.finale().equals(net.minecraft.core.BlockPos.ZERO)
                         ? 0L : state.finale().asLong(),
-                state.mode().ordinal(), state.cycle());
+                state.mode().ordinal(), state.cycle(), state.paused());
         for (ServerPlayer player : level.players()) {
             PacketDistributor.sendToPlayer(player, payload);
         }

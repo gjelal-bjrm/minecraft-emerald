@@ -54,6 +54,7 @@ public class GameHudClient {
     private static int status = GameState.Status.LOBBY.ordinal();
     private static int mode = GameState.Mode.DEFI.ordinal();
     private static int cycle = 1;
+    private static boolean paused;
     private static long remaining;
     private static int phase;
     private static int anchors;
@@ -66,6 +67,7 @@ public class GameHudClient {
         status = payload.status();
         mode = payload.mode();
         cycle = payload.cycle();
+        paused = payload.paused();
         remaining = payload.remaining();
         phase = payload.phase();
         anchors = payload.anchors();
@@ -129,7 +131,14 @@ public class GameHudClient {
                     Component.translatable("game.emeraldweapons.hud.cycle", cycle),
                     x + PANEL_W / 2, y + 5, color);
         } else {
+            // EN PAUSE, LE CHRONOMETRE LE DIT. Un compte a rebours arrete sans
+            // rien qui l'explique se lit comme un jeu bloque -- et l'on
+            // s'inquiete au lieu de s'absenter tranquillement.
             String time = current == GameState.Status.RUNNING ? formatTime(remaining) : "--:--";
+            if (paused && current == GameState.Status.RUNNING) {
+                time = "\u23F8 " + time;
+                color = 0xFF9CE8FF;
+            }
             graphics.drawCenteredString(mc.font, time, x + PANEL_W / 2, y + 5, color);
         }
 

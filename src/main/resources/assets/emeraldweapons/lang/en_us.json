@@ -482,5 +482,11 @@
   "weather.emeraldweapons.aurore.double": "The Aurora doubles the Arcencium vein",
   "weather.emeraldweapons.aurore.diamond": "The Aurora enriches diamond, and sometimes mixes Arcencium in",
   "weather.emeraldweapons.vein.diamond": "Diamond",
-  "weather.emeraldweapons.vein.arcencium": "Arcencium"
+  "weather.emeraldweapons.vein.arcencium": "Arcencium",
+  "game.emeraldweapons.pause.on": "Run paused. The clock, the Tide and the weather wait. /arcencium reprendre",
+  "game.emeraldweapons.pause.off": "The run resumes.",
+  "game.emeraldweapons.resume.prologue": "The village siege picks up where it stopped.",
+  "command.emeraldweapons.pause.nogame": "No run in progress.",
+  "command.emeraldweapons.pause.already": "The run is already paused.",
+  "command.emeraldweapons.pause.notpaused": "The run is not paused."
 }

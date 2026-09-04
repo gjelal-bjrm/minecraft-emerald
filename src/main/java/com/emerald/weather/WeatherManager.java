@@ -110,7 +110,11 @@ public final class WeatherManager {
                 current = Weather.CLEAR;
                 scheduleGap(level);
             }
-        } else if (GameState.get(level).status() == GameState.Status.RUNNING) {
+        } else if (GameState.get(level).status() == GameState.Status.RUNNING
+                && !GameState.get(level).paused()) {
+            // EN PAUSE, ON NE TIRE PLUS DE METEO. Revenir dans une Nuit
+            // d'Arcencium qu'on n'a pas vue arriver serait la punition exacte
+            // qu'on cherchait a eviter en s'arretant.
             if (--gapTicks <= 0) {
                 Weather next = roll(level);
                 if (next != null) {

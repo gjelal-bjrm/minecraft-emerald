@@ -66,6 +66,21 @@ public class GameState extends SavedData {
     private boolean modeChosen;
     /** Le tour de piste, en mode LIBRE : il commence a un et ne s'arrete pas. */
     private int cycle = 1;
+    /**
+     * LA PAUSE, et pourquoi elle vit dans la sauvegarde.
+     *
+     * « Parfois je dois m'absenter temporairement. » Une partie de quatre-vingt
+     * -dix minutes qui continue de courir pendant qu'on repond a la porte est
+     * une partie perdue pour une raison qui n'a rien a voir avec le jeu.
+     *
+     * On ne peut pas arreter l'horloge du monde -- elle fait pousser le ble et
+     * tourner les fours. On note donc l'instant ou l'on s'arrete, et au retour
+     * on DECALE le depart d'autant : le temps ecoule est le meme qu'a la
+     * seconde ou l'on est parti. Sauvegardee, parce qu'une pause doit survivre
+     * a une fermeture du jeu -- c'est meme le cas le plus courant.
+     */
+    private boolean paused;
+    private long pausedAt;
     private long startTick;
     private int anchorsActive;
     private int anchorsInProgress;
@@ -90,6 +105,8 @@ public class GameState extends SavedData {
         state.mode = Mode.values()[Math.floorMod(tag.getInt("Mode"), Mode.values().length)];
         state.modeChosen = tag.getBoolean("ModeChosen");
         state.cycle = Math.max(1, tag.getInt("Cycle"));
+        state.paused = tag.getBoolean("Paused");
+        state.pausedAt = tag.getLong("PausedAt");
         state.startTick = tag.getLong("StartTick");
         state.anchorsActive = tag.getInt("AnchorsActive");
         state.anchorsInProgress = tag.getInt("AnchorsInProgress");
@@ -113,6 +130,8 @@ public class GameState extends SavedData {
         tag.putInt("Mode", this.mode.ordinal());
         tag.putBoolean("ModeChosen", this.modeChosen);
         tag.putInt("Cycle", this.cycle);
+        tag.putBoolean("Paused", this.paused);
+        tag.putLong("PausedAt", this.pausedAt);
         tag.putLong("StartTick", this.startTick);
         tag.putInt("AnchorsActive", this.anchorsActive);
         tag.putInt("AnchorsInProgress", this.anchorsInProgress);
@@ -147,6 +166,31 @@ public class GameState extends SavedData {
 
     public int cycle() {
         return this.cycle;
+    }
+
+    public boolean paused() {
+        return this.paused;
+    }
+
+    /**
+     * Met l'horloge en pause, ou la relance.
+     *
+     * @return vrai si l'etat a change
+     */
+    public boolean setPaused(ServerLevel level, boolean value) {
+        if (this.paused == value || this.status != Status.RUNNING) {
+            return false;
+        }
+        if (value) {
+            this.pausedAt = level.getGameTime();
+        } else {
+            // le depart RECULE du temps passe en pause : tout ce qui se lit sur
+            // l'ecoule -- la Maree, les phases, la defaite -- suit sans le savoir
+            this.startTick += level.getGameTime() - this.pausedAt;
+        }
+        this.paused = value;
+        setDirty();
+        return true;
     }
 
     /**
@@ -261,7 +305,12 @@ public class GameState extends SavedData {
     }
 
     public long elapsed(ServerLevel level) {
-        return this.status == Status.RUNNING ? level.getGameTime() - this.startTick : 0L;
+        if (this.status != Status.RUNNING) {
+            return 0L;
+        }
+        // en pause, l'heure est celle de l'instant ou l'on s'est arrete
+        long now = this.paused ? this.pausedAt : level.getGameTime();
+        return now - this.startTick;
     }
 
     public long remaining(ServerLevel level) {
@@ -308,6 +357,8 @@ public class GameState extends SavedData {
     public void begin(ServerLevel level) {
         this.status = Status.RUNNING;
         this.startTick = level.getGameTime();
+        this.paused = false;
+        this.pausedAt = 0L;
         this.anchorsActive = 0;
         this.anchorsInProgress = 0;
         this.activated.clear();
@@ -363,6 +414,8 @@ public class GameState extends SavedData {
     public void reset() {
         this.status = Status.LOBBY;
         this.cycle = 1;
+        this.paused = false;
+        this.pausedAt = 0L;
         this.startTick = 0L;
         this.anchorsActive = 0;
         this.anchorsInProgress = 0;

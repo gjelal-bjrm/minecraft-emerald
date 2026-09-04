@@ -174,7 +174,12 @@ public class GameManager {
                 return;
             }
             siteAt = pending.remove(0);
-            site = Sanctuary.job(level, null, siteAt, 3 - pending.size());
+            // LE PALIER SE LIT SUR LE RANG DE L'ANCRE, et non sur ce qui reste
+            // a batir : une partie reprise ne remet en file que les sanctuaires
+            // manquants, et « trois moins ce qui reste » aurait alors donne le
+            // palier trois au premier venu.
+            int index = GameState.get(level).anchors().indexOf(siteAt);
+            site = Sanctuary.job(level, null, siteAt, index >= 0 ? index + 1 : 1);
             return;                       // le chantier commence a la tique suivante
         }
         site.advance(BUILD_BUDGET_NANOS);
@@ -793,6 +798,63 @@ public class GameManager {
         }
         org.slf4j.LoggerFactory.getLogger(EmeraldWeaponsMod.MODID).info(
                 "Monde ouvert : cycle {} ouvert, sanctuaires en {}", state.cycle(), anchors);
+    }
+
+    /**
+     * CE QU'UNE PARTIE REPRISE DOIT RETROUVER.
+     *
+     * LE CHRONOMETRE SE GARDE TOUT SEUL : il se compte en tics de MONDE, qui ne
+     * courent pas pendant que le jeu est ferme. On revient a la seconde exacte
+     * ou l'on est parti, sans rien faire pour cela -- c'etait deja le cas.
+     *
+     * Deux choses, en revanche, ne vivaient qu'en memoire vive et disparaissaient
+     * a la fermeture :
+     *
+     *  - LE SIEGE DU VILLAGE. Quitter pendant le prologue laissait la partie en
+     *    PROLOGUE sans aucune vague : la lame retiree, le joueur confine au
+     *    village, et plus rien qui puisse arriver. Une partie perdue pour de
+     *    bon, et pas par le jeu. Il reprend, depuis sa premiere vague -- on ne
+     *    sait pas ou il en etait, et redemander trois vagues vaut mieux que
+     *    rendre la partie impossible ;
+     *  - LES SANCTUAIRES EN ATTENTE. Quitter pendant qu'ils se dressent
+     *    laissait des ancres annoncees a l'interface et RIEN sur le terrain.
+     *    On regarde donc chaque ancre : si son bloc n'est pas la, le chantier
+     *    retourne dans la file.
+     */
+    public static void resume(ServerLevel level) {
+        GameState state = GameState.get(level);
+        if (state.status() == GameState.Status.PROLOGUE && prologue == null) {
+            BlockPos center = state.village();
+            if (!center.equals(BlockPos.ZERO)) {
+                surroundWithVillagers(level, center);
+                setGolemsAside(level, center);
+                prologue = new Siege(level, center, 1, PROLOGUE_WAVES,
+                        Component.translatable("game.emeraldweapons.siege.village"),
+                        BossEvent.BossBarColor.RED, Siege.Failure.VILLAGERS);
+                for (ServerPlayer player : level.players()) {
+                    player.sendSystemMessage(Component.translatable(
+                                    "game.emeraldweapons.resume.prologue")
+                            .withStyle(ChatFormatting.YELLOW));
+                }
+                org.slf4j.LoggerFactory.getLogger(EmeraldWeaponsMod.MODID).info(
+                        "Partie reprise : le siege du village repart en {}", center);
+            }
+        }
+        if (state.status() != GameState.Status.RUNNING) {
+            return;
+        }
+        int missing = 0;
+        for (BlockPos anchor : state.anchors()) {
+            if (!level.getBlockState(anchor).is(ModBlocks.PRISMATIC_ANCHOR.get())
+                    && !pending.contains(anchor) && !anchor.equals(siteAt)) {
+                pending.add(anchor);
+                missing++;
+            }
+        }
+        if (missing > 0) {
+            org.slf4j.LoggerFactory.getLogger(EmeraldWeaponsMod.MODID).info(
+                    "Partie reprise : {} sanctuaire(s) a rebatir", missing);
+        }
     }
 
     // ------------------------------------------------------------ les ancres

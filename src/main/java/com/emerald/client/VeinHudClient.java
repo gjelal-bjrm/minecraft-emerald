@@ -110,10 +110,16 @@ public final class VeinHudClient {
         double toTarget = Math.toDegrees(Math.atan2(dz, dx));
         double looking = mc.player.getYRot() + 90.0;      // yaw 0 = +Z, atan2 0 = +X
         double delta = Mth.wrapDegrees(toTarget - looking);
-        // LE SIGNE COMPTE : l'angle croit vers l'EST puis le SUD, c'est-a-dire
-        // vers la GAUCHE du joueur. Sans ce moins, la fleche envoyait
-        // exactement a l'oppose -- et une boussole qui ment est pire qu'aucune.
-        int step = (int) Math.round((-delta + 360.0) / 45.0) % 8;
+        // LE SIGNE, VERIFIE A L'ECRAN ET NON DEDUIT.
+        //
+        // J'avais raisonne que le vecteur « a droite » du joueur etait
+        // (cos yaw, sin yaw) et ajoute un moins en consequence. C'est le
+        // vecteur A GAUCHE : lacet zero regarde le sud, et le sud a l'est sur
+        // sa gauche. La capture d'essai l'a montre d'un coup d'oeil -- le filon
+        // pose a l'est s'affichait a droite. Une boussole qui ment est pire
+        // qu'aucune boussole ; celle-ci se relit sur une image, pas sur un
+        // raisonnement.
+        int step = (int) Math.round((delta + 360.0) / 45.0) % 8;
         return switch (step) {
             case 0 -> "↑";      // droit devant
             case 1 -> "↗";

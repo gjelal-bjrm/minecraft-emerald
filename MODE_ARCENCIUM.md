@@ -3582,3 +3582,84 @@ pauses courtes et regulieres plutot que rares et longues, ce qu'il faut a un jeu
 qui dessine soixante images par seconde. Le script refuse toute instance dont le
 jeu tourne -- CurseForge reecrit `minecraftinstance.json` a la fermeture et
 effacerait le reglage.
+
+---
+
+## 45. Reprendre, mettre en pause, et la mesure du chantier *(4 sept. 2026)*
+
+### 45.1 Une partie reprise reprend vraiment
+
+**Le chronometre se gardait deja tout seul** : il se compte en tics de MONDE,
+qui ne courent pas pendant que le jeu est ferme. On revient a la seconde exacte
+ou l'on est parti, et cela n'a jamais demande une ligne de code.
+
+Deux choses, en revanche, ne vivaient qu'en memoire vive :
+
+- **le siege du village.** Quitter pendant le prologue laissait la partie en
+  PROLOGUE sans aucune vague : la lame retiree, le joueur confine au village, et
+  plus rien qui puisse arriver. Une partie perdue pour de bon, et pas par le
+  jeu. Il **repart depuis sa premiere vague** -- on ne sait pas ou il en etait,
+  et redemander trois vagues vaut mieux que rendre la partie impossible ;
+- **les sanctuaires en attente.** Quitter pendant qu'ils se dressent laissait
+  des ancres annoncees a l'interface et RIEN sur le terrain. Au chargement, on
+  regarde chaque ancre : si son bloc n'est pas la, le chantier retourne dans la
+  file. Le palier se lit desormais sur le RANG de l'ancre et non sur ce qui
+  reste a batir, sans quoi le seul sanctuaire manquant aurait recu le palier
+  trois.
+
+`GameManager.resume`, appele par `WorldSetup` au demarrage du serveur.
+
+### 45.2 La pause
+
+`/arcencium pause` et `/arcencium reprendre`. On ne peut pas arreter l'horloge
+du monde -- elle fait pousser le ble et tourner les fours -- alors on note
+l'instant ou l'on s'arrete, et au retour **on decale le depart d'autant**. Tout
+ce qui se lit sur le temps ecoule suit sans le savoir : les phases, la Maree, la
+defaite. **La meteo ne tire plus non plus** : revenir dans une Nuit d'Arcencium
+qu'on n'a pas vue arriver serait exactement la punition qu'on cherchait a
+eviter. L'etat est SAUVEGARDE : une pause survit a la fermeture du jeu, ce qui
+est meme le cas le plus courant.
+
+L'interface affiche « ⏸ 89:58 » en bleu : un compte a rebours arrete sans rien
+qui l'explique se lit comme un jeu bloque.
+
+### 45.3 Le chantier, mesure puis coupe en deux
+
+On ne devine plus quelle etape coute : chaque chantier journalise son temps
+total **et le nom de sa pire etape**. Trois passages, trois mesures :
+
+| Etat | Total | Pire etape |
+|---|---|---|
+| avant | 5 500 ms **en une tique** | -- |
+| file d'etapes | 5 551 ms etales | **pyramide, 1 148 ms** |
+| pyramide par quadrants | 5 698 ms | **muraille, 546 ms** |
+| muraille en tranches de 24 | 6 082 ms | **pyramide q1, 519 ms** |
+
+Le pic est passe de **7 secondes a un demi**, et ce demi-seconde est une pose de
+structure indivisible (`template`) : on s'arrete la. Six secondes de fil serveur
+etalees sur vingt-cinq, a 450 blocs de la, pendant qu'on s'equipe au village.
+
+### 45.4 Deux fautes trouvees par la mesure
+
+**Le balayage qui tuait le serveur.** `sweepMarks` effacait les jalons de
+l'Aurore en parcourant `level.getEntities().getAll()`. Retirer une entite
+pendant qu'on parcourt la vue TROUE ses sections, et la vue rend alors des
+nulls : `Cannot invoke Entity.getTags() because entity is null`, serveur a
+terre en une minute. On releve d'abord, on efface ensuite. **La meme faute
+dormait dans `Finale.dissolveGuards`** -- elle ne s'etait jamais reveillee
+parce qu'elle ne tourne qu'une fois par partie.
+
+**La boussole qui mentait.** J'avais raisonne que le vecteur « a droite » du
+joueur etait `(cos yaw, sin yaw)` et corrige le signe en consequence. C'est le
+vecteur A GAUCHE : lacet zero regarde le sud, et le sud a l'est sur sa gauche.
+La capture d'essai l'a montre d'un coup d'oeil -- le filon pose a l'est
+s'affichait a droite. Verifie ensuite dans l'autre sens : le filon droit devant
+affiche ↑, celui a l'est affiche ←. Une boussole se relit sur une image, pas
+sur un raisonnement.
+
+### 45.5 Un filon par VEINE, pas par colonne
+
+Le panneau affichait « Diamant 63m ▲5 » trois fois de suite : un filon naturel
+de diamant tient sur deux ou trois colonnes, et la sonde en gardait un par
+colonne. Trois lignes identiques ne guident vers rien de plus qu'une seule. Huit
+blocs d'ecart minimum entre deux lignes, et les trois designent trois endroits.

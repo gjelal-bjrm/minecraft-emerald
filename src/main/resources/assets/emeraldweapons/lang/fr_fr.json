@@ -482,5 +482,11 @@
   "weather.emeraldweapons.aurore.double": "L'Aurore double la veine d'Arcencium",
   "weather.emeraldweapons.aurore.diamond": "L'Aurore enrichit le diamant, et y mêle parfois l'Arcencium",
   "weather.emeraldweapons.vein.diamond": "Diamant",
-  "weather.emeraldweapons.vein.arcencium": "Arcencium"
+  "weather.emeraldweapons.vein.arcencium": "Arcencium",
+  "game.emeraldweapons.pause.on": "Partie en pause. Le chronomètre, la Marée et la météo attendent. /arcencium reprendre",
+  "game.emeraldweapons.pause.off": "La partie reprend.",
+  "game.emeraldweapons.resume.prologue": "Le siège du village reprend là où il s'était arrêté.",
+  "command.emeraldweapons.pause.nogame": "Aucune partie en cours.",
+  "command.emeraldweapons.pause.already": "La partie est déjà en pause.",
+  "command.emeraldweapons.pause.notpaused": "La partie n'est pas en pause."
 }

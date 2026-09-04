@@ -748,12 +748,24 @@ public final class WeatherEffects {
         }
     }
 
-    /** On efface les jalons avant d'en reposer : ils ne doivent jamais s'accumuler. */
+    /**
+     * On efface les jalons avant d'en reposer : ils ne doivent jamais s'accumuler.
+     *
+     * ON RELEVE D'ABORD, ON EFFACE ENSUITE. Effacer pendant qu'on parcourt
+     * `getEntities().getAll()` fait rendre des NULLS a la vue -- ses sections
+     * sont des tableaux qu'un retrait troue en cours de route. Le serveur est
+     * tombe la-dessus en une minute : « Cannot invoke Entity.getTags() because
+     * entity is null ». La liste d'abord, la suppression apres.
+     */
     static void sweepMarks(ServerLevel level) {
+        List<net.minecraft.world.entity.Entity> doomed = new ArrayList<>();
         for (net.minecraft.world.entity.Entity entity : level.getEntities().getAll()) {
-            if (entity.getTags().contains(TAG_VEIN)) {
-                entity.discard();
+            if (entity != null && entity.getTags().contains(TAG_VEIN)) {
+                doomed.add(entity);
             }
+        }
+        for (net.minecraft.world.entity.Entity entity : doomed) {
+            entity.discard();
         }
     }
 
@@ -815,8 +827,27 @@ public final class WeatherEffects {
                     if (dx * dx + dz * dz > (double) AURORE_RANGE * AURORE_RANGE) {
                         continue;
                     }
-                    if (columns.add(ChunkPos.asLong(wx, wz))) {
-                        found.add(new BlockPos(wx, wy, wz));
+                    if (!columns.add(ChunkPos.asLong(wx, wz))) {
+                        continue;
+                    }
+                    // UNE LIGNE PAR VEINE, PAS PAR COLONNE.
+                    //
+                    // Un filon naturel de diamant tient sur deux ou trois
+                    // colonnes : le panneau affichait alors « Diamant 63m ▲5 »
+                    // trois fois de suite, pour le meme tas. Trois lignes
+                    // identiques ne guident vers rien de plus qu'une seule.
+                    // Huit blocs d'ecart minimum, et les trois lignes designent
+                    // trois endroits differents.
+                    BlockPos here = new BlockPos(wx, wy, wz);
+                    boolean tooClose = false;
+                    for (BlockPos kept : found) {
+                        if (kept.distSqr(here) < 64.0) {
+                            tooClose = true;
+                            break;
+                        }
+                    }
+                    if (!tooClose) {
+                        found.add(here);
                     }
                 }
             }

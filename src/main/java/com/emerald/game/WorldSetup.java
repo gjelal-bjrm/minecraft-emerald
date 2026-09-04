@@ -55,6 +55,10 @@ public class WorldSetup {
         ServerLevel level = event.getServer().overworld();
         GameState state = GameState.get(level);
         if (state.isPrepared() && isVillageValid(level, state)) {
+            // Le monde est deja pret : il reste a rendre a la partie ce que la
+            // memoire vive avait emporte -- le siege en cours, les chantiers
+            // inacheves. Voir GameManager.resume.
+            GameManager.resume(level);
             return;
         }
         if (state.isPrepared()) {

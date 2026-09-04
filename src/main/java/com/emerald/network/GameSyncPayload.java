@@ -16,7 +16,7 @@ import net.minecraft.resources.ResourceLocation;
  */
 public record GameSyncPayload(int status, long remaining, int phase, int anchors,
                               java.util.List<Long> anchorPositions, int heldMask,
-                              long finalePos, int mode, int cycle)
+                              long finalePos, int mode, int cycle, boolean paused)
         implements CustomPacketPayload {
 
     public static final CustomPacketPayload.Type<GameSyncPayload> TYPE =
@@ -35,6 +35,7 @@ public record GameSyncPayload(int status, long remaining, int phase, int anchors
                 ByteBufCodecs.VAR_LONG.encode(buf, p.finalePos());
                 ByteBufCodecs.VAR_INT.encode(buf, p.mode());
                 ByteBufCodecs.VAR_INT.encode(buf, p.cycle());
+                ByteBufCodecs.BOOL.encode(buf, p.paused());
             },
             buf -> new GameSyncPayload(
                     ByteBufCodecs.VAR_INT.decode(buf),
@@ -45,7 +46,8 @@ public record GameSyncPayload(int status, long remaining, int phase, int anchors
                     ByteBufCodecs.VAR_INT.decode(buf),
                     ByteBufCodecs.VAR_LONG.decode(buf),
                     ByteBufCodecs.VAR_INT.decode(buf),
-                    ByteBufCodecs.VAR_INT.decode(buf)));
+                    ByteBufCodecs.VAR_INT.decode(buf),
+                    ByteBufCodecs.BOOL.decode(buf)));
 
     @Override
     public CustomPacketPayload.Type<GameSyncPayload> type() {

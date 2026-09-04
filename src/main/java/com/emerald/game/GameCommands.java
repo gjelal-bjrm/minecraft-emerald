@@ -20,6 +20,26 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
 @EventBusSubscriber(modid = EmeraldWeaponsMod.MODID)
 public class GameCommands {
 
+    /** Arrete ou relance l'horloge de la partie. */
+    private static int setPaused(CommandSourceStack source, boolean value) {
+        ServerLevel level = source.getServer().overworld();
+        GameState state = GameState.get(level);
+        if (!state.setPaused(level, value)) {
+            source.sendFailure(Component.translatable(state.status() != GameState.Status.RUNNING
+                    ? "command.emeraldweapons.pause.nogame"
+                    : (value ? "command.emeraldweapons.pause.already"
+                             : "command.emeraldweapons.pause.notpaused")));
+            return 0;
+        }
+        for (net.minecraft.server.level.ServerPlayer player : level.players()) {
+            player.sendSystemMessage(Component.translatable(value
+                            ? "game.emeraldweapons.pause.on"
+                            : "game.emeraldweapons.pause.off")
+                    .withStyle(net.minecraft.ChatFormatting.AQUA));
+        }
+        return 1;
+    }
+
     /** Le regime du monde, choisi a la commande ou par un bouton du chat. */
     private static int chooseRegime(CommandSourceStack source, GameState.Mode mode) {
         return com.emerald.game.ModeChoice.choose(source.getServer().overworld(), mode) ? 1 : 0;
@@ -213,6 +233,11 @@ public class GameCommands {
                                     "command.emeraldweapons.skip", minutes), true);
                             return 1;
                         })));
+
+        // LA PAUSE : « parfois je dois m'absenter temporairement ».
+        root.then(Commands.literal("pause").executes(ctx -> setPaused(ctx.getSource(), true)));
+        root.then(Commands.literal("reprendre")
+                .executes(ctx -> setPaused(ctx.getSource(), false)));
 
         // LE REGIME DU MONDE : defi chronometre, ou monde ouvert.
         //

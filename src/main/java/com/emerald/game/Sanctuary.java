@@ -208,9 +208,15 @@ public final class Sanctuary {
         private final int cz;
         private final int rank;
         private final int[] bounds;
-        private final java.util.ArrayDeque<Runnable> steps = new java.util.ArrayDeque<>();
+        /** Une etape et SON NOM : sans le nom, « pire etape 1148 ms » ne dit pas laquelle. */
+        private record Step(String name, Runnable run) {
+        }
+
+        private final java.util.ArrayDeque<Step> steps = new java.util.ArrayDeque<>();
+        private String worstName = "?";
 
         private int apex = -1;
+        private boolean pyramidOk = true;
         private int repainted;
         private int calque;
         private BlockPos anchor;
@@ -236,7 +242,7 @@ public final class Sanctuary {
 
         /** La file, dans l'ordre exact de l'ancien corps de `build`. */
         private void plan() {
-            steps.add(() -> {
+            add("ouverture", () -> {
                 // Le registre s'ouvre AVANT la premiere pose : il note, pour
                 // chaque bloc, la routine qui l'a mis et sa position relative au
                 // centre -- c'est ce qui permet de designer un defaut a l'ecran
@@ -251,19 +257,32 @@ public final class Sanctuary {
             for (int band = from; band <= to; band += CLEAR_BAND) {
                 final int a = band;
                 final int b = Math.min(to, band + CLEAR_BAND - 1);
-                steps.add(() -> clearSite(level, cx, y, cz, bounds, a, b));
+                add("deblaiement", () -> clearSite(level, cx, y, cz, bounds, a, b));
             }
             // LA COUR D'ABORD, LA PYRAMIDE ENSUITE : l'ordre inverse laissait
             // une ceinture de terre autour d'elle et une marche d'un bloc.
-            steps.add(() -> courtyard(level, cx, y, cz));
-            steps.add(() -> apex = greatPyramid(level, source, cx, y, cz));
-            steps.add(() -> repainted = reskin(level, bounds, y));
-            steps.add(() -> curtainWall(level, cx, y, cz));
+            add("cour", () -> courtyard(level, cx, y, cz));
+            if (cursedPyramid()) {
+                for (int[] quad : PYRAMID_QUADS) {
+                    final int[] q = quad;
+                    add("pyramide q" + q[0],
+                            () -> pyramidOk &= pyramidQuad(level, cx, y, cz, q));
+                }
+                add("pyramide faite", () -> apex = pyramidFinish(level, cx, y, cz, pyramidOk));
+            } else {
+                add("pyramide", () -> apex = greatPyramid(level, source, cx, y, cz));
+            }
+            add("rhabillage", () -> repainted = reskin(level, bounds, y));
+            for (int band = -HALF; band <= HALF; band += WALL_BAND) {
+                final int a = band;
+                final int b = Math.min(HALF, band + WALL_BAND - 1);
+                add("muraille", () -> curtainWall(level, cx, y, cz, a, b));
+            }
             for (int sx = -1; sx <= 1; sx += 2) {
                 for (int sz = -1; sz <= 1; sz += 2) {
                     final int fx = sx;
                     final int fz = sz;
-                    steps.add(() -> cornerTower(level, cx, cz, cx + fx * HALF, y,
+                    add("tour", () -> cornerTower(level, cx, cz, cx + fx * HALF, y,
                             cz + fz * HALF, rank));
                 }
             }
@@ -271,9 +290,9 @@ public final class Sanctuary {
             // commande du jeu, qui choisit elle-meme sa rotation.
             for (int side = 0; side < 4; side++) {
                 final int face = side;
-                steps.add(() -> gatehouse(level, cx, y, cz, face, rank));
+                add("porte", () -> gatehouse(level, cx, y, cz, face, rank));
             }
-            steps.add(() -> {
+            add("sommet", () -> {
                 // Le sommet du modele n'est pas au milieu de son emprise : il
                 // tombe a (44, 44) de l'angle, la jonction des quadrants a
                 // (44, 47). Les quatre morceaux hauts font quarante blocs et
@@ -291,8 +310,8 @@ public final class Sanctuary {
             });
             // LE CALQUE EN DERNIER : il rejoue, telles quelles, les corrections
             // relevees a la Sonde, et ecrase ce qui le gene.
-            steps.add(() -> calque = SanctuaryOverlay.apply(level, cx, y, cz));
-            steps.add(() -> {
+            add("calque", () -> calque = SanctuaryOverlay.apply(level, cx, y, cz));
+            add("liaisons", () -> {
                 // L'INSTANTANE NE SE PREND QU'EN TEST : quatre millions de
                 // cases, le prix d'un outil de mise au point.
                 if (source != null) {
@@ -302,9 +321,13 @@ public final class Sanctuary {
             });
             // La garnison EN DERNIER, quand plus un bloc ne bouge : posee avant
             // le parvis, l'escalier et le couloir, ces trois-la l'etouffaient.
-            steps.add(() -> SanctuaryGarrison.populate(level, new BlockPos(cx, y, cz),
+            add("garnison", () -> SanctuaryGarrison.populate(level, new BlockPos(cx, y, cz),
                     HALF, WALK, TOWER_TOP));
-            steps.add(this::report);
+            add("compte rendu", this::report);
+        }
+
+        private void add(String name, Runnable run) {
+            steps.add(new Step(name, run));
         }
 
         private void report() {
@@ -312,8 +335,9 @@ public final class Sanctuary {
             String occupant = BuiltInRegistries.BLOCK.getKey(found.getBlock()).toString();
             org.slf4j.LoggerFactory.getLogger(EmeraldWeaponsMod.MODID).info(
                     "Sanctuaire palier {} : {} coffres poses, bati en {} ms de fil serveur "
-                            + "(pire etape {} ms)",
-                    rank, chestsPlaced, spentNanos / 1_000_000L, worstNanos / 1_000_000L);
+                            + "(pire etape : {} en {} ms)",
+                    rank, chestsPlaced, spentNanos / 1_000_000L, worstName,
+                    worstNanos / 1_000_000L);
             if (source == null) {
                 return;                  // bati par la partie : rien a dire
             }
@@ -345,15 +369,18 @@ public final class Sanctuary {
         public void advance(long budgetNanos) {
             long start = System.nanoTime();
             do {
-                Runnable step = steps.poll();
+                Step step = steps.poll();
                 if (step == null) {
                     return;
                 }
                 long at = System.nanoTime();
-                step.run();
+                step.run().run();
                 long took = System.nanoTime() - at;
                 spentNanos += took;
-                worstNanos = Math.max(worstNanos, took);
+                if (took > worstNanos) {
+                    worstNanos = took;
+                    worstName = step.name();
+                }
             } while (!steps.isEmpty() && System.nanoTime() - start < budgetNanos);
         }
     }
@@ -423,6 +450,49 @@ public final class Sanctuary {
     /**
      * @return la hauteur du faite, ou -1 si l'on s'est rabattu sur la notre
      */
+    /**
+     * Les quadrants, dans l'ordre releve : 1 au nord-ouest, 2 au sud-ouest,
+     * 3 au nord-est, 4 au sud-est.
+     *
+     * Ils sont sortis de la methode pour que le CHANTIER puisse les poser un
+     * par un. Mesure : la pyramide etait la pire etape du sanctuaire, 1106 ms
+     * a elle seule -- vingt-deux tiques de gel. Un quadrant en fait le quart.
+     */
+    static final int[][] PYRAMID_QUADS = {{1, 0, 0}, {2, 0, 47}, {3, 47, 0}, {4, 47, 47}};
+
+    /** La Pyramide Maudite est-elle installee ? Sans Cataclysm, on batit la notre. */
+    static boolean cursedPyramid() {
+        return BuiltInRegistries.BLOCK.containsKey(
+                ResourceLocation.fromNamespaceAndPath("cataclysm", "door_of_seal"));
+    }
+
+    /** Un quadrant, pose sur la cour. Voir greatPyramid pour le pourquoi du y+1. */
+    static boolean pyramidQuad(ServerLevel level, int cx, int y, int cz, int[] quad) {
+        SanctuaryLedger.part("greatPyramid");
+        return template(level, "cursed_pyramid_upper" + quad[0],
+                cx - PYRAMID_CX + quad[1], y + 1, cz - PYRAMID_CZ + quad[2]);
+    }
+
+    /**
+     * Apres les quatre quadrants : on VERIFIE qu'une masse se dresse la ou le
+     * faite devrait etre. « place template » ne leve rien quand il echoue, si
+     * bien qu'une pose ratee passait inapercue.
+     *
+     * @return la hauteur du faite, ou -1 si l'on s'est rabattu sur la notre
+     */
+    static int pyramidFinish(ServerLevel level, int cx, int y, int cz, boolean ok) {
+        boolean standing = probeTop(level, cx, y, cz - (PYRAMID_CZ - 44)) > y + 12;
+        if (ok && standing) {
+            scrubMarkers(level, cx - PYRAMID_CX, y + 1, cz - PYRAMID_CZ);
+            return y + 1 + PYRAMID_H - 1;
+        }
+        org.slf4j.LoggerFactory.getLogger(EmeraldWeaponsMod.MODID).warn(
+                "Pyramide de Cataclysm non posee (commandes={}, dressee={}) "
+                        + "a y={} : repli sur la notre", ok, standing, y);
+        steppedPyramid(level, cx, y, cz);
+        return -1;
+    }
+
     private static int greatPyramid(ServerLevel level, CommandSourceStack source,
                                     int cx, int y, int cz) {
         SanctuaryLedger.part("greatPyramid");
@@ -434,9 +504,8 @@ public final class Sanctuary {
             // Les quadrants, dans l'ordre releve : 1 au nord-ouest, 2 au
             // sud-ouest, 3 au nord-est, 4 au sud-est. Les superieurs se posent
             // quarante-huit blocs plus haut, aux memes abscisses.
-            int[][] quads = {{1, 0, 0}, {2, 0, 47}, {3, 47, 0}, {4, 47, 47}};
             boolean ok = true;
-            for (int[] q : quads) {
+            for (int[] q : PYRAMID_QUADS) {
                 // SEULEMENT la moitie haute, et POSEE SUR LE SOL.
                 //
                 // Les quatre morceaux du bas sont les salles du tombeau : un
@@ -452,20 +521,9 @@ public final class Sanctuary {
                 // Un bloc AU-DESSUS de la cour, et non dedans : posee a la
                 // hauteur du pavage, sa premiere assise se confondait avec lui
                 // et la pyramide paraissait enfoncee d'un cran.
-                ok &= template(level, "cursed_pyramid_upper" + q[0],
-                        ox + q[1], y + 1, oz + q[2]);
+                ok &= pyramidQuad(level, cx, y, cz, q);
             }
-            // On VERIFIE qu'une masse se dresse la ou le faite devrait etre :
-            // « place template » ne leve rien quand il echoue, si bien qu'une
-            // pose ratee passait inapercue.
-            boolean standing = probeTop(level, cx, y, cz - (PYRAMID_CZ - 44)) > y + 12;
-            if (ok && standing) {
-                scrubMarkers(level, ox, y + 1, oz);
-                return y + 1 + PYRAMID_H - 1;
-            }
-            org.slf4j.LoggerFactory.getLogger(EmeraldWeaponsMod.MODID).warn(
-                    "Pyramide de Cataclysm non posee (commandes={}, dressee={}) "
-                            + "a y={} : repli sur la notre", ok, standing, y);
+            return pyramidFinish(level, cx, y, cz, ok);
         }
         steppedPyramid(level, cx, y, cz);
         return -1;
@@ -761,9 +819,17 @@ public final class Sanctuary {
      * se dresse a dix et onze, cote exterieur seulement, pour ne pas gener la
      * circulation cote cour.
      */
+    /** Largeur d'une tranche de muraille : la muraille etait la pire etape restante. */
+    private static final int WALL_BAND = 24;
+
     private static void curtainWall(ServerLevel level, int cx, int y, int cz) {
+        curtainWall(level, cx, y, cz, -HALF, HALF);
+    }
+
+    private static void curtainWall(ServerLevel level, int cx, int y, int cz,
+                                    int fromD, int toD) {
         SanctuaryLedger.part("curtainWall");
-        for (int d = -HALF; d <= HALF; d++) {
+        for (int d = fromD; d <= toD; d++) {
             for (int t = 0; t < THICK; t++) {
                 for (int side = 0; side < 4; side++) {
                     int[] xz = wallPoint(side, d, t, cx, cz);
