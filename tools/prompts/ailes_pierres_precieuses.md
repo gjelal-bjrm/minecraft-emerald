@@ -1,150 +1,82 @@
-# Les Ailes de Pierres Précieuses : ce qui cloche, et quatre patrons possibles
+# Les Ailes de Pierres Précieuses — le Vitrail
 
-## Je m'étais trompé de coupable
+Patron retenu par le joueur. Ce sont **parmi les ailes les plus puissantes du
+jeu** : le dessin doit se lire comme une pièce d'orfèvrerie, pas comme une
+variante de plus.
 
-J'avais accusé les **branches séparées**. C'est faux, et le joueur l'a dit :
-elles sont voulues, et le **Givre** a exactement les mêmes — il rend très bien.
-Une texture ne se juge pas sur son plan mais sur ce qu'il en reste réduit à un
-bloc de large, et j'avais lu la mauvaise différence.
+## L'idée
 
-## La vraie cause, mesurée sur les dix ailes
+Une aile taillée dans un **vitrail de cathédrale**. Pas des plumes : de larges
+**panneaux de verre coloré** tenus par un **plombage noir épais**, qui suit la
+nervure de l'aile comme les plombs d'une verrière suivent son dessin. Le
+plombage fait tout le travail : il dessine la silhouette, il sépare les
+couleurs, et il survit à la réduction — c'est pourquoi un vitrail se lit encore
+à trente mètres dans une nef, là où une résille fine disparaît.
 
-J'ai relevé, pour chaque aile du mode, l'**étalement de teinte** (0 = une seule
-couleur, 1 = arc-en-ciel complet) et la **saturation moyenne** :
+On garde ta **structure en deux branches** : elle est ta signature et le Givre
+prouve qu'elle rend bien.
 
-| Aile | Étalement de teinte | Saturation |
-|---|---|---|
-| Givre, Rubis, Tempête, Braise | 0,01 – 0,02 | 0,47 – 0,80 |
-| Obscures, Papillon | 0,06 – 0,09 | 0,20 – 0,69 |
-| Émeraude, Aurore | 0,16 – 0,17 | 0,44 – 0,71 |
-| Prismatiques | 0,33 | **0,16** *(pastel)* |
-| **Pierres Précieuses** | **0,56** | **0,71** |
+## Deux règles à ne pas lâcher
 
-Tout ton jeu d'ailes suit, sans que tu l'aies formulé, **une règle** :
+**La racine.** Le point d'attache doit tomber à environ **15 % du bord gauche
+et 85 % de la hauteur** — le coin bas-gauche, la partie la plus dense et la
+plus épaisse de l'image. C'est là que le jeu pose l'aile sur l'omoplate.
 
-> Soit **une famille de teintes**, même très saturée (Givre, Rubis, Braise) ;
-> soit **beaucoup de teintes, mais pâles** (Prismatiques, saturation 0,16).
+**Le plombage.** Épais, noir, **partout** : autour de chaque panneau *et*
+autour de l'aile entière. C'est lui qui tient l'ensemble quand l'image est
+réduite à la taille d'un bloc.
 
-Les Pierres Précieuses enfreignent les deux à la fois : sept teintes franches à
-saturation 0,71. À un bloc de large, l'œil ne peut plus **grouper** les plumes
-en un seul objet — chaque plume devient une tache indépendante, et l'ensemble
-se lit comme des confettis. Les branches n'y sont pour rien ; le Givre le
-prouve.
+## Le prompt
 
-**Corollaire utile pour la suite** : ce n'est pas la couleur qui doit porter la
-variété d'une aile à l'autre — c'est le **patron**.
+> A single right wing, seen from behind, root at the bottom-left, tip sweeping
+> to the top-right, isolated on a pure black background. No body, no character,
+> no text, no border, no frame.
+>
+> The wing is a **cathedral stained-glass window cut into the shape of a wing**.
+> It is built from twelve to sixteen LARGE panes of coloured glass — long
+> tapering shapes like elongated leaves — each pane filled with a single deep
+> jewel colour and lit from behind so the glass glows: ruby red, burnt amber,
+> golden topaz, emerald green, deep sapphire, royal amethyst.
+>
+> Every pane is outlined by THICK BLACK LEAD CAME, four to six pixels wide, and
+> a heavy black outline runs around the entire wing. The lead is the strongest
+> graphic element of the image.
+>
+> The panes are grouped in **two distinct branches** that split from a shared
+> root: a long upper branch sweeping high to the top-right, and a shorter lower
+> branch fanning outward — with a clear dark gap between the two.
+>
+> At the root, in the bottom-left, a **massive ornate gold anchor**: a fan of
+> gold tracery ribs radiating outward like the spokes of a rose window, set
+> with six to eight LARGE faceted cabochon gems — big, individually readable,
+> never a scattering of small stones. The gold is heavy, polished, with strong
+> highlights. This root is the densest and most detailed part of the image.
+>
+> Thin shafts of coloured light spill outward from behind the glass, and a few
+> loose gem fragments drift away from the trailing edge.
+>
+> Style: painted fantasy game asset, crisp graphic edges, very high contrast
+> against the black, saturated glass and heavy dark leading. Square image,
+> 1024 × 1024 minimum. The wing spans the image on the diagonal, wider than
+> tall, its mass on the line from the bottom-left root to the top-right tip.
 
----
+## Ce qui doit faire rejeter un essai
 
-## Quatre patrons, tous différents des plumes
+- du plombage fin ou absent : c'est **le** point ;
+- des plumes, de la résille, des chaînettes, des pendentifs ;
+- une nuée de petites pierres au lieu de six à huit grosses ;
+- la racine ailleurs qu'en bas à gauche, ou une racine légère ;
+- une aile plus haute que large, ou dressée à la verticale.
 
-Chacun garde la règle de couleur, se distingue franchement des neuf autres, et
-survit à la réduction. Le prompt commun à tous : **une aile DROITE seule, vue
-de dos, racine en bas à gauche, pointe en haut à droite, fond noir pur, sans
-corps ni personnage ni texte, carré, 1024 × 1024 au moins.**
+## Ce qui l'attend en jeu
 
-### 1. Le Vitrail *(recommandé pour des « pierres précieuses »)*
-
-**Le patron.** Pas de plumes : de larges **panneaux de verre taillé** tenus par
-un **plombage noir épais**, comme une verrière de cathédrale découpée en forme
-d'aile. Huit à douze panneaux seulement, chacun d'un seul bloc de couleur.
-
-**Pourquoi ça marche là où l'actuelle échoue.** Le plombage noir fait exactement
-ce qui manque : il **groupe**. Des lignes sombres épaisses survivent à la
-réduction et dessinent la silhouette, si bien que les couleurs peuvent rester
-nombreuses et franches sans devenir des confettis — c'est le principe même du
-vitrail, lisible à trente mètres dans une nef.
-
-> A single right wing shaped like a cathedral stained-glass window: eight to
-> twelve LARGE flat panes of coloured glass — ruby red, amber, emerald,
-> sapphire, amethyst — each a single flat colour, separated by THICK black
-> lead came lines, four to six pixels wide, that also outline the whole wing.
-> The panes are cut in long tapering shapes that follow the wing's sweep, split
-> into two branches. Light shines through the glass from behind. No feathers,
-> no filigree, no small ornaments. Crisp graphic style, heavy dark outlines,
-> high contrast on pure black.
-
-### 2. La Géode
-
-**Le patron.** Une aile de **cristaux bruts** poussés en grappe, comme
-l'intérieur d'une géode d'améthyste : des prismes épais de longueurs inégales,
-serrés à la racine, ouverts en éventail irrégulier vers la pointe. Aucune
-symétrie, aucun bord lisse.
-
-**Pourquoi ça marche.** Les formes sont grosses et anguleuses, et la teinte
-reste **une** (violet, ou vert selon la variante) avec un cœur plus clair : le
-contraste clair/sombre porte le relief, pas la couleur.
-
-> A single right wing made of raw crystal clusters, like the inside of an
-> amethyst geode: thick hexagonal prisms of uneven length, densely packed at
-> the root, fanning out irregularly toward the tip in two clusters. All in one
-> hue — deep violet — with pale, almost white glowing cores and dark violet
-> shadows between the prisms. Rough broken facets, no smooth edges, no
-> feathers, no metal, no ornament.
-
-### 3. Les Lames
-
-**Le patron.** Un éventail de **lames courbes** — des cimeterres emboîtés
-plutôt que des plumes. Métal sombre, tranchant clair, une seule couleur
-d'accent qui court le long des fils.
-
-**Pourquoi ça marche.** La silhouette devient **dure et anguleuse**, ce
-qu'aucune autre aile du jeu n'est : on la reconnaît d'un coup d'œil. Et le
-contraste métal sombre / fil clair est le plus haut de tout le jeu de textures,
-donc le plus lisible de loin.
-
-> A single right wing built from nine curved blades instead of feathers, like
-> nested scimitars sharing one hilt at the root, splitting into two groups. The
-> blades are dark blued steel with a bright razor edge; a single accent colour
-> — molten gold — runs along every cutting edge and pools at the hilt. Hard
-> angular silhouette, strong specular highlights, no feathers, no gems.
-
-### 4. Les Éclats suspendus
-
-**Le patron.** Aucune membrane : des **fragments détachés** qui flottent en
-formation d'aile, comme un vitrail brisé tenu en l'air. Gros éclats près de la
-racine, plus petits et plus espacés vers la pointe.
-
-**Pourquoi ça marche — et son risque.** C'est le patron le plus original des
-quatre, et le seul que je te signale comme **risqué** : trop d'espace entre les
-fragments et l'aile disparaît en jeu. Il ne tient que si les éclats proches de
-la racine sont **vraiment gros** et si l'on garde une seule teinte.
-
-> A single right wing made of floating detached shards with no membrane between
-> them: large angular fragments of gemstone near the root, becoming smaller and
-> more widely spaced toward the tip, arranged so their outline still reads as a
-> wing. One hue only — deep sapphire blue — with bright edges catching light.
-> Faint glowing dust in the gaps. No feathers, no connecting structure.
-
----
-
-## Si tu préfères garder l'image actuelle
-
-Le remède le moins cher, sans rien repeindre : **regrouper les couleurs**.
-Plutôt qu'une teinte par plume, trois **zones** franches le long de l'aile.
-
-**Je l'ai essayé sur ton fichier** (rouge à la racine, violet au milieu, bleu à
-la pointe, l'or intact) et mesuré : l'étalement de teinte passe de **0,56 à
-0,35** — soit le niveau des Prismatiques, la seule autre aile multicolore qui
-rend bien. Réduite à 64 px, la silhouette se groupe enfin en un objet au lieu
-de sept.
-
-Ce n'est pas aussi net qu'un patron pensé pour ça (la saturation reste à 0,67,
-là où les Prismatiques tiennent à 0,16), mais c'est une minute de travail contre
-une repeinture. L'image d'essai est dans le bloc-notes ; dis-moi si tu veux que
-je la pose.
-
-## Ce qui est déjà en place
-
-- **Écartement et envergure par apparence** (`WingSkin`) : les Pierres
-  Précieuses ont +14° et +15 %, ce qui sépare les deux branches. Ça aide, mais
-  ça ne traite pas la cause — la couleur.
+- **La racine est lue par apparence** depuis cette image : je relève sa
+  position et je la donne au rendu, donc l'aile se pose juste sur l'épaule.
+  C'était la cause de ton « trop élevées et trop serrées », et elle est
+  corrigée pour les dix ailes — la plupart étaient dessinées un peu trop haut.
 - **Les pierres tombent** (`specialization/WingGems`) : une gemme toutes les
-  trois tiques s'égrène et s'efface, six couleurs franches, visible par toute
-  l'équipe.
+  trois tiques s'égrène de l'aile et s'efface, en six couleurs franches,
+  visible par toute l'équipe. Avec le vitrail, l'effet prend tout son sens :
+  la verrière perd ses éclats.
 
-## L'épreuve, quel que soit le patron
-
-Réduis l'image à **64 × 64** et regarde-la. Si la silhouette reste une aile et
-que les masses se distinguent, elle tiendra en jeu. C'est exactement ce que le
-jeu en fait.
+Envoie-moi l'image, je m'occupe du reste.

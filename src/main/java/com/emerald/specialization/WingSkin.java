@@ -17,9 +17,9 @@ import net.minecraft.util.StringRepresentable;
  * mecanique sera ecrite ; pour l'instant, une apparence n'est qu'un aspect.
  */
 public enum WingSkin implements StringRepresentable {
-    PRISMATIQUES("prismatiques", true, 0.80F),
-    RUBIS("rubis", true, 1.0F),
-    AURORE("aurore", true, 0.95F),
+    PRISMATIQUES("prismatiques", true, 0.80F, 0.14F, 0.85F, false),
+    RUBIS("rubis", true, 1.0F, 0.15F, 0.85F, false),
+    AURORE("aurore", true, 0.95F, 0.15F, 0.87F, false),
     /**
      * LES PIERRES PRECIEUSES SONT AJUSTEES, ET ELLES SEULES.
      *
@@ -37,13 +37,13 @@ public enum WingSkin implements StringRepresentable {
      * deux branches et rend chaque pierre lisible. Et elle laisse tomber ses
      * pierres (voir WingGems), ce qui etait la demande.
      */
-    PIERRES_PRECIEUSES("pierres_precieuses", true, 1.0F, 14.0F, 1.15F, true),
-    BRAISE("braise", true, 1.0F),
-    TEMPETE("tempete", true, 0.95F),
-    EMERAUDE("emeraude", true, 1.0F),
-    OBSCURES("obscures", false, 1.0F),
-    GIVRE("givre", true, 0.85F),
-    PAPILLON("papillon", false, 1.0F);
+    PIERRES_PRECIEUSES("pierres_precieuses", true, 1.0F, 0.21F, 0.76F, true),
+    BRAISE("braise", true, 1.0F, 0.16F, 0.85F, false),
+    TEMPETE("tempete", true, 0.95F, 0.16F, 0.84F, false),
+    EMERAUDE("emeraude", true, 1.0F, 0.17F, 0.85F, false),
+    OBSCURES("obscures", false, 1.0F, 0.12F, 0.85F, false),
+    GIVRE("givre", true, 0.85F, 0.16F, 0.83F, false),
+    PAPILLON("papillon", false, 1.0F, 0.21F, 0.79F, false);
 
     private final String id;
     /** Rendue en emissif (lumiere) plutot qu'eclairee par le monde (matiere). */
@@ -54,23 +54,39 @@ public enum WingSkin implements StringRepresentable {
      */
     public final float tint;
 
-    /** Degres d'ecartement en plus, pour une silhouette qui a besoin d'air. */
-    public final float spread;
-    /** Facteur d'envergure : une aile fine se lit mieux un peu plus grande. */
-    public final float scale;
+    /**
+     * LA RACINE DE L'AILE DANS SA PROPRE TOILE, en fractions (u vers la droite,
+     * v vers le bas). C'est le point d'attache, celui qu'on pose sur l'omoplate.
+     *
+     * ELLE ETAIT LA MEME POUR TOUTES : (0,12 ; 0,78), ecrite en dur dans le
+     * calque. Or les peintures ne placent pas leur racine au meme endroit -- le
+     * releve donne v entre 0,76 et 0,87 selon l'aile. Toutes etaient donc
+     * dessinees un peu trop haut, et les Pierres Precieuses, dont la racine est
+     * la plus haute (0,76) et la plus rentree (0,21), l'etaient le plus : c'est
+     * exactement ce que le joueur voyait -- « trop elevees et trop serrees ».
+     *
+     * J'avais d'abord accuse leurs couleurs. Elles expliquent la LISIBILITE de
+     * la texture reduite, pas son placement ; le joueur a maintenu que le
+     * probleme etait l'affichage, et la mesure lui donne raison.
+     *
+     * Valeurs relevees sur chaque image : centre de masse des huit pour cent de
+     * matiere les plus proches du coin bas-gauche.
+     */
+    public final float rootU;
+    public final float rootV;
     /** Vrai si elle laisse tomber des pierres (voir WingGems). */
     public final boolean gems;
 
     WingSkin(String id, boolean emissive, float tint) {
-        this(id, emissive, tint, 0.0F, 1.0F, false);
+        this(id, emissive, tint, 0.12F, 0.78F, false);
     }
 
-    WingSkin(String id, boolean emissive, float tint, float spread, float scale, boolean gems) {
+    WingSkin(String id, boolean emissive, float tint, float rootU, float rootV, boolean gems) {
         this.id = id;
         this.emissive = emissive;
         this.tint = tint;
-        this.spread = spread;
-        this.scale = scale;
+        this.rootU = rootU;
+        this.rootV = rootV;
         this.gems = gems;
     }
 

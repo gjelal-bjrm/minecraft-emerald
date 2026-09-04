@@ -3053,7 +3053,27 @@ matiere sont IDENTIQUES a celles du Givre et des Prismatiques, qui rendent tres
 bien -- centre de masse a (0,47 ; 0,50) contre (0,51 ; 0,51), meme part de
 matiere dans le tiers haut. Ce n'est donc ni un decalage, ni un centrage.
 
-**J'ai d'abord accuse les branches separees. C'etait faux** : elles sont
+**LA CAUSE ETAIT L'ANCRAGE, et le joueur l'a tenu bon contre deux de mes
+diagnostics.** Le calque posait TOUTES les ailes sur le meme point de leur
+toile -- (0,12 ; 0,78) ecrit en dur. Or chaque peinture place sa racine ou elle
+veut. Releve (centre de masse des 8 % de matiere les plus proches du coin
+bas-gauche) :
+
+| Aile | racine (u ; v) |
+|---|---|
+| Obscures | (0,12 ; 0,85) |
+| Prismatiques, Rubis, Aurore | (0,14-0,15 ; 0,85-0,87) |
+| Givre, Braise, Tempete, Emeraude | (0,16-0,17 ; 0,83-0,85) |
+| Papillon | (0,21 ; 0,79) |
+| **Pierres Precieuses** | **(0,21 ; 0,76)** |
+
+Toutes etaient donc dessinees un peu trop haut, et les Pierres Precieuses --
+racine la plus haute ET la plus rentree -- l'etaient le plus : « trop elevees
+et trop serrees », mot pour mot. `WingSkin` porte desormais la racine de
+chaque apparence et le calque s'en sert.
+
+**Les deux diagnostics precedents etaient faux**, et il faut le noter parce
+qu'ils sont instructifs. J'ai d'abord accuse les branches separees : elles sont
 voulues, et le Givre a exactement les memes en rendant tres bien. La mesure a
 tranche autrement. En relevant sur les dix ailes l'**etalement de teinte**
 (0 = une seule couleur, 1 = arc-en-ciel) et la **saturation moyenne** :
@@ -3074,11 +3094,19 @@ et l'ensemble se lit comme des confettis.
 
 **L'epreuve qui tranche** : reduire l'image a 64 pixels, ce que le jeu en fait.
 Le Givre et les Prismatiques restent des ailes ; les Pierres Precieuses
-deviennent un gribouillis. **Corollaire** : la variete d'une aile a l'autre doit
-passer par le PATRON, pas par la couleur -- quatre patrons proposes dans
-`tools/prompts/ailes_pierres_precieuses.md` (vitrail, geode, lames, eclats
-suspendus). Retouche mesuree sur le fichier actuel : regrouper les teintes en
-trois zones fait tomber l'etalement de 0,56 a 0,35.
+deviennent un gribouillis. **Corollaire** : la variete d'une aile a l'autre gagne a
+passer par le PATRON plutot que par la couleur.
+
+Ces deux relevés restent vrais et utiles -- ils disent comment une texture se
+LIT une fois reduite -- mais ils n'expliquaient pas la plainte du joueur, qui
+portait sur le PLACEMENT. Il l'a maintenu deux fois ; il avait raison.
+
+**Le patron retenu** : le **Vitrail** (brief complet dans
+`tools/prompts/ailes_pierres_precieuses.md`). De larges panneaux de verre
+colore tenus par un plombage noir epais, en deux branches, avec une racine d'or
+massive. Le plombage est ce qui manquait : des lignes sombres epaisses
+survivent a la reduction et GROUPENT la forme, ce qui autorise enfin des
+couleurs nombreuses et franches.
 
 En attendant une repeinture (prompt dans `tools/prompts/ailes_pierres_precieuses.md`) :
 

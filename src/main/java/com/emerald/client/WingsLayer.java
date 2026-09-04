@@ -39,9 +39,7 @@ public class WingsLayer<T extends AbstractClientPlayer, M extends PlayerModel<T>
 
     /** Envergure d'une aile a +15, en blocs. */
     private static final float FULL_SIZE = 3.4F;
-    /** Ou est la racine dans la texture : 12 % du bord gauche, 78 % du haut. */
-    private static final float ROOT_U = 0.12F;
-    private static final float ROOT_V = 0.78F;
+
 
     public WingsLayer(RenderLayerParent<T, M> parent) {
         super(parent);
@@ -62,7 +60,7 @@ public class WingsLayer<T extends AbstractClientPlayer, M extends PlayerModel<T>
             return;
         }
         WingSkin skin = WingsClient.skin(player);
-        float size = sizeFor(level) * skin.scale;
+        float size = sizeFor(level);
         // le battement : lent au repos, plus ample et plus rapide en mouvement
         boolean moving = player.isFallFlying() || limbSwingAmount > 0.15F
                 || WingsFlightClient.gliding(player);
@@ -82,12 +80,12 @@ public class WingsLayer<T extends AbstractClientPlayer, M extends PlayerModel<T>
             pose.pushPose();
             // l'omoplate : dans l'espace du modele, +y descend, -x est la droite du joueur
             pose.translate(side * 0.14F, 0.17F, 0.0F);
-            pose.mulPose(Axis.YP.rotationDegrees(side * (-24.0F - skin.spread - flap)));
+            pose.mulPose(Axis.YP.rotationDegrees(side * (-24.0F - flap)));
             pose.mulPose(Axis.ZP.rotationDegrees(-side * (6.0F + lift)));   // les pointes montent
-            quad(pose, body, side, size, light, 1.0F, 255);
+            quad(pose, body, side, size, light, 1.0F, 255, skin);
             if (glow != null) {
                 pose.translate(0.0F, 0.0F, -0.004F);
-                quad(pose, glow, side, size, LightTexture.FULL_BRIGHT, skin.tint, GLOW_ALPHA);
+                quad(pose, glow, side, size, LightTexture.FULL_BRIGHT, skin.tint, GLOW_ALPHA, skin);
             }
             pose.popPose();
         }
@@ -103,11 +101,15 @@ public class WingsLayer<T extends AbstractClientPlayer, M extends PlayerModel<T>
     private static final int GLOW_ALPHA = 150;
 
     private static void quad(PoseStack pose, VertexConsumer vc, int side, float size, int light,
-                             float tint, int alpha) {
-        float x0 = side * (-ROOT_U * size);          // bord de la racine
-        float x1 = side * ((1.0F - ROOT_U) * size);  // bord de la pointe
-        float yTop = -(ROOT_V * size);               // le haut de la texture (y monte vers le negatif)
-        float yBot = (1.0F - ROOT_V) * size;
+                             float tint, int alpha, WingSkin skin) {
+        // LA RACINE VIENT DE L'APPARENCE, plus d'une constante commune : chaque
+        // peinture place la sienne ou elle veut (voir WingSkin.rootU/rootV).
+        float rootU = skin.rootU;
+        float rootV = skin.rootV;
+        float x0 = side * (-rootU * size);          // bord de la racine
+        float x1 = side * ((1.0F - rootU) * size);  // bord de la pointe
+        float yTop = -(rootV * size);               // le haut de la texture (y monte vers le negatif)
+        float yBot = (1.0F - rootV) * size;
         // le miroir est deja fait par la geometrie (x0 pres du corps, x1 dehors,
         // des deux cotes) : la texture se lit toujours racine a gauche, pointe
         // a droite. La retourner en plus donnait une aile a l'envers.
