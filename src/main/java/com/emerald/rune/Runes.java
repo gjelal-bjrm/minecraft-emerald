@@ -126,6 +126,25 @@ public final class Runes {
         return sum;
     }
 
+    /**
+     * LA MEILLEURE, ET NON LA SOMME. Regle donnee par le joueur : deux options
+     * SL de la meme categorie -- une SL Attaque sur l'arme et une autre sur le
+     * casque, deux SL Generale -- ne s'ajoutent pas, on garde la plus haute.
+     *
+     * C'est ce qui empeche l'empilement de devenir la seule strategie : sans
+     * cette regle, cinq pieces gravees SL Defense donnaient quatre-vingts
+     * niveaux, soit plus que toute une partie de points depenses.
+     */
+    public static double best(LivingEntity entity, Rune stat) {
+        double best = 0.0;
+        for (ItemStack stack : worn(entity)) {
+            for (RuneMark mark : on(stack)) {
+                best = Math.max(best, mark.value(stat));
+            }
+        }
+        return best;
+    }
+
     /** L'arme en main et les quatre pieces portees. */
     public static List<ItemStack> worn(LivingEntity entity) {
         List<ItemStack> all = new ArrayList<>(5);

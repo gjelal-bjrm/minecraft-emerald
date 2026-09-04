@@ -166,6 +166,18 @@ public class GameCommands {
         wingsNode.then(skinNode);
         root.then(wingsNode);
 
+        // OUVRIR LA PARTIE SANS JOUER LE PROLOGUE. Tout ce qui ne vit qu'en
+        // phase RUNNING -- la Traque, la Maree, les meteos tardives -- etait
+        // invisible aux essais : apres `setup` on reste en Prologue tant que
+        // le siege du village n'est pas gagne.
+        root.then(Commands.literal("open").executes(ctx -> {
+            ServerLevel level = ctx.getSource().getServer().overworld();
+            GameManager.openNow(level);
+            ctx.getSource().sendSuccess(() -> Component.literal(
+                    "Partie ouverte : les ancres sont levees.")
+                    .withStyle(net.minecraft.ChatFormatting.AQUA), true);
+            return 1;
+        }));
         root.then(Commands.literal("skip")
                 .then(Commands.argument("minutes",
                                 com.mojang.brigadier.arguments.IntegerArgumentType.integer(1, 60))

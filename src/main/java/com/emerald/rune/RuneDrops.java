@@ -179,16 +179,20 @@ public final class RuneDrops {
      * On ne construit pas une partie autour, on s'en souvient.
      */
     private static int rank(double health, int phaseCeiling, RandomSource random) {
-        int ceiling = health < 15 ? 2
-                : health < 30 ? 3
-                : health < 60 ? 4
-                : health < 100 ? 5
-                : health < 200 ? 6
-                : health < 400 ? 7 : 8;
+        // LE PLAFOND ETAIT LE VRAI GOULOT. Il fallait 400 points de vie pour
+        // ouvrir le rang 8 : seuls les trois boss d'une partie y arrivaient, et
+        // le rang 8 sortait dans deux parties sur cent quoi qu'on fasse du
+        // tirage. Le joueur veut ces rangs POSSIBLES, seulement plus rares que
+        // les autres. La table descend donc d'un cran : une bete a 200 points
+        // de vie -- un monstre de siege tardif, un seigneur de Maree -- peut
+        // desormais donner du rang 8, et le tirage pondere s'occupe du reste.
+        int ceiling = health < 15 ? 3
+                : health < 30 ? 4
+                : health < 60 ? 5
+                : health < 100 ? 6
+                : health < 200 ? 7 : 8;
         ceiling = Math.max(1, Math.min(ceiling, phaseCeiling));
-        // LES BOSS TIRENT DEUX FOIS ET GARDENT LE MEILLEUR : sans cela le rang 8
-        // n'apparaissait dans aucune partie sur trois mille (mesure). Avec, il
-        // sort dans deux parties sur cent -- rare, mais present.
+        // LES BOSS TIRENT DEUX FOIS ET GARDENT LE MEILLEUR.
         int drawn = weighted(ceiling, random);
         if (health >= 400) {
             drawn = Math.max(drawn, weighted(ceiling, random));
@@ -201,8 +205,11 @@ public final class RuneDrops {
      * decroit lineairement jusqu'a deux. Plafond 8 : le rang 1 pese 9, le rang
      * 8 pese 2 -- un rang 8 sur 22 tirages au plafond.
      *
-     * Mesure sur une partie type (483 monstres, trois boss) : 63 runes
-     * ramassees, un rang 7 ou plus dans 25 % des parties, un rang 8 dans 2 %.
+     * MESURE, avec la Traque (voir game/Prowl) qui double le bestiaire croise :
+     * 116 runes ramassees par partie, un rang 7 ou plus dans 76 % des parties,
+     * un rang 8 dans 34 %. Par rune : le rang 1 sort une fois sur trois, le
+     * rang 7 une fois sur cent, le rang 8 une fois sur deux cent cinquante --
+     * possibles, et bien plus rares que les autres, ce que le joueur demandait.
      */
     private static int weighted(int ceiling, RandomSource random) {
         int total = 0;

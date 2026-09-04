@@ -1201,13 +1201,22 @@ C'est la pièce que j'avais manquée. Chez NosTale, « SL Attaque 17 » ne donne
 dix-sept points d'attaque mais **dix-sept niveaux dans la voie**. Nos runes font
 pareil :
 
-| Option | Famille | Grade min | Effet |
+| Option | Famille | Grades | Effet |
 |---|---|---|---|
-| SL Attaque | Arme | B | +4 à +13 niveaux en Attaque |
-| SL Élément | Arme | B | +4 à +13 niveaux en Élément |
-| SL Défense | Armure | B | +4 à +13 niveaux en Défense |
-| SL HP/MP | Armure | B | +4 à +13 niveaux en Vitalité |
-| **SL Générale** | Arme | **S** | +2 à +4 niveaux dans **les quatre** |
+| SL Attaque | Arme | C → A | **+9-10 / +11-13 / +14-17** niveaux en Attaque |
+| SL Élément | Arme | C → A | idem, en Élément |
+| SL Défense | Armure | C → A | idem, en Défense |
+| SL HP/MP | Armure | C → A | idem, en Vitalité |
+| **SL Générale** | Arme | **S** | **+9 à +13** niveaux dans **les quatre** |
+
+Ce sont des **niveaux entiers** : le tirage ne rend jamais « SL Attaque 11,73 ».
+
+**Deux options SL de la même catégorie ne se cumulent pas** — règle donnée par
+le joueur : une SL Attaque sur l'arme et une autre sur le casque, deux SL
+Générale, on garde **la plus haute** (`Runes.best`). Les deux *catégories*,
+elles, s'ajoutent : une SL Générale et une SL Attaque ne sont pas la même
+option. Sans cette règle, cinq pièces gravées SL Défense donnaient
+quatre-vingts niveaux, soit plus qu'une partie entière de points dépensés.
 
 Ces niveaux **ne se paient pas** et s'ajoutent par-dessus l'achat. Ils peuvent
 pousser une voie **au-delà du centième** — jusqu'à 120, plafond relevé de
@@ -1218,9 +1227,10 @@ C'est de loin l'option la plus forte du catalogue. Mesuré en points de fiche
 
 | Grade | Sur une voie à 0 | à 50 | à 90 |
 |---|---|---|---|
-| B | ~7 pts | ~28 pts | ~49 pts |
-| A | ~9 pts | ~36 pts | ~66 pts |
-| S | ~16 pts | ~55 pts | ~76 pts |
+| C (9-10) | ~10 pts | ~40 pts | ~72 pts |
+| B (11-13) | ~13 pts | ~52 pts | ~94 pts |
+| A (14-17) | ~17 pts | ~68 pts | ~120 pts |
+| S — les quatre voies | ~44 pts | ~176 pts | ~312 pts |
 
 Plus la voie est haute, plus la rune vaut cher — parce que là-haut chaque niveau
 coûte jusqu'à dix points. **Un joueur qui a déjà tout dépensé a donc encore une
@@ -1510,10 +1520,10 @@ Releve de NosTale, tel quel :
 
 | Cran | +1 | +2 | +3 | +4 | +5 | +6 | +7 | +8 | +9 | +10 |
 |---|---|---|---|---|---|---|---|---|---|---|
-| Gain | 10 % | 15 % | 22 % | 32 % | 43 % | 54 % | 65 % | **90 %** | **120 %** | **200 %** |
+| Gain | 5 % | 9 % | 13 % | 18 % | 24 % | 31 % | 39 % | **55 %** | **75 %** | **110 %** |
 
 Sa FORME est ce qui compte : les sept premiers montent doucement, puis le
-huitieme saute a 90 % et le dixieme a 200 %. Les trois derniers valent a eux
+huitieme saute a 55 % et le dixieme a 110 %. Les trois derniers valent a eux
 seuls plus que les sept premiers reunis. Un +7 est une piece correcte qu'on
 obtient sans y penser ; un +10 est un evenement.
 
@@ -2873,3 +2883,72 @@ Trois propositions dans `tools/prompts/ailes_souverain_astral.md` (Couronne
 d'Astres, Firmament Brise, Aurore Souveraine) : apparence, bonus, animation
 ajoutee par le mod, prompt. Le joueur choisit ; l'apparence, son bonus et son
 animation viendront ensuite.
+
+## 37. La Traque, les hauts rangs de rune, la courbe d'amelioration *(4 sept. 2026)*
+
+### 37.1 « Il n'y a pas assez de monstres »
+
+Le joueur cherchait des monstres a farmer et n'en trouvait pas. La cause n'est
+pas un reglage mais une consequence : **le mode se joue a midi**
+(`WorldSetup` fixe l'heure a 1000, la meteo la retient), or Minecraft ne fait
+apparaitre d'hostiles a ciel ouvert que dans le noir. Le bestiaire vivait dans
+les grottes pendant que la partie se joue en surface -- et la partie DEMANDE de
+farmer : runes, plumes, Arcencium.
+
+`game/Prowl` ajoute une **pression**, sans toucher aux regles d'apparition du
+jeu. Toutes les cinq secondes, on compte les hostiles autour de chaque joueur ;
+s'il en manque, on en pose un ou deux **derriere lui**, sur un anneau de 22 a
+38 blocs. Le nombre vise suit la phase :
+
+| Phase | Hostiles vises dans 40 blocs | Vivier |
+|---|---|---|
+| Prologue | 0 *(le siege suffit)* | -- |
+| Exploration | 10 | palier 1 |
+| Montee | 14 | palier 2 |
+| Pression | 18 | palier 3 |
+| Assaut, Fin | 22 | palier 3 |
+
+Trois garde-fous : le **village est epargne dans vingt blocs** (on forge en
+paix) ; les traques **ne sont pas persistants**, ils s'effacent quand on
+s'eloigne, comme un monstre naturel, et rien ne s'accumule ; et un **casque
+force** sur la tete, sans quoi la moitie du vivier vanilla brule au soleil --
+on aurait peuple le monde de torches.
+
+### 37.2 Les rangs 7 et 8 de rune existent enfin
+
+Le joueur : « l'objectif c'est quand meme d'avoir la possibilite d'obtenir des
+runes rang 7 et 8, juste moins frequemment ». Or ils sortaient dans 2 % des
+parties quoi qu'on fasse du tirage -- et j'avais d'abord cherche la correction
+du mauvais cote.
+
+**Le goulot n'etait pas le tirage, c'etait le plafond par points de vie** :
+il fallait 400 PV pour ouvrir le rang 8, et seuls les trois boss d'une partie
+y arrivaient. La table descend donc d'un cran -- une bete a 200 PV (monstre de
+siege tardif, seigneur de Maree) peut donner du rang 8 :
+
+| PV max | < 15 | < 30 | < 60 | < 100 | < 200 | ≥ 200 |
+|---|---|---|---|---|---|---|
+| Rang maximum | 3 | 4 | 5 | 6 | 7 | 8 |
+
+**Mesure**, avec la Traque qui double le bestiaire croise : 116 runes par
+partie, un rang 7 ou plus dans **76 %** des parties, un rang 8 dans **34 %**.
+Par rune : rang 1 une fois sur trois, rang 7 une fois sur cent, rang 8 une fois
+sur deux cent cinquante. Possibles, et bien plus rares que les autres.
+
+### 37.3 Le +10 ne double plus les degats
+
+« Deux cents pour cent au plus dix, c'est beaucoup trop » -- et c'est juste :
+une arme qui triple ses degats termine seule une partie de quatre-vingt-dix
+minutes, et la rarete, les runes et la fiche du Heros deviennent decoratives.
+
+Le plafond descend a **+110 %**, la FORME est conservee -- c'est elle qui compte :
+
+| Cran | +1 | +2 | +3 | +4 | +5 | +6 | +7 | +8 | +9 | +10 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Avant | 10 | 15 | 22 | 32 | 43 | 54 | 65 | 90 | 120 | 200 |
+| **Maintenant** | 5 | 9 | 13 | 18 | 24 | 31 | 39 | **55** | **75** | **110** |
+
+Les trois derniers crans valent toujours a eux seuls plus que les sept premiers
+reunis (240 contre 139) : c'est bien a partir du +8 qu'on gagne gros. Et
+l'equipement vanilla, plafonne a +7, s'arrete a +39 % -- l'ecart avec les armes
+du mode se creuse au bon endroit.

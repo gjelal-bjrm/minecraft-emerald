@@ -639,6 +639,16 @@ public class GameManager {
      * Enchainer les deux moments plutot que les juxtaposer -- la lame ne
      * disparait pas, elle donne naissance a l'objectif suivant.
      */
+    /** Ouvre la partie sans passer par le prologue : reserve aux essais (`/arcencium open`). */
+    public static void openNow(ServerLevel level) {
+        GameState state = GameState.get(level);
+        if (state.status() == GameState.Status.RUNNING) {
+            return;
+        }
+        prologue = null;
+        openTheGame(level, state.village());
+    }
+
     private static void openTheGame(ServerLevel level, BlockPos center) {
         GameState state = GameState.get(level);
         dissolveCeremonial(level);

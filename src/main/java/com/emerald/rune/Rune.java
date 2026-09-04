@@ -53,10 +53,12 @@ public enum Rune implements StringRepresentable {
     ALLONGE(RuneFamily.WEAPON, RuneGrade.B, RuneGrade.A, 0, 0.20, 0.32, 0),
     /** Armure adverse ignoree. Sans equivalent : A seulement. */
     PERCEE(RuneFamily.WEAPON, RuneGrade.A, RuneGrade.A, 0, 0, 5.0, 0),
-    /** SL Attaque : B a A, 11 / 17 -- des niveaux de fiche. */
-    SL_ATTAQUE(RuneFamily.WEAPON, RuneGrade.B, RuneGrade.A, 0, 5.0, 8.0, 0),
-    /** SL Element : B a A, 11 / 17. */
-    SL_ELEMENT(RuneFamily.WEAPON, RuneGrade.B, RuneGrade.A, 0, 5.0, 8.0, 0),
+    /** SL Attaque : C a A -- des NIVEAUX de fiche, 9-10 / 11-13 / 14-17. */
+    SL_ATTAQUE(RuneFamily.WEAPON, RuneGrade.C, RuneGrade.A,
+            new double[]{9, 11, 14, 0}, new double[]{10, 13, 17, 0}),
+    /** SL Element : C a A, memes niveaux. */
+    SL_ELEMENT(RuneFamily.WEAPON, RuneGrade.C, RuneGrade.A,
+            new double[]{9, 11, 14, 0}, new double[]{10, 13, 17, 0}),
     /** Degats relatifs : S seulement, 19. L'option la plus recherchee. */
     RAVAGE(RuneFamily.WEAPON, RuneGrade.S, RuneGrade.S, 0, 0, 0, 12.0),
 
@@ -76,8 +78,16 @@ public enum Rune implements StringRepresentable {
     CERNE(RuneFamily.WEAPON, RuneGrade.A, RuneGrade.A, 0, 0, 1.4, 0),
     /** Frappe tout autour de la cible. Sans equivalent : S seulement. */
     CATACLYSME(RuneFamily.WEAPON, RuneGrade.S, RuneGrade.S, 0, 0, 0, 4.0),
-    /** SL Total : S seulement, 11 -- dans les quatre voies a la fois. */
-    SL_TOTAL(RuneFamily.WEAPON, RuneGrade.S, RuneGrade.S, 0, 0, 0, 4.0),
+    /**
+     * SL Generale : S seulement, 9 a 13 NIVEAUX dans LES QUATRE voies.
+     *
+     * L'option la plus forte du catalogue, et de loin -- le joueur la voulait a
+     * cette hauteur. Elle vaut quatre fois une SL unique de grade A, ce qui est
+     * le prix d'une case S dans une rune de rang 7 ou 8, ou le S n'est meme plus
+     * garanti (voir RuneMark.roll).
+     */
+    SL_TOTAL(RuneFamily.WEAPON, RuneGrade.S, RuneGrade.S,
+            new double[]{0, 0, 0, 9}, new double[]{0, 0, 0, 13}),
 
     // -------------------------------------- armure : le defensif permanent
 
@@ -95,10 +105,12 @@ public enum Rune implements StringRepresentable {
     REGENERATION(RuneFamily.ARMOR, RuneGrade.S, RuneGrade.S, 0, 0, 0, 0.30),
     /** Toutes les defenses en pour cent : S seulement. */
     SAUVEGARDE(RuneFamily.ARMOR, RuneGrade.S, RuneGrade.S, 0, 0, 0, 4.5),
-    /** SL Defense : B a A, 11 / 17. */
-    SL_DEFENSE(RuneFamily.ARMOR, RuneGrade.B, RuneGrade.A, 0, 5.0, 8.0, 0),
-    /** SL HP/MP : B a A, 11 / 17. */
-    SL_VITALITE(RuneFamily.ARMOR, RuneGrade.B, RuneGrade.A, 0, 5.0, 8.0, 0);
+    /** SL Defense : C a A, 9-10 / 11-13 / 14-17. */
+    SL_DEFENSE(RuneFamily.ARMOR, RuneGrade.C, RuneGrade.A,
+            new double[]{9, 11, 14, 0}, new double[]{10, 13, 17, 0}),
+    /** SL HP/MP : C a A, memes niveaux. */
+    SL_VITALITE(RuneFamily.ARMOR, RuneGrade.C, RuneGrade.A,
+            new double[]{9, 11, 14, 0}, new double[]{10, 13, 17, 0});
 
     public static final Codec<Rune> CODEC = StringRepresentable.fromEnum(Rune::values);
 
@@ -121,15 +133,35 @@ public enum Rune implements StringRepresentable {
     private final RuneGrade highest;
     /** Le maximum a chaque grade, dans l'ordre C, B, A, S ; zero hors fourchette. */
     private final double[] max;
+    /**
+     * Les minima DONNES, pour les options qui se comptent en niveaux.
+     *
+     * Nul partout ailleurs : on prend alors {@link #FLOOR} du maximum. Les SL
+     * ne s'en contentent pas -- un niveau et demi n'existe pas, et le joueur a
+     * donne les fourchettes exactes (3-5 / 6-9 / 10-13, et 9-13 pour la
+     * Generale). Quand ce tableau est la, le tirage est ENTIER.
+     */
+    private final double[] mins;
     private final String id;
 
     Rune(RuneFamily family, RuneGrade lowest, RuneGrade highest,
          double maxC, double maxB, double maxA, double maxS) {
+        this(family, lowest, highest, null, new double[]{maxC, maxB, maxA, maxS});
+    }
+
+    /** Une option qui se compte en NIVEAUX : minima donnes, tirage entier. */
+    Rune(RuneFamily family, RuneGrade lowest, RuneGrade highest, double[] mins, double[] max) {
         this.family = family;
         this.lowest = lowest;
         this.highest = highest;
-        this.max = new double[]{maxC, maxB, maxA, maxS};
+        this.max = max;
+        this.mins = mins;
         this.id = name().toLowerCase(Locale.ROOT);
+    }
+
+    /** Vrai si l'option se compte en niveaux de fiche : tirage entier. */
+    public boolean levels() {
+        return this.mins != null;
     }
 
     public RuneFamily family() {
@@ -157,7 +189,8 @@ public enum Rune implements StringRepresentable {
     }
 
     public double min(RuneGrade grade) {
-        return this.max[grade.ordinal()] * FLOOR;
+        return this.mins != null ? this.mins[grade.ordinal()]
+                : this.max[grade.ordinal()] * FLOOR;
     }
 
     /**
@@ -170,6 +203,12 @@ public enum Rune implements StringRepresentable {
     public double roll(RuneGrade grade, RandomSource random) {
         double a = min(grade);
         double b = max(grade);
+        if (levels()) {
+            // ENTIER, et bornes comprises : « SL Attaque 12 », jamais 11,73.
+            int lo = (int) Math.round(a);
+            int hi = (int) Math.round(b);
+            return hi <= lo ? lo : lo + random.nextInt(hi - lo + 1);
+        }
         return a + random.nextDouble() * (b - a);
     }
 
@@ -191,7 +230,8 @@ public enum Rune implements StringRepresentable {
     /** L'effet chiffre, tel qu'il s'affiche dans l'infobulle. */
     public Component effect(double value) {
         return Component.translatable(translationKey() + ".effect",
-                String.format(Locale.ROOT, "%.2f", value));
+                levels() ? String.valueOf((int) Math.round(value))
+                        : String.format(Locale.ROOT, "%.2f", value));
     }
 
     @Override

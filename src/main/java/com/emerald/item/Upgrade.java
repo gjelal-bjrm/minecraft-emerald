@@ -17,10 +17,17 @@ import net.minecraft.world.item.component.CustomData;
  *   - les RUNES et les ARTEFACTS disent ce qu'elle FAIT ;
  *   - l'AMELIORATION dit seulement de combien elle frappe ou protege PLUS.
  *
- * LE BAREME EST CELUI DE NOSTALE, releve tel quel. Sa forme est ce qui compte :
- * les sept premiers crans montent doucement -- dix, quinze, vingt-deux... --
- * puis le huitieme saute a quatre-vingt-dix et le dixieme a deux cents. Les
- * trois derniers valent a eux seuls plus que les sept premiers reunis.
+ * LA FORME VIENT DE NOSTALE, LES CHIFFRES SONT LES NOTRES. Le releve montait
+ * jusqu'a +200 % au dixieme cran : le joueur l'a juge « beaucoup trop », et la
+ * mesure lui donne raison -- une arme qui triple ses degats termine seule une
+ * partie d'une heure et demie, et tout ce qu'on a bati par ailleurs (rarete,
+ * runes, fiche du Heros) devient decoratif.
+ *
+ * Le plafond descend donc a +110 %, et la FORME est conservee, car c'est elle
+ * qui compte : les sept premiers crans montent doucement -- cinq, neuf,
+ * treize... -- puis le huitieme saute a cinquante-cinq et le dixieme a cent dix.
+ * Les trois derniers valent a eux seuls plus que les sept premiers reunis
+ * (240 contre 139), et c'est bien a partir du +8 qu'on gagne gros.
  *
  * C'est cette courbe qui fait tout l'interet du systeme : un +7 est une piece
  * correcte qu'on obtient sans y penser, un +10 est un evenement. Une
@@ -36,7 +43,7 @@ public final class Upgrade {
      *
      * L'indice zero vaut zero : une piece non amelioree n'ajoute rien.
      */
-    private static final int[] BONUS = {0, 10, 15, 22, 32, 43, 54, 65, 90, 120, 200};
+    private static final int[] BONUS = {0, 5, 9, 13, 18, 24, 31, 39, 55, 75, 110};
 
     /**
      * Les chances de reussite, en pour cent, pour passer AU cran suivant.

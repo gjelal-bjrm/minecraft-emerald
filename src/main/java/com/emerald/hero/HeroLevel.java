@@ -146,8 +146,11 @@ public final class HeroLevel {
      * sorte qu'une rune ne puisse jamais offrir un palier entier.
      */
     public static int effective(Player player, HeroStat stat) {
-        double gift = com.emerald.rune.Runes.total(player, slOf(stat))
-                + com.emerald.rune.Runes.total(player, com.emerald.rune.Rune.SL_TOTAL);
+        // LA MEILLEURE DE CHAQUE CATEGORIE, pas la somme (voir Runes.best). Les
+        // deux categories, elles, s'ajoutent : une SL Generale et une SL Attaque
+        // ne sont pas la meme option.
+        double gift = com.emerald.rune.Runes.best(player, slOf(stat))
+                + com.emerald.rune.Runes.best(player, com.emerald.rune.Rune.SL_TOTAL);
         return Math.min(HeroStat.SOFT_CAP,
                 path(player, stat) + (int) Math.floor(gift));
     }
