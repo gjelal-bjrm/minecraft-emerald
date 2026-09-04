@@ -74,7 +74,8 @@ public final class WeatherClient {
     @SubscribeEvent
     public static void onClientTick(ClientTickEvent.Post event) {
         Weather w = current();
-        boolean foggy = w == Weather.BRUME || w == Weather.NUIT
+        // LE PRISME N'EST PLUS UN BROUILLARD : il ne compte plus parmi eux.
+        boolean foggy = w == Weather.NUIT
                 || w == Weather.ORAGE || w == Weather.DECHIRURE
                 || w == Weather.METEORES || w == Weather.AURORE;
         intensity = clamp(intensity + (foggy ? 0.015F : -0.015F));
@@ -108,10 +109,6 @@ public final class WeatherClient {
      */
     public static float[] veilFor(Weather w, double time) {
         return switch (w) {
-            case BRUME -> {
-                float[] c = fogColorFor(Weather.BRUME, (long) time);
-                yield new float[]{c[0], c[1], c[2], 0.92F, 0.80F, 56.0F};
-            }
             case AURORE -> new float[]{0.07F, 0.10F, 0.20F, 0.45F, 0.90F, 210.0F};
             case NUIT -> new float[]{0.03F, 0.02F, 0.08F, 0.55F, 1.0F, 96.0F};
             case METEORES -> new float[]{0.30F, 0.13F, 0.07F, 0.88F, 1.0F, 150.0F};
@@ -145,13 +142,6 @@ public final class WeatherClient {
 
     private static float[] fogColorFor(Weather w, long time) {
         return switch (w) {
-            case BRUME -> {
-                // une teinte pastel qui derive : la brume est prismatique, pas grise
-                float hue = (float) ((time * 0.0008) % 1.0);
-                int rgb = Color.HSBtoRGB(hue, 0.22F, 0.78F);
-                yield new float[]{((rgb >> 16) & 0xFF) / 255F,
-                        ((rgb >> 8) & 0xFF) / 255F, (rgb & 0xFF) / 255F};
-            }
             // un indigo leger : il assombrit juste assez pour que les rideaux
             // ressortent, y compris en plein jour ou un melange additif se
             // noierait dans un ciel clair
@@ -187,7 +177,6 @@ public final class WeatherClient {
         // aucune raison de fermer l'horizon, et leurs distances passent donc a
         // l'echelle du terrain lointain.
         float far = switch (current()) {
-            case BRUME -> 72.0F;           // le vrai brouillard : on ne voit rien, c'est voulu
             case ORAGE -> 420.0F;
             case NUIT -> 520.0F;           // il fait NOIR, il n'y a pas de brouillard
             case DECHIRURE -> 620.0F;
@@ -199,9 +188,6 @@ public final class WeatherClient {
             return;
         }
         event.setFarPlaneDistance(lerp(event.getFarPlaneDistance(), far, intensity));
-        if (current() == Weather.BRUME) {
-            event.setNearPlaneDistance(lerp(event.getNearPlaneDistance(), 6.0F, intensity));
-        }
         // sans l'annulation, les distances posees ici sont ignorees
         event.setCanceled(true);
     }
@@ -275,7 +261,6 @@ public final class WeatherClient {
         RandomSource random = level.random;
         long time = level.getGameTime();
         switch (w) {
-            case BRUME -> brume(level, player, random, time);
             case AURORE -> aurore(level, player, random, time);
             case NUIT -> prismaticRain(level, player, random);
             case METEORES -> meteores(level, player, random, time);
@@ -286,53 +271,6 @@ public final class WeatherClient {
         }
     }
 
-    /**
-     * La Brume : des NAPPES qui rampent au sol, plus epaisses dans les creux,
-     * et des formes qui se defont quand on approche.
-     *
-     * Les nappes naissent AU SOL, jamais en l'air : une brume flotte a hauteur
-     * de cheville, c'est ce qui la distingue d'un nuage. Et le creux -- un sol
-     * plus bas que le joueur -- en recoit le double : la brume s'accumule la
-     * ou l'air ne bouge pas.
-     */
-    private static void brume(ClientLevel level, LocalPlayer player, RandomSource random, long time) {
-        // la brume est aussi DANS L'AIR : des nappes suspendues autour du
-        // joueur, jusqu'a quinze blocs au-dessus. Au sol seulement, on avait
-        // « du brouillard par terre et nulle part ailleurs »
-        for (int i = 0; i < 3; i++) {
-            double a = random.nextDouble() * Math.PI * 2;
-            double d = 6 + random.nextDouble() * 26;
-            level.addParticle(ModParticles.MIST_SHEET.get(),
-                    player.getX() + Math.cos(a) * d,
-                    player.getY() - 2 + random.nextDouble() * 17,
-                    player.getZ() + Math.sin(a) * d,
-                    (random.nextDouble() - 0.5) * 0.004, 0.0, (random.nextDouble() - 0.5) * 0.004);
-        }
-        for (int i = 0; i < 2; i++) {
-            double x = player.getX() + (random.nextDouble() - 0.5) * 36;
-            double z = player.getZ() + (random.nextDouble() - 0.5) * 36;
-            double g = ground(level, x, z);
-            int count = g < player.getY() - 1.5 ? 2 : 1;
-            for (int k = 0; k < count; k++) {
-                level.addParticle(ModParticles.MIST_SHEET.get(),
-                        x, g + 0.3 + random.nextDouble() * 0.9, z,
-                        (random.nextDouble() - 0.5) * 0.004, 0.0, (random.nextDouble() - 0.5) * 0.004);
-            }
-        }
-        if (random.nextInt(90) == 0) {
-            double a = random.nextDouble() * Math.PI * 2;
-            double d = 8 + random.nextDouble() * 10;
-            double x = player.getX() + Math.cos(a) * d;
-            double z = player.getZ() + Math.sin(a) * d;
-            level.addParticle(ModParticles.MIST_WRAITH.get(), x, ground(level, x, z) + 1.0, z, 0, 0, 0);
-        }
-        // un souffle etouffe, rare : la brume s'entend a ce qu'elle tait
-        if (time % 240 == 0) {
-            level.playLocalSound(player.getX(), player.getY(), player.getZ(),
-                    net.minecraft.sounds.SoundEvents.AMBIENT_BASALT_DELTAS_MOOD.value(),
-                    net.minecraft.sounds.SoundSource.AMBIENT, 0.35F, 0.55F, false);
-        }
-    }
 
     /**
      * L'Aurore : les rideaux sont de la geometrie (AuroraRenderer). Au sol,

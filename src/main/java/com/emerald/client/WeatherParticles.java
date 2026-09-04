@@ -40,7 +40,7 @@ public final class WeatherParticles {
     /** Plein feu : la particule luit dans le noir. */
     private static final int BRIGHT = 0xF000F0;
 
-    // =================================================================== BRUME
+    // =================================================================== PRISME
 
     /**
      * La nappe : une grande tache douce qui rampe au ras du sol.

@@ -18,7 +18,26 @@ import java.util.List;
 public enum Weather {
     CLEAR("clear", false, null, 0, 0, 0x9AA0A6),
     EMBELLIE("embellie", false, null, 60 * 20, 90 * 20, 0xC0E8FF),
-    BRUME("brume", false, GamePhase.EXPLORATION, 120 * 20, 240 * 20, 0xB9C6D6),
+    /**
+  * LE PRISME ETEINT -- ce qui fut la Brume Prismatique.
+     *
+     * La Brume ne tenait pas. Le brouillard etait mal rendu -- Distant Horizons
+     * coupe le brouillard vanilla (`enableVanillaFog = false`) et dessine le
+     * sien sur quatre mille blocs, si bien qu'on voyait le terrain lointain A
+     * TRAVERS la brume, sous un ciel reste bleu -- et surtout elle ne DONNAIT
+     * rien : son seul effet, une portee de detection reduite chez l'ennemi, ne
+     * se voit pas. « C'est juste chiant », et c'etait exact.
+     *
+     * Plus un gramme de brouillard. Le prisme cesse de separer la lumiere : le
+     * monde perd ses couleurs, en vrai noir et blanc de pellicule. On y voit
+     * aussi loin qu'avant -- mieux, meme, puisque plus rien ne bouche
+     * l'horizon -- et ce qui vit se detoure a travers les murs. C'est la
+     * FENETRE DE CHASSE, comme l'Aurore est la fenetre de mine.
+     *
+     * DEUX MINUTES, pas une de plus : le noir et blanc est un effet fort, il ne
+     * doit pas s'installer.
+     */
+    PRISME("prisme", false, GamePhase.EXPLORATION, 120 * 20, 120 * 20, 0xC8C8C8),
     AURORE("aurore", false, GamePhase.EXPLORATION, 120 * 20, 240 * 20, 0x9CE8FF),
     NUIT("nuit", true, GamePhase.MONTEE, 150 * 20, 240 * 20, 0xB98CFF),
     METEORES("meteores", true, GamePhase.PRESSION, 120 * 20, 200 * 20, 0xFF9C4A),
@@ -86,9 +105,9 @@ public enum Weather {
      */
     public static List<Weather> poolFor(GamePhase phase) {
         return switch (phase) {
-            case EXPLORATION -> List.of(BRUME, AURORE);
-            case MONTEE -> List.of(BRUME, AURORE, NUIT);
-            case PRESSION -> List.of(BRUME, AURORE, NUIT, METEORES, DECHIRURE, ORAGE);
+            case EXPLORATION -> List.of(PRISME, AURORE);
+            case MONTEE -> List.of(PRISME, AURORE, NUIT);
+            case PRESSION -> List.of(PRISME, AURORE, NUIT, METEORES, DECHIRURE, ORAGE);
             case ASSAUT -> List.of(METEORES, DECHIRURE, ORAGE);
             default -> List.of();
         };

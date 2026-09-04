@@ -100,7 +100,13 @@ public final class HeroCombat {
                     + com.emerald.rune.RuneEvents.critChance(attacker)
                     + com.emerald.specialization.SkinBonus.critChance(attacker);
             // LA CONSTELLATION PLEINE force le critique : c'est tout son propos.
-            boolean forced = com.emerald.specialization.SkinBonus.constellationReady(attacker);
+            // DEUX FACONS DE FORCER UN CRITIQUE, ET UNE SEULE FAIT LA NOVA.
+            //
+            // La Constellation pleine eclate ; l'embuscade du Prisme Eteint ne
+            // fait que garantir le coup. Les confondre aurait donne l'explosion
+            // astrale a chaque creature surprise, sans aile ni etoile.
+            boolean constellation = com.emerald.specialization.SkinBonus.constellationReady(attacker);
+            boolean forced = constellation || com.emerald.weather.WeatherEffects.ambush(victim);
             if (forced || chance > 0.0 && attacker.getRandom().nextDouble() * 100.0 < chance) {
                 double multiplier = CRIT_BASE
                         + (com.emerald.element.WeaponProfile.critDamage(held)
@@ -124,7 +130,7 @@ public final class HeroCombat {
                 // c'est la que le paquet part, et il doit savoir si ce coup-ci
                 // etait critique.
                 victim.getPersistentData().putLong(TAG_CRIT_AT, victim.level().getGameTime());
-                if (forced) {
+                if (constellation) {
                     com.emerald.specialization.SkinBonus.nova(attacker, victim, amount);
                 }
                 // ce que les ailes posent sur un critique : brulure de la Braise, givre du Givre

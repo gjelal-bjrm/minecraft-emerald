@@ -84,7 +84,7 @@ public final class WeatherEffects {
     }
 
     /** Reduit la portee de detection des monstres pendant la Brume. */
-    private static final ResourceLocation BRUME_ID = id("weather_brume");
+    private static final ResourceLocation PRISME_ID = id("weather_prisme");
 
     /** Allege la gravite pendant la Dechirure. */
     private static final ResourceLocation GRAVITY_ID = id("weather_gravity");
@@ -321,7 +321,10 @@ public final class WeatherEffects {
             sweepMarks(level);
         }
         switch (weather) {
-            case BRUME -> sweepModifier(level, Attributes.FOLLOW_RANGE, BRUME_ID);
+            case PRISME -> {
+                sweepModifier(level, Attributes.FOLLOW_RANGE, PRISME_ID);
+                unglow(level);
+            }
             case DECHIRURE -> endDechirure(level);
             case METEORES -> {
                 meteors.clear();
@@ -340,7 +343,7 @@ public final class WeatherEffects {
     static void tick(ServerLevel level, Weather weather) {
         stormPressure(level, weather);
         switch (weather) {
-            case BRUME -> tickBrume(level);
+            case PRISME -> tickPrisme(level);
             case AURORE -> tickAurore(level);
             case NUIT -> tickNuit(level);
             case METEORES -> tickMeteores(level);
@@ -531,16 +534,81 @@ public final class WeatherEffects {
      * celle du joueur, et ce modificateur reduit celle des monstres. C'est la
      * fenetre pour traverser ou contourner sans se battre.
      */
-    private static void tickBrume(ServerLevel level) {
+    /** Rayon de la chasse : ce qui vit dans ce cercle se detoure. */
+    private static final int PRISME_RANGE = 64;
+
+    /**
+     * LE PRISME ETEINT : LA FENETRE DE CHASSE.
+     *
+     * TOUT CE QUI VIT SE DETOURE -- la lueur d'entite traverse les murs,
+     * exactement comme les jalons de l'Aurore. Pendant ce temps la portee de
+     * detection des hostiles reste coupee de soixante-dix pour cent : on les
+     * voit, ils ne nous voient pas.
+     *
+     * (Un temps le monde perdait aussi ses couleurs, en noir et blanc de
+     * pellicule. L'effet tenait techniquement -- verifie sous Iris -- mais le
+     * joueur l'a essaye et tranche : « au debut c'etait sympa, mais a la
+     * longue c'est vraiment genant ». Retire. Le detourage suffit a signer la
+     * meteo, et il ne fatigue pas l'oeil.)
+     *
+     * C'est l'inverse exact de l'ancienne Brume, qui prenait la vue au joueur
+     * sans rien lui donner. Ici la meteo ENLEVE la couleur et REND
+     * l'information : le seul echange qu'un joueur accepte volontiers.
+     */
+    private static void tickPrisme(ServerLevel level) {
         if (level.getGameTime() % 20 != 0) {
             return;
         }
         for (ServerPlayer player : level.players()) {
             for (Mob mob : level.getEntitiesOfClass(Mob.class,
-                    player.getBoundingBox().inflate(48), m -> m instanceof Enemy)) {
-                ensureModifier(mob, Attributes.FOLLOW_RANGE, BRUME_ID, -0.7);
+                    player.getBoundingBox().inflate(PRISME_RANGE), m -> m.isAlive())) {
+                mob.setGlowingTag(true);
+                if (mob instanceof Enemy) {
+                    ensureModifier(mob, Attributes.FOLLOW_RANGE, PRISME_ID, -0.7);
+                }
             }
         }
+        if (level.getGameTime() % 160 == 0) {
+            // une nappe basse, tres discrete : le silence d'une pellicule
+            for (ServerPlayer player : level.players()) {
+                player.playNotifySound(SoundEvents.BEACON_AMBIENT,
+                        SoundSource.AMBIENT, 0.22F, 0.55F);
+            }
+        }
+    }
+
+    /**
+     * Le detourage s'eteint avec la meteo.
+     *
+     * On balaie large -- cent vingt-huit blocs -- parce qu'une creature marquee
+     * puis eloignee de sa lueur garderait son contour pour toujours. Et l'on
+     * releve avant d'ecrire : la vue des entites rend des nulls si on la
+     * modifie en la parcourant (la lecon des jalons de l'Aurore).
+     */
+    private static void unglow(ServerLevel level) {
+        List<net.minecraft.world.entity.Entity> marked = new ArrayList<>();
+        for (net.minecraft.world.entity.Entity entity : level.getEntities().getAll()) {
+            if (entity instanceof Mob mob && mob.hasGlowingTag()) {
+                marked.add(mob);
+            }
+        }
+        for (net.minecraft.world.entity.Entity entity : marked) {
+            entity.setGlowingTag(false);
+        }
+    }
+
+    /**
+     * LE COUP QUI NE SE VOIT PAS VENIR EST TOUJOURS CRITIQUE.
+     *
+     * Sous le Prisme Eteint, frapper une creature qui ne vous a pas pris pour
+     * cible garantit le critique. C'est ce qui fait de la fenetre une CHASSE et
+     * non une simple promenade en noir et blanc : on choisit sa cible, on
+     * s'approche par le bon cote, et le premier coup compte double.
+     */
+    public static boolean ambush(net.minecraft.world.entity.LivingEntity victim) {
+        return WeatherManager.current() == Weather.PRISME
+                && victim instanceof Mob mob
+                && (mob.getTarget() == null || !(mob.getTarget() instanceof Player));
     }
 
     // ------------------------------------------------------------- l'Aurore

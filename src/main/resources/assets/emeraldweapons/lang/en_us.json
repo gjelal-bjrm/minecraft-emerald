@@ -170,8 +170,6 @@
   "weather.emeraldweapons.clear": "Clear skies",
   "weather.emeraldweapons.embellie": "The Respite",
   "weather.emeraldweapons.embellie.sub": "Nothing will come. Breathe.",
-  "weather.emeraldweapons.brume": "Prismatic Mist",
-  "weather.emeraldweapons.brume.sub": "Sight fades — yours, and theirs.",
   "weather.emeraldweapons.aurore": "Aurora",
   "weather.emeraldweapons.aurore.sub": "Haste, speed, and the veins show themselves. Go and mine.",
   "weather.emeraldweapons.nuit": "Arcencium Night",
@@ -469,7 +467,6 @@
   "game.emeraldweapons.cycle.next.sub": "Three sanctuaries rise elsewhere",
   "game.emeraldweapons.hud.cycle": "Cycle %s",
   "game.emeraldweapons.weather.omen": "Omen",
-  "weather.emeraldweapons.omen.brume": "The air thickens; far off, the colours blur.",
   "weather.emeraldweapons.omen.aurore": "The sky pales, as if holding back its light.",
   "weather.emeraldweapons.omen.nuit": "Daylight retreats. Something is waiting for it to go out.",
   "weather.emeraldweapons.omen.meteores": "A smell of hot stone comes down from the sky.",
@@ -488,5 +485,8 @@
   "game.emeraldweapons.resume.prologue": "The village siege picks up where it stopped.",
   "command.emeraldweapons.pause.nogame": "No run in progress.",
   "command.emeraldweapons.pause.already": "The run is already paused.",
-  "command.emeraldweapons.pause.notpaused": "The run is not paused."
+  "command.emeraldweapons.pause.notpaused": "The run is not paused.",
+  "weather.emeraldweapons.prisme": "The Dimmed Prism",
+  "weather.emeraldweapons.prisme.sub": "The world loses its colours. What lives stands out.",
+  "weather.emeraldweapons.omen.prisme": "The colours hesitate, like film going pale."
 }

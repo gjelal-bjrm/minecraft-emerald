@@ -91,7 +91,7 @@
   "artifact.emeraldweapons.lentille_du_prisme": "Lentille du Prisme",
   "artifact.emeraldweapons.lentille_du_prisme.desc": "Les artefacts au sol luisent a travers les murs, jusqu'a 40 blocs.",
   "artifact.emeraldweapons.filtre_de_brume": "Filtre de Brume",
-  "artifact.emeraldweapons.filtre_de_brume.desc": "Immunise aux degats des meteos agressives.",
+  "artifact.emeraldweapons.filtre_de_brume.desc": "Immunise aux dégâts des météos agressives.",
   "artifact.emeraldweapons.repere_d_echo": "Repere d'Echo",
   "artifact.emeraldweapons.repere_d_echo.desc": "L'ennemi le plus coriace des environs se met a luire.",
   "artifact.emeraldweapons.coque_prismatique": "Coque Prismatique",
@@ -170,8 +170,6 @@
   "weather.emeraldweapons.clear": "Ciel clair",
   "weather.emeraldweapons.embellie": "L'Embellie",
   "weather.emeraldweapons.embellie.sub": "Rien ne viendra. Respirez.",
-  "weather.emeraldweapons.brume": "Brume Prismatique",
-  "weather.emeraldweapons.brume.sub": "La vue se voile — la vôtre, et la leur.",
   "weather.emeraldweapons.aurore": "Aurore",
   "weather.emeraldweapons.aurore.sub": "Hâte, vitesse, et les filons se montrent. Descendez miner.",
   "weather.emeraldweapons.nuit": "Nuit d'Arcencium",
@@ -469,7 +467,6 @@
   "game.emeraldweapons.cycle.next.sub": "Trois sanctuaires se dressent ailleurs",
   "game.emeraldweapons.hud.cycle": "Cycle %s",
   "game.emeraldweapons.weather.omen": "Présage",
-  "weather.emeraldweapons.omen.brume": "L'air s'épaissit ; au loin, les couleurs se brouillent.",
   "weather.emeraldweapons.omen.aurore": "Le ciel pâlit, comme s'il retenait sa lumière.",
   "weather.emeraldweapons.omen.nuit": "Le jour recule. Quelque chose attend qu'il s'éteigne.",
   "weather.emeraldweapons.omen.meteores": "Une odeur de pierre chaude descend du ciel.",
@@ -488,5 +485,8 @@
   "game.emeraldweapons.resume.prologue": "Le siège du village reprend là où il s'était arrêté.",
   "command.emeraldweapons.pause.nogame": "Aucune partie en cours.",
   "command.emeraldweapons.pause.already": "La partie est déjà en pause.",
-  "command.emeraldweapons.pause.notpaused": "La partie n'est pas en pause."
+  "command.emeraldweapons.pause.notpaused": "La partie n'est pas en pause.",
+  "weather.emeraldweapons.prisme": "Le Prisme Éteint",
+  "weather.emeraldweapons.prisme.sub": "Le monde perd ses couleurs. Ce qui vit se détache.",
+  "weather.emeraldweapons.omen.prisme": "Les couleurs hésitent, comme une pellicule qui se voile."
 }
