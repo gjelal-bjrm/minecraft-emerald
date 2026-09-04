@@ -84,6 +84,8 @@ public final class Prowl {
     private static final int VILLAGE_PEACE = 48;
     /** Combien de points on essaie avant d'abandonner une pose. */
     private static final int TRIES = 6;
+    /** Hauteur du compte : l'etage du joueur, pas les grottes en dessous. */
+    private static final int VERTICAL = 20;
 
     private Prowl() {
     }
@@ -132,11 +134,18 @@ public final class Prowl {
             return;
         }
         BlockPos village = state.village();
+        sweepVillage(level, village);
         for (ServerPlayer player : level.players()) {
             if (player.isSpectator() || player.isCreative()) {
                 continue;
             }
-            AABB around = player.getBoundingBox().inflate(RADIUS);
+            // UNE GALETTE, PAS UN CUBE. Compter dans un cube de cent
+            // quatre-vingt-douze blocs de cote ramassait tout ce qui dort dans
+            // les GROTTES sous les pieds du joueur : le compte etait toujours
+            // au-dessus de la cible et la Traque ne posait jamais rien (mesure
+            // en jeu : zero pose en une minute). On ne compte donc que ce qui
+            // partage son etage -- c'est bien d'un PAYSAGE qu'il s'agit.
+            AABB around = player.getBoundingBox().inflate(RADIUS, VERTICAL, RADIUS);
             int nearby = level.getEntitiesOfClass(Mob.class, around,
                     mob -> mob instanceof Enemy && mob.isAlive()).size();
             int posed = 0;
@@ -148,6 +157,43 @@ public final class Prowl {
             if (posed > 0) {
                 LOGGER.info("Traque : {} pose(s) autour de {} (il y en avait {}, on en veut {})",
                         posed, player.getName().getString(), nearby, want);
+            } else {
+                LOGGER.debug("Traque : rien a poser autour de {} (il y en a {}, on en veut {})",
+                        player.getName().getString(), nearby, want);
+            }
+        }
+    }
+
+    /**
+     * LA ZONE SURE SE TIENT, ELLE NE SE DECRETE PAS.
+     *
+     * Ne pas faire APPARAITRE de monstres dans le village ne suffisait pas :
+     * ils y entraient a pied. Le joueur s'est fait « traquer y compris dans le
+     * village », au point de ne plus pouvoir ameliorer son equipement -- et
+     * c'etait notre faute deux fois : on leur avait donne sa personne pour
+     * cible, et ils le suivaient donc jusqu'a l'atelier.
+     *
+     * On efface donc, a chaque passe, les traques qui ont franchi la limite --
+     * les NOTRES seulement, reconnus a leur marque : ni le siege du prologue,
+     * ni les monstres du jeu, ni ceux que le joueur aurait attires lui-meme.
+     * Et jamais sous les yeux de quelqu'un : un monstre qui disparait a vingt
+     * pas se lit comme une panne, alors on attend qu'il soit hors de portee.
+     */
+    private static void sweepVillage(ServerLevel level, BlockPos village) {
+        if (village == null) {
+            return;
+        }
+        AABB zone = new AABB(village).inflate(VILLAGE_PEACE);
+        for (Mob mob : level.getEntitiesOfClass(Mob.class, zone, m -> m.getTags().contains(TAG))) {
+            boolean watched = false;
+            for (ServerPlayer player : level.players()) {
+                if (player.distanceToSqr(mob) < 24.0 * 24.0) {
+                    watched = true;
+                    break;
+                }
+            }
+            if (!watched) {
+                mob.discard();
             }
         }
     }

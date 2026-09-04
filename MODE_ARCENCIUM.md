@@ -2914,6 +2914,17 @@ les traques **ne sont pas persistants**, ils s'effacent d'eux-memes et rien ne
 s'accumule ; et un **casque force** sur la tete, sans quoi la moitie du vivier
 vanilla brule au soleil -- on aurait peuple le monde de torches.
 
+### 37.1 ter Le compte se fait a l'etage du joueur
+
+Premiere mesure de la version corrigee : **zero pose en une minute**. La cause
+etait le volume du compte -- un cube de RADIUS de demi-cote, soit cent
+quatre-vingt-douze blocs d'arete, qui ramassait **tous les monstres des grottes
+sous les pieds du joueur**. Huit y sont toujours ; la cible etait donc toujours
+atteinte, et la Traque ne posait jamais rien.
+
+On ne compte plus que sur vingt blocs de hauteur : c'est bien d'un PAYSAGE
+qu'il s'agit, pas d'une colonne jusqu'au socle du monde.
+
 ### 37.1 bis On peuple, on ne chasse pas *(corrige apres essai)*
 
 La premiere version posait les monstres a **vingt-deux blocs** et leur
@@ -3031,3 +3042,41 @@ rendu ne suffit toujours pas :
 
 - laisser une partie tourner une fois : la generation continue en fond ;
 - pre-generer avec Chunky autour du village avant de jouer.
+
+
+## 39. Les Ailes de Pierres Precieuses : belles en image, ternes en jeu *(4 sept. 2026)*
+
+Le joueur les a repeintes et les trouve « trop elevees et trop serrees » une
+fois portees. **J'ai verifie avant de conclure**, et ma premiere lecture etait
+fausse : le cadrage (boite du dessin dans la toile) et la repartition de la
+matiere sont IDENTIQUES a celles du Givre et des Prismatiques, qui rendent tres
+bien -- centre de masse a (0,47 ; 0,50) contre (0,51 ; 0,51), meme part de
+matiere dans le tiers haut. Ce n'est donc ni un decalage, ni un centrage.
+
+Ce qui differe est la **silhouette** :
+
+| | Givre / Prismatiques | Pierres Precieuses |
+|---|---|---|
+| Forme | **un** eventail plein | **deux** branches ecartees |
+| Structure | plumes larges qui se recouvrent | resille doree fine, ajouree |
+| Detail | quelques gros elements | beaucoup de tres petites pierres |
+| Vides | presque aucun | grands vides entre les branches |
+
+**L'epreuve qui tranche** : reduire les trois images a 64 pixels, ce que le jeu
+fait de fait quand l'aile occupe un bloc de large. Le Givre et les Prismatiques
+restent des ailes lisibles ; les Pierres Precieuses deviennent un gribouillis
+colore. La regle a retenir pour toute aile future : **ce qui compte n'est pas la
+finesse du dessin mais la lisibilite de la silhouette reduite**.
+
+En attendant une repeinture (prompt dans `tools/prompts/ailes_pierres_precieuses.md`) :
+
+- `WingSkin` porte desormais un **ecartement** et une **envergure** par
+  apparence. Les Pierres Precieuses recoivent +14 degres et +15 % : les deux
+  branches se separent et chaque pierre redevient lisible. Toutes les autres
+  gardent zero -- une aile bien composee n'en a pas besoin ;
+- `specialization/WingGems` : **les pierres tombent des ailes**, demande du
+  joueur. Une gemme toutes les trois tiques s'egrene et s'efface, dans six
+  couleurs franches. Aucune texture peinte : on donne un bloc de gemme a la
+  particule de poussiere qui tombe, et elle en prend la couleur -- emeraude,
+  redstone, lapis, or, amethyste, diamant. Cote serveur, donc visible par
+  toute l'equipe.

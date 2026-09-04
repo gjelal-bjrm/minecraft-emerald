@@ -20,7 +20,24 @@ public enum WingSkin implements StringRepresentable {
     PRISMATIQUES("prismatiques", true, 0.80F),
     RUBIS("rubis", true, 1.0F),
     AURORE("aurore", true, 0.95F),
-    PIERRES_PRECIEUSES("pierres_precieuses", true, 1.0F),
+    /**
+     * LES PIERRES PRECIEUSES SONT AJUSTEES, ET ELLES SEULES.
+     *
+     * Le joueur les trouvait « trop elevees et trop serrees » en jeu. Verifie :
+     * leur cadrage et la repartition de leur matiere sont IDENTIQUES aux
+     * autres -- ce n'est donc ni un decalage ni un centrage. Ce qui differe est
+     * la SILHOUETTE : deux branches ecartees, une resille doree fine et
+     * beaucoup de petites pierres, la ou le Givre et les Prismatiques sont un
+     * eventail plein. Une silhouette ouverte se lit mal quand on la reduit a un
+     * bloc de large : les vides deviennent du bruit et les branches se
+     * confondent.
+     *
+     * En attendant une repeinture (voir tools/prompts/ailes_pierres_precieuses.md),
+     * on lui donne plus d'envergure et plus d'ecartement, ce qui separe les
+     * deux branches et rend chaque pierre lisible. Et elle laisse tomber ses
+     * pierres (voir WingGems), ce qui etait la demande.
+     */
+    PIERRES_PRECIEUSES("pierres_precieuses", true, 1.0F, 14.0F, 1.15F, true),
     BRAISE("braise", true, 1.0F),
     TEMPETE("tempete", true, 0.95F),
     EMERAUDE("emeraude", true, 1.0F),
@@ -37,10 +54,24 @@ public enum WingSkin implements StringRepresentable {
      */
     public final float tint;
 
+    /** Degres d'ecartement en plus, pour une silhouette qui a besoin d'air. */
+    public final float spread;
+    /** Facteur d'envergure : une aile fine se lit mieux un peu plus grande. */
+    public final float scale;
+    /** Vrai si elle laisse tomber des pierres (voir WingGems). */
+    public final boolean gems;
+
     WingSkin(String id, boolean emissive, float tint) {
+        this(id, emissive, tint, 0.0F, 1.0F, false);
+    }
+
+    WingSkin(String id, boolean emissive, float tint, float spread, float scale, boolean gems) {
         this.id = id;
         this.emissive = emissive;
         this.tint = tint;
+        this.spread = spread;
+        this.scale = scale;
+        this.gems = gems;
     }
 
     public String id() {

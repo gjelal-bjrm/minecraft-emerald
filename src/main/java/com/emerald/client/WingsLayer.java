@@ -62,7 +62,7 @@ public class WingsLayer<T extends AbstractClientPlayer, M extends PlayerModel<T>
             return;
         }
         WingSkin skin = WingsClient.skin(player);
-        float size = sizeFor(level);
+        float size = sizeFor(level) * skin.scale;
         // le battement : lent au repos, plus ample et plus rapide en mouvement
         boolean moving = player.isFallFlying() || limbSwingAmount > 0.15F
                 || WingsFlightClient.gliding(player);
@@ -82,7 +82,7 @@ public class WingsLayer<T extends AbstractClientPlayer, M extends PlayerModel<T>
             pose.pushPose();
             // l'omoplate : dans l'espace du modele, +y descend, -x est la droite du joueur
             pose.translate(side * 0.14F, 0.17F, 0.0F);
-            pose.mulPose(Axis.YP.rotationDegrees(side * (-24.0F - flap)));
+            pose.mulPose(Axis.YP.rotationDegrees(side * (-24.0F - skin.spread - flap)));
             pose.mulPose(Axis.ZP.rotationDegrees(-side * (6.0F + lift)));   // les pointes montent
             quad(pose, body, side, size, light, 1.0F, 255);
             if (glow != null) {
