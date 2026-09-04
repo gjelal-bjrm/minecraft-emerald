@@ -5,6 +5,7 @@ import com.emerald.element.Element;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 
@@ -34,6 +35,16 @@ public final class SkinBonus {
     private static final String TAG_FROST_UNTIL = "ArcenciumFrostUntil";
     private static final double FROST_TAKEN = 0.15;
 
+    /** La Constellation : combien d'etoiles sont allumees, et jusqu'a quand. */
+    private static final String TAG_STARS = "ArcenciumStars";
+    private static final String TAG_STARS_UNTIL = "ArcenciumStarsUntil";
+    /** Cinq etoiles font une constellation. */
+    public static final int STARS_FULL = 5;
+    /** Sans coup pendant huit secondes, les etoiles s'eteignent. */
+    private static final int STARS_TIMEOUT = 160;
+    /** Rayon de la frappe qui suit la constellation pleine. */
+    private static final double NOVA_RADIUS = 3.0;
+
     private SkinBonus() {
     }
 
@@ -49,6 +60,11 @@ public final class SkinBonus {
             case GIVRE -> new Bonus(0, 8, 0, 5, 0, 0, 0, 0, 6, 0, 0, 0, false, true, false);
             case EMERAUDE -> new Bonus(0, 7, 12, 8, 0, 0, 0, 0, 0, 0, 0, 0, false, false, false);
             case PAPILLON -> new Bonus(0, 0, 0, 6, 0, 0, 0, 0, 4, 0, 0, 0, false, false, false);
+            // LA COURONNE D'ASTRES : le plus fort du jeu, et il doit se voir.
+            // Douze de critique et vingt de degats critiques -- au-dessus de
+            // tout le reste -- plus la Constellation, qui est sa vraie signature.
+            case SOUVERAIN_ASTRAL ->
+                    new Bonus(0, 0, 0, 6, 0, 0, 12, 20, 0, 0, 0, 0, false, false, false);
         };
     }
 
@@ -121,6 +137,77 @@ public final class SkinBonus {
             victim.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 60, 1));
             victim.getPersistentData().putLong(TAG_FROST_UNTIL, victim.level().getGameTime() + 60);
         }
+        if (Specialization.skin(attacker) == WingSkin.SOUVERAIN_ASTRAL
+                && Specialization.level(attacker) >= 15) {
+            lightStar(attacker);
+        }
+    }
+
+    /**
+     * LA CONSTELLATION : chaque critique allume une etoile.
+     *
+     * A cinq, le coup suivant est un critique GARANTI qui frappe tout autour --
+     * et les etoiles s'eteignent. C'est ce qui distingue la Couronne d'Astres
+     * d'un simple sac de pourcentages : elle demande de garder le rythme, et
+     * elle rend un moment plutot qu'un chiffre.
+     *
+     * Les etoiles s'eteignent seules apres huit secondes sans coup critique :
+     * sans cela on les accumulerait sur des poulets avant d'entrer au
+     * sanctuaire, et la recompense ne recompenserait plus le combat.
+     */
+    private static void lightStar(Player player) {
+        long now = player.level().getGameTime();
+        int stars = stars(player);
+        stars = Math.min(STARS_FULL, stars + 1);
+        player.getPersistentData().putInt(TAG_STARS, stars);
+        player.getPersistentData().putLong(TAG_STARS_UNTIL, now + STARS_TIMEOUT);
+        if (!(player.level() instanceof ServerLevel level)) {
+            return;
+        }
+        // une etoile de plus, un ton plus haut : on entend la constellation monter
+        level.playSound(null, player.blockPosition(),
+                net.minecraft.sounds.SoundEvents.AMETHYST_BLOCK_CHIME,
+                net.minecraft.sounds.SoundSource.PLAYERS, 0.6F, 0.9F + 0.14F * stars);
+        level.sendParticles(net.minecraft.core.particles.ParticleTypes.END_ROD,
+                player.getX(), player.getY() + 1.6, player.getZ(), stars * 2, 0.4, 0.3, 0.4, 0.02);
+    }
+
+    /** Les etoiles allumees, ou zero si elles se sont eteintes. */
+    public static int stars(Player player) {
+        if (player.getPersistentData().getLong(TAG_STARS_UNTIL) < player.level().getGameTime()) {
+            return 0;
+        }
+        return player.getPersistentData().getInt(TAG_STARS);
+    }
+
+    /** Vrai si la constellation est pleine : le prochain coup est garanti. */
+    public static boolean constellationReady(Player player) {
+        return Specialization.skin(player) == WingSkin.SOUVERAIN_ASTRAL
+                && Specialization.level(player) >= 15
+                && stars(player) >= STARS_FULL;
+    }
+
+    /**
+     * La frappe de la constellation : tout ce qui entoure la cible le prend
+     * aussi, et les etoiles s'eteignent.
+     */
+    public static void nova(Player attacker, LivingEntity victim, float damage) {
+        attacker.getPersistentData().putInt(TAG_STARS, 0);
+        attacker.getPersistentData().putLong(TAG_STARS_UNTIL, 0L);
+        if (!(attacker.level() instanceof ServerLevel level)) {
+            return;
+        }
+        for (LivingEntity other : level.getEntitiesOfClass(LivingEntity.class,
+                victim.getBoundingBox().inflate(NOVA_RADIUS),
+                e -> e != victim && e != attacker && e.isAlive() && !(e instanceof Player))) {
+            other.hurt(level.damageSources().playerAttack(attacker), damage * 0.6F);
+        }
+        level.sendParticles(net.minecraft.core.particles.ParticleTypes.END_ROD,
+                victim.getX(), victim.getY() + 1.0, victim.getZ(), 60, NOVA_RADIUS * 0.6, 0.6,
+                NOVA_RADIUS * 0.6, 0.08);
+        level.playSound(null, victim.blockPosition(),
+                net.minecraft.sounds.SoundEvents.TOTEM_USE,
+                net.minecraft.sounds.SoundSource.PLAYERS, 0.9F, 1.4F);
     }
 
     public static boolean frozen(LivingEntity victim) {

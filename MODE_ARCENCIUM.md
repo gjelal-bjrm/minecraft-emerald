@@ -3120,3 +3120,65 @@ En attendant une repeinture (prompt dans `tools/prompts/ailes_pierres_precieuses
   particule de poussiere qui tombe, et elle en prend la couleur -- emeraude,
   redstone, lapis, or, amethyste, diamant. Cote serveur, donc visible par
   toute l'equipe.
+
+## 40. Les Ailes du Souverain Astral *(4 sept. 2026)*
+
+Le joueur a choisi le patron A -- **la Couronne d'Astres** -- et son bonus, puis
+a peint les deux images : le **Vitrail** pour les Pierres Precieuses, et
+l'astrale. Nuit profonde piquetee d'etoiles, nervures d'or, nebuleuse violette
+et turquoise au coeur.
+
+### 40.1 L'import : detourer un fond NOIR
+
+`tools/wings_import.py` savait detourer le blanc et le vert. Les deux images
+arrivent sur fond **noir opaque**, et un simple seuil de luminance aurait troue
+l'aile astrale de part en part -- elle est elle-meme d'un bleu presque noir.
+
+On procede donc **par region** : le fond est la zone sombre CONNEXE qui touche
+le bord de l'image (remplissage par diffusion depuis les quatre cotes). Tout ce
+qui est sombre mais ENFERME dans le dessin -- l'ombre entre deux plumes, le
+creux d'une gemme -- reste opaque. Les bords recoivent un degre d'un pixel pris
+de la luminance, pour que la decoupe ne soit pas crenelee.
+
+Les textures passent aussi de 512 a **1024** : ces peintures ont du detail a
+garder.
+
+### 40.2 Ce que les deux nouvelles valent, mesure
+
+L'epreuve des 64 pixels, sur fond de ciel et sur fond de nuit :
+
+| Aile | Racine (u ; v) | Lisible reduite |
+|---|---|---|
+| Pierres Precieuses (vitrail) | (0,12 ; 0,80) | **oui** -- l'or groupe les panneaux, les couleurs se lisent en bandes ordonnees |
+| Souverain Astral | (0,18 ; 0,87) | **oui** -- silhouette sombre franche, nebuleuse et nervures d'or au coeur |
+
+Le vitrail regle ce qui clochait : le plombage dore fait exactement le travail
+attendu, et les sept teintes ne se lisent plus comme des confettis.
+
+L'astrale est rendue en emissif mais **retenue a 0,72** : plein feu, ses etoiles
+se seraient lavees dans la lumiere au lieu de s'allumer.
+
+### 40.3 Le bonus : la Constellation
+
++12 % de chance de critique et +20 % de degats critiques -- au-dessus de toutes
+les autres apparences -- et surtout :
+
+> **Chaque critique allume une etoile** (jusqu'a cinq). A cinq, le coup suivant
+> est un **critique garanti** qui frappe **tout ce qui entoure la cible**
+> (rayon 3, 60 % des degats) et eteint les etoiles.
+
+Les etoiles s'eteignent seules apres **huit secondes** sans critique : sans
+cela on les accumulerait sur des poules avant d'entrer au sanctuaire, et la
+recompense ne recompenserait plus le combat. Chaque etoile monte d'un ton --
+on ENTEND la constellation se remplir.
+
+C'est ce qui distingue ces ailes d'un sac de pourcentages : elles demandent de
+tenir le rythme, et elles rendent un moment plutot qu'un chiffre.
+
+### 40.4 L'obtention
+
+La Plume du Souverain Astral tombe **du boss final, et de lui seul**, a la
+condition que les **trois sanctuaires** soient tombes -- une victoire obtenue
+en courant droit a l'arene ne la donne pas. **Une chance sur trois** : il faut
+gagner plusieurs fois, ce qui convient a une apparence qui se garde entre les
+parties. Elle est explicitement hors du vivier des plumes de monstre.

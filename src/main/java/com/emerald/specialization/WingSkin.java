@@ -37,13 +37,26 @@ public enum WingSkin implements StringRepresentable {
      * deux branches et rend chaque pierre lisible. Et elle laisse tomber ses
      * pierres (voir WingGems), ce qui etait la demande.
      */
-    PIERRES_PRECIEUSES("pierres_precieuses", true, 1.0F, 0.21F, 0.76F, true),
+    PIERRES_PRECIEUSES("pierres_precieuses", true, 1.0F, 0.12F, 0.80F, true),
     BRAISE("braise", true, 1.0F, 0.16F, 0.85F, false),
     TEMPETE("tempete", true, 0.95F, 0.16F, 0.84F, false),
     EMERAUDE("emeraude", true, 1.0F, 0.17F, 0.85F, false),
     OBSCURES("obscures", false, 1.0F, 0.12F, 0.85F, false),
     GIVRE("givre", true, 0.85F, 0.16F, 0.83F, false),
-    PAPILLON("papillon", false, 1.0F, 0.21F, 0.79F, false);
+    PAPILLON("papillon", false, 1.0F, 0.21F, 0.79F, false),
+    /**
+     * LES AILES DU SOUVERAIN ASTRAL : la Couronne d'Astres.
+     *
+     * Les plus puissantes du jeu, et les plus dures a obtenir -- elles ne
+     * tombent que du boss final, et seulement si les trois sanctuaires sont
+     * tombes. Nuit profonde piquetee d'etoiles, nervures d'or, nebuleuse
+     * violette et turquoise au coeur.
+     *
+     * Rendue en emissif, mais RETENUE a 0,72 : l'aile est presque noire, et le
+     * plein feu aurait lave ses etoiles au lieu de les allumer. Ce sont elles
+     * qui doivent briller, pas la plume.
+     */
+    SOUVERAIN_ASTRAL("souverain_astral", true, 0.72F, 0.18F, 0.87F, false);
 
     private final String id;
     /** Rendue en emissif (lumiere) plutot qu'eclairee par le monde (matiere). */

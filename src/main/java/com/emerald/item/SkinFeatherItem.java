@@ -63,6 +63,7 @@ public class SkinFeatherItem extends Item {
             case OBSCURES -> 0x5A2C78;
             case GIVRE -> 0xBFE6FF;
             case PAPILLON -> 0xF2EAD0;
+            case SOUVERAIN_ASTRAL -> 0x8C6BFF;    // la nebuleuse, pas la plume noire
         };
     }
 
@@ -90,6 +91,9 @@ public class SkinFeatherItem extends Item {
         if (weather == com.emerald.weather.Weather.METEORES) {
             return WingSkin.BRAISE;
         }
+        // Le Souverain Astral n'est PAS dans ce vivier : il ne tombe que du boss
+        // final, trois sanctuaires pris (voir Finale.awardAstralWings). Jamais
+        // le Rubis non plus.
         WingSkin[] pool = {WingSkin.PIERRES_PRECIEUSES, WingSkin.EMERAUDE, WingSkin.PAPILLON, WingSkin.AURORE};
         return pool[random.nextInt(pool.length)];
     }

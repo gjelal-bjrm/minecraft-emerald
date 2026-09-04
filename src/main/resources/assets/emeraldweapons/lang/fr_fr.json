@@ -447,5 +447,8 @@
   "forge.emeraldweapons.weak": "Trop faible pour aller au-delà de +%s. Seules les armes du mode vont à +10.",
   "socket.emeraldweapons.rarity.weak": "Trop faible pour dépasser %s. Seules les pièces du mode vont plus haut.",
   "wings.emeraldweapons.glide": "Vos ailes vous portent : maintenez Saut en l'air.",
-  "wings.emeraldweapons.doublejump": "Ailes au maximum : double saut."
+  "wings.emeraldweapons.doublejump": "Ailes au maximum : double saut.",
+  "wings.emeraldweapons.souverain_astral": "Ailes du Souverain Astral",
+  "game.emeraldweapons.astral.won": "Le ciel vous reconnaît : une Plume du Souverain Astral vous revient.",
+  "skin.emeraldweapons.souverain_astral.bonus": "+12 % critique, +20 % dégâts critiques, et la Constellation"
 }

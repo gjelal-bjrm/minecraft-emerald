@@ -462,8 +462,36 @@ public final class Finale {
                         player.getY() + 1.0, player.getZ() + (level.random.nextDouble() - 0.5) * 6.0);
             }
         }
+        awardAstralWings(level);
         dissolveGuards(level);
         hintAt = level.getGameTime() + 100L;
+    }
+
+    /**
+     * LA PLUME DU SOUVERAIN ASTRAL, et la seule facon de l'avoir.
+     *
+     * Elle ne tombe que du boss final, et seulement si les TROIS sanctuaires
+     * sont tombes -- une victoire obtenue en courant droit a l'arene ne la
+     * donne pas. Une chance sur trois : il faut donc gagner plusieurs fois, ce
+     * qui convient a des ailes qui se gardent entre les parties.
+     */
+    private static void awardAstralWings(ServerLevel level) {
+        GameState state = GameState.get(level);
+        if (state.anchorsActive() < 3) {
+            return;
+        }
+        if (level.random.nextInt(3) != 0) {
+            return;
+        }
+        for (ServerPlayer player : level.players()) {
+            player.getInventory().placeItemBackInInventory(
+                    com.emerald.item.SkinFeatherItem.stack(
+                            com.emerald.specialization.WingSkin.SOUVERAIN_ASTRAL,
+                            com.emerald.item.ModItems.SKIN_FEATHER.get()));
+            player.sendSystemMessage(net.minecraft.network.chat.Component.translatable(
+                            "game.emeraldweapons.astral.won")
+                    .withStyle(net.minecraft.ChatFormatting.LIGHT_PURPLE));
+        }
     }
 
     /** Le temps est ecoule : la Maree a tout recouvert. */

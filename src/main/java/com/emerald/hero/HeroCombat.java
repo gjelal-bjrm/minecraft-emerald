@@ -99,7 +99,9 @@ public final class HeroCombat {
                     + HeroStat.ATTAQUE.bonus(HeroBonus.CRIT_CHANCE, level)
                     + com.emerald.rune.RuneEvents.critChance(attacker)
                     + com.emerald.specialization.SkinBonus.critChance(attacker);
-            if (chance > 0.0 && attacker.getRandom().nextDouble() * 100.0 < chance) {
+            // LA CONSTELLATION PLEINE force le critique : c'est tout son propos.
+            boolean forced = com.emerald.specialization.SkinBonus.constellationReady(attacker);
+            if (forced || chance > 0.0 && attacker.getRandom().nextDouble() * 100.0 < chance) {
                 double multiplier = CRIT_BASE
                         + (com.emerald.element.WeaponProfile.critDamage(held)
                            + HeroStat.ATTAQUE.bonus(HeroBonus.CRIT_DAMAGE, level)
@@ -122,6 +124,9 @@ public final class HeroCombat {
                 // c'est la que le paquet part, et il doit savoir si ce coup-ci
                 // etait critique.
                 victim.getPersistentData().putLong(TAG_CRIT_AT, victim.level().getGameTime());
+                if (forced) {
+                    com.emerald.specialization.SkinBonus.nova(attacker, victim, amount);
+                }
                 // ce que les ailes posent sur un critique : brulure de la Braise, givre du Givre
                 com.emerald.specialization.SkinBonus.onCrit(attacker, victim);
                 if (attacker.level() instanceof ServerLevel world) {

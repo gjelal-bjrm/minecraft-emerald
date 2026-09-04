@@ -447,5 +447,8 @@
   "forge.emeraldweapons.weak": "Too weak to go beyond +%s. Only the mode's weapons reach +10.",
   "socket.emeraldweapons.rarity.weak": "Too weak to rise above %s. Only the mode's gear goes higher.",
   "wings.emeraldweapons.glide": "Your wings carry you: hold Jump in the air.",
-  "wings.emeraldweapons.doublejump": "Wings at max: double jump."
+  "wings.emeraldweapons.doublejump": "Wings at max: double jump.",
+  "wings.emeraldweapons.souverain_astral": "Wings of the Astral Sovereign",
+  "game.emeraldweapons.astral.won": "The sky knows you: a Feather of the Astral Sovereign is yours.",
+  "skin.emeraldweapons.souverain_astral.bonus": "+12 % crit, +20 % crit damage, and the Constellation"
 }

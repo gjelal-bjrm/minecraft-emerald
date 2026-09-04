@@ -159,6 +159,24 @@ public class GameCommands {
                                 com.mojang.brigadier.arguments.IntegerArgumentType.integer(1, 999))
                         .executes(ctx -> giveFeathers(ctx.getSource(),
                                 com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(ctx, "nombre")))));
+        // POUR LES ESSAIS : porter une apparence sans passer par la plume.
+        // `apparence` DONNE la plume, ce qui est juste en jeu mais impraticable
+        // quand on veut simplement regarder une aile.
+        var wearNode = Commands.literal("porte");
+        for (com.emerald.specialization.WingSkin skin : com.emerald.specialization.WingSkin.values()) {
+            wearNode.then(Commands.literal(skin.id()).executes(ctx -> {
+                if (!(ctx.getSource().getEntity()
+                        instanceof net.minecraft.server.level.ServerPlayer player)) {
+                    return 0;
+                }
+                com.emerald.specialization.Specialization.set(player,
+                        com.emerald.specialization.Specialization.level(player), skin);
+                ctx.getSource().sendSuccess(() -> Component.literal("Ailes : " + skin.id()), false);
+                return 1;
+            }));
+        }
+        wingsNode.then(wearNode);
+
         var skinNode = Commands.literal("apparence");
         for (com.emerald.specialization.WingSkin skin : com.emerald.specialization.WingSkin.values()) {
             skinNode.then(Commands.literal(skin.id()).executes(ctx -> giveSkinFeather(ctx.getSource(), skin)));
