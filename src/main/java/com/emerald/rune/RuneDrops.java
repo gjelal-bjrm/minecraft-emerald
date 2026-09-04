@@ -66,13 +66,18 @@ public final class RuneDrops {
         }
         RandomSource random = killer.getRandom();
         double health = victim.getMaxHealth();
+        // LA BATTUE PAIE MIEUX, et c'est ce qui en fait une fenetre de FARM et
+        // non une simple facilite de visee : moitie plus de plumes, de pierres
+        // de forge, de cristaux et de runes tant qu'elle dure.
+        double hunt = com.emerald.weather.WeatherManager.current()
+                == com.emerald.weather.Weather.BATTUE ? 1.5 : 1.0;
         // Pas de bonus de Butin : depuis la 1.21 il ne passe plus par un
         // niveau lisible sur l'evenement mais par un effet d'enchantement
         // applique en amont. Plutot que de deviner une API, on s'en passe --
         // LA PLUME D'ARCENCIUM : le materiau de la specialisation, qui survit
         // a la partie -- donc rare sur le menu fretin, presque sure sur un
         // puissant. Elle se tire AVANT la porte des runes : c'est un butin a part.
-        double featherChance = 0.25 + 0.40 * Math.min(1.0, health / 200.0);
+        double featherChance = (0.25 + 0.40 * Math.min(1.0, health / 200.0)) * hunt;
         if (random.nextDouble() < featherChance) {
             event.getDrops().add(new net.minecraft.world.entity.item.ItemEntity(
                     victim.level(), victim.getX(), victim.getY(), victim.getZ(),
@@ -90,7 +95,7 @@ public final class RuneDrops {
         }
 
         // et le taux ci-dessous est cale sans elle.
-        double chance = CHANCE + CHANCE_BONUS * Math.min(1.0, health / TOUGH);
+        double chance = (CHANCE + CHANCE_BONUS * Math.min(1.0, health / TOUGH)) * hunt;
         if (random.nextDouble() >= chance) {
             return;
         }
@@ -104,7 +109,7 @@ public final class RuneDrops {
         com.emerald.element.Element flavour =
                 com.emerald.element.Attunement.of(victim);
         if (flavour != com.emerald.element.Element.NEUTRE
-                && random.nextDouble() < STONE_DROP_CHANCE) {
+                && random.nextDouble() < STONE_DROP_CHANCE * hunt) {
             event.getDrops().add(new net.minecraft.world.entity.item.ItemEntity(
                     victim.level(), victim.getX(), victim.getY(), victim.getZ(),
                     com.emerald.element.ElementStoneItem.stack(flavour,
@@ -118,7 +123,7 @@ public final class RuneDrops {
         // le COMBAT : le metal se ramasse en creusant, et si la pierre se
         // ramassait aussi en creusant, tout le systeme d'amelioration
         // recompenserait le temps passe plutot que le jeu joue.
-        if (random.nextDouble() < STONE_CHANCE) {
+        if (random.nextDouble() < STONE_CHANCE * hunt) {
             event.getDrops().add(new net.minecraft.world.entity.item.ItemEntity(
                     victim.level(), victim.getX(), victim.getY(), victim.getZ(),
                     new ItemStack(com.emerald.item.ModItems.FORGE_STONE.get(),

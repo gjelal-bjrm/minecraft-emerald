@@ -74,7 +74,7 @@ public final class WeatherClient {
     @SubscribeEvent
     public static void onClientTick(ClientTickEvent.Post event) {
         Weather w = current();
-        // LE PRISME N'EST PLUS UN BROUILLARD : il ne compte plus parmi eux.
+        // LE BATTUE N'EST PLUS UN BROUILLARD : il ne compte plus parmi eux.
         boolean foggy = w == Weather.NUIT
                 || w == Weather.ORAGE || w == Weather.DECHIRURE
                 || w == Weather.METEORES || w == Weather.AURORE;

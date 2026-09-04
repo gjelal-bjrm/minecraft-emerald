@@ -51,7 +51,8 @@ public final class UpgradeTooltip {
         event.getToolTip().add(Component.translatable("upgrade.emeraldweapons.next",
                         level + 1, cost.amount(),
                         Component.translatable(cost.material().getDescriptionId()),
-                        Upgrade.odds(level))
+                        Upgrade.odds(level, com.emerald.client.WeatherClient.current()
+                                == com.emerald.weather.Weather.HEURE_DOREE))
                 .withStyle(ChatFormatting.DARK_GRAY));
         if (Upgrade.risky(level)) {
             event.getToolTip().add(Component.translatable("upgrade.emeraldweapons.risk")

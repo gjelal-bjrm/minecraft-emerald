@@ -126,6 +126,17 @@ public final class Prowl {
         }
         GamePhase phase = state.phase(level);
         int want = target(phase);
+        // LA BATTUE DOUBLE LE VIVIER.
+        //
+        // Une meteo qui encourage le combat doit d'abord donner QUOI combattre.
+        // On ne pousse rien vers le joueur -- « c'est a moi d'aller vers eux,
+        // pas a eux d'etre a cote de moi » -- on peuple simplement l'anneau
+        // deux fois plus, entre quarante-huit et quatre-vingt-seize blocs. Le
+        // joueur voit des silhouettes au loin et decide.
+        if (com.emerald.weather.WeatherManager.current()
+                == com.emerald.weather.Weather.BATTUE) {
+            want *= 2;
+        }
         if (want <= 0) {
             return;
         }

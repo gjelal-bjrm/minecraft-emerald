@@ -486,7 +486,11 @@
   "command.emeraldweapons.pause.nogame": "Aucune partie en cours.",
   "command.emeraldweapons.pause.already": "La partie est déjà en pause.",
   "command.emeraldweapons.pause.notpaused": "La partie n'est pas en pause.",
-  "weather.emeraldweapons.prisme": "Le Prisme Éteint",
-  "weather.emeraldweapons.prisme.sub": "Le monde perd ses couleurs. Ce qui vit se détache.",
-  "weather.emeraldweapons.omen.prisme": "Les couleurs hésitent, comme une pellicule qui se voile."
+  "weather.emeraldweapons.battue": "La Battue",
+  "weather.emeraldweapons.battue.sub": "Ce qui vit se détache. Va les chercher.",
+  "weather.emeraldweapons.omen.battue": "Quelque chose remue au loin, et ne se cache plus.",
+  "weather.emeraldweapons.heure_doree": "L'Heure Dorée",
+  "weather.emeraldweapons.heure_doree.sub": "Le soleil s'attarde. La Forge tient mieux, et l'Éclat ne se paie plus.",
+  "weather.emeraldweapons.omen.heure_doree": "La lumière s'épaissit et jaunit, comme un après-midi qui refuse de finir.",
+  "socket.emeraldweapons.golden": "L'Heure Dorée vous rend votre Éclat du Destin"
 }

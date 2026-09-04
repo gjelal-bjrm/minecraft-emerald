@@ -171,6 +171,11 @@ public final class WeatherManager {
         return switch (weather) {
             case NUIT -> 18000L;
             case METEORES -> 13200L;
+            // L'HEURE DOREE : le soleil rasant, juste avant qu'il se couche.
+            // Rien a peindre -- le jeu et le pack de shaders s'en chargent, et
+            // c'est la seule facon d'obtenir une lumiere doree qu'on ne puisse
+            // pas rater.
+            case HEURE_DOREE -> 11800L;
             default -> -1L;
         };
     }

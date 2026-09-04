@@ -43,6 +43,19 @@ public class ArcenciumForgeScreen extends AbstractContainerScreen<ArcenciumForge
     private static final int GREEN = 0xFF3FA65B;
     private static final int RED = 0xFFD94848;
     private static final int GREY = 0xFF6F6F6F;
+    /**
+     * L'Heure Doree vue du CLIENT.
+     *
+     * Le compteur de meteo du serveur n'existe pas ici : l'ecran interroge donc
+     * sa propre copie. Sans cela l'atelier afficherait dix pour cent pendant
+     * que le serveur en roule vingt-cinq -- et une interface qui ment sur un
+     * pari est pire qu'une interface muette.
+     */
+    private static boolean golden() {
+        return com.emerald.client.WeatherClient.current()
+                == com.emerald.weather.Weather.HEURE_DOREE;
+    }
+
     private static final int INK = 0xFF3F3F3F;
     private static final int PALE = 0xFF8A8A8A;
 
@@ -114,7 +127,7 @@ public class ArcenciumForgeScreen extends AbstractContainerScreen<ArcenciumForge
                     tx, 19, GOLD, false);
         } else {
             graphics.drawString(this.font, Component.translatable("forge.emeraldweapons.next",
-                    level, level + 1, Upgrade.odds(level)), tx, 19, INK, false);
+                    level, level + 1, Upgrade.odds(level, golden())), tx, 19, INK, false);
         }
         graphics.drawString(this.font, Component.translatable("forge.emeraldweapons.stone", stones),
                 tx, 33, stones > 0 ? GREEN : RED, false);
@@ -166,7 +179,7 @@ public class ArcenciumForgeScreen extends AbstractContainerScreen<ArcenciumForge
             int amountColor = done ? GREEN : next ? (carried >= cost.amount() ? GREEN : RED) : ink;
             graphics.drawString(this.font, amount, hx + 41, ry, amountColor, false);
             graphics.drawString(this.font, metalName(cost.material()), hx + 72, ry, ink, false);
-            String chance = Upgrade.odds(target - 1) + " %";
+            String chance = Upgrade.odds(target - 1, golden()) + " %";
             graphics.drawString(this.font, chance, this.imageWidth - 8 - this.font.width(chance),
                     ry, next ? GOLD : ink, false);
         }

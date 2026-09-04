@@ -3663,3 +3663,80 @@ Le panneau affichait « Diamant 63m ▲5 » trois fois de suite : un filon natur
 de diamant tient sur deux ou trois colonnes, et la sonde en gardait un par
 colonne. Trois lignes identiques ne guident vers rien de plus qu'une seule. Huit
 blocs d'ecart minimum entre deux lignes, et les trois designent trois endroits.
+
+---
+
+## 46. La Battue et l'Heure Doree *(4 sept. 2026)*
+
+### 46.1 Pourquoi la Brume est morte
+
+Deux causes, mesurees et non supposees.
+
+**Le rendu.** `config/DistantHorizons.toml` porte `enableVanillaFog = false` : DH
+coupe le brouillard du jeu et dessine le sien sur 4 096 blocs. Notre mur a 72
+blocs etait donc neutralise, et l'on voyait le terrain lointain A TRAVERS la
+brume, sous un ciel reste bleu. « On voit parfois derriere et parfois on ne voit
+pas » : c'etait exact, et ce n'etait pas rattrapable sans piloter la config de
+DH meteo par meteo.
+
+**Le jeu.** Son seul effet etait `FOLLOW_RANGE -70 %` sur les hostiles a 48
+blocs -- c'est-a-dire rien de perceptible. Elle ne donnait rien et prenait la
+vue.
+
+### 46.2 LA BATTUE : la fenetre de combat
+
+Plus un gramme de brouillard : ni mur, ni coupole, ni particules. L'horizon est
+degage, et il n'y a plus rien qui puisse mal se dessiner.
+
+| | |
+|---|---|
+| Ce qu'on voit | **tout ce qui vit a 64 blocs se detoure**, a travers les murs (lueur d'entite -- la meme technique que les jalons de l'Aurore) |
+| Ce qu'on gagne | detection ennemie **-70 %** ; **critique garanti** sur une creature qui ne vous a pas pris pour cible ; **vivier double** ; **+50 %** de plumes, pierres de forge, cristaux, runes et experience de Heros |
+| Duree | 2 minutes fixes |
+| Son | une nappe tres basse toutes les huit secondes |
+
+Elle repond a l'Aurore : **l'Aurore envoie miner, la Battue envoie combattre.**
+Le vivier double se peuple dans l'ANNEAU de 48 a 96 blocs -- on ne pousse
+toujours rien vers le joueur, « c'est a moi d'aller vers eux ».
+
+Le critique d'embuscade est distinct du critique force de la Constellation :
+seul ce dernier declenche la Nova astrale. Les confondre aurait donne
+l'explosion a chaque creature surprise, sans aile ni etoile.
+
+### 46.3 Le noir et blanc : construit, verifie, retire
+
+L'ambiance « vieux film » a ete faite et elle FONCTIONNAIT, y compris sous Iris
++ Complementary : le jeu embarque le programme `color_convolve` (la vision du
+Creeper) avec un uniforme `Saturation` ; a zero, chaque pixel devient sa
+luminance. Un seul fichier JSON, aucun GLSL. La saturation etant un uniforme,
+elle se pilotait en continu -- fondu de trois secondes, et des a-coups de
+couleur rendus par les coups portes et recus.
+
+Le joueur l'a essayee et tranchee : « au debut c'etait sympa, mais a la longue
+c'est vraiment genant ». Retiree entierement. **La lecon vaut d'etre gardee :
+un post-traitement du jeu passe sous Iris, et ce qui est dessine APRES la chaine
+garde ses couleurs.**
+
+### 46.4 L'HEURE DOREE : la fenetre de l'atelier
+
+Les autres meteos poussent DEHORS. Celle-ci fait RENTRER.
+
+- **son ciel ne nous coute rien** : on ne peint pas un voile, on DEPLACE
+  L'HORLOGE a 11 800 -- juste avant le coucher. Le soleil devient rasant et
+  dore, et c'est le jeu (ou le pack de shaders) qui le rend. L'horloge est
+  rendue a la fin, comme pour la Nuit d'Arcencium ;
+- **+15 points de reussite** a la Forge. Points fixes et non multiplicateur :
+  sur un +9 a 10 % cela fait 25 %, sur un +1 a 95 % cela ne change rien. La
+  fenetre vaut pour les paris qu'on n'ose pas ;
+- **l'Etabli ne prend plus l'Eclat du Destin** sur une tentative de rarete.
+  L'Eclat est la seule monnaie qu'on ne puisse pas produire : le rendre, c'est
+  offrir une tentative entiere. Seul l'Eclat est rendu -- une rune ou un
+  artefact serti reste consomme ;
+- **l'interface dit le chiffre DU MOMENT** : l'ecran de la Forge et l'infobulle
+  interrogent la meteo du CLIENT, sans quoi ils afficheraient dix pour cent
+  pendant que le serveur en roule vingt-cinq. Une interface qui ment sur un
+  pari est pire qu'une interface muette ;
+- deux minutes trente.
+
+Les trois douces se partagent donc les trois verbes du mode : **Aurore = miner,
+Battue = combattre, Heure Doree = forger.**

@@ -486,7 +486,11 @@
   "command.emeraldweapons.pause.nogame": "No run in progress.",
   "command.emeraldweapons.pause.already": "The run is already paused.",
   "command.emeraldweapons.pause.notpaused": "The run is not paused.",
-  "weather.emeraldweapons.prisme": "The Dimmed Prism",
-  "weather.emeraldweapons.prisme.sub": "The world loses its colours. What lives stands out.",
-  "weather.emeraldweapons.omen.prisme": "The colours hesitate, like film going pale."
+  "weather.emeraldweapons.battue": "The Drive",
+  "weather.emeraldweapons.battue.sub": "What lives stands out. Go and find them.",
+  "weather.emeraldweapons.omen.battue": "Something stirs in the distance, and stops hiding.",
+  "weather.emeraldweapons.heure_doree": "The Golden Hour",
+  "weather.emeraldweapons.heure_doree.sub": "The sun lingers. The Forge holds better, and the Shard costs nothing.",
+  "weather.emeraldweapons.omen.heure_doree": "The light thickens and yellows, like an afternoon refusing to end.",
+  "socket.emeraldweapons.golden": "The Golden Hour returns your Shard of Fate"
 }

@@ -57,7 +57,13 @@ public final class HeroEvents {
         // points de vie maximaux sont la seule mesure comparable d'un mod a
         // l'autre, et elle range d'elle-meme un boss au-dessus d'un zombie.
         int worth = 2 + (int) Math.round(victim.getMaxHealth() / 4.0);
-        award(player, Math.min(120, worth));
+        // LA BATTUE REND LA MOITIE EN PLUS : la fenetre de chasse doit se
+        // sentir sur la fiche du personnage, pas seulement dans le sac.
+        if (com.emerald.weather.WeatherManager.current()
+                == com.emerald.weather.Weather.BATTUE) {
+            worth = (int) Math.round(worth * 1.5);
+        }
+        award(player, Math.min(160, worth));
     }
 
     /** Une recompense franche, pour un objectif franc. */

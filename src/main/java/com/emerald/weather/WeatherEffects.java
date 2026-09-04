@@ -84,7 +84,7 @@ public final class WeatherEffects {
     }
 
     /** Reduit la portee de detection des monstres pendant la Brume. */
-    private static final ResourceLocation PRISME_ID = id("weather_prisme");
+    private static final ResourceLocation BATTUE_ID = id("weather_battue");
 
     /** Allege la gravite pendant la Dechirure. */
     private static final ResourceLocation GRAVITY_ID = id("weather_gravity");
@@ -321,8 +321,8 @@ public final class WeatherEffects {
             sweepMarks(level);
         }
         switch (weather) {
-            case PRISME -> {
-                sweepModifier(level, Attributes.FOLLOW_RANGE, PRISME_ID);
+            case BATTUE -> {
+                sweepModifier(level, Attributes.FOLLOW_RANGE, BATTUE_ID);
                 unglow(level);
             }
             case DECHIRURE -> endDechirure(level);
@@ -343,7 +343,7 @@ public final class WeatherEffects {
     static void tick(ServerLevel level, Weather weather) {
         stormPressure(level, weather);
         switch (weather) {
-            case PRISME -> tickPrisme(level);
+            case BATTUE -> tickBattue(level);
             case AURORE -> tickAurore(level);
             case NUIT -> tickNuit(level);
             case METEORES -> tickMeteores(level);
@@ -538,7 +538,7 @@ public final class WeatherEffects {
     private static final int PRISME_RANGE = 64;
 
     /**
-     * LE PRISME ETEINT : LA FENETRE DE CHASSE.
+     * LE BATTUE ETEINT : LA FENETRE DE CHASSE.
      *
      * TOUT CE QUI VIT SE DETOURE -- la lueur d'entite traverse les murs,
      * exactement comme les jalons de l'Aurore. Pendant ce temps la portee de
@@ -555,7 +555,7 @@ public final class WeatherEffects {
      * sans rien lui donner. Ici la meteo ENLEVE la couleur et REND
      * l'information : le seul echange qu'un joueur accepte volontiers.
      */
-    private static void tickPrisme(ServerLevel level) {
+    private static void tickBattue(ServerLevel level) {
         if (level.getGameTime() % 20 != 0) {
             return;
         }
@@ -564,7 +564,7 @@ public final class WeatherEffects {
                     player.getBoundingBox().inflate(PRISME_RANGE), m -> m.isAlive())) {
                 mob.setGlowingTag(true);
                 if (mob instanceof Enemy) {
-                    ensureModifier(mob, Attributes.FOLLOW_RANGE, PRISME_ID, -0.7);
+                    ensureModifier(mob, Attributes.FOLLOW_RANGE, BATTUE_ID, -0.7);
                 }
             }
         }
@@ -606,7 +606,7 @@ public final class WeatherEffects {
      * s'approche par le bon cote, et le premier coup compte double.
      */
     public static boolean ambush(net.minecraft.world.entity.LivingEntity victim) {
-        return WeatherManager.current() == Weather.PRISME
+        return WeatherManager.current() == Weather.BATTUE
                 && victim instanceof Mob mob
                 && (mob.getTarget() == null || !(mob.getTarget() instanceof Player));
     }

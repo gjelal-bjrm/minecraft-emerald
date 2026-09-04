@@ -186,7 +186,25 @@ public class SocketBenchMenu extends AbstractContainerMenu {
                             0.8F + graved.rank() * 0.05F);
                 }
                 SocketBenchMenu.this.inputs.setItem(SLOT_GEAR, ItemStack.EMPTY);
-                SocketBenchMenu.this.inputs.setItem(SLOT_ARTIFACT, ItemStack.EMPTY);
+                // L'HEURE DOREE NE PREND PAS L'ECLAT DU DESTIN.
+                //
+                // L'Eclat est la seule monnaie du mode qu'on ne puisse pas
+                // produire : le rendre pendant la fenetre, c'est offrir une
+                // tentative de rarete entiere, et donner une raison de rentrer
+                // au village au lieu d'en partir. Seul l'Eclat est rendu -- une
+                // rune ou un artefact serti reste consomme, sans quoi la
+                // fenetre ne serait plus une aubaine mais une exploitation.
+                ItemStack spent = SocketBenchMenu.this.inputs.getItem(SLOT_ARTIFACT);
+                boolean golden = com.emerald.weather.WeatherManager.current()
+                        == com.emerald.weather.Weather.HEURE_DOREE
+                        && spent.is(com.emerald.item.ModItems.FATE_SHARD.get());
+                if (!golden) {
+                    SocketBenchMenu.this.inputs.setItem(SLOT_ARTIFACT, ItemStack.EMPTY);
+                } else if (player instanceof net.minecraft.server.level.ServerPlayer sp) {
+                    sp.displayClientMessage(net.minecraft.network.chat.Component.translatable(
+                                    "socket.emeraldweapons.golden")
+                            .withStyle(net.minecraft.ChatFormatting.GOLD), true);
+                }
                 super.onTake(player, stack);
             }
         });

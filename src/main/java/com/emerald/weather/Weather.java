@@ -19,7 +19,10 @@ public enum Weather {
     CLEAR("clear", false, null, 0, 0, 0x9AA0A6),
     EMBELLIE("embellie", false, null, 60 * 20, 90 * 20, 0xC0E8FF),
     /**
-  * LE PRISME ETEINT -- ce qui fut la Brume Prismatique.
+     * LA BATTUE -- ce qui fut la Brume Prismatique.
+     *
+     * Elle encourage LE COMBAT, comme l'Aurore encourage la mine : c'est le
+     * partage voulu des deux meteos douces du debut de partie.
      *
      * La Brume ne tenait pas. Le brouillard etait mal rendu -- Distant Horizons
      * coupe le brouillard vanilla (`enableVanillaFog = false`) et dessine le
@@ -37,8 +40,27 @@ public enum Weather {
      * DEUX MINUTES, pas une de plus : le noir et blanc est un effet fort, il ne
      * doit pas s'installer.
      */
-    PRISME("prisme", false, GamePhase.EXPLORATION, 120 * 20, 120 * 20, 0xC8C8C8),
+    BATTUE("battue", false, GamePhase.EXPLORATION, 120 * 20, 120 * 20, 0xC8C8C8),
     AURORE("aurore", false, GamePhase.EXPLORATION, 120 * 20, 240 * 20, 0x9CE8FF),
+    /**
+     * L'HEURE DOREE : la fenetre de L'ATELIER.
+     *
+     * Les autres meteos vous poussent DEHORS -- miner, chasser, survivre.
+     * Celle-ci vous fait RENTRER : tant qu'elle dure, la Forge d'Arcencium
+     * reussit quinze points de plus et l'Etabli de Sertissage ne prend pas son
+     * Eclat du Destin. C'est la seule qui recompense de s'asseoir.
+     *
+     * SON CIEL NE NOUS COUTE RIEN. On ne peint pas un voile, on ne pose pas de
+     * coupole : on DEPLACE L'HORLOGE juste avant le coucher (voir
+     * WeatherManager.clockFor). Le soleil devient rasant et dore, et c'est le
+     * jeu -- ou le pack de shaders -- qui le rend, magnifiquement et sans que
+     * nous ayons une seule chance de le rater. L'horloge est rendue a la fin,
+     * exactement comme pour la Nuit d'Arcencium.
+     *
+     * Deux minutes trente : le temps d'une serie de tentatives, pas d'une
+     * seance entiere.
+     */
+    HEURE_DOREE("heure_doree", false, GamePhase.EXPLORATION, 150 * 20, 150 * 20, 0xFFC46B),
     NUIT("nuit", true, GamePhase.MONTEE, 150 * 20, 240 * 20, 0xB98CFF),
     METEORES("meteores", true, GamePhase.PRESSION, 120 * 20, 200 * 20, 0xFF9C4A),
     DECHIRURE("dechirure", true, GamePhase.PRESSION, 120 * 20, 200 * 20, 0xE478FF),
@@ -105,9 +127,10 @@ public enum Weather {
      */
     public static List<Weather> poolFor(GamePhase phase) {
         return switch (phase) {
-            case EXPLORATION -> List.of(PRISME, AURORE);
-            case MONTEE -> List.of(PRISME, AURORE, NUIT);
-            case PRESSION -> List.of(PRISME, AURORE, NUIT, METEORES, DECHIRURE, ORAGE);
+            case EXPLORATION -> List.of(BATTUE, AURORE, HEURE_DOREE);
+            case MONTEE -> List.of(BATTUE, AURORE, HEURE_DOREE, NUIT);
+            case PRESSION -> List.of(BATTUE, AURORE, HEURE_DOREE, NUIT, METEORES,
+                    DECHIRURE, ORAGE);
             case ASSAUT -> List.of(METEORES, DECHIRURE, ORAGE);
             default -> List.of();
         };

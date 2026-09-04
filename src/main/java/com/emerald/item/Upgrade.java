@@ -203,7 +203,28 @@ public final class Upgrade {
 
     /** Les chances de reussir le passage au cran suivant, en pour cent. */
     public static int odds(int level) {
-        return level >= MAX ? 0 : ODDS[Math.max(0, level)];
+        return odds(level, com.emerald.weather.WeatherManager.current()
+                == com.emerald.weather.Weather.HEURE_DOREE);
+    }
+
+    /**
+     * L'HEURE DOREE AJOUTE QUINZE POINTS.
+     *
+     * Pas un multiplicateur : quinze points fixes. Sur un +9 a 10 %, cela fait
+     * 25 % -- deux fois et demie plus de chances, et c'est enorme ; sur un +1 a
+     * 95 %, cela ne change presque rien. C'est exactement le bon sens de
+     * l'effet : la fenetre vaut pour les paris qu'on n'ose pas, pas pour ceux
+     * qu'on gagne de toute facon.
+     *
+     * L'infobulle affiche donc le chiffre DU MOMENT : on voit la fenetre
+     * s'ouvrir sans avoir a la connaitre.
+     */
+    public static int odds(int level, boolean golden) {
+        if (level >= MAX) {
+            return 0;
+        }
+        int base = ODDS[Math.max(0, level)];
+        return golden ? Math.min(100, base + 15) : base;
     }
 
     /** Vrai si l'on approche du sommet : sert a prevenir dans l'infobulle. */
