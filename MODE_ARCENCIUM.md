@@ -3183,27 +3183,30 @@ en courant droit a l'arene ne la donne pas. **Une chance sur trois** : il faut
 gagner plusieurs fois, ce qui convient a une apparence qui se garde entre les
 parties. Elle est explicitement hors du vivier des plumes de monstre.
 
-### 40.5 Les animations, enfin visibles
+### 40.5 Les animations : deux versions refusees, puis la regle
 
-Le joueur : « tu n'as pas ajoute d'animation ». Il avait raison deux fois.
+**Premiere version** : la poussiere qui tombe d'un bloc pour les pierres du
+Vitrail -- un grain de deux pixels, chute en une demi-seconde. Invisible ; le
+joueur ne l'a jamais vue.
 
-**Les pierres du Vitrail ne se voyaient pas.** Elles etaient la poussiere qui
-tombe d'un bloc (FALLING_DUST) : un grain de deux pixels qui chute en une
-demi-seconde. Elles sont maintenant la particule d'OBJET -- celle qui eclate
-quand on mange -- nourrie d'une vraie gemme : emeraude, diamant, eclat
-d'amethyste, lapis, redstone, pepite d'or. Taille et couleur d'un eclat de
-pierre, gravite, un rebond, et elle s'efface. Une toutes les quatre tiques,
-lancee vers l'exterieur pour se DETACHER de l'aile.
+**Deuxieme version** : des gemmes-objets qui tombaient de l'aile toutes les
+quatre tiques, et pour le Souverain Astral des etoiles blanches (END_ROD)
+partout -- aux pointes, en anneau autour des epaules, en trainee de plane, en
+couronne. Verdict du joueur : les pierres « font pleurer les ailes », et les
+etoiles sont « trop visibles, ca gache la vue et empeche de contempler les
+ailes ». Il a demande « des choses plus discretes et plus petites ».
 
-**Le Souverain Astral n'avait que sa texture.** Quatre choses, toutes cote
-serveur pour que l'equipe les voie -- sauf la premiere, qui est du rendu :
+**La regle qui en sort, a garder pour tout effet d'aile futur** : un effet
+d'aile est un ACCENT, jamais un spectacle. L'aile est le spectacle. Ce qu'on
+ajoute doit se lire du coin de l'oeil et disparaitre quand on regarde en face.
 
-| | Ou | Quoi |
+Ce qui reste, et rien de plus :
+
+| Aile | Effet | Cadence |
 |---|---|---|
-| Le battement | client (`WingsLayer`) | plus lent et plus ample -- un rapace, pas un moineau -- et la lueur emissive **scintille** (deux ondes qui ne battent jamais a l'unisson) |
-| Les pointes | serveur (`WingGems`) | une etoile toutes les trois tiques au bout d'une aile, qui monte et s'eteint |
-| La Constellation | serveur | une etoile par etoile allumee **tourne autour des epaules** ; a cinq, une couronne d'etincelles au-dessus de la tete |
-| Le plane | serveur | en descente, une etoile par tique derriere chaque aile : une trainee |
+| Vitrail | un **glint** : une seule mote prismatique (5 a 10 centiemes de bloc, fondu en entree et en sortie) posee SUR l'aile, sans vitesse -- une facette qui accroche la lumiere. Rien ne tombe. | une toutes les 2,5 s |
+| Souverain Astral | le **scintillement est dans la lueur de la texture** (`WingsLayer` : deux ondes emissives qui ne battent jamais a l'unisson) et le battement plus lent et plus ample ; aucune particule au repos | continu, rendu client |
+| Souverain Astral | la **Constellation**, parce qu'elle est une information de jeu : une mote par etoile allumee, qui tourne lentement au-dessus de la tete | une par etoile toutes les 20 tiques |
+| Souverain Astral | l'etoile gagnee : une mote ; la frappe pleine : douze motes autour de la cible | a l'evenement |
 
-La Constellation se lit donc sur le porteur avant meme de frapper : on voit
-combien d'etoiles il tient, et l'on sait quand la prochaine frappe sera la bonne.
+Plus d'anneau, plus de trainee, plus de couronne.

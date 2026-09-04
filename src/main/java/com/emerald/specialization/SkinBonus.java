@@ -171,8 +171,9 @@ public final class SkinBonus {
         level.playSound(null, player.blockPosition(),
                 net.minecraft.sounds.SoundEvents.AMETHYST_BLOCK_CHIME,
                 net.minecraft.sounds.SoundSource.PLAYERS, 0.6F, 0.9F + 0.14F * stars);
-        level.sendParticles(net.minecraft.core.particles.ParticleTypes.END_ROD,
-                player.getX(), player.getY() + 1.6, player.getZ(), stars * 2, 0.4, 0.3, 0.4, 0.02);
+        // une seule mote par etoile gagnee : on l'entend plus qu'on ne la voit
+        level.sendParticles(com.emerald.particles.ModParticles.PRISM_MOTE.get(),
+                player.getX(), player.getY() + 2.1, player.getZ(), 1, 0.2, 0.05, 0.2, 0.0);
     }
 
     /** Les etoiles allumees, ou zero si elles se sont eteintes. */
@@ -205,9 +206,10 @@ public final class SkinBonus {
                 e -> e != victim && e != attacker && e.isAlive() && !(e instanceof Player))) {
             other.hurt(level.damageSources().playerAttack(attacker), damage * 0.6F);
         }
-        level.sendParticles(net.minecraft.core.particles.ParticleTypes.END_ROD,
-                victim.getX(), victim.getY() + 1.0, victim.getZ(), 60, NOVA_RADIUS * 0.6, 0.6,
-                NOVA_RADIUS * 0.6, 0.08);
+        // bref et contenu : douze motes autour de la cible, pas soixante etoiles
+        level.sendParticles(com.emerald.particles.ModParticles.PRISM_MOTE.get(),
+                victim.getX(), victim.getY() + 1.0, victim.getZ(), 12, NOVA_RADIUS * 0.5, 0.4,
+                NOVA_RADIUS * 0.5, 0.0);
         LOGGER.info("Constellation : pleine -- frappe garantie autour de {}",
                 victim.getName().getString());
         level.playSound(null, victim.blockPosition(),
