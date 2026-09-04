@@ -3182,3 +3182,28 @@ condition que les **trois sanctuaires** soient tombes -- une victoire obtenue
 en courant droit a l'arene ne la donne pas. **Une chance sur trois** : il faut
 gagner plusieurs fois, ce qui convient a une apparence qui se garde entre les
 parties. Elle est explicitement hors du vivier des plumes de monstre.
+
+### 40.5 Les animations, enfin visibles
+
+Le joueur : « tu n'as pas ajoute d'animation ». Il avait raison deux fois.
+
+**Les pierres du Vitrail ne se voyaient pas.** Elles etaient la poussiere qui
+tombe d'un bloc (FALLING_DUST) : un grain de deux pixels qui chute en une
+demi-seconde. Elles sont maintenant la particule d'OBJET -- celle qui eclate
+quand on mange -- nourrie d'une vraie gemme : emeraude, diamant, eclat
+d'amethyste, lapis, redstone, pepite d'or. Taille et couleur d'un eclat de
+pierre, gravite, un rebond, et elle s'efface. Une toutes les quatre tiques,
+lancee vers l'exterieur pour se DETACHER de l'aile.
+
+**Le Souverain Astral n'avait que sa texture.** Quatre choses, toutes cote
+serveur pour que l'equipe les voie -- sauf la premiere, qui est du rendu :
+
+| | Ou | Quoi |
+|---|---|---|
+| Le battement | client (`WingsLayer`) | plus lent et plus ample -- un rapace, pas un moineau -- et la lueur emissive **scintille** (deux ondes qui ne battent jamais a l'unisson) |
+| Les pointes | serveur (`WingGems`) | une etoile toutes les trois tiques au bout d'une aile, qui monte et s'eteint |
+| La Constellation | serveur | une etoile par etoile allumee **tourne autour des epaules** ; a cinq, une couronne d'etincelles au-dessus de la tete |
+| Le plane | serveur | en descente, une etoile par tique derriere chaque aile : une trainee |
+
+La Constellation se lit donc sur le porteur avant meme de frapper : on voit
+combien d'etoiles il tient, et l'on sait quand la prochaine frappe sera la bonne.

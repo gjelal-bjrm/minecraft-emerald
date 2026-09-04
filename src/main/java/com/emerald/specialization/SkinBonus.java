@@ -22,6 +22,8 @@ import net.minecraft.world.entity.player.Player;
  */
 public final class SkinBonus {
 
+    private static final org.slf4j.Logger LOGGER = com.mojang.logging.LogUtils.getLogger();
+
     /** Les bonus d'une apparence, en pour cent sauf mention. */
     public record Bonus(double attack, double defense, double health, double speed, double cadence,
                         double element, double critChance, double critDamage, double dodge,
@@ -165,6 +167,7 @@ public final class SkinBonus {
             return;
         }
         // une etoile de plus, un ton plus haut : on entend la constellation monter
+        LOGGER.info("Constellation : {} etoile(s) sur {}", stars, STARS_FULL);
         level.playSound(null, player.blockPosition(),
                 net.minecraft.sounds.SoundEvents.AMETHYST_BLOCK_CHIME,
                 net.minecraft.sounds.SoundSource.PLAYERS, 0.6F, 0.9F + 0.14F * stars);
@@ -205,6 +208,8 @@ public final class SkinBonus {
         level.sendParticles(net.minecraft.core.particles.ParticleTypes.END_ROD,
                 victim.getX(), victim.getY() + 1.0, victim.getZ(), 60, NOVA_RADIUS * 0.6, 0.6,
                 NOVA_RADIUS * 0.6, 0.08);
+        LOGGER.info("Constellation : pleine -- frappe garantie autour de {}",
+                victim.getName().getString());
         level.playSound(null, victim.blockPosition(),
                 net.minecraft.sounds.SoundEvents.TOTEM_USE,
                 net.minecraft.sounds.SoundSource.PLAYERS, 0.9F, 1.4F);

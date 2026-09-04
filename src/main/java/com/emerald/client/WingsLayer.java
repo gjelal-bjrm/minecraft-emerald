@@ -64,9 +64,24 @@ public class WingsLayer<T extends AbstractClientPlayer, M extends PlayerModel<T>
         // le battement : lent au repos, plus ample et plus rapide en mouvement
         boolean moving = player.isFallFlying() || limbSwingAmount > 0.15F
                 || WingsFlightClient.gliding(player);
-        float flap = Mth.sin(ageInTicks * 0.07F) * 7.0F
-                + (moving ? Mth.sin(ageInTicks * 0.32F) * 12.0F : 0.0F);
-        float lift = Mth.sin(ageInTicks * 0.07F + 1.2F) * 3.0F;
+        // LE SOUVERAIN ASTRAL BAT PLUS LENT ET PLUS AMPLE : un battement de
+        // rapace, pas de moineau. C'est la premiere chose qui le distingue de
+        // loin, avant meme la couleur.
+        boolean astral = skin == WingSkin.SOUVERAIN_ASTRAL;
+        float tempo = astral ? 0.045F : 0.07F;
+        float reach = astral ? 11.0F : 7.0F;
+        float flap = Mth.sin(ageInTicks * tempo) * reach
+                + (moving ? Mth.sin(ageInTicks * (astral ? 0.22F : 0.32F)) * 12.0F : 0.0F);
+        float lift = Mth.sin(ageInTicks * tempo + 1.2F) * (astral ? 4.5F : 3.0F);
+        // LA LUEUR VIT. Une passe emissive fixe se remarque une fois puis
+        // disparait du regard ; l'astrale scintille -- deux ondes qui ne
+        // battent jamais a l'unisson, comme des etoiles qui vacillent.
+        int glowAlpha = GLOW_ALPHA;
+        if (astral) {
+            float twinkle = 0.62F + 0.22F * Mth.sin(ageInTicks * 0.19F)
+                    + 0.16F * Mth.sin(ageInTicks * 0.53F + 2.1F);
+            glowAlpha = (int) (255 * Mth.clamp(twinkle, 0.3F, 1.0F));
+        }
 
         pose.pushPose();
         getParentModel().body.translateAndRotate(pose);
@@ -85,7 +100,7 @@ public class WingsLayer<T extends AbstractClientPlayer, M extends PlayerModel<T>
             quad(pose, body, side, size, light, 1.0F, 255, skin);
             if (glow != null) {
                 pose.translate(0.0F, 0.0F, -0.004F);
-                quad(pose, glow, side, size, LightTexture.FULL_BRIGHT, skin.tint, GLOW_ALPHA, skin);
+                quad(pose, glow, side, size, LightTexture.FULL_BRIGHT, skin.tint, glowAlpha, skin);
             }
             pose.popPose();
         }
