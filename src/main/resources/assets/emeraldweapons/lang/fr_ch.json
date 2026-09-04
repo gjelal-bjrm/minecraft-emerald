@@ -477,5 +477,7 @@
   "weather.emeraldweapons.omen.orage": "Les cheveux se dressent ; la lumière grésille.",
   "weather.emeraldweapons.omen.embellie": "Le calme revient.",
   "weather.emeraldweapons.omen.clear": "Rien ne vient.",
-  "specialization.emeraldweapons.legacy": "Un personnage d'avant existe, commun à tous les mondes. /arcencium personnage importer pour le reprendre ici."
+  "specialization.emeraldweapons.legacy": "Un personnage d'avant existe, commun à tous les mondes. /arcencium personnage importer pour le reprendre ici.",
+  "weather.emeraldweapons.aurore.veins": "L'Aurore fait chanter %s veine(s) d'Arcencium — la plus proche à %s blocs, vers le %s. Suivez les colonnes de lumière : le filon rend le double tant qu'elle dure.",
+  "weather.emeraldweapons.aurore.double": "L'Aurore double la veine"
 }

@@ -283,6 +283,19 @@ public final class WeatherManager {
             net.minecraft.world.level.block.Block.popResource(level, event.getPos(),
                     new net.minecraft.world.item.ItemStack(ModItems.RAW_ARCENCIUM.get(),
                             1 + level.random.nextInt(2)));
+            // UN BONUS QU'ON NE VOIT PAS N'EST PAS UN BONUS.
+            //
+            // Le supplement tombe au sol au milieu du reste du filon : rien ne
+            // dit qu'il vient de l'Aurore, et le joueur ne peut pas savoir
+            // qu'il a interet a miner MAINTENANT. On le lui dit une fois, a son
+            // premier filon, sur la barre d'action -- assez pour comprendre,
+            // trop discret pour lasser.
+            if (event.getPlayer() instanceof ServerPlayer miner
+                    && WeatherEffects.firstVeinOfAurore(miner)) {
+                miner.displayClientMessage(Component.translatable(
+                                "weather.emeraldweapons.aurore.double")
+                        .withStyle(style -> style.withColor(Weather.AURORE.color)), true);
+            }
         }
         if (WeatherEffects.claimScar(level, event.getPos())) {
             net.minecraft.world.level.block.Block.popResource(level, event.getPos(),

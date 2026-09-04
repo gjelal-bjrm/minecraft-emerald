@@ -477,5 +477,7 @@
   "weather.emeraldweapons.omen.orage": "Your hair lifts; the light crackles.",
   "weather.emeraldweapons.omen.embellie": "The calm returns.",
   "weather.emeraldweapons.omen.clear": "Nothing is coming.",
-  "specialization.emeraldweapons.legacy": "An older character exists, shared by every world. /arcencium personnage importer to take it over here."
+  "specialization.emeraldweapons.legacy": "An older character exists, shared by every world. /arcencium personnage importer to take it over here.",
+  "weather.emeraldweapons.aurore.veins": "The Aurora sets %s Arcencium vein(s) singing — the nearest %s blocks away, to the %s. Follow the pillars of light: ore pays double while it lasts.",
+  "weather.emeraldweapons.aurore.double": "The Aurora doubles the vein"
 }

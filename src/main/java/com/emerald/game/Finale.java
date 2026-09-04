@@ -564,7 +564,7 @@ public final class Finale {
     }
 
     /** Direction cardinale, dans la convention de la boussole du jeu (sud = 0). */
-    static String cardinal(double dx, double dz) {
+    public static String cardinal(double dx, double dz) {
         String[] names = {"S", "SO", "O", "NO", "N", "NE", "E", "SE"};
         double angle = Math.toDegrees(Math.atan2(dz, dx));
         int index = (int) Math.round(((angle + 360.0) % 360.0) / 45.0) % 8;

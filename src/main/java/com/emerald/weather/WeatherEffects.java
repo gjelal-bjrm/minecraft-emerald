@@ -298,6 +298,11 @@ public final class WeatherEffects {
     // ---------------------------------------------------------- cycle de vie
 
     static void begin(ServerLevel level, Weather weather) {
+        if (weather == Weather.AURORE) {
+            // chaque Aurore reparle : ce qu'on a dit la fois d'avant est loin
+            auroreTold.clear();
+            auroreMined.clear();
+        }
         if (weather == Weather.DECHIRURE) {
             spawnShards(level);
         }
@@ -545,6 +550,27 @@ public final class WeatherEffects {
     private static final int AURORE_BEAMS = 6;
 
     /**
+     * A QUI ON A DEJA DIT, pendant cette Aurore-ci.
+     *
+     * Le sous-titre « Descendez miner » passe en trois secondes, sous un titre,
+     * une fois. Les rais de lumiere sortent bien du sol -- encore faut-il
+     * regarder par la, et savoir que ces colonnes veulent dire quelque chose.
+     *
+     * On le dit donc a chacun, UNE FOIS par Aurore, et seulement quand c'est
+     * VRAI pour lui : quand des veines chantent effectivement pres de lui. Un
+     * conseil qu'on repete devient un bruit ; un conseil qui compte les veines
+     * qu'on a sous les pieds est une information.
+     */
+    private static final java.util.Set<java.util.UUID> auroreTold = new java.util.HashSet<>();
+    /** Et a qui l'on a deja confirme que la veine rendait double. */
+    private static final java.util.Set<java.util.UUID> auroreMined = new java.util.HashSet<>();
+
+    /** Vrai la premiere fois seulement : c'est le joueur qui vient de casser son premier filon. */
+    static boolean firstVeinOfAurore(ServerPlayer player) {
+        return auroreMined.add(player.getUUID());
+    }
+
+    /**
      * L'AURORE EST LA FENETRE DE LA MINE.
      *
      * Elle ne faisait rien d'utile : la sonde cherchait dans un cube de douze
@@ -574,6 +600,16 @@ public final class WeatherEffects {
             if (!veins.isEmpty()) {
                 level.playSound(null, veins.get(0), SoundEvents.AMETHYST_BLOCK_CHIME,
                         SoundSource.AMBIENT, 0.7F, 1.4F);
+                if (auroreTold.add(player.getUUID())) {
+                    BlockPos nearest = veins.get(0);
+                    player.sendSystemMessage(net.minecraft.network.chat.Component.translatable(
+                                    "weather.emeraldweapons.aurore.veins", veins.size(),
+                                    (int) Math.sqrt(player.blockPosition().distSqr(nearest)),
+                                    com.emerald.game.Finale.cardinal(
+                                            nearest.getX() - player.getX(),
+                                            nearest.getZ() - player.getZ()))
+                            .withStyle(style -> style.withColor(Weather.AURORE.color)));
+                }
             }
         }
     }

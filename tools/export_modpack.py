@@ -126,6 +126,18 @@ def collect(instance: Path, version: str, slim: bool, out_dir: Path):
         else:
             shutil.copytree(src, over / folder)
             copied.append(folder)
+    # LE MENU DU MODE FAIT FOI, PAS CELUI DE L'INSTANCE.
+    #
+    # On emportait `packmenu` tel qu'il etait dans l'instance. Or CurseForge
+    # repare les instances, et une instance reparee reprend le menu d'ATM10 :
+    # le zip est alors parti avec le fond « Please Change Me » et le bouton
+    # Akliz, sans que rien ne le signale. Le calque du depot repasse dessus.
+    menu = Path(__file__).resolve().parent / "pack" / "packmenu" / "assets"
+    target = over / "packmenu" / "resources" / "assets"
+    if menu.is_dir() and target.parent.is_dir():
+        shutil.copytree(menu, target, dirs_exist_ok=True)
+        copied.append("packmenu (calque du mode)")
+
     for name in FILES:
         if (instance / name).is_file():
             shutil.copy2(instance / name, over / name)

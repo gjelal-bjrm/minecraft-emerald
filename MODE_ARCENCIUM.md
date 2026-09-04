@@ -3349,3 +3349,49 @@ Trois decisions dans ce tableau :
   quatre pieces d'armure tombaient a quatre lancers, ce qui vidait la Forge de
   son sens -- pour un tirage a part : une chance sur treize, soit une piece ou
   deux par sanctuaire, jamais la panoplie.
+
+---
+
+## 42. L'Aurore se dit, et le menu ne se perd plus *(4 sept. 2026)*
+
+### 42.1 L'Aurore parle a qui a des veines sous les pieds
+
+Rappel du concept (section 6) : l'Aurore est **la fenetre de la mine**. Les
+veines d'Arcencium a moins de **40 blocs** envoient un **rai de lumiere** du
+filon jusqu'au-dessus du sol -- six colonnes au plus, rafraichies toutes les
+trois secondes -- et **chaque filon casse pendant l'Aurore rend 1 a 2 morceaux
+d'Arcencium brut de plus**.
+
+Rien de tout cela ne se DISAIT. Le sous-titre « Descendez miner » passe en trois
+secondes, sous un titre, une fois ; les colonnes de lumiere ne veulent rien dire
+pour qui ignore leur regle ; et le supplement de minerai tombe au milieu du
+reste du filon, indiscernable. Deux messages, jamais plus d'un chacun par
+Aurore et par joueur :
+
+- quand des veines chantent **effectivement pres de lui** : « L'Aurore fait
+  chanter *n* veine(s) d'Arcencium -- la plus proche a *d* blocs, vers le
+  *cardinal*. Suivez les colonnes de lumiere : le filon rend le double tant
+  qu'elle dure. » Un conseil qui compte les veines qu'on a sous les pieds est
+  une information ; un conseil qu'on repete est un bruit ;
+- a son **premier filon casse**, sur la barre d'action : « L'Aurore double la
+  veine ».
+
+### 42.2 Le menu du mode revenait a celui d'ATM10
+
+Le menu (fond peint, embleme, boutons) vivait **uniquement** dans
+`packmenu/resources/` de l'instance CurseForge, pose a la main une fois. Le
+depot n'en gardait qu'une copie morte dans `tools/pack/packmenu/`, que rien ne
+reinstallait.
+
+**Mesure** : les deux instances portaient l'image d'ATM10 **du 8 juin**
+(2560x1440), pas la notre (1920x1080) -- et `export_modpack.py`, qui recopie le
+dossier de l'instance, l'emportait telle quelle. Le profil importe ouvrait donc
+sur le menu d'ATM10, fond « Please Change Me » et bouton Akliz compris. Il a
+suffi que CurseForge repare une instance pour tout perdre en silence.
+
+**Le depot fait desormais foi.** `tools/menu_arcencium.py` repose
+`tools/pack/packmenu/assets` par-dessus l'instance, et `export_modpack.py`
+applique le meme calque au zip apres avoir copie le dossier de l'instance : une
+instance reparee redevient juste au passage suivant, et le zip ne peut plus
+mentir. Le bouton Akliz, qu'un calque ne peut pas supprimer, est livre en
+version invisible (0x0, hors ecran).
