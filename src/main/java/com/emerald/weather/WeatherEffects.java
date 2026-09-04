@@ -550,6 +550,24 @@ public final class WeatherEffects {
     private static final int AURORE_BEAMS = 6;
 
     /**
+     * L'AURORE CHERCHE AUSSI LE DIAMANT, et c'etait une contradiction.
+     *
+     * Le minerai d'Arcencium se mine a la pioche de DIAMANT. Une meteo qui
+     * montre les veines d'Arcencium et paie double sur elles ne sert donc a
+     * rien tant qu'on n'a pas de diamant -- c'est-a-dire exactement pendant la
+     * phase d'Exploration, la seule ou l'Aurore tombe. On donnait une clef a
+     * qui possedait deja la serrure.
+     *
+     * Le diamant est donc devenu la premiere chose que l'Aurore designe. Meme
+     * rai de lumiere, meme portee : ce que la meteo promet, c'est « voila ou
+     * creuser », et le premier ou creuser est le diamant.
+     */
+    private static boolean auroreTarget(net.minecraft.world.level.block.state.BlockState state) {
+        return state.is(ModBlocks.ARCENCIUM_ORE.get())
+                || state.is(net.neoforged.neoforge.common.Tags.Blocks.ORES_DIAMOND);
+    }
+
+    /**
      * A QUI ON A DEJA DIT, pendant cette Aurore-ci.
      *
      * Le sous-titre « Descendez miner » passe en trois secondes, sous un titre,
@@ -636,7 +654,7 @@ public final class WeatherEffects {
                         continue;
                     }
                     // la palette repond sans qu'on ouvre la section
-                    if (!section.maybeHas(state -> state.is(ModBlocks.ARCENCIUM_ORE.get()))) {
+                    if (!section.maybeHas(WeatherEffects::auroreTarget)) {
                         continue;
                     }
                     scanSection(level, section, cp, baseY, minY, maxY, center, found);
@@ -662,7 +680,7 @@ public final class WeatherEffects {
             }
             for (int x = 0; x < 16; x++) {
                 for (int z = 0; z < 16; z++) {
-                    if (!section.getBlockState(x, y, z).is(ModBlocks.ARCENCIUM_ORE.get())) {
+                    if (!auroreTarget(section.getBlockState(x, y, z))) {
                         continue;
                     }
                     int wx = cp.getMinBlockX() + x;

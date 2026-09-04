@@ -277,9 +277,30 @@ public final class WeatherManager {
         // L'AURORE PAIE LA MINE : un morceau de plus par filon casse pendant
         // qu'elle dure. C'est ce qui fait d'elle une fenetre qu'on attend, et
         // non un simple decor -- le joueur ne voyait « rien de bien, rien de mal ».
-        if (current() == Weather.AURORE
-                && event.getState().is(com.emerald.block.ModBlocks.ARCENCIUM_ORE.get())
-                && !event.getPlayer().isCreative()) {
+        boolean aurore = current() == Weather.AURORE && !event.getPlayer().isCreative();
+        // LE DIAMANT D'ABORD : sans pioche de diamant, pas d'Arcencium.
+        //
+        // Un filon de diamant casse pendant l'Aurore rend UN OU DEUX diamants
+        // de plus, et UNE FOIS SUR DEUX un morceau d'Arcencium brut avec. La
+        // veine d'Arcencium qu'on voit briller a quarante blocs devient alors
+        // atteignable dans la meme fenetre : la meteo ne montre plus une porte
+        // fermee, elle donne la clef et la porte.
+        if (aurore && event.getState().is(net.neoforged.neoforge.common.Tags.Blocks.ORES_DIAMOND)) {
+            net.minecraft.world.level.block.Block.popResource(level, event.getPos(),
+                    new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.DIAMOND,
+                            1 + level.random.nextInt(2)));
+            if (level.random.nextBoolean()) {
+                net.minecraft.world.level.block.Block.popResource(level, event.getPos(),
+                        new net.minecraft.world.item.ItemStack(ModItems.RAW_ARCENCIUM.get(), 1));
+            }
+            if (event.getPlayer() instanceof ServerPlayer digger
+                    && WeatherEffects.firstVeinOfAurore(digger)) {
+                digger.displayClientMessage(Component.translatable(
+                                "weather.emeraldweapons.aurore.diamond")
+                        .withStyle(style -> style.withColor(Weather.AURORE.color)), true);
+            }
+        }
+        if (aurore && event.getState().is(com.emerald.block.ModBlocks.ARCENCIUM_ORE.get())) {
             net.minecraft.world.level.block.Block.popResource(level, event.getPos(),
                     new net.minecraft.world.item.ItemStack(ModItems.RAW_ARCENCIUM.get(),
                             1 + level.random.nextInt(2)));

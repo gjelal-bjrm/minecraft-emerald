@@ -3395,3 +3395,36 @@ applique le meme calque au zip apres avoir copie le dossier de l'instance : une
 instance reparee redevient juste au passage suivant, et le zip ne peut plus
 mentir. Le bouton Akliz, qu'un calque ne peut pas supprimer, est livre en
 version invisible (0x0, hors ecran).
+
+### 42.3 Le damier violet : un jar reecrit sous un jeu ouvert
+
+**Ce n'etait pas une perte, c'etait une lecture a moitie faite.** A 18h40 j'ai
+recopie le jar dans les instances pendant que le client demarrait (18h38).
+Minecraft lisait le fichier au moment ou il etait reecrit :
+
+    java.util.zip.ZipException: invalid distance too far back
+
+sur CHAQUE modele et CHAQUE structure du mod -- d'ou le damier violet et noir
+sur tout notre contenu, onglet creatif et village compris. Le jar sur le disque
+etait juste (`testzip()` sain, 1458 entrees) ; un redemarrage suffisait.
+
+La regle « ne jamais toucher a la session du joueur » etait ecrite pour les
+LANCEMENTS ; elle vaut autant pour l'ECRITURE. `tools/deploy_jar.py` la rend
+mecanique : il lit les lignes de commande des `java`/`javaw` en cours, **refuse
+toute instance dont un jeu tourne**, et verifie le zip apres copie.
+
+### 42.4 La contradiction de l'Aurore : le diamant d'abord
+
+Le minerai d'Arcencium se mine **a la pioche de diamant**. Une meteo qui montre
+les veines d'Arcencium et paie double dessus ne servait donc a rien tant qu'on
+n'avait pas de diamant -- c'est-a-dire pendant la phase d'Exploration, la seule
+ou l'Aurore tombe. On donnait une clef a qui possedait deja la serrure.
+
+- **la sonde cherche aussi le diamant** (`#c:ores/diamond`, donc les variantes
+  moddees aussi) : meme rai de lumiere, meme portee de 40 blocs ;
+- **un filon de diamant casse pendant l'Aurore rend 1 a 2 diamants de plus**, et
+  **une fois sur deux un Arcencium brut avec**.
+
+La veine d'Arcencium qu'on voit briller a quarante blocs devient atteignable
+dans la meme fenetre : la meteo ne montre plus une porte fermee, elle donne la
+clef et la porte.

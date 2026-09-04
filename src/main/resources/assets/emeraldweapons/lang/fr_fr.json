@@ -173,7 +173,7 @@
   "weather.emeraldweapons.brume": "Brume Prismatique",
   "weather.emeraldweapons.brume.sub": "La vue se voile — la vôtre, et la leur.",
   "weather.emeraldweapons.aurore": "Aurore",
-  "weather.emeraldweapons.aurore.sub": "Les veines d'Arcencium percent le sol. Descendez miner.",
+  "weather.emeraldweapons.aurore.sub": "Le diamant et l'Arcencium percent le sol. Descendez miner.",
   "weather.emeraldweapons.nuit": "Nuit d'Arcencium",
   "weather.emeraldweapons.nuit.sub": "La nuit tombe en plein jour. Les éclairs choisissent leurs couleurs.",
   "weather.emeraldweapons.meteores": "Pluie de Météores d'Arcencium",
@@ -478,6 +478,7 @@
   "weather.emeraldweapons.omen.embellie": "Le calme revient.",
   "weather.emeraldweapons.omen.clear": "Rien ne vient.",
   "specialization.emeraldweapons.legacy": "Un personnage d'avant existe, commun à tous les mondes. /arcencium personnage importer pour le reprendre ici.",
-  "weather.emeraldweapons.aurore.veins": "L'Aurore fait chanter %s veine(s) d'Arcencium — la plus proche à %s blocs, vers le %s. Suivez les colonnes de lumière : le filon rend le double tant qu'elle dure.",
-  "weather.emeraldweapons.aurore.double": "L'Aurore double la veine"
+  "weather.emeraldweapons.aurore.veins": "L'Aurore fait chanter %s filon(s) — le plus proche à %s blocs, vers le %s. Suivez les colonnes de lumière : le diamant rend davantage, et le minerai d'Arcencium le double.",
+  "weather.emeraldweapons.aurore.double": "L'Aurore double la veine d'Arcencium",
+  "weather.emeraldweapons.aurore.diamond": "L'Aurore enrichit le diamant, et y mêle parfois l'Arcencium"
 }
