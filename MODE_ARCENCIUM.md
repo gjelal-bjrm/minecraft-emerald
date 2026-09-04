@@ -2908,11 +2908,32 @@ s'il en manque, on en pose un ou deux **derriere lui**, sur un anneau de 22 a
 | Pression | 18 | palier 3 |
 | Assaut, Fin | 22 | palier 3 |
 
-Trois garde-fous : le **village est epargne dans vingt blocs** (on forge en
-paix) ; les traques **ne sont pas persistants**, ils s'effacent quand on
-s'eloigne, comme un monstre naturel, et rien ne s'accumule ; et un **casque
-force** sur la tete, sans quoi la moitie du vivier vanilla brule au soleil --
-on aurait peuple le monde de torches.
+Trois garde-fous : la **zone sure du village** (rien n'apparait dans
+quarante-huit blocs, mais la passe continue -- les monstres se posent AUTOUR) ;
+les traques **ne sont pas persistants**, ils s'effacent d'eux-memes et rien ne
+s'accumule ; et un **casque force** sur la tete, sans quoi la moitie du vivier
+vanilla brule au soleil -- on aurait peuple le monde de torches.
+
+### 37.1 bis On peuple, on ne chasse pas *(corrige apres essai)*
+
+La premiere version posait les monstres a **vingt-deux blocs** et leur
+**donnait le joueur pour cible**. Le joueur : « je me fais harceler non-stop,
+ce n'est pas le but ; c'est a moi d'aller vers eux, pas a eux d'etre a cote de
+moi ». Il a raison, et l'erreur etait de conception : j'avais ecrit une
+PRESSION la ou il fallait une POPULATION.
+
+| | Avant | Maintenant |
+|---|---|---|
+| Anneau d'apparition | 22-38 blocs | **48-96 blocs** |
+| Cible designee | le joueur | **aucune** |
+| Rayon du compte | 40 blocs | **96 blocs** |
+| Vises (Exploration → Assaut) | 10-22 | **8-20** |
+| Village | la passe s'arretait | **zone sure de 48 blocs, la passe continue** |
+
+Le chiffre vise decrit desormais une **densite de paysage** : sur un disque de
+quatre-vingt-seize blocs, huit a vingt silhouettes, c'est un monde habite qu'on
+traverse -- et non une meute au coude. Et comme aucun d'eux ne recoit d'ordre,
+ils ne viennent que si l'on s'approche.
 
 ### 37.2 Les rangs 7 et 8 de rune existent enfin
 
