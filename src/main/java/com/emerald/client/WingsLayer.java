@@ -86,25 +86,40 @@ public class WingsLayer<T extends AbstractClientPlayer, M extends PlayerModel<T>
         pose.pushPose();
         getParentModel().body.translateAndRotate(pose);
         pose.translate(0.0F, 0.0F, 0.15F);            // juste derriere le dos
-        // la matiere : decoupe opaque, lumiere du monde -- et donc une ombre
-        VertexConsumer body = buffer.getBuffer(RenderType.entityCutoutNoCull(skin.texture()));
-        // la lueur des apparences de lumiere, posee par-dessus, un peu en avant
-        VertexConsumer glow = skin.emissive
-                ? buffer.getBuffer(RenderType.entityTranslucentEmissive(skin.texture())) : null;
+
+        // DEUX PASSES SEPAREES, ET JAMAIS DEUX TAMPONS EN MAIN.
+        //
+        // On tenait le tampon de la matiere ET celui de la lueur en meme temps,
+        // puis on ecrivait dans les deux en alternance. Dans le MONDE cela
+        // passe : les types de rendu des entites y ont chacun leur tampon
+        // reserve. Dans l'INVENTAIRE, non -- la source n'en garde qu'un, et
+        // demander le second TERMINE le premier. La premiere ecriture suivante
+        // tombait alors sur « Not building! », et le jeu plantait des qu'on
+        // ouvrait son sac avec des ailes emissives dans le dos.
+        //
+        // On fait donc la matiere en entier, puis la lueur en entier, en
+        // reprenant le tampon a chaque fois.
+        drawWings(pose, buffer.getBuffer(RenderType.entityCutoutNoCull(skin.texture())),
+                skin, size, light, flap, lift, 1.0F, 255, 0.0F);
+        if (skin.emissive) {
+            drawWings(pose, buffer.getBuffer(RenderType.entityTranslucentEmissive(skin.texture())),
+                    skin, size, LightTexture.FULL_BRIGHT, flap, lift, skin.tint, glowAlpha, -0.004F);
+        }
+        pose.popPose();
+    }
+
+    /** Les deux ailes, en une passe : un seul tampon, du debut a la fin. */
+    private void drawWings(PoseStack pose, VertexConsumer vc, WingSkin skin, float size, int light,
+                           float flap, float lift, float tint, int alpha, float depth) {
         for (int side = -1; side <= 1; side += 2) {
             pose.pushPose();
             // l'omoplate : dans l'espace du modele, +y descend, -x est la droite du joueur
-            pose.translate(side * 0.14F, 0.17F, 0.0F);
+            pose.translate(side * 0.14F, 0.17F, depth);
             pose.mulPose(Axis.YP.rotationDegrees(side * (-24.0F - flap)));
             pose.mulPose(Axis.ZP.rotationDegrees(-side * (6.0F + lift)));   // les pointes montent
-            quad(pose, body, side, size, light, 1.0F, 255, skin);
-            if (glow != null) {
-                pose.translate(0.0F, 0.0F, -0.004F);
-                quad(pose, glow, side, size, LightTexture.FULL_BRIGHT, skin.tint, glowAlpha, skin);
-            }
+            quad(pose, vc, side, size, light, tint, alpha, skin);
             pose.popPose();
         }
-        pose.popPose();
     }
 
     /**
