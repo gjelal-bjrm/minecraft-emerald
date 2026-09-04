@@ -65,6 +65,20 @@ public enum Weather {
     }
 
     /**
+     * LE PRESAGE : ce qu'on sent venir sans savoir encore ce que c'est.
+     *
+     * On annoncait la meteo par son nom, quinze secondes a l'avance. C'etait
+     * une fiche technique : on lisait « Orage Prismatique dans 12 s » et il ne
+     * restait rien a decouvrir -- ni le ciel qui change, ni le doute. Chaque
+     * meteo a donc sa phrase, qui decrit un SIGNE et jamais la chose : l'air
+     * qui s'epaissit, le jour qui recule, la lumiere qui gresille. Le nom, lui,
+     * arrive avec la meteo elle-meme, en plein ecran.
+     */
+    public String omenKey() {
+        return "weather.emeraldweapons.omen." + this.id;
+    }
+
+    /**
      * Ce que la phase autorise. Les douces d'abord, les agressives avec la
      * progression -- et pendant l'Assaut, plus que les agressives : c'est
      * l'« orage permanent » du cahier, obtenu par le tirage plutot que par une

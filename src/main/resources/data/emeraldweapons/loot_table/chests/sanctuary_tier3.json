@@ -23,14 +23,28 @@
         },
         {
           "type": "minecraft:item",
-          "name": "emeraldweapons:raw_arcencium",
-          "weight": 6,
+          "name": "emeraldweapons:arcencium_feather",
+          "weight": 5,
           "functions": [
             {
               "function": "minecraft:set_count",
               "count": {
-                "min": 5,
-                "max": 10
+                "min": 1,
+                "max": 4
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "emeraldweapons:raw_arcencium",
+          "weight": 1,
+          "functions": [
+            {
+              "function": "minecraft:set_count",
+              "count": {
+                "min": 1,
+                "max": 3
               }
             }
           ]
@@ -38,7 +52,7 @@
         {
           "type": "minecraft:item",
           "name": "emeraldweapons:prism_branch",
-          "weight": 4,
+          "weight": 3,
           "functions": [
             {
               "function": "minecraft:set_count",
@@ -52,7 +66,7 @@
         {
           "type": "minecraft:item",
           "name": "emeraldweapons:prism_fiber",
-          "weight": 4,
+          "weight": 3,
           "functions": [
             {
               "function": "minecraft:set_count",
@@ -67,8 +81,8 @@
     },
     {
       "rolls": {
-        "min": 2,
-        "max": 6
+        "min": 1,
+        "max": 4
       },
       "entries": [
         {
@@ -89,10 +103,7 @@
       ]
     },
     {
-      "rolls": {
-        "min": 1,
-        "max": 2
-      },
+      "rolls": 1,
       "entries": [
         {
           "type": "minecraft:item",
@@ -102,8 +113,8 @@
             {
               "function": "minecraft:set_count",
               "count": {
-                "min": 2,
-                "max": 4
+                "min": 1,
+                "max": 2
               }
             }
           ]
@@ -132,6 +143,20 @@
       "entries": [
         {
           "type": "minecraft:item",
+          "name": "minecraft:diamond",
+          "weight": 4,
+          "functions": [
+            {
+              "function": "minecraft:set_count",
+              "count": {
+                "min": 6,
+                "max": 12
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
           "name": "minecraft:netherite_ingot",
           "weight": 5,
           "functions": [
@@ -146,46 +171,90 @@
         },
         {
           "type": "minecraft:item",
-          "name": "emeraldweapons:arcencium_helmet",
-          "weight": 2
-        },
-        {
-          "type": "minecraft:item",
-          "name": "emeraldweapons:arcencium_chestplate",
-          "weight": 2
-        },
-        {
-          "type": "minecraft:item",
-          "name": "emeraldweapons:arcencium_leggings",
-          "weight": 2
-        },
-        {
-          "type": "minecraft:item",
-          "name": "emeraldweapons:arcencium_boots",
-          "weight": 2
-        },
-        {
-          "type": "minecraft:item",
-          "name": "minecraft:experience_bottle",
-          "weight": 4,
+          "name": "emeraldweapons:arcencium_ingot",
+          "weight": 5,
           "functions": [
             {
               "function": "minecraft:set_count",
               "count": {
-                "min": 32,
-                "max": 64
+                "min": 2,
+                "max": 5
               }
             }
           ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "emeraldweapons:arcencium_feather",
+          "weight": 5,
+          "functions": [
+            {
+              "function": "minecraft:set_count",
+              "count": {
+                "min": 3,
+                "max": 5
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "minecraft:enchanted_book",
+          "weight": 2
         }
       ]
     },
     {
-      "rolls": {
-        "min": 1,
-        "max": 2
-      },
+      "rolls": 1,
       "entries": [
+        {
+          "type": "minecraft:empty",
+          "weight": 200
+        },
+        {
+          "type": "minecraft:item",
+          "name": "emeraldweapons:arcencium_helmet",
+          "weight": 4
+        },
+        {
+          "type": "minecraft:item",
+          "name": "emeraldweapons:arcencium_chestplate",
+          "weight": 4
+        },
+        {
+          "type": "minecraft:item",
+          "name": "emeraldweapons:arcencium_leggings",
+          "weight": 4
+        },
+        {
+          "type": "minecraft:item",
+          "name": "emeraldweapons:arcencium_boots",
+          "weight": 4
+        },
+        {
+          "type": "minecraft:item",
+          "name": "emeraldweapons:arcencium_glaive",
+          "weight": 2
+        },
+        {
+          "type": "minecraft:item",
+          "name": "emeraldweapons:arcencium_bow",
+          "weight": 2
+        },
+        {
+          "type": "minecraft:item",
+          "name": "emeraldweapons:arcencium_scepter",
+          "weight": 2
+        }
+      ]
+    },
+    {
+      "rolls": 1,
+      "entries": [
+        {
+          "type": "minecraft:empty",
+          "weight": 52
+        },
         {
           "type": "minecraft:item",
           "name": "emeraldweapons:artifact",
@@ -202,7 +271,7 @@
         {
           "type": "minecraft:item",
           "name": "emeraldweapons:artifact",
-          "weight": 1,
+          "weight": 3,
           "functions": [
             {
               "function": "minecraft:set_components",
@@ -215,7 +284,7 @@
         {
           "type": "minecraft:item",
           "name": "emeraldweapons:artifact",
-          "weight": 1,
+          "weight": 3,
           "functions": [
             {
               "function": "minecraft:set_components",
@@ -241,7 +310,7 @@
         {
           "type": "minecraft:item",
           "name": "emeraldweapons:artifact",
-          "weight": 1,
+          "weight": 3,
           "functions": [
             {
               "function": "minecraft:set_components",
@@ -254,7 +323,7 @@
         {
           "type": "minecraft:item",
           "name": "emeraldweapons:artifact",
-          "weight": 1,
+          "weight": 3,
           "functions": [
             {
               "function": "minecraft:set_components",
@@ -306,7 +375,7 @@
         {
           "type": "minecraft:item",
           "name": "emeraldweapons:artifact",
-          "weight": 1,
+          "weight": 3,
           "functions": [
             {
               "function": "minecraft:set_components",
@@ -384,7 +453,7 @@
         {
           "type": "minecraft:item",
           "name": "emeraldweapons:artifact",
-          "weight": 1,
+          "weight": 3,
           "functions": [
             {
               "function": "minecraft:set_components",
@@ -423,7 +492,7 @@
         {
           "type": "minecraft:item",
           "name": "emeraldweapons:artifact",
-          "weight": 1,
+          "weight": 3,
           "functions": [
             {
               "function": "minecraft:set_components",
@@ -436,7 +505,7 @@
         {
           "type": "minecraft:item",
           "name": "emeraldweapons:artifact",
-          "weight": 1,
+          "weight": 3,
           "functions": [
             {
               "function": "minecraft:set_components",
@@ -462,7 +531,7 @@
         {
           "type": "minecraft:item",
           "name": "emeraldweapons:artifact",
-          "weight": 1,
+          "weight": 3,
           "functions": [
             {
               "function": "minecraft:set_components",
@@ -514,7 +583,7 @@
         {
           "type": "minecraft:item",
           "name": "emeraldweapons:artifact",
-          "weight": 1,
+          "weight": 3,
           "functions": [
             {
               "function": "minecraft:set_components",

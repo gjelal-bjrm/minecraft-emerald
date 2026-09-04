@@ -216,6 +216,7 @@ public final class Sanctuary {
         // c'est ce qui permet ensuite de designer un defaut a l'ecran et de
         // retrouver la ligne qui en est responsable.
         SanctuaryLedger.begin(new BlockPos(cx, y, cz));
+        chestsPlaced = 0;                 // on COMPTE, on ne suppose plus
         clearSite(level, cx, y, cz, bounds);
         courtyard(level, cx, y, cz);
         int apex = greatPyramid(level, source, cx, y, cz);
@@ -311,13 +312,16 @@ public final class Sanctuary {
 
         BlockState found = level.getBlockState(anchor);
         String occupant = BuiltInRegistries.BLOCK.getKey(found.getBlock()).toString();
+        org.slf4j.LoggerFactory.getLogger(com.emerald.main.EmeraldWeaponsMod.MODID).info(
+                "Sanctuaire palier {} : {} coffres poses", rank, chestsPlaced);
         if (source == null) {
             return anchor;                  // bati par la partie : rien a dire
         }
         source.sendSuccess(() -> Component.literal(String.format(
-                "Sol %d | sommet %d | pyramide %s | %d blocs rhabilles | calque %d | %s | a l'ancre : %s",
+                "Sol %d | sommet %d | pyramide %s | %d blocs rhabilles | calque %d | %s "
+                        + "| %d coffres | a l'ancre : %s",
                 y, summit, apex >= 0 ? "dressee" : "ABSENTE", repainted, calque,
-                sealReport, occupant)), false);
+                sealReport, chestsPlaced, occupant)), false);
         return anchor;
     }
 
@@ -753,7 +757,7 @@ public final class Sanctuary {
     private static void cornerTower(ServerLevel level, int cx, int cz,
                                     int tx, int y, int tz, int rank) {
         SanctuaryLedger.part("cornerTower");
-        roundTower(level, tx, y, tz, TOWER_RADIUS, TOWER_TOP, rank);
+        roundTower(level, tx, y, tz, TOWER_RADIUS, TOWER_TOP, rank, true);
         // Vers la cour, jamais vers le dehors : le signe se deduit de la
         // position du coin par rapport au centre de la place.
         int inX = Integer.signum(cx - tx);
@@ -837,7 +841,8 @@ public final class Sanctuary {
             int seat = flank * (GATE_HALF + 6);
             int bx = g.x(seat, 0);
             int bz = g.z(seat, 0);
-            roundTower(level, bx, y, bz, 6, TOWER_TOP - 6, rank);
+            // les tourelles de porte gardent, elles ne paient pas
+            roundTower(level, bx, y, bz, 6, TOWER_TOP - 6, rank, false);
             // La normale de la porte pointe DEHORS : on perce donc a l'oppose.
             boolean acrossX = g.nx() != 0;
             int inward = -(acrossX ? g.nx() : g.nz());
@@ -1402,8 +1407,29 @@ public final class Sanctuary {
         }
     }
 
+    /**
+     * CENT CINQUANTE-SIX COFFRES PAR SANCTUAIRE : voila ce qu'on avait bati.
+     *
+     * Quatre tours d'angle de sept etages et huit tourelles de porte de six,
+     * a DEUX coffres par etage, plus les quatre du tresor. On sortait du
+     * PREMIER sanctuaire avec de quoi finir la partie, et les deux suivants
+     * n'avaient plus rien a donner -- « des le premier sanctuaire on obtient
+     * beaucoup de choses ».
+     *
+     * Trois coupes, et le monument ne perd pas un bloc :
+     *
+     *   - les tourelles de porte n'ont plus de coffre du tout. Ce sont des
+     *     postes de garde : leurs gardiens restent, leur butin s'en va ;
+     *   - UN coffre par etage au lieu de deux ;
+     *   - un etage sur deux seulement, en commencant par le premier -- le
+     *     sommet reste paye, puisque la tour a un nombre impair d'etages.
+     *
+     * Vingt coffres par sanctuaire au lieu de cent cinquante-six. Le GARDIEN,
+     * lui, reste a CHAQUE etage : on ne monte pas plus facilement, on monte
+     * pour moins de coffres et chacun compte.
+     */
     private static void towerInterior(ServerLevel level, int tx, int y, int tz,
-                                      int radius, int top, int rank) {
+                                      int radius, int top, int rank, boolean loot) {
         SanctuaryLedger.part("towerInterior");
         int storey = 6;
         double inner = radius - 1.0;
@@ -1425,10 +1451,10 @@ public final class Sanctuary {
             int chestY = y + base + storey + 1;
             int offX = (int) (dx == 0 ? inner - 2 : 0);
             int offZ = (int) (dz == 0 ? inner - 2 : 0);
-            lootChest(level, tx + offX, chestY, tz + offZ, sanctuaryTable(rank),
-                    Direction.NORTH);
-            lootChest(level, tx - offX, chestY, tz - offZ, sanctuaryTable(rank),
-                    Direction.SOUTH);
+            if (loot && (base / storey) % 2 == 0) {
+                lootChest(level, tx + offX, chestY, tz + offZ, sanctuaryTable(rank),
+                        Direction.NORTH);
+            }
             // UN GARDIEN PAR PALIER, ATTACHE A SON PALIER.
             //
             // Sans lui, la tour etait un libre-service : on entrait par la
@@ -1484,7 +1510,7 @@ public final class Sanctuary {
      * centre, vus de l'exterieur ». Un cercle franc n'a pas ce defaut.
      */
     private static void roundTower(ServerLevel level, int tx, int y, int tz,
-                                   int radius, int top, int rank) {
+                                   int radius, int top, int rank, boolean loot) {
         SanctuaryLedger.part("roundTower");
         for (int dx = -radius; dx <= radius; dx++) {
             for (int dz = -radius; dz <= radius; dz++) {
@@ -1521,7 +1547,7 @@ public final class Sanctuary {
         //
         // Il s'arretait deux blocs plus bas et l'on posait le toit par-dessus :
         // le dernier etage n'avait donc aucun acces, dans toutes les tours.
-        towerInterior(level, tx, y, tz, radius, top, rank);
+        towerInterior(level, tx, y, tz, radius, top, rank, loot);
         towerTorches(level, tx, y, tz, radius, top);
         // Rien au MILIEU du dernier plancher : c'est la que l'escalier
         // debouche, et le bloc qui portait la lanterne barrait la sortie --
@@ -1554,6 +1580,15 @@ public final class Sanctuary {
      * qu'on aborde par l'arriere se lit comme un meuble pousse contre un mur,
      * pas comme une recompense.
      */
+    /**
+     * Combien de coffres ce sanctuaire a-t-il poses ?
+     *
+     * On avait bati cent cinquante-six coffres sans le savoir : le nombre
+     * n'etait ecrit nulle part, il se deduisait de trois boucles imbriquees.
+     * Il est desormais compte et rapporte, comme le reste.
+     */
+    private static int chestsPlaced;
+
     private static void lootChest(ServerLevel level, int x, int y, int z, String table,
                                   @Nullable Direction facing) {
         BlockPos pos = new BlockPos(x, y, z);
@@ -1569,6 +1604,7 @@ public final class Sanctuary {
                     net.minecraft.world.level.block.ChestBlock.FACING, facing);
         }
         level.setBlock(pos, chestBlock, 2);
+        chestsPlaced++;
         if (level.getBlockEntity(pos) instanceof
                 net.minecraft.world.level.block.entity.RandomizableContainerBlockEntity chest) {
             chest.setLootTable(net.minecraft.resources.ResourceKey.create(

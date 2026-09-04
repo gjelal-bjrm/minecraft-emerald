@@ -43,8 +43,14 @@ import java.util.List;
 @EventBusSubscriber(modid = EmeraldWeaponsMod.MODID)
 public final class WeatherManager {
 
-    /** Le preavis avant toute meteo tiree au sort. */
-    private static final int WARNING_TICKS = 15 * 20;
+    /**
+     * Le preavis avant toute meteo tiree au sort : DIX A QUINZE SECONDES.
+     *
+     * Une duree variable, et non quinze secondes pile : un preavis constant se
+     * compte, et se compter enleve le peu d'inquietude que le presage installe.
+     */
+    private static final int WARNING_MIN = 10 * 20;
+    private static final int WARNING_SPAN = 5 * 20;
 
     private static Weather current = Weather.CLEAR;
     private static int remaining;
@@ -89,14 +95,11 @@ public final class WeatherManager {
         } else if (off) {
             // rien a planifier hors du mode
         } else if (pending != null) {
-            if (warningTicks % 20 == 0) {
-                Component warning = Component.translatable("game.emeraldweapons.weather.incoming",
-                                Component.translatable(pending.translationKey()), warningTicks / 20)
-                        .withStyle(style -> style.withColor(pending.color));
-                for (ServerPlayer player : level.players()) {
-                    player.displayClientMessage(warning, true);
-                }
-            }
+            // PLUS DE COMPTE A REBOURS NOMME.
+            //
+            // Le presage est parti une fois, au tirage (voir plus bas) ; le
+            // repeter chaque seconde avec le nom de la meteo et le nombre de
+            // secondes restantes revenait a publier l'horaire des trains.
             if (--warningTicks <= 0) {
                 Weather next = pending;
                 pending = null;
@@ -112,9 +115,16 @@ public final class WeatherManager {
                 Weather next = roll(level);
                 if (next != null) {
                     pending = next;
-                    warningTicks = WARNING_TICKS;
+                    warningTicks = WARNING_MIN + level.random.nextInt(WARNING_SPAN + 1);
                     level.playSound(null, level.getSharedSpawnPos(),
                             SoundEvents.BELL_RESONATE, SoundSource.WEATHER, 0.8F, 0.7F);
+                    // LE PRESAGE, une seule fois, dans la couleur de la meteo :
+                    // de quoi lever les yeux sans savoir encore vers quoi.
+                    Component omen = Component.translatable(next.omenKey())
+                            .withStyle(style -> style.withColor(next.color).withItalic(true));
+                    for (ServerPlayer player : level.players()) {
+                        player.sendSystemMessage(omen);
+                    }
                 } else {
                     scheduleGap(level);
                 }

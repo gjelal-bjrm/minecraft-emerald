@@ -585,6 +585,15 @@ public class GameManager {
                 && state.status() != GameState.Status.PROLOGUE) {
             return;
         }
+        // LE REGIME SE CHOISIT AVANT DE TIRER LA LAME, JAMAIS APRES.
+        //
+        // La lame refuse de venir tant que personne n'a tranche. Un choix par
+        // defaut aurait suffi -- mais lancer par megarde un chronometre de
+        // quatre-vingt-dix minutes sur un monde qu'on voulait habiter est
+        // exactement le genre d'erreur qu'on ne peut plus defaire.
+        if (!ModeChoice.ready(level, player)) {
+            return;
+        }
         level.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
         player.getInventory().add(new ItemStack(ModItems.OATH_BLADE.get()));
 
@@ -696,6 +705,60 @@ public class GameManager {
                 player.sendSystemMessage(line);
             }
         }
+    }
+
+    /**
+     * LE CYCLE SUIVANT DU MONDE OUVERT : trois sanctuaires de plus, ailleurs.
+     *
+     * Les precedents restent ou ils sont. Ce sont des ruines qu'on a prises, et
+     * les effacer volerait au joueur la trace de ce qu'il a fait -- c'est meme
+     * l'un des interets du monde ouvert : la carte se couvre de sanctuaires
+     * morts. La rosace tourne d'un cran et s'ecarte d'un cycle a l'autre pour
+     * qu'aucun nouveau site ne retombe sur un ancien.
+     */
+    public static void raiseNextCycle(ServerLevel level) {
+        GameState state = GameState.get(level);
+        if (state.timed() || state.status() != GameState.Status.RUNNING) {
+            return;
+        }
+        BlockPos village = state.village();
+        if (village.equals(BlockPos.ZERO)) {
+            return;
+        }
+        state.nextCycle();
+        // les registres sont VOLATILS mais cumulatifs : sans ce nettoyage, les
+        // sceaux du cycle precedent reclameraient encore leur ancre disparue
+        SanctuarySeals.clearAll();
+        SanctuaryMist.clearAll();
+        Finale.clear();
+
+        double turn = state.cycle() * 37.0;
+        int distance = GameState.ANCHOR_DISTANCE + Math.min(3, state.cycle() - 1) * 60;
+        List<BlockPos> anchors = new ArrayList<>();
+        for (int i = 0; i < 3; i++) {
+            double angle = Math.toRadians(90 + turn + i * 120);
+            int x = village.getX() + (int) Math.round(Math.cos(angle) * distance);
+            int z = village.getZ() + (int) Math.round(Math.sin(angle) * distance);
+            anchors.add(WorldSetup.findOpenGround(level, new BlockPos(x, 0, z), 16));
+        }
+        state.setAnchors(anchors);
+        pending.clear();
+        pending.addAll(anchors);
+        announce(level, Component.translatable("game.emeraldweapons.cycle.next", state.cycle())
+                        .withStyle(style -> style.withColor(0x9CE8FF)),
+                Component.translatable("game.emeraldweapons.cycle.next.sub")
+                        .withStyle(ChatFormatting.GRAY));
+        int index = 1;
+        for (BlockPos anchor : anchors) {
+            Component line = Component.translatable("game.emeraldweapons.anchor.at", index++,
+                    anchor.getX(), anchor.getY(), anchor.getZ())
+                    .withStyle(ChatFormatting.AQUA);
+            for (ServerPlayer player : level.players()) {
+                player.sendSystemMessage(line);
+            }
+        }
+        org.slf4j.LoggerFactory.getLogger(EmeraldWeaponsMod.MODID).info(
+                "Monde ouvert : cycle {} ouvert, sanctuaires en {}", state.cycle(), anchors);
     }
 
     // ------------------------------------------------------------ les ancres

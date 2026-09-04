@@ -91,9 +91,17 @@ public final class MobGear {
      */
     public static double stage(ServerLevel level, int tier) {
         GameState state = GameState.get(level);
-        double byClock = state.status() == GameState.Status.RUNNING
-                ? Math.min(1.0, state.elapsed(level) / (double) GameState.GAME_TICKS)
-                : 0.0;
+        // En monde ouvert, le CYCLE remplace l'horloge : chaque tour de piste
+        // durcit l'opposition d'un tiers, et le monde ne se durcit plus tout
+        // seul pendant qu'on batit.
+        double byClock;
+        if (state.status() != GameState.Status.RUNNING) {
+            byClock = 0.0;
+        } else if (state.timed()) {
+            byClock = Math.min(1.0, state.elapsed(level) / (double) GameState.GAME_TICKS);
+        } else {
+            byClock = Math.min(1.0, (state.cycle() - 1) / 3.0);
+        }
         double byAnchors = state.anchorsActive() / 3.0;
         double byTier = Math.max(0, tier - 1) / 3.0;
         return Math.min(1.0, Math.max(byClock, Math.max(byAnchors, byTier)));

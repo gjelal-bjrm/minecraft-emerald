@@ -274,6 +274,13 @@ public final class Specialization {
         if (event.getEntity() instanceof ServerPlayer player) {
             applyBonuses(player);
             sync(player);
+            // Le personnage appartient desormais au MONDE. Celui qui en avait un
+            // avant doit pouvoir le reprendre, et ne peut pas deviner comment.
+            if (SpecializationStore.legacyPending()) {
+                player.sendSystemMessage(Component.translatable(
+                                "specialization.emeraldweapons.legacy")
+                        .withStyle(net.minecraft.ChatFormatting.YELLOW));
+            }
         }
     }
 

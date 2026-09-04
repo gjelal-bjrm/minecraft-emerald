@@ -52,6 +52,8 @@ public class GameHudClient {
     private static final long RED_AT = 3L * 60L * 20L;
 
     private static int status = GameState.Status.LOBBY.ordinal();
+    private static int mode = GameState.Mode.DEFI.ordinal();
+    private static int cycle = 1;
     private static long remaining;
     private static int phase;
     private static int anchors;
@@ -62,6 +64,8 @@ public class GameHudClient {
 
     public static void accept(GameSyncPayload payload) {
         status = payload.status();
+        mode = payload.mode();
+        cycle = payload.cycle();
         remaining = payload.remaining();
         phase = payload.phase();
         anchors = payload.anchors();
@@ -110,9 +114,23 @@ public class GameHudClient {
         graphics.fill(x, y, x + PANEL_W, y + PANEL_H, 0xB4060608);
         prismaticEdge(graphics, x, y, mc.level == null ? 0L : mc.level.getGameTime());
 
-        int color = current == GameState.Status.RUNNING ? countdownColor() : phaseColor();
-        String time = current == GameState.Status.RUNNING ? formatTime(remaining) : "--:--";
-        graphics.drawCenteredString(mc.font, time, x + PANEL_W / 2, y + 5, color);
+        // EN MONDE OUVERT, LA PREMIERE LIGNE DIT LE CYCLE ET NON L'HEURE.
+        //
+        // Un compte a rebours qui ne compte pas serait un mensonge, et un
+        // « --:-- » ne dit rien. Le numero du cycle, lui, est la seule mesure
+        // de progression qui existe ici : c'est le nombre de fois qu'on a
+        // abattu le boss.
+        boolean endless = mode == GameState.Mode.LIBRE.ordinal();
+        int color = current == GameState.Status.RUNNING && !endless
+                ? countdownColor() : phaseColor();
+        if (endless && current == GameState.Status.RUNNING) {
+            graphics.drawCenteredString(mc.font,
+                    Component.translatable("game.emeraldweapons.hud.cycle", cycle),
+                    x + PANEL_W / 2, y + 5, color);
+        } else {
+            String time = current == GameState.Status.RUNNING ? formatTime(remaining) : "--:--";
+            graphics.drawCenteredString(mc.font, time, x + PANEL_W / 2, y + 5, color);
+        }
 
         // la partie finie, le panneau dit le verdict plutot qu'une phase
         Component label;
@@ -158,11 +176,17 @@ public class GameHudClient {
         if (pendingOrdinal >= 0) {
             com.emerald.weather.Weather incoming = com.emerald.weather.Weather.values()[
                     Math.floorMod(pendingOrdinal, com.emerald.weather.Weather.values().length)];
+            // LE PANNEAU NE DIT PLUS CE QUI VIENT.
+            //
+            // Il disait le nom et les secondes restantes, ce qui rendait le
+            // presage inutile : on n'avait pas a deviner, il suffisait de lire
+            // le coin de l'ecran. Il ne reste que le signe -- quelque chose
+            // arrive -- et sa COULEUR, seul indice offert a qui la connait.
             graphics.fill(x, y, x + PANEL_W, y + 12, 0x8C060608);
             Component label = Component.literal("⚠ ")
-                    .append(Component.translatable(incoming.translationKey()))
-                    .append(" " + (com.emerald.client.WeatherClient.warningTicks() / 20) + "s");
-            graphics.drawString(mc.font, label, x + 3, y + 2, 0xFFFFC24A, false);
+                    .append(Component.translatable("game.emeraldweapons.weather.omen"));
+            graphics.drawString(mc.font, label, x + 3, y + 2,
+                    0xFF000000 | incoming.color, false);
             return;
         }
         if (weather == com.emerald.weather.Weather.CLEAR) {

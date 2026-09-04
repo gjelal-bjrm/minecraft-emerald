@@ -30,6 +30,25 @@ public enum GamePhase {
         return "game.emeraldweapons.phase." + this.id;
     }
 
+    /**
+     * La phase d'un MONDE OUVERT, lue sur ce que le joueur a accompli.
+     *
+     * Sans horloge, il faut bien que la pression vienne de quelque part : elle
+     * vient des ancres tenues. Trois ancres, ou l'Arc-en-ciel leve, valent
+     * l'Assaut -- ce qui redonne aux dernieres minutes avant le boss l'orage
+     * permanent qu'elles ont en mode Defi.
+     */
+    public static GamePhase forProgress(int anchors, boolean arenaRaised) {
+        if (arenaRaised || anchors >= 3) {
+            return ASSAUT;
+        }
+        return switch (Math.max(0, anchors)) {
+            case 0 -> EXPLORATION;
+            case 1 -> MONTEE;
+            default -> PRESSION;
+        };
+    }
+
     /** La phase correspondant a un nombre de ticks ecoules depuis le depart. */
     public static GamePhase forTicks(long ticks) {
         long minutes = ticks / (20L * 60L);

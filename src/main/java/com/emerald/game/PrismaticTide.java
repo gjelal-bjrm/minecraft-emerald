@@ -85,6 +85,14 @@ public final class PrismaticTide {
         if (ModeSwitch.off() || state.status() != GameState.Status.RUNNING) {
             return -1;
         }
+        // LA MAREE EST LA TRADUCTION VISIBLE DU CHRONOMETRE.
+        //
+        // Sans horloge, elle n'a rien a traduire : en monde ouvert, elle
+        // enfermerait le joueur dans cent vingt blocs pour toujours, ce qui est
+        // exactement le contraire de ce qu'on lui a promis.
+        if (!state.timed()) {
+            return -1;
+        }
         long elapsed = state.elapsed(level);
         if (elapsed < START_TICKS) {
             return -1;

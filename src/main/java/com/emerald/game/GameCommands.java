@@ -20,6 +20,11 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
 @EventBusSubscriber(modid = EmeraldWeaponsMod.MODID)
 public class GameCommands {
 
+    /** Le regime du monde, choisi a la commande ou par un bouton du chat. */
+    private static int chooseRegime(CommandSourceStack source, GameState.Mode mode) {
+        return com.emerald.game.ModeChoice.choose(source.getServer().overworld(), mode) ? 1 : 0;
+    }
+
     @SubscribeEvent
     public static void onRegister(RegisterCommandsEvent event) {
         LiteralArgumentBuilder<CommandSourceStack> root = Commands.literal("arcencium")
@@ -208,6 +213,34 @@ public class GameCommands {
                                     "command.emeraldweapons.skip", minutes), true);
                             return 1;
                         })));
+
+        // LE REGIME DU MONDE : defi chronometre, ou monde ouvert.
+        //
+        // Distinct de « mode on/off », qui est l'interrupteur de fabrication.
+        // Celui-ci se choisit une fois par monde, avant de tirer la Lame, et
+        // les deux boutons du chat n'appellent rien d'autre que cette commande.
+        root.then(Commands.literal("partie")
+                .then(Commands.literal("defi").executes(ctx -> chooseRegime(
+                        ctx.getSource(), GameState.Mode.DEFI)))
+                .then(Commands.literal("libre").executes(ctx -> chooseRegime(
+                        ctx.getSource(), GameState.Mode.LIBRE)))
+                .executes(ctx -> {
+                    com.emerald.game.ModeChoice.ask(ctx.getSource().getPlayerOrException());
+                    return 1;
+                }));
+
+        // Reprendre ICI le personnage global d'avant la separation par monde.
+        root.then(Commands.literal("personnage")
+                .then(Commands.literal("importer").executes(ctx -> {
+                    ServerLevel level = ctx.getSource().getServer().overworld();
+                    boolean done = com.emerald.specialization.SpecializationStore
+                            .importLegacy(level.getServer());
+                    ctx.getSource().sendSuccess(() -> Component.literal(done
+                            ? "Personnage global repris dans ce monde."
+                            : "Rien a reprendre : aucun personnage global en attente."),
+                            true);
+                    return done ? 1 : 0;
+                })));
 
         // L'interrupteur du mode : c'est ce qui permet d'aller EXPLORER sans
         // avoir a gagner le prologue d'abord.

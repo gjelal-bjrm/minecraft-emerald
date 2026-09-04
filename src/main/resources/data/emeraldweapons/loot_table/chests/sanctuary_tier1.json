@@ -23,14 +23,28 @@
         },
         {
           "type": "minecraft:item",
-          "name": "emeraldweapons:raw_arcencium",
-          "weight": 6,
+          "name": "emeraldweapons:arcencium_feather",
+          "weight": 5,
           "functions": [
             {
               "function": "minecraft:set_count",
               "count": {
-                "min": 3,
-                "max": 6
+                "min": 1,
+                "max": 2
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "emeraldweapons:raw_arcencium",
+          "weight": 1,
+          "functions": [
+            {
+              "function": "minecraft:set_count",
+              "count": {
+                "min": 1,
+                "max": 3
               }
             }
           ]
@@ -38,7 +52,7 @@
         {
           "type": "minecraft:item",
           "name": "emeraldweapons:prism_branch",
-          "weight": 4,
+          "weight": 3,
           "functions": [
             {
               "function": "minecraft:set_count",
@@ -52,7 +66,7 @@
         {
           "type": "minecraft:item",
           "name": "emeraldweapons:prism_fiber",
-          "weight": 4,
+          "weight": 3,
           "functions": [
             {
               "function": "minecraft:set_count",
@@ -67,8 +81,8 @@
     },
     {
       "rolls": {
-        "min": 2,
-        "max": 4
+        "min": 1,
+        "max": 2
       },
       "entries": [
         {
@@ -89,10 +103,7 @@
       ]
     },
     {
-      "rolls": {
-        "min": 1,
-        "max": 2
-      },
+      "rolls": 1,
       "entries": [
         {
           "type": "minecraft:item",
@@ -102,8 +113,8 @@
             {
               "function": "minecraft:set_count",
               "count": {
-                "min": 2,
-                "max": 4
+                "min": 1,
+                "max": 3
               }
             }
           ]
@@ -116,8 +127,8 @@
             {
               "function": "minecraft:set_count",
               "count": {
-                "min": 8,
-                "max": 16
+                "min": 6,
+                "max": 12
               }
             }
           ]
@@ -132,7 +143,21 @@
       "entries": [
         {
           "type": "minecraft:item",
-          "name": "minecraft:diamond",
+          "name": "minecraft:iron_ingot",
+          "weight": 7,
+          "functions": [
+            {
+              "function": "minecraft:set_count",
+              "count": {
+                "min": 6,
+                "max": 12
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "minecraft:gold_ingot",
           "weight": 6,
           "functions": [
             {
@@ -153,6 +178,34 @@
               "function": "minecraft:set_count",
               "count": {
                 "min": 1,
+                "max": 2
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "emeraldweapons:arcencium_feather",
+          "weight": 4,
+          "functions": [
+            {
+              "function": "minecraft:set_count",
+              "count": {
+                "min": 1,
+                "max": 2
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "minecraft:diamond",
+          "weight": 2,
+          "functions": [
+            {
+              "function": "minecraft:set_count",
+              "count": {
+                "min": 1,
                 "max": 3
               }
             }
@@ -161,21 +214,7 @@
         {
           "type": "minecraft:item",
           "name": "minecraft:enchanted_book",
-          "weight": 3
-        },
-        {
-          "type": "minecraft:item",
-          "name": "minecraft:experience_bottle",
-          "weight": 5,
-          "functions": [
-            {
-              "function": "minecraft:set_count",
-              "count": {
-                "min": 16,
-                "max": 28
-              }
-            }
-          ]
+          "weight": 2
         }
       ]
     },
@@ -184,7 +223,7 @@
       "entries": [
         {
           "type": "minecraft:empty",
-          "weight": 40
+          "weight": 88
         },
         {
           "type": "minecraft:item",
@@ -207,59 +246,7 @@
             {
               "function": "minecraft:set_components",
               "components": {
-                "emeraldweapons:artifact": "filtre_de_brume"
-              }
-            }
-          ]
-        },
-        {
-          "type": "minecraft:item",
-          "name": "emeraldweapons:artifact",
-          "weight": 1,
-          "functions": [
-            {
-              "function": "minecraft:set_components",
-              "components": {
-                "emeraldweapons:artifact": "repere_d_echo"
-              }
-            }
-          ]
-        },
-        {
-          "type": "minecraft:item",
-          "name": "emeraldweapons:artifact",
-          "weight": 1,
-          "functions": [
-            {
-              "function": "minecraft:set_components",
-              "components": {
                 "emeraldweapons:artifact": "lentille_d_aurore"
-              }
-            }
-          ]
-        },
-        {
-          "type": "minecraft:item",
-          "name": "emeraldweapons:artifact",
-          "weight": 1,
-          "functions": [
-            {
-              "function": "minecraft:set_components",
-              "components": {
-                "emeraldweapons:artifact": "plaque_de_gangue"
-              }
-            }
-          ]
-        },
-        {
-          "type": "minecraft:item",
-          "name": "emeraldweapons:artifact",
-          "weight": 1,
-          "functions": [
-            {
-              "function": "minecraft:set_components",
-              "components": {
-                "emeraldweapons:artifact": "coque_prismatique"
               }
             }
           ]
@@ -299,19 +286,6 @@
               "function": "minecraft:set_components",
               "components": {
                 "emeraldweapons:artifact": "lest_de_gangue"
-              }
-            }
-          ]
-        },
-        {
-          "type": "minecraft:item",
-          "name": "emeraldweapons:artifact",
-          "weight": 1,
-          "functions": [
-            {
-              "function": "minecraft:set_components",
-              "components": {
-                "emeraldweapons:artifact": "jambieres_de_maree"
               }
             }
           ]
@@ -389,19 +363,6 @@
             {
               "function": "minecraft:set_components",
               "components": {
-                "emeraldweapons:artifact": "bottes_de_retour"
-              }
-            }
-          ]
-        },
-        {
-          "type": "minecraft:item",
-          "name": "emeraldweapons:artifact",
-          "weight": 1,
-          "functions": [
-            {
-              "function": "minecraft:set_components",
-              "components": {
                 "emeraldweapons:artifact": "regulateur_de_lame"
               }
             }
@@ -428,46 +389,7 @@
             {
               "function": "minecraft:set_components",
               "components": {
-                "emeraldweapons:artifact": "drain_de_cristal"
-              }
-            }
-          ]
-        },
-        {
-          "type": "minecraft:item",
-          "name": "emeraldweapons:artifact",
-          "weight": 1,
-          "functions": [
-            {
-              "function": "minecraft:set_components",
-              "components": {
-                "emeraldweapons:artifact": "eclat_final"
-              }
-            }
-          ]
-        },
-        {
-          "type": "minecraft:item",
-          "name": "emeraldweapons:artifact",
-          "weight": 1,
-          "functions": [
-            {
-              "function": "minecraft:set_components",
-              "components": {
                 "emeraldweapons:artifact": "tension_rapide"
-              }
-            }
-          ]
-        },
-        {
-          "type": "minecraft:item",
-          "name": "emeraldweapons:artifact",
-          "weight": 1,
-          "functions": [
-            {
-              "function": "minecraft:set_components",
-              "components": {
-                "emeraldweapons:artifact": "fleche_fourchue"
               }
             }
           ]
@@ -507,19 +429,6 @@
               "function": "minecraft:set_components",
               "components": {
                 "emeraldweapons:artifact": "cran_d_arret"
-              }
-            }
-          ]
-        },
-        {
-          "type": "minecraft:item",
-          "name": "emeraldweapons:artifact",
-          "weight": 1,
-          "functions": [
-            {
-              "function": "minecraft:set_components",
-              "components": {
-                "emeraldweapons:artifact": "ruee_en_chaine"
               }
             }
           ]

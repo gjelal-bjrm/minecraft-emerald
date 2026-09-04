@@ -103,6 +103,10 @@ public final class Finale {
     private static Pending pending;
     /** Le rappel de fin de partie, quelques secondes apres le titre. */
     private static long hintAt = -1L;
+    /** En monde ouvert : quand relancer le cycle, une fois la victoire savouree. */
+    private static long cycleAt = -1L;
+    /** Le temps qu'on laisse au joueur entre le boss abattu et les trois suivants. */
+    private static final int CYCLE_DELAY = 20 * 20;
 
     private record Pending(StructureStart start, ChunkGenerator generator, ArrayDeque<ChunkPos> chunks,
                            BoundingBox box, BlockPos center, EntityType<?> bossType) {
@@ -398,6 +402,11 @@ public final class Finale {
             return;
         }
         tickPlacement(level);
+        // LE CYCLE SUIVANT, en monde ouvert : trois nouveaux sanctuaires.
+        if (cycleAt >= 0L && level.getGameTime() >= cycleAt) {
+            cycleAt = -1L;
+            GameManager.raiseNextCycle(level);
+        }
         if (hintAt >= 0L && level.getGameTime() >= hintAt) {
             hintAt = -1L;
             for (ServerPlayer player : level.players()) {
@@ -448,15 +457,26 @@ public final class Finale {
     public static void victory(ServerLevel level) {
         GameState state = GameState.get(level);
         String time = clock(state.elapsed(level));
-        if (state.status() == GameState.Status.RUNNING) {
+        // EN MONDE OUVERT, LA VICTOIRE N'EST PAS UNE FIN.
+        //
+        // On garde tout ce qui la rend bonne -- le titre, les feux, la Plume du
+        // Souverain Astral -- et on retire la seule chose qui n'a pas de sens
+        // ici : l'ecran de fin. La partie ne se ferme pas, elle repart.
+        boolean endless = !state.timed();
+        if (state.status() == GameState.Status.RUNNING && !endless) {
             state.finish(true);
         }
-        GameManager.announce(level, "game.emeraldweapons.won",
-                "game.emeraldweapons.won.sub", 0xFFD36B, END_TITLE_STAY);
+        GameManager.announce(level,
+                endless ? "game.emeraldweapons.cycle.won" : "game.emeraldweapons.won",
+                endless ? "game.emeraldweapons.cycle.won.sub" : "game.emeraldweapons.won.sub",
+                0xFFD36B, END_TITLE_STAY);
         for (ServerPlayer player : level.players()) {
             player.playNotifySound(SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, SoundSource.MASTER, 1.0F, 1.0F);
-            player.sendSystemMessage(Component.translatable("game.emeraldweapons.won.chat", time)
-                    .withStyle(ChatFormatting.GOLD));
+            player.sendSystemMessage(endless
+                    ? Component.translatable("game.emeraldweapons.cycle.won.chat", state.cycle())
+                            .withStyle(ChatFormatting.GOLD)
+                    : Component.translatable("game.emeraldweapons.won.chat", time)
+                            .withStyle(ChatFormatting.GOLD));
             for (int i = 0; i < 3; i++) {
                 fireworks(level, player.getX() + (level.random.nextDouble() - 0.5) * 6.0,
                         player.getY() + 1.0, player.getZ() + (level.random.nextDouble() - 0.5) * 6.0);
@@ -464,7 +484,8 @@ public final class Finale {
         }
         awardAstralWings(level);
         dissolveGuards(level);
-        hintAt = level.getGameTime() + 100L;
+        hintAt = endless ? -1L : level.getGameTime() + 100L;
+        cycleAt = endless ? level.getGameTime() + CYCLE_DELAY : -1L;
     }
 
     /**
@@ -515,6 +536,7 @@ public final class Finale {
     public static void clear() {
         pending = null;
         hintAt = -1L;
+        cycleAt = -1L;
     }
 
     private static void dissolveGuards(ServerLevel level) {

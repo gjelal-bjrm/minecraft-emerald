@@ -3210,3 +3210,142 @@ Ce qui reste, et rien de plus :
 | Souverain Astral | l'etoile gagnee : une mote ; la frappe pleine : douze motes autour de la cible | a l'evenement |
 
 Plus d'anneau, plus de trainee, plus de couronne.
+
+---
+
+## 41. Deux facons de jouer, et une refonte des coffres *(4 sept. 2026)*
+
+### 41.1 Le regime du monde : Defi ou Monde ouvert
+
+Le mode n'avait qu'une facon de se jouer : quatre-vingt-dix minutes, la Maree
+qui referme la carte, une victoire ou une defaite. C'est une bonne course --
+mais tout ce qu'on a bati autour (meteo, runes, ameliorations, specialisation,
+ailes) demande plus de temps qu'une course n'en laisse.
+
+**Le regime appartient au MONDE** (`GameState.Mode`, sauvegarde en NBT), pas au
+joueur ni au serveur : deux mondes peuvent se jouer differemment, et un monde ne
+change pas de nature entre deux connexions.
+
+**Comment on choisit** — trois portes, une seule verite :
+
+1. **une carte dans le chat a la connexion**, tant que la question n'a pas de
+   reponse : un titre, une ligne par regime, deux boutons cliquables ;
+2. **`/arcencium partie defi`** et **`/arcencium partie libre`** -- c'est
+   exactement ce qu'appellent les boutons ;
+3. **la Lame du Serment refuse de venir** tant que personne n'a tranche
+   (`ModeChoice.ready`). Un defaut silencieux aurait suffi, mais lancer par
+   megarde un chronometre de quatre-vingt-dix minutes sur un monde qu'on
+   voulait habiter est le genre d'erreur qu'on ne peut plus defaire.
+
+Le choix se verrouille au retrait de la Lame ; `/arcencium stop` rouvre le lobby
+et donc le choix.
+
+### 41.2 Ce que change le Monde ouvert
+
+| | Defi | Monde ouvert |
+|---|---|---|
+| Chronometre | 90 min, defaite au bout | aucun |
+| Maree Prismatique | de la minute 54 a la fin | jamais |
+| Phases (meteo, equipement des monstres) | l'horloge | **les ancres tenues** : 0 → Exploration, 1 → Montee, 2 → Pression, 3 ou arene levee → Assaut |
+| Difficulte de fond (`MobGear.stage`) | le temps ecoule | **le cycle** : +1/3 par tour de piste |
+| Boss abattu | ecran de victoire, fin | **le cycle recommence** |
+| Meteo, prologue, sanctuaires, sieges, butin | identiques | identiques |
+
+**Le cycle** (`GameManager.raiseNextCycle`, vingt secondes apres la mort du
+boss) : trois nouveaux sanctuaires se dressent ailleurs -- la rosace tourne de
+37 degres par cycle et s'ecarte de 60 blocs jusqu'a trois cycles. Les anciens
+**restent debout** : ce sont des ruines qu'on a prises, et la carte se couvre
+peu a peu de sanctuaires morts. L'interface remplace le compte a rebours par
+**« Cycle N »**.
+
+### 41.3 La meteo s'annonce par un presage, plus par son nom
+
+On lisait « Orage Prismatique dans 12 s » : une fiche technique, et plus rien a
+decouvrir. Le preavis dure maintenant **dix a quinze secondes tirees au sort**
+(une duree constante se compte), il part **une seule fois**, et chaque meteo a
+**sa phrase**, qui decrit un signe et jamais la chose :
+
+| Meteo | Presage |
+|---|---|
+| Brume | « L'air s'epaissit ; au loin, les couleurs se brouillent. » |
+| Aurore | « Le ciel palit, comme s'il retenait sa lumiere. » |
+| Nuit | « Le jour recule. Quelque chose attend qu'il s'eteigne. » |
+| Meteores | « Une odeur de pierre chaude descend du ciel. » |
+| Dechirure | « Quelque part l'air se fend, et le bruit arrive en retard. » |
+| Orage | « Les cheveux se dressent ; la lumiere gresille. » |
+
+Le panneau de l'interface ne dit plus que **« ⚠ Presage »**, dans la couleur de
+la meteo -- seul indice offert a qui la connait. Le nom arrive avec la meteo
+elle-meme, en plein ecran.
+
+### 41.4 Le personnage appartient au MONDE
+
+`SpecializationStore` ecrivait dans le dossier du serveur, qui en solo est le
+dossier du jeu : **un seul personnage pour tous les mondes de la machine**. On
+remettait a zero dans un monde d'essai et le personnage du vrai monde
+disparaissait avec.
+
+Le fichier vit desormais dans `<monde>/emeraldweapons/specialization.json`.
+Chaque monde a son niveau d'ailes et ses apparences, comme il a deja son niveau
+de Heros (donnees du joueur) et son equipement.
+
+L'ancien fichier global n'est **ni lu ni efface** : il est signale a la
+connexion, et **`/arcencium personnage importer`** le reprend dans le monde ou
+l'on est. Le recopier tout seul aurait donne le meme personnage maxe a tous les
+mondes -- exactement ce qu'on venait de corriger.
+
+### 41.5 Les coffres : cent cinquante-six devient vingt
+
+**La mesure d'abord.** Un sanctuaire comptait quatre tours d'angle de sept
+etages et huit tourelles de porte de six, a **deux coffres par etage**, plus
+les quatre du tresor : **156 coffres**. On sortait du premier sanctuaire avec de
+quoi finir la partie, et les deux suivants n'avaient plus rien a donner.
+
+Trois coupes, sans qu'un seul bloc du monument change :
+
+- les **tourelles de porte** n'ont plus de coffre : ce sont des postes de garde,
+  leurs gardiens restent ;
+- **un** coffre par etage au lieu de deux ;
+- **un etage sur deux**, en commencant par le premier -- le sommet reste paye,
+  la tour ayant un nombre impair d'etages.
+
+**Vingt coffres par sanctuaire.** Le gardien, lui, reste a *chaque* etage : on
+ne monte pas plus facilement, on monte pour moins de coffres et chacun compte.
+
+### 41.6 Le butin suit l'echelle d'amelioration
+
+Un coffre ne donne pas ce qui est **cher**, il donne ce qui **sert
+maintenant**. On trouvait neuf diamants par coffre des le premier sanctuaire,
+alors que le diamant n'entre dans l'amelioration qu'a **+7** -- une fortune
+inutile, la pire des recompenses.
+
+| | Palier 1 | Palier 2 | Palier 3 |
+|---|---|---|---|
+| Ce qu'il finance | +1 a +6, la specialisation | +7, +8 | +9, +10, le boss |
+| Fer / Or | 75 / 45 | 15 blocs / 57 | — |
+| Diamant | **5** | 69 | 86 |
+| Netherite | — | 9 eclats | 23 lingots |
+| Lingot d'Arcencium | — | — | 41 |
+| Plumes d'Arcencium | 20 | 38 | 71 |
+| Eclats du Destin | 20 | 29 | 39 |
+| Artefacts | 4 (1 coffre sur 5) | 7 (1 sur 3) | 10 (1 sur 2) |
+| Notre equipement | — | — | ~2 pieces (1 coffre sur 13) |
+
+*(moyennes par sanctuaire, 200 tirages, `scratchpad/sim_loot.py`)*
+
+Trois decisions dans ce tableau :
+
+- **les fioles d'experience disparaissent des trois paliers.** L'experience du
+  mode se gagne en tuant, le niveau de Heros ne les lit meme pas, et par vingt
+  coffres elles rendaient l'enchantement gratuit ;
+- **les artefacts ne sont plus garantis.** Ils l'etaient aux paliers deux et
+  trois : cinquante artefacts par partie, pour six emplacements -- on ne
+  choisissait plus, on rangeait. Et **dix artefacts majeurs** (Filtre de Brume,
+  Jambieres de Maree, Plaque de Gangue, Bottes de Retour, Eclat Final, Drain de
+  Cristal, Fleche Fourchue, Ruee en Chaine, Coque Prismatique, Repere d'Echo)
+  sont **ecartes du palier un** et **trois fois plus probables au palier
+  trois** ;
+- **notre equipement** quitte le tirage ordinaire du palier trois -- ou les
+  quatre pieces d'armure tombaient a quatre lancers, ce qui vidait la Forge de
+  son sens -- pour un tirage a part : une chance sur treize, soit une piece ou
+  deux par sanctuaire, jamais la panoplie.

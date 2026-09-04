@@ -103,64 +103,144 @@ def pool(rolls, entries, bonus=None):
     return p
 
 
+# LES ARTEFACTS MAJEURS : ceux qui changent une fin de partie.
+#
+# Il n'y avait aucune hierarchie -- les trente-deux tombaient a poids egal des
+# le premier coffre du premier sanctuaire. On pouvait donc trouver les
+# Jambieres de Maree ou le Filtre de Brume avant d'avoir vu une seule tempete,
+# et il ne restait plus rien a esperer des deux sanctuaires suivants.
+#
+# Ceux-la sont donc ECARTES du palier un, ordinaires au palier deux, et TROIS
+# FOIS plus probables au palier trois. Le choix n'est pas une note de
+# puissance brute : ce sont ceux qui repondent a une menace de fin de partie
+# (la Maree, les meteos, le coup fatal) ou qui multiplient une arme.
+MAJOR = [
+    "filtre_de_brume",        # les meteos agressives ne blessent plus
+    "repere_d_echo",          # un artefact garanti par siege
+    "plaque_de_gangue",       # survivre au coup fatal
+    "coque_prismatique",      # l'onde de choc
+    "jambieres_de_maree",     # rester dans la zone qui se ferme
+    "bottes_de_retour",       # revenir a l'ancre
+    "eclat_final",            # l'explosion a chaque mort
+    "drain_de_cristal",       # le vol de vie
+    "fleche_fourchue",        # trois fleches
+    "ruee_en_chaine",         # trois bonds
+]
+
+
+def artifacts_for(tier):
+    """Le tirage d'artefacts d'un palier : ce qu'on peut y trouver, et a quel poids."""
+    if tier == 1:
+        return [artifact(name) for name in ARTIFACTS if name not in MAJOR]
+    if tier == 2:
+        return [artifact(name) for name in ARTIFACTS]
+    return [artifact(name, 3 if name in MAJOR else 1) for name in ARTIFACTS]
+
+
 def table(tier):
-    """Le contenu d'un coffre, pour un palier d'ancre."""
+    """Le contenu d'un coffre, pour un palier d'ancre.
+
+    LA REGLE DE L'ECHELLE, et c'est la refonte de septembre : un coffre ne
+    donne pas ce qui est CHER, il donne ce qui SERT MAINTENANT.
+
+    On sortait du premier sanctuaire avec neuf diamants par coffre et des
+    piles de fioles d'experience -- une fortune qui ne servait a rien, puisque
+    le diamant n'entre dans l'amelioration qu'a +7 et qu'on en etait a +2. Le
+    butin etait riche et inutile, ce qui est la pire combinaison : il donne le
+    sentiment d'avoir tout eu sans rien donner a faire.
+
+    Chaque palier paie donc l'etape qu'on est en train de vivre :
+
+      - palier 1 : le fer et l'or (+1 a +6), les plumes (specialisation), les
+        Eclats du Destin (rarete). Du diamant, oui, mais un filet ;
+      - palier 2 : le diamant pour de bon (+7, +8), plus de plumes, les
+        premiers eclats de netherite ;
+      - palier 3 : netherite et Arcencium (+9, +10), les artefacts majeurs, et
+        une petite chance de repartir avec une piece de NOTRE equipement.
+
+    Les fioles d'experience ont disparu des trois paliers : l'experience du
+    mode se gagne en tuant, le niveau de Heros ne les lit meme pas, et par
+    seize coffres elles rendaient l'enchantement gratuit.
+    """
     pools = []
 
-    # 1. PAS d'arcencium en coffre, ou presque.
+    # 1. LA MONNAIE DU MODE : ce qui ne se fabrique pas.
     #
-    # Il en tombait a chaque coffre, multiplie par les etages de quatre tours
-    # et les quatre de la salle du tresor : on n'avait plus aucune raison de
-    # miner, et l'activation des ancres -- qui est censee coute cher -- se
-    # payait toute seule en visitant. Il n'en reste qu'un filet de minerai
-    # BRUT, rare, qu'il faut encore fondre.
-    # 2. La matiere premiere et le bois, pour fabriquer sur place
+    # L'Eclat du Destin (rarete) et la Plume d'Arcencium (specialisation) sont
+    # les deux seules ressources qu'on ne peut pas produire a volonte. Elles
+    # sont donc dans les trois paliers, en quantite croissante : c'est ce qui
+    # fait qu'un sanctuaire fait AVANCER le personnage et pas seulement le sac.
+    #
+    # PAS d'arcencium en coffre, ou presque : il en tombait a chaque coffre,
+    # multiplie par les etages de quatre tours, et l'activation des ancres --
+    # qui est censee couter cher -- se payait toute seule en visitant.
     pools.append(pool({"min": 1, "max": 2}, [
-        # L'Eclat du Destin ne se fabrique pas : c'est la seule monnaie du
-        # mode qu'on ne puisse pas produire a volonte, donc la seule qui garde
-        # sa valeur. Sa quantite monte avec le palier, ce qui fait des
-        # tentatives de haute rarete une recompense de fin de partie.
         item("%s:fate_shard" % MOD, 6, (1, 1 + tier * 2)),
+        item("%s:arcencium_feather" % MOD, 5, (1, tier + 1)),
         item("%s:raw_arcencium" % MOD, 1, (1, 3)),
-        item("%s:prism_branch" % MOD, 4, (4, 10)),
-        item("%s:prism_fiber" % MOD, 4, (4, 10)),
+        item("%s:prism_branch" % MOD, 3, (4, 10)),
+        item("%s:prism_fiber" % MOD, 3, (4, 10)),
     ]))
 
-    # 3. Le materiel d'Apotheosis : de quoi reforger et sertir
-    pools.append(pool({"min": 2, "max": 3 + tier}, [
+    # 2. Le materiel d'Apotheosis : de quoi reforger et sertir
+    pools.append(pool({"min": 1, "max": 1 + tier}, [
         tag_entry("%s:sanctuary/tier%d" % (MOD, tier), 10, (1, 1 + tier)),
     ]))
 
-    # 4. La consommation qui sauve : plus le palier monte, plus elle est franche
+    # 3. La consommation qui sauve : plus le palier monte, plus elle est franche
     heal = {
-        1: [item("minecraft:golden_apple", 6, (2, 4)),
-            item("minecraft:cooked_beef", 4, (8, 16))],
-        2: [item("minecraft:golden_apple", 6, (4, 8)),
+        1: [item("minecraft:golden_apple", 6, (1, 3)),
+            item("minecraft:cooked_beef", 4, (6, 12))],
+        2: [item("minecraft:golden_apple", 6, (2, 4)),
             item("minecraft:enchanted_golden_apple", 2, (1, 1))],
-        3: [item("minecraft:enchanted_golden_apple", 6, (2, 4)),
+        3: [item("minecraft:enchanted_golden_apple", 6, (1, 2)),
             item("minecraft:totem_of_undying", 3, (1, 1))],
     }[tier]
-    pools.append(pool({"min": 1, "max": 2}, heal))
+    pools.append(pool(1, heal))
 
-    # 5. L'equipement. Au palier trois, on trouve NOTRE armure : c'est le
-    #    moment de la partie ou l'on doit pouvoir affronter le boss.
-    gear = {
-        1: [item("minecraft:diamond", 6, (4, 9)),
-            item("minecraft:iron_block", 4, (1, 3)),
-            item("minecraft:enchanted_book", 3),
-            item("minecraft:experience_bottle", 5, (16, 28))],
-        2: [item("minecraft:diamond", 6, (8, 16)),
-            item("minecraft:netherite_scrap", 3, (2, 4)),
-            item("minecraft:enchanted_book", 3),
-            item("minecraft:experience_bottle", 5, (24, 48))],
-        3: [item("minecraft:netherite_ingot", 5, (1, 3)),
-            item("%s:arcencium_helmet" % MOD, 2),
-            item("%s:arcencium_chestplate" % MOD, 2),
-            item("%s:arcencium_leggings" % MOD, 2),
-            item("%s:arcencium_boots" % MOD, 2),
-            item("minecraft:experience_bottle", 4, (32, 64))],
+    # 4. LA FORGE : exactement les materiaux du cran ou l'on est.
+    #
+    # L'echelle d'amelioration est fer (+1 a +3), or (+4 a +6), diamant (+7,
+    # +8), netherite (+9), Arcencium (+10). Le coffre suit cette echelle a la
+    # lettre -- c'est la seule facon qu'un butin ait l'air d'avoir ete pense
+    # pour le moment ou on l'ouvre.
+    forge = {
+        1: [item("minecraft:iron_ingot", 7, (6, 12)),
+            item("minecraft:gold_ingot", 6, (4, 9)),
+            item("minecraft:iron_block", 4, (1, 2)),
+            item("%s:arcencium_feather" % MOD, 4, (1, 2)),
+            item("minecraft:diamond", 2, (1, 3)),
+            item("minecraft:enchanted_book", 2)],
+        2: [item("minecraft:diamond", 7, (4, 8)),
+            item("minecraft:gold_ingot", 4, (6, 12)),
+            item("%s:arcencium_feather" % MOD, 5, (2, 3)),
+            item("minecraft:netherite_scrap", 3, (1, 3)),
+            item("minecraft:iron_block", 3, (2, 4)),
+            item("minecraft:enchanted_book", 2)],
+        3: [item("minecraft:diamond", 4, (6, 12)),
+            item("minecraft:netherite_ingot", 5, (1, 3)),
+            item("%s:arcencium_ingot" % MOD, 5, (2, 5)),
+            item("%s:arcencium_feather" % MOD, 5, (3, 5)),
+            item("minecraft:enchanted_book", 2)],
     }[tier]
-    pools.append(pool({"min": 1, "max": 1 + tier}, gear))
+    pools.append(pool({"min": 1, "max": 1 + tier}, forge))
+
+    # 5. LE TRESOR DU DERNIER SANCTUAIRE : nos armes, et rarement.
+    #
+    # Nos quatre pieces d'armure tombaient d'un tirage a quatre lancers : on
+    # ressortait habille de neuf sans avoir rien forge, ce qui vide de son sens
+    # la Forge d'Arcencium. Elles passent donc dans un tirage a part, avec les
+    # trois armes, et une chance sur treize environ -- de quoi esperer une
+    # piece par sanctuaire, jamais la panoplie.
+    if tier == 3:
+        pools.append(pool(1, [{"type": "minecraft:empty", "weight": 200}]
+                          + [item("%s:arcencium_helmet" % MOD, 4),
+                             item("%s:arcencium_chestplate" % MOD, 4),
+                             item("%s:arcencium_leggings" % MOD, 4),
+                             item("%s:arcencium_boots" % MOD, 4),
+                             item("%s:arcencium_glaive" % MOD, 2),
+                             item("%s:arcencium_bow" % MOD, 2),
+                             item("%s:arcencium_scepter" % MOD, 2)]))
 
     # 6. Les artefacts, la vraie recompense.
     #
@@ -169,13 +249,17 @@ def table(tier):
     # et un coffre qui ne rend jamais rien de memorable cesse d'etre ouvert.
     # Il en donne desormais un sur quatre environ -- assez rare pour rester une
     # trouvaille, assez frequent pour qu'on fouille la douzaine de coffres d'une
-    # tour en esperant.
-    if tier == 1:
-        pools.append(pool(1, [{"type": "minecraft:empty", "weight": 3 * len(ARTIFACTS)}]
-                          + [artifact(name) for name in ARTIFACTS]))
-    else:
-        pools.append(pool(1 if tier == 2 else {"min": 1, "max": 2},
-                          [artifact(name) for name in ARTIFACTS]))
+    # tour en esperant -- mais jamais un majeur.
+    #
+    # LE TIRAGE EST LE MEME PARTOUT, seule la chance monte : un sur cinq au
+    # palier un, un sur trois au deux, un sur deux au trois. Ils etaient
+    # GARANTIS aux paliers deux et trois, ce qui, par vingt coffres, donnait
+    # cinquante artefacts en une partie -- pour six emplacements. On ne
+    # choisissait plus, on rangeait.
+    entries = artifacts_for(tier)
+    blanks = {1: 4, 2: 2, 3: 1}[tier]
+    total = sum(e.get("weight", 1) for e in entries)
+    pools.append(pool(1, [{"type": "minecraft:empty", "weight": blanks * total}] + entries))
 
     return {"type": "minecraft:chest", "pools": pools}
 

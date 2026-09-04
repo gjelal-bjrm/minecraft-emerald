@@ -39,10 +39,33 @@ public class GameState extends SavedData {
 
     public enum Status { LOBBY, PROLOGUE, RUNNING, WON, LOST }
 
+    /**
+     * LES DEUX FACONS DE JOUER LE MODE.
+     *
+     * DEFI est le mode d'origine : quatre-vingt-dix minutes, la Maree qui
+     * referme la carte, et une defaite si le temps passe. C'est une partie, avec
+     * un debut et une fin.
+     *
+     * LIBRE est le meme monde SANS L'HORLOGE. Les trois sanctuaires se dressent,
+     * la meteo tourne, le boss vient quand les trois ancres sont tenues -- mais
+     * rien ne presse et rien ne se referme. Le boss abattu, le CYCLE RECOMMENCE :
+     * trois nouveaux sanctuaires ailleurs, et l'on garde tout ce qu'on a bati.
+     *
+     * Le choix appartient au monde, pas au joueur ni au serveur : deux mondes
+     * peuvent donc se jouer differemment, et un monde ne change pas de nature
+     * entre deux connexions.
+     */
+    public enum Mode { DEFI, LIBRE }
+
     /** Distance entre le village et chaque ancre. */
     public static final int ANCHOR_DISTANCE = 450;
 
     private Status status = Status.LOBBY;
+    private Mode mode = Mode.DEFI;
+    /** Vrai des que quelqu'un a tranche : sinon on repose la question. */
+    private boolean modeChosen;
+    /** Le tour de piste, en mode LIBRE : il commence a un et ne s'arrete pas. */
+    private int cycle = 1;
     private long startTick;
     private int anchorsActive;
     private int anchorsInProgress;
@@ -64,6 +87,9 @@ public class GameState extends SavedData {
     private static GameState load(CompoundTag tag, HolderLookup.Provider registries) {
         GameState state = new GameState();
         state.status = Status.values()[Math.floorMod(tag.getInt("Status"), Status.values().length)];
+        state.mode = Mode.values()[Math.floorMod(tag.getInt("Mode"), Mode.values().length)];
+        state.modeChosen = tag.getBoolean("ModeChosen");
+        state.cycle = Math.max(1, tag.getInt("Cycle"));
         state.startTick = tag.getLong("StartTick");
         state.anchorsActive = tag.getInt("AnchorsActive");
         state.anchorsInProgress = tag.getInt("AnchorsInProgress");
@@ -84,6 +110,9 @@ public class GameState extends SavedData {
     @Override
     public CompoundTag save(CompoundTag tag, HolderLookup.Provider registries) {
         tag.putInt("Status", this.status.ordinal());
+        tag.putInt("Mode", this.mode.ordinal());
+        tag.putBoolean("ModeChosen", this.modeChosen);
+        tag.putInt("Cycle", this.cycle);
         tag.putLong("StartTick", this.startTick);
         tag.putInt("AnchorsActive", this.anchorsActive);
         tag.putInt("AnchorsInProgress", this.anchorsInProgress);
@@ -101,6 +130,58 @@ public class GameState extends SavedData {
 
     public Status status() {
         return this.status;
+    }
+
+    public Mode mode() {
+        return this.mode;
+    }
+
+    /** Vrai quand l'horloge compte : le raccourci lu par la Maree et le HUD. */
+    public boolean timed() {
+        return this.mode == Mode.DEFI;
+    }
+
+    public boolean modeChosen() {
+        return this.modeChosen;
+    }
+
+    public int cycle() {
+        return this.cycle;
+    }
+
+    /**
+     * Choisit le regime. Refuse une fois la partie ouverte : changer de nature
+     * au milieu d'une course arreterait un chronometre deja lance, ou en
+     * lancerait un sur un monde qu'on habite depuis trois heures.
+     */
+    public boolean chooseMode(Mode value) {
+        if (this.status != Status.LOBBY) {
+            return false;
+        }
+        this.mode = value;
+        this.modeChosen = true;
+        setDirty();
+        return true;
+    }
+
+    /**
+     * LE CYCLE SUIVANT, en monde ouvert.
+     *
+     * Le boss est tombe : on efface les objectifs, PAS le monde. Les
+     * sanctuaires abattus restent debout ou ils sont -- ce sont des ruines
+     * qu'on a prises -- et trois autres se dressent ailleurs. Le chronometre
+     * n'est pas touche : il ne sert a rien ici, et le remettre a zero
+     * fausserait les statistiques de partie.
+     */
+    public void nextCycle() {
+        this.cycle++;
+        this.anchorsActive = 0;
+        this.anchorsInProgress = 0;
+        this.activated.clear();
+        this.finale = BlockPos.ZERO;
+        this.finaleBoss = "";
+        this.finaleTick = 0L;
+        setDirty();
     }
 
     public int anchorsActive() {
@@ -191,7 +272,15 @@ public class GameState extends SavedData {
         return switch (this.status) {
             case LOBBY -> GamePhase.LOBBY;
             case PROLOGUE -> GamePhase.PROLOGUE;
-            case RUNNING -> GamePhase.forTicks(elapsed(level));
+            // EN MONDE OUVERT, LA PHASE SUIT LES ANCRES ET NON L'HORLOGE.
+            //
+            // Les phases pilotent la meteo et l'equipement des monstres. Les
+            // lire sur un chronometre qui ne compte plus donnerait l'Assaut
+            // permanent au bout d'une heure et demie de jeu tranquille : le
+            // monde durcirait tout seul pendant qu'on batit une maison.
+            case RUNNING -> this.mode == Mode.LIBRE
+                    ? GamePhase.forProgress(this.anchorsActive, !this.finale.equals(BlockPos.ZERO))
+                    : GamePhase.forTicks(elapsed(level));
             case WON, LOST -> GamePhase.FIN;
         };
     }
@@ -264,9 +353,16 @@ public class GameState extends SavedData {
         setDirty();
     }
 
-    /** Remet la partie a zero SANS toucher au village ni aux ancres deja places. */
+    /**
+     * Remet la partie a zero SANS toucher au village ni aux ancres deja places.
+     *
+     * Le regime, lui, SURVIT : c'est un choix qu'on a fait pour ce monde, pas
+     * un etat de partie. Une nouvelle mise en place dans un monde ouvert doit
+     * rester un monde ouvert.
+     */
     public void reset() {
         this.status = Status.LOBBY;
+        this.cycle = 1;
         this.startTick = 0L;
         this.anchorsActive = 0;
         this.anchorsInProgress = 0;
