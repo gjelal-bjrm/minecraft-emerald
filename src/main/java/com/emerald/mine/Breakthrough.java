@@ -70,21 +70,28 @@ public final class Breakthrough {
 
     public enum Shape { COULOIR, ESCALIER, CHEMINEE, SALLE }
 
-    /** Un chantier en cours : ses tranches, ce qu'il a deja ouvert, et son eau. */
+    /** Un chantier en cours : ses tranches, ce qu'il a deja ouvert, son eau, et sa suite. */
     private static final class Dig {
         final ServerLevel level;
         final ArrayDeque<List<BlockPos>> slices;
         final Set<BlockPos> carved = new HashSet<>();
         final List<BlockPos> water;
-        final Shape shape;
+        final Direction facing;
+        /** Ce qui se passe une fois tout ouvert : les filons des Percees, le fond des Poches. */
+        final java.util.function.Consumer<Set<BlockPos>> onDone;
 
-        Dig(ServerLevel level, ArrayDeque<List<BlockPos>> slices, List<BlockPos> water, Shape shape) {
+        Dig(ServerLevel level, ArrayDeque<List<BlockPos>> slices, List<BlockPos> water,
+            Direction facing, java.util.function.Consumer<Set<BlockPos>> onDone) {
             this.level = level;
             this.slices = slices;
             this.water = water;
-            this.shape = shape;
+            this.facing = facing;
+            this.onDone = onDone;
         }
     }
+
+    /** Une percee sur tant debouche sur une Poche : la faille mene quelque part. */
+    private static final int POCKET_ONE_IN = 6;
 
     private static final List<Dig> digs = new ArrayList<>();
     private static final Map<UUID, Long> rest = new HashMap<>();
@@ -135,7 +142,7 @@ public final class Breakthrough {
         if (plan == null) {
             return false;
         }
-        digs.add(new Dig(level, plan.slices, plan.water, shape));
+        digs.add(new Dig(level, plan.slices, plan.water, facing, carved -> finishBreakthrough(level, carved, facing)));
         // LE CRAQUEMENT, puis le grondement : on entend la roche ceder avant de
         // la voir s'ouvrir
         level.playSound(null, from, SoundEvents.DEEPSLATE_BREAK, SoundSource.BLOCKS, 1.2F, 0.6F);
@@ -148,6 +155,38 @@ public final class Breakthrough {
     // ---------------------------------------------------------------- le plan
 
     private record Plan(ArrayDeque<List<BlockPos>> slices, List<BlockPos> water) {
+    }
+
+    /**
+     * Met un chantier en file pour quelqu'un d'autre (les Poches) : memes
+     * tranches, meme rythme, meme respect de la roche ; a la fin, sa suite.
+     */
+    static void enqueue(ServerLevel level, ArrayDeque<List<BlockPos>> slices, List<BlockPos> water,
+                        Direction facing, java.util.function.Consumer<Set<BlockPos>> onDone) {
+        digs.add(new Dig(level, slices, water, facing, onDone));
+    }
+
+    /**
+     * L'emprise est-elle ouvrable ? De la roche, de l'air ou du minerai, rien
+     * d'autre, et pas une goutte de fluide a son contact. La meme regle que
+     * le plan des Percees, offerte aux Poches.
+     */
+    static boolean clear(ServerLevel level, List<BlockPos> footprint) {
+        for (BlockPos pos : footprint) {
+            if (pos.getY() < level.getMinBuildHeight() + 2) {
+                return false;
+            }
+            BlockState state = level.getBlockState(pos);
+            if (!state.isAir() && !Underground.natural(state) && !Underground.ore(state)) {
+                return false;
+            }
+            for (Direction side : Direction.values()) {
+                if (!level.getFluidState(pos.relative(side)).isEmpty()) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
     /**
@@ -230,23 +269,9 @@ public final class Breakthrough {
             }
         }
         // LA VERIFICATION, avant le premier bloc
-        for (List<BlockPos> slice : slices) {
-            for (BlockPos pos : slice) {
-                if (pos.getY() < level.getMinBuildHeight() + 2) {
-                    return null;
-                }
-                BlockState state = level.getBlockState(pos);
-                if (!state.isAir() && !Underground.natural(state) && !Underground.ore(state)) {
-                    return null;                  // autre chose que de la roche : on s'arrete la
-                }
-                for (Direction side : Direction.values()) {
-                    if (!level.getFluidState(pos.relative(side)).isEmpty()) {
-                        return null;              // l'eau ou la lave entrerait : non
-                    }
-                }
-            }
-        }
-        return new Plan(slices, water);
+        List<BlockPos> footprint = new ArrayList<>();
+        slices.forEach(footprint::addAll);
+        return clear(level, footprint) ? new Plan(slices, water) : null;
     }
 
     // ------------------------------------------------------------ le chantier
@@ -289,16 +314,35 @@ public final class Breakthrough {
         }
     }
 
-    /** Le chantier fini : l'eau de la chambre, et les filons dans les parois. */
+    /** Le chantier fini : l'eau, puis la suite propre a chacun. */
     private static void finish(Dig dig) {
         ServerLevel level = dig.level;
         for (BlockPos pos : dig.water) {
             level.setBlock(pos, Blocks.WATER.defaultBlockState(), 3);
         }
-        plantOres(level, dig.carved);
-        if (!dig.carved.isEmpty()) {
-            BlockPos any = dig.carved.iterator().next();
-            level.playSound(null, any, SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.BLOCKS, 0.7F, 0.8F);
+        dig.onDone.accept(dig.carved);
+    }
+
+    /** La suite d'une Percee : ses filons, et une fois sur six une Poche au bout. */
+    private static void finishBreakthrough(ServerLevel level, Set<BlockPos> carved, Direction facing) {
+        plantOres(level, carved);
+        if (carved.isEmpty()) {
+            return;
+        }
+        BlockPos any = carved.iterator().next();
+        level.playSound(null, any, SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.BLOCKS, 0.7F, 0.8F);
+        if (level.random.nextInt(POCKET_ONE_IN) == 0) {
+            // le bout de la faille : le bloc ouvert le plus loin dans sa direction
+            BlockPos far = any;
+            int best = Integer.MIN_VALUE;
+            for (BlockPos pos : carved) {
+                int along = pos.getX() * facing.getStepX() + pos.getZ() * facing.getStepZ();
+                if (along > best) {
+                    best = along;
+                    far = pos;
+                }
+            }
+            Pockets.open(level, far, facing, null);
         }
     }
 

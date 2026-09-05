@@ -250,6 +250,20 @@ public class GameCommands {
             }));
         }
         root.then(percee);
+        var poche = Commands.literal("poche");
+        for (com.emerald.mine.Pockets.Kind kind : com.emerald.mine.Pockets.Kind.values()) {
+            final com.emerald.mine.Pockets.Kind wanted = kind;
+            poche.then(Commands.literal(kind.name().toLowerCase(java.util.Locale.ROOT)).executes(ctx -> {
+                net.minecraft.server.level.ServerPlayer player = ctx.getSource().getPlayerOrException();
+                boolean ok = com.emerald.mine.Pockets.open(player.serverLevel(),
+                        player.blockPosition().relative(player.getDirection()), player.getDirection(), wanted);
+                ctx.getSource().sendSuccess(() -> Component.literal(ok
+                        ? "Poche : " + wanted + " ouverte"
+                        : "Poche refusee : l'emprise n'est pas que de la roche"), false);
+                return ok ? 1 : 0;
+            }));
+        }
+        root.then(poche);
         root.then(Commands.literal("resonance").executes(ctx -> {
             net.minecraft.server.level.ServerPlayer player = ctx.getSource().getPlayerOrException();
             BlockPos at = player.blockPosition().relative(player.getDirection(), 2);

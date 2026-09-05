@@ -83,7 +83,7 @@ public final class SanctuaryGarrison {
         BlockPos at = spot.offset(
                 level.random.nextInt(spread * 2 + 1) - spread, 0,
                 level.random.nextInt(spread * 2 + 1) - spread);
-        spawnGuard(level, pool, at, 12);
+        spawnGuard(level, pool, at, 12, null);
     }
 
     /**
@@ -96,25 +96,35 @@ public final class SanctuaryGarrison {
      * maintenant l'endroit ou on l'a mis.
      */
     public static void postGuard(ServerLevel level, BlockPos at, int radius) {
-        List<EntityType<?>> pool = pool(level);
-        if (!pool.isEmpty()) {
-            spawnGuard(level, pool, at, radius);
-        }
+        postGuard(level, at, radius, null);
     }
 
-    private static void spawnGuard(ServerLevel level, List<EntityType<?>> pool,
-                                   BlockPos at, int radius) {
+    /** Un gardien avec une marque de plus : le Vide des Poches s'en sert. */
+    @javax.annotation.Nullable
+    public static Entity postGuard(ServerLevel level, BlockPos at, int radius,
+                                   @javax.annotation.Nullable String extraTag) {
+        List<EntityType<?>> pool = pool(level);
+        return pool.isEmpty() ? null : spawnGuard(level, pool, at, radius, extraTag);
+    }
+
+    @javax.annotation.Nullable
+    private static Entity spawnGuard(ServerLevel level, List<EntityType<?>> pool,
+                                     BlockPos at, int radius, @javax.annotation.Nullable String extraTag) {
         EntityType<?> type = pool.get(level.random.nextInt(pool.size()));
         Entity mob = type.spawn(level, at, MobSpawnType.STRUCTURE);
         if (mob == null) {
-            return;
+            return null;
         }
         mob.addTag(TAG_GUARD);
+        if (extraTag != null) {
+            mob.addTag(extraTag);
+        }
         if (mob instanceof PathfinderMob guard) {
             guard.restrictTo(at, radius);
             guard.goalSelector.addGoal(6, new MoveTowardsRestrictionGoal(guard, 1.0));
             guard.setPersistenceRequired();
         }
+        return mob;
     }
 
     /**

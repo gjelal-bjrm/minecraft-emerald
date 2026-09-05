@@ -3881,3 +3881,39 @@ escalier descendant avec deux cuivres exposes ; cheminee « gorge ouverte » et
 Piege d'essai a retenir : `execute as @p run tp @s ~ ~ ~` SANS `at @s` prend
 la position de la source de la fonction -- le spawn du monde -- et
 `/fill` refuse au-dela de 32 768 blocs, en silence dans une fonction.
+
+### 47.5 Etape 4 : les Poches
+
+`mine/Pockets`. En cassant un minerai sous y = 48, une chance sur douze (une
+sur six pendant l'Aurore) qu'il s'ouvre : un craquement, un echo creux, et
+derriere lui -- dans la direction du regard, quantifiee -- une cavite qu'on n'a
+pas creusee : une gorge d'un bloc, puis un blob de 3x2x3 aux coins rognes, qui
+s'ouvre du plus pres au plus loin par le chantier des Percees (memes tranches,
+memes garde-fous : de la roche, de l'air ou du minerai, et rien a moins d'un
+bloc d'un fluide, sinon rien). Au fond :
+
+| | | |
+|---|---|---|
+| **Geode** | 50 % | 45 % des parois en amethyste, des cristaux qui poussent vers l'interieur (ils eclairent : c'est la seule poche qu'on VOIT s'ouvrir), et au sol 2-3 pierres d'element et 1-2 plumes |
+| **Cache** | 30 % | un coffre, eparpille : fer et or, ou or et diamant sous zero, des torches, une rune une fois sur trois |
+| **Filon riche** | 15 % | 6 a 10 blocs d'Arcencium dans les parois |
+| **Le Vide** | 5 % | 5x4x5, NOIR, et une elite de la garnison des sanctuaires attachee a la cavite -- elle paie double |
+
+**Le Vide est verrouille** tant que moins de deux sanctuaires sont tenus
+(`GameState.anchorsActive() < 2`) : avant, la poche redevient une geode.
+
+**Une Percee sur six debouche sur une Poche**, au bout de la faille.
+
+Aucun message : le trou parle de lui-meme. Le journal, lui, dit tout
+(« Poche GEODE ouverte derriere ... vers south (19 blocs) », ou pourquoi elle a
+ete refusee).
+
+Commande d'essai : `/arcencium poche <geode|cache|filon|vide>`.
+
+Verifie en jeu : geode aux parois d'amethyste et Pierres de Lumiere au sol ;
+coffre de la cache exactement au fond (par le bloc) ; filon de six Arcencium en
+paroi ; Vide verrouille sans deux sanctuaires (aucune elite).
+
+Deuxieme piege d'essai, meme famille que le premier : `execute as @p run
+execute if entity @e[distance=..12]` sans `at @s` mesure la distance depuis le
+spawn du monde.

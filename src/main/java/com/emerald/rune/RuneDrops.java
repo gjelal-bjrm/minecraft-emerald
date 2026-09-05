@@ -72,6 +72,10 @@ public final class RuneDrops {
         double hunt = com.emerald.weather.WeatherManager.current()
                 == com.emerald.weather.Weather.BATTUE
                 ? 1.5 * com.emerald.weather.BattueHunt.multiplier(killer) : 1.0;
+        // L'ELITE DU VIDE PAIE DOUBLE : c'est le prix du pari qu'on a ouvert.
+        if (victim.getTags().contains(com.emerald.mine.Pockets.TAG_VIDE)) {
+            hunt *= 2.0;
+        }
         // Pas de bonus de Butin : depuis la 1.21 il ne passe plus par un
         // niveau lisible sur l'evenement mais par un effet d'enchantement
         // applique en amont. Plutot que de deviner une API, on s'en passe --
