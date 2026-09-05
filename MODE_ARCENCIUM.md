@@ -3740,3 +3740,56 @@ Les autres meteos poussent DEHORS. Celle-ci fait RENTRER.
 
 Les trois douces se partagent donc les trois verbes du mode : **Aurore = miner,
 Battue = combattre, Heure Doree = forger.**
+
+---
+
+## 47. Les grottes prennent vie -- le plan, et l'etape 1 *(5 sept. 2026)*
+
+### 47.1 Le plan arrete avec le joueur
+
+Six etapes, chacune verifiee en jeu avant la suivante :
+
+1. **L'ambiance de la Battue** (aube, corbeaux, cor, hurlements, tambour) et le
+   **blanc / rouge** -- *faite*.
+2. **La Proie** (cerf ou sanglier du Twilight Forest, tire au sort) et **la
+   Serie** (butin x1,5 / x2 / x3 sur les kills enchaines, affichee).
+3. **La Resonance** (la pioche comme sonar : les minerais du meme type
+   repondent a 4 / 8 / 12 blocs selon l'outil) et **les Percees** (la roche
+   qui s'ouvre en couloir, escalier, cheminee-bassin ou salle, 1 sur 45,
+   sous y = 48, en exposant les filons qu'elle croise).
+4. **Les Poches** (1 minerai casse sur 12 s'ouvre sur une geode, une cache, un
+   filon riche -- ou le Vide, verrouille tant que moins de deux sanctuaires
+   sont tenus).
+5. **Les Puits et les Brumes d'Aurore** : pendant l'Aurore, des colonnes de
+   lumiere (blocs traversables, chute lente, remontee) se levent dans les
+   grottes, et des paires de brumes etoilees relient deux points -- on s'y
+   dissout et l'on traverse la roche jusqu'a l'autre. Annonce a 45 s et 15 s
+   de la fin, extinction bloc par bloc, chute lente a qui est encore dedans.
+6. **Les Echos** (Souffle, Secousse, Chant, Yeux), toutes les 3 a 5 minutes
+   sous terre.
+
+Perimetre : partout sous terre, sauf les 48 blocs du village et l'emprise des
+sanctuaires. Rien a fabriquer, rien a poser : ce sont les grottes qui vivent.
+
+### 47.2 Etape 1 : ce qu'on entend et voit de la Battue
+
+Tout ce qui ne peut PAS mal se dessiner -- l'horloge, le son, la lueur
+d'entite, des creatures vivantes -- et rien d'autre (`weather/BattueScene`).
+
+| | |
+|---|---|
+| **L'aube** | horloge a 23 000 : lune encore la, premiere lueur a l'est, lumiere bleue -- l'oppose de l'Heure Doree |
+| **Les corbeaux** | 5 a 8 `twilightforest:raven`, tenus en cercle a 14 blocs au-dessus du joueur (leur IA les poserait en dix secondes), rayon et hauteur qui ondulent ; ils partent avec la meteo |
+| **Le cor** | la corne de chevre du jeu, variantes « call » et « seek » ; a 70 blocs au debut, puis 50, puis 30 -- la chasse se rapproche |
+| **Les hurlements** | des loups a 40-70 blocs, toutes les 15 a 25 s, direction au sort |
+| **Le tambour** | une grosse caisse au joueur quand un hostile qui ne l'a pas vu est a moins de 16 blocs ; tempo de 30 a 8 tiques selon la distance ; se tait des qu'il est repere |
+
+**Blanc / rouge / or** : la couleur d'une lueur d'entite est celle de son
+EQUIPE de scoreboard. Trois equipes (`arc_battue_white/red/gold`), chaque
+creature y est rangee chaque seconde selon son etat -- cible sur un joueur ou
+non, Proie ou non -- et toutes sont videes a la fin. Gratuit, et fiable sous
+tout pack de shaders.
+
+Verifie en jeu : captures de l'aube aux corbeaux, des contours blancs, du
+zombie passe au rouge en prenant le joueur pour cible ; `blanc present`,
+`rouge present`, `equipes videes`, `corbeaux partis`.

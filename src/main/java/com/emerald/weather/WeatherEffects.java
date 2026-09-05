@@ -306,6 +306,9 @@ public final class WeatherEffects {
             auroreTold.clear();
             auroreMined.clear();
         }
+        if (weather == Weather.BATTUE) {
+            BattueScene.begin(level);
+        }
         if (weather == Weather.DECHIRURE) {
             spawnShards(level);
         }
@@ -324,6 +327,7 @@ public final class WeatherEffects {
             case BATTUE -> {
                 sweepModifier(level, Attributes.FOLLOW_RANGE, BATTUE_ID);
                 unglow(level);
+                BattueScene.end(level);
             }
             case DECHIRURE -> endDechirure(level);
             case METEORES -> {
@@ -535,7 +539,7 @@ public final class WeatherEffects {
      * fenetre pour traverser ou contourner sans se battre.
      */
     /** Rayon de la chasse : ce qui vit dans ce cercle se detoure. */
-    private static final int PRISME_RANGE = 64;
+    static final int PRISME_RANGE = 64;
 
     /**
      * LE BATTUE ETEINT : LA FENETRE DE CHASSE.
@@ -556,23 +560,22 @@ public final class WeatherEffects {
      * l'information : le seul echange qu'un joueur accepte volontiers.
      */
     private static void tickBattue(ServerLevel level) {
+        // l'ambiance -- corbeaux, cor, hurlements, tambour, blanc/rouge -- vit
+        // dans BattueScene ; ici ne reste que ce qui touche au jeu
+        BattueScene.tick(level);
         if (level.getGameTime() % 20 != 0) {
             return;
         }
         for (ServerPlayer player : level.players()) {
             for (Mob mob : level.getEntitiesOfClass(Mob.class,
                     player.getBoundingBox().inflate(PRISME_RANGE), m -> m.isAlive())) {
+                if (mob.getTags().contains(BattueScene.TAG_RAVEN)) {
+                    continue;                          // les corbeaux ne sont pas du gibier
+                }
                 mob.setGlowingTag(true);
                 if (mob instanceof Enemy) {
                     ensureModifier(mob, Attributes.FOLLOW_RANGE, BATTUE_ID, -0.7);
                 }
-            }
-        }
-        if (level.getGameTime() % 160 == 0) {
-            // une nappe basse, tres discrete : le silence d'une pellicule
-            for (ServerPlayer player : level.players()) {
-                player.playNotifySound(SoundEvents.BEACON_AMBIENT,
-                        SoundSource.AMBIENT, 0.22F, 0.55F);
             }
         }
     }

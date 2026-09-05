@@ -176,6 +176,10 @@ public final class WeatherManager {
             // c'est la seule facon d'obtenir une lumiere doree qu'on ne puisse
             // pas rater.
             case HEURE_DOREE -> 11800L;
+            // LA BATTUE : l'aube profonde. La lune encore la, la premiere lueur
+            // a l'est, une lumiere bleue et froide -- l'oppose exact de l'Heure
+            // Doree. Une battue se fait a l'aube ; c'est sa definition.
+            case BATTUE -> 23000L;
             default -> -1L;
         };
     }
