@@ -500,5 +500,6 @@
   "game.emeraldweapons.battue.prey.killed": "Halloo! %s has fallen.",
   "game.emeraldweapons.battue.prey.escaped": "The Prey got away.",
   "weather.emeraldweapons.vein.prey": "Prey",
-  "weather.emeraldweapons.vein.mist": "Mist"
+  "weather.emeraldweapons.vein.mist": "Mist",
+  "mine.emeraldweapons.breakthrough": "The rock gives way."
 }

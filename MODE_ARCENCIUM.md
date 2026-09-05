@@ -3832,3 +3832,52 @@ entree -- Arcencium, diamant, Proie, et la Brume d'Aurore a venir.
 Verifie en jeu : « Battue : la Proie « Seize-Cors » (cerf) », « ↙ Proie 72m
 ▼36 », « SERIE ×1,5 4 kill(s) » puis « ×2 5 kill(s) », « Hallali ! Seize-Cors
 est tombe. », Proie partie a l'arret.
+
+### 47.4 Etape 3 : la Resonance et les Percees
+
+Le paquet `mine` porte desormais le sous-sol, avec ses regles communes
+(`Underground`) : SOUS y = 48 seulement, jamais a moins de 48 blocs du village
+ni de 110 d'une ancre, et l'on ne touche qu'a la ROCHE NATURELLE -- un bloc
+pose, un coffre, un minerai arretent tout. Le minerai n'est jamais detruit, il
+est decouvert.
+
+**La Resonance** (`mine/Resonance`) : casser un minerai fait repondre les
+minerais DU MEME TYPE caches dans la roche autour -- un carillon a leur endroit,
+plus haut quand ils sont proches, et un jalon lumineux de deux secondes et
+demie a travers la pierre (`mine/Jalons`, la technique des filons de l'Aurore
+sortie pour servir a tous : un porte-armure marqueur invisible et luisant qui
+porte sa propre date de mort). Six echos au plus, et jamais un filon deja a
+l'air libre. La portee suit l'outil -- bois et or 2, pierre 3, fer 4, diamant
+8, netherite et au-dela 12 -- et double pendant l'Aurore. Toujours actif,
+jamais en creatif.
+
+**Les Percees** (`mine/Breakthrough`) : en cassant de la PIERRE sous y = 48,
+une chance sur quarante-cinq que la roche cede. Un craquement, un grondement,
+« La roche cede. » sur la barre d'action, et le passage s'ouvre BLOC PAR BLOC
+-- une tranche par tique, avec le bruit et les eclats du bloc (evenement 2001)
+pour que la fissure se voie courir. Quatre formes :
+
+| Forme | Emprise | Ce qu'elle fait |
+|---|---|---|
+| Couloir (40 %) | 1x2, 6 a 14 blocs droit devant | avancer vite |
+| Escalier (30 %) | descend d'un bloc par bloc, 5 a 10, avec un palier | descendre sans sauter |
+| Cheminee (15 %) | gorge 2x2 de 6 a 12 blocs, chambre 3x3x3 au sol D'EAU, puis un couloir qui repart | descendre d'un coup, sans se faire mal |
+| Salle (15 %) | 5x4x5 | respirer, poser une base |
+
+L'emprise ENTIERE est verifiee avant le premier bloc : de la roche, de l'air
+ou du minerai, rien d'autre, et pas une goutte de fluide a son contact --
+sinon pas de percee du tout. Vingt secondes de repit entre deux. A la fin, la
+faille plante DEUX A QUATRE MINERAIS dans les parois qui bordent ce qu'elle a
+ouvert (ardoise sous zero, diamant seulement sous seize, Arcencium une fois sur
+quatre) : « ca casse des filons ».
+
+Commandes d'essai : `/arcencium percee <couloir|escalier|cheminee|salle>` et
+`/arcencium resonance`.
+
+Verifie en jeu : echos presents ; couloir ouvert avec un minerai en paroi ;
+escalier descendant avec deux cuivres exposes ; cheminee « gorge ouverte » et
+« eau a 12 » (le fond de la chambre, par les blocs) ; salle carree.
+
+Piege d'essai a retenir : `execute as @p run tp @s ~ ~ ~` SANS `at @s` prend
+la position de la source de la fonction -- le spawn du monde -- et
+`/fill` refuse au-dela de 32 768 blocs, en silence dans une fonction.

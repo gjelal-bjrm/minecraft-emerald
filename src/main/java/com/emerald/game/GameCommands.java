@@ -234,6 +234,31 @@ public class GameCommands {
                             return 1;
                         })));
 
+        // LE SOUS-SOL, a la demande : de quoi voir une percee ou un echo sans
+        // casser quarante-cinq pierres en esperant.
+        var percee = Commands.literal("percee");
+        for (com.emerald.mine.Breakthrough.Shape shape : com.emerald.mine.Breakthrough.Shape.values()) {
+            final com.emerald.mine.Breakthrough.Shape wanted = shape;
+            percee.then(Commands.literal(shape.name().toLowerCase(java.util.Locale.ROOT)).executes(ctx -> {
+                net.minecraft.server.level.ServerPlayer player = ctx.getSource().getPlayerOrException();
+                boolean ok = com.emerald.mine.Breakthrough.open(player.serverLevel(), player,
+                        player.blockPosition().relative(player.getDirection()), wanted);
+                ctx.getSource().sendSuccess(() -> Component.literal(ok
+                        ? "Percee : " + wanted + " ouverte"
+                        : "Percee refusee : l'emprise n'est pas que de la roche"), false);
+                return ok ? 1 : 0;
+            }));
+        }
+        root.then(percee);
+        root.then(Commands.literal("resonance").executes(ctx -> {
+            net.minecraft.server.level.ServerPlayer player = ctx.getSource().getPlayerOrException();
+            BlockPos at = player.blockPosition().relative(player.getDirection(), 2);
+            int echoes = com.emerald.mine.Resonance.echo(player.serverLevel(), player, at,
+                    net.minecraft.world.level.block.Blocks.DIAMOND_ORE);
+            ctx.getSource().sendSuccess(() -> Component.literal("Resonance : " + echoes + " echo(s)"), false);
+            return echoes;
+        }));
+
         // LA PAUSE : « parfois je dois m'absenter temporairement ».
         root.then(Commands.literal("pause").executes(ctx -> setPaused(ctx.getSource(), true)));
         root.then(Commands.literal("reprendre")

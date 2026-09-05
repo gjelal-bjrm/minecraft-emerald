@@ -500,5 +500,6 @@
   "game.emeraldweapons.battue.prey.killed": "Hallali ! %s est tombé.",
   "game.emeraldweapons.battue.prey.escaped": "La Proie s'est échappée.",
   "weather.emeraldweapons.vein.prey": "Proie",
-  "weather.emeraldweapons.vein.mist": "Brume"
+  "weather.emeraldweapons.vein.mist": "Brume",
+  "mine.emeraldweapons.breakthrough": "La roche cède."
 }
