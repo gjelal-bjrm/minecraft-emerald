@@ -250,6 +250,16 @@ public class GameCommands {
             }));
         }
         root.then(percee);
+        // Les grottes de l'Aurore, a la demande : ouvrir, puis refermer.
+        root.then(Commands.literal("grottes")
+                .then(Commands.literal("ouvrir").executes(ctx -> {
+                    com.emerald.mine.AuroreCaves.begin(ctx.getSource().getServer().overworld());
+                    return 1;
+                }))
+                .then(Commands.literal("fermer").executes(ctx -> {
+                    com.emerald.mine.AuroreCaves.end(ctx.getSource().getServer().overworld());
+                    return 1;
+                })));
         var poche = Commands.literal("poche");
         for (com.emerald.mine.Pockets.Kind kind : com.emerald.mine.Pockets.Kind.values()) {
             final com.emerald.mine.Pockets.Kind wanted = kind;

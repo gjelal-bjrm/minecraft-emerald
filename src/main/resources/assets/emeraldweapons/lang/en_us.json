@@ -501,5 +501,9 @@
   "game.emeraldweapons.battue.prey.escaped": "The Prey got away.",
   "weather.emeraldweapons.vein.prey": "Prey",
   "weather.emeraldweapons.vein.mist": "Mist",
-  "mine.emeraldweapons.breakthrough": "The rock gives way."
+  "mine.emeraldweapons.breakthrough": "The rock gives way.",
+  "mine.emeraldweapons.aurore.opened": "The caves open: %s Aurora wells, %s pair(s) of starry mists.",
+  "mine.emeraldweapons.aurore.closing": "The Aurora wells go out in %s seconds.",
+  "block.emeraldweapons.aurore_light": "Aurora Well",
+  "block.emeraldweapons.star_mist": "Starry Mist"
 }

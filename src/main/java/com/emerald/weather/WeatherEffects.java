@@ -305,6 +305,8 @@ public final class WeatherEffects {
             // chaque Aurore reparle : ce qu'on a dit la fois d'avant est loin
             auroreTold.clear();
             auroreMined.clear();
+            // et les grottes s'ouvrent : puits de lumiere, brumes etoilees
+            com.emerald.mine.AuroreCaves.begin(level);
         }
         if (weather == Weather.BATTUE) {
             BattueScene.begin(level);
@@ -322,6 +324,7 @@ public final class WeatherEffects {
     static void end(ServerLevel level, Weather weather) {
         if (weather == Weather.AURORE) {
             sweepMarks(level);
+            com.emerald.mine.AuroreCaves.end(level);
         }
         switch (weather) {
             case BATTUE -> {
@@ -722,6 +725,7 @@ public final class WeatherEffects {
      * Vitesse, et la faim qui descend deux fois moins vite.
      */
     private static void tickAurore(ServerLevel level) {
+        com.emerald.mine.AuroreCaves.tick(level, WeatherManager.remainingTicks());
         if (level.getGameTime() % 40 != 0) {
             return;
         }
@@ -736,6 +740,19 @@ public final class WeatherEffects {
                 if (!level.getBlockState(veins.get(i)).is(ModBlocks.ARCENCIUM_ORE.get())) {
                     kinds |= com.emerald.network.VeinSyncPayload.KIND_DIAMOND << (2 * i);
                 }
+            }
+            // LES SORTIES SUR LA BOUSSOLE : la brume la plus proche, apres les
+            // filons. On sait toujours par ou remonter.
+            BlockPos nearestMist = null;
+            for (BlockPos mist : com.emerald.mine.AuroreCaves.mists()) {
+                if (nearestMist == null || mist.distSqr(player.blockPosition())
+                        < nearestMist.distSqr(player.blockPosition())) {
+                    nearestMist = mist;
+                }
+            }
+            if (nearestMist != null && packed.size() < 15) {
+                kinds |= com.emerald.network.VeinSyncPayload.KIND_MIST << (2 * packed.size());
+                packed.add(nearestMist.asLong());
             }
             net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player,
                     new com.emerald.network.VeinSyncPayload(packed, kinds));

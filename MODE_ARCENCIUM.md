@@ -3917,3 +3917,48 @@ paroi ; Vide verrouille sans deux sanctuaires (aucune elite).
 Deuxieme piege d'essai, meme famille que le premier : `execute as @p run
 execute if entity @e[distance=..12]` sans `at @s` mesure la distance depuis le
 spawn du monde.
+
+### 47.6 Etape 5 : les Puits et les Brumes d'Aurore
+
+`mine/AuroreCaves`, avec deux blocs sans objet ni recette (`AuroreLightBlock`,
+`StarMistBlock` : incassables, sans butin, sans collision, lumineux, rendus en
+translucide par `render_type` dans le modele -- textures procedurales, car ce
+sont des effets de lumiere et non des pieces d'identite).
+
+**Au debut de l'Aurore**, autour de chaque joueur (rayon 64, 400 colonnes
+sondees au hasard, jamais dans un chunk qu'il faudrait charger, jamais sous le
+ciel, jamais hors du perimetre d'`Underground`) :
+
+- **2 a 4 Puits** la ou il y a au moins six blocs d'air au-dessus d'un sol
+  naturel -- les plus grands vides d'abord, jamais deux a moins de douze blocs.
+  La colonne MONTE bloc par bloc (un par tique, une note qui grimpe). Dedans on
+  monte (0,22/tique), on descend accroupi, la chute est remise a zero a chaque
+  tique. Le mouvement est pose des deux cotes, comme une colonne de bulles ;
+- **1 a 2 paires de Brumes** : deux lieux a 30-120 blocs, en preferant le plus
+  grand ecart de hauteur (c'est une remontee). Six blocs chacune (une croix et
+  deux de haut). Entrer dans l'une declenche le voyage : un porteur invisible
+  (porte-armure marqueur, `noPhysics`) suit une courbe de Bezier a travers la
+  roche en 70 tiques, le joueur le chevauche (re-attache a chaque tique s'il
+  descend), invulnerable, dans une trainee de motes ; a l'arrivee il est pose
+  sur l'ancre jumelle. Le depart ne se fait qu'en ENTRANT (touche cette tique
+  et pas la precedente), et jamais dans les trois secondes qui suivent une
+  arrivee : on ne rebondit pas.
+- La brume la plus proche est sur la boussole (`KIND_MIST`, « Brume 34m ▼12 »).
+
+**La fin, annoncee** : a 45 s et a 15 s de la fin (`WeatherManager.
+remainingTicks`), « Les puits d'Aurore s'eteignent dans N secondes ». A la
+fin, les colonnes s'eteignent DE HAUT EN BAS, un bloc par tique ; qui est
+encore dedans recoit dix secondes de chute lente ; les brumes se dispersent ;
+un voyage en cours va jusqu'au bout.
+
+Commandes d'essai : `/arcencium grottes ouvrir|fermer`.
+
+Verifie en jeu : « 2 puits et 1 paire(s) de brumes leves », l'une a y = 16 et
+l'autre a y = 0 ; le voyage capture en plein vol DANS la roche (x -405, y 7)
+puis a l'arrivee exacte (-410, 0, -401) ; le puits qui porte le joueur de y = 0
+a 7 puis 13 ; les deux avertissements ; « puits eteint » et « brume dispersee »
+par les blocs apres la fin.
+
+Troisieme piege d'essai : SendKeys reserve `{ } ( ) + ^ % ~` -- une commande
+tapee au chat qui en contient est tronquee, et un chat reste ouvert apres un
+echec (Echap avant `t`).

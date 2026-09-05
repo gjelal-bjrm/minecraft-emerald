@@ -69,6 +69,11 @@ public final class WeatherManager {
         return current;
     }
 
+    /** Ce qu'il reste de la meteo en cours, en tiques ; zero hors meteo. */
+    public static int remainingTicks() {
+        return current.real() ? remaining : 0;
+    }
+
     public static boolean isEmbellie() {
         return current == Weather.EMBELLIE;
     }

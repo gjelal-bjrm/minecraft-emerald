@@ -501,5 +501,9 @@
   "game.emeraldweapons.battue.prey.escaped": "La Proie s'est échappée.",
   "weather.emeraldweapons.vein.prey": "Proie",
   "weather.emeraldweapons.vein.mist": "Brume",
-  "mine.emeraldweapons.breakthrough": "La roche cède."
+  "mine.emeraldweapons.breakthrough": "La roche cède.",
+  "mine.emeraldweapons.aurore.opened": "Les grottes s'ouvrent : %s puits d'Aurore, %s paire(s) de brumes étoilées.",
+  "mine.emeraldweapons.aurore.closing": "Les puits d'Aurore s'éteignent dans %s secondes.",
+  "block.emeraldweapons.aurore_light": "Puits d'Aurore",
+  "block.emeraldweapons.star_mist": "Brume étoilée"
 }

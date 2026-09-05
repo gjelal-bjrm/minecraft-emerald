@@ -211,6 +211,24 @@ public class ModBlocks {
     // ------------------------------------------------------------- helpers
 
     /** Enregistre un bloc sans objet associe : pour ceux que seul le jeu pose. */
+    /**
+     * LES DEUX PHENOMENES DE L'AURORE SOUS TERRE, sans objet ni recette : on ne
+     * les pose pas, ils apparaissent. Incassables, sans butin, sans collision,
+     * lumineux ; ils se rendent en translucide (render_type dans le modele).
+     */
+    public static final DeferredBlock<AuroreLightBlock> AURORE_LIGHT = registerBlockOnly("aurore_light",
+            () -> new AuroreLightBlock(BlockBehaviour.Properties.of()
+                    .noCollission().noOcclusion().lightLevel(s -> 15)
+                    .strength(-1.0F, 3600000.0F).noLootTable()
+                    .pushReaction(net.minecraft.world.level.material.PushReaction.DESTROY)
+                    .sound(net.minecraft.world.level.block.SoundType.AMETHYST)));
+    public static final DeferredBlock<StarMistBlock> STAR_MIST = registerBlockOnly("star_mist",
+            () -> new StarMistBlock(BlockBehaviour.Properties.of()
+                    .noCollission().noOcclusion().lightLevel(s -> 12)
+                    .strength(-1.0F, 3600000.0F).noLootTable()
+                    .pushReaction(net.minecraft.world.level.material.PushReaction.DESTROY)
+                    .sound(net.minecraft.world.level.block.SoundType.AMETHYST)));
+
     private static <T extends Block> DeferredBlock<T> registerBlockOnly(String name, Supplier<T> block) {
         return BLOCKS.register(name, block);
     }
