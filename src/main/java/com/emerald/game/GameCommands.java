@@ -260,6 +260,16 @@ public class GameCommands {
                     com.emerald.mine.AuroreCaves.end(ctx.getSource().getServer().overworld());
                     return 1;
                 })));
+        var echo = Commands.literal("echo");
+        for (com.emerald.mine.Echoes.Kind kind : com.emerald.mine.Echoes.Kind.values()) {
+            final com.emerald.mine.Echoes.Kind wanted = kind;
+            echo.then(Commands.literal(kind.name().toLowerCase(java.util.Locale.ROOT)).executes(ctx -> {
+                net.minecraft.server.level.ServerPlayer player = ctx.getSource().getPlayerOrException();
+                com.emerald.mine.Echoes.fire(player.serverLevel(), player, wanted);
+                return 1;
+            }));
+        }
+        root.then(echo);
         var poche = Commands.literal("poche");
         for (com.emerald.mine.Pockets.Kind kind : com.emerald.mine.Pockets.Kind.values()) {
             final com.emerald.mine.Pockets.Kind wanted = kind;

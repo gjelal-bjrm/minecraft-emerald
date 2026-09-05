@@ -379,7 +379,7 @@ public final class Breakthrough {
         }
     }
 
-    private static BlockState oreFor(RandomSource random, int y) {
+    static BlockState oreFor(RandomSource random, int y) {
         boolean deep = y < 0;
         int r = random.nextInt(100);
         Block ore;

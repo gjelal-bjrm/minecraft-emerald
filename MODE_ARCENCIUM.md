@@ -3962,3 +3962,55 @@ par les blocs apres la fin.
 Troisieme piege d'essai : SendKeys reserve `{ } ( ) + ^ % ~` -- une commande
 tapee au chat qui en contient est tronquee, et un chat reste ouvert apres un
 echec (Echap avant `t`).
+
+### 47.7 Etape 6 : les Echos
+
+`mine/Echoes`. Jusqu'ici rien n'arrivait dans une galerie. Tant qu'un joueur
+est SOUS TERRE (sous y = 50, sans ciel au-dessus, dans le perimetre
+d'`Underground` : pas les 48 blocs du village, pas l'emprise des sanctuaires),
+un echo lui arrive toutes les 3 a 5 minutes -- le premier au bout de 2 a 3,
+pour que la premiere descente en rencontre un. Le compte ne tourne que sous
+terre : remonter le fige, redescendre le reprend. Jamais deux fois le meme
+d'affilee. Chacun est annonce d'une ligne courte, en italique, comme un
+presage :
+
+- **Le Souffle** (30 %) -- « Un souffle passe. » Un souffle de Breeze, et les
+  torches a 12 blocs (murales, d'ame comprises) tombent : l'objet est au sol,
+  recuperable. Le noir revient, et ce qui vient avec. S'il n'y avait rien a
+  souffler, la paroi se fend a la place : pas d'echo vide.
+- **La Secousse** (30 %) -- « La paroi se fend. » La secousse des Meteores
+  (`WeatherPulsePayload`, 55 de tremblement, sans flash), un craquement de
+  debris antiques, et 2 a 4 minerais apparaissent sur les parois exposees a
+  8 blocs (le tirage par profondeur des Percees, `Breakthrough.oreFor`, avec
+  l'Arcencium dedans), chacun detoure huit secondes.
+- **Le Chant** (28 %) -- « Quelque chose chante dans la pierre. » Une cache
+  est plantee dans la roche PLEINE a 15-25 blocs (six faces de roche autour),
+  et un carillon d'amethyste la fait entendre pendant 90 s : plus fort et plus
+  aigu a mesure qu'on approche, toutes les deux secondes de loin, chaque
+  seconde a moins de douze. Pas de boussole : c'est l'oreille qui guide.
+  A moins de trois blocs, « Le chant s'arrete : la pierre s'ouvre » -- la
+  Poche-cache s'ouvre (gorge, blob, coffre garni selon la profondeur, rune une
+  fois sur trois), et le bloc devant la gorge se fend. Trop tard : « Le chant
+  s'est tu. »
+- **Les Yeux** (12 %, rare) -- « Quelque chose vous regarde. » Un battement de
+  coeur de Warden, et trois hostiles du vivier des sieges (`SiegeRoster.
+  forTier`, palier = ancres tenues + 1, equipes par `MobGear`) se levent dans
+  le noir a 16-24 blocs, la ou l'on peut se tenir (deux d'air sur du plein),
+  DEJA DETOURES pendant dix secondes, et vous ont pris pour cible. Le combat
+  qui vient a vous.
+
+Commandes d'essai : `/arcencium echo souffle|secousse|chant|yeux`.
+
+Verifie en jeu (galerie taillee de 57 x 4 x 57 sous vingt-huit blocs de
+roche, chaque echo force par la commande) : le Souffle fait tomber les quatre
+torches posees (bloc absent, objets au sol) ; la Secousse pose 3 minerais sur
+569 parois candidates ; le Chant plante sa cache a 24 blocs, et le joueur
+teleporte a deux blocs l'ouvre (« Poche CACHE ouverte derriere -418 22 -417
+vers east », le bloc cible est de l'air, la ligne « la pierre s'ouvre » au
+chat) ; les Yeux levent trois hostiles marques (« Quantite : 3 »), a cible.
+
+Quatrieme piege d'essai : quand le script tourne en arriere-plan, la fenetre
+du jeu garde le focus entre deux commandes, donc `Echap` OUVRE le menu pause
+au lieu de le fermer -- une commande sur deux se perdait. Desormais
+`pauseOnLostFocus:false` dans `run/options.txt`, et le chat tape `t`,
+`Ctrl+A`, la commande : plus d'Echap nulle part.

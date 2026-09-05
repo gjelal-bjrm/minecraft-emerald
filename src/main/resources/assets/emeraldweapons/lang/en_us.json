@@ -505,5 +505,11 @@
   "mine.emeraldweapons.aurore.opened": "The caves open: %s Aurora wells, %s pair(s) of starry mists.",
   "mine.emeraldweapons.aurore.closing": "The Aurora wells go out in %s seconds.",
   "block.emeraldweapons.aurore_light": "Aurora Well",
-  "block.emeraldweapons.star_mist": "Starry Mist"
+  "block.emeraldweapons.star_mist": "Starry Mist",
+  "mine.emeraldweapons.echo.souffle": "A breath passes.",
+  "mine.emeraldweapons.echo.secousse": "The wall splits.",
+  "mine.emeraldweapons.echo.chant": "Something sings in the stone.",
+  "mine.emeraldweapons.echo.chant.found": "The song stops: the stone opens.",
+  "mine.emeraldweapons.echo.chant.lost": "The song has gone quiet.",
+  "mine.emeraldweapons.echo.yeux": "Something is watching you."
 }

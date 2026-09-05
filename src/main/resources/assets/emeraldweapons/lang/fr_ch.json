@@ -505,5 +505,11 @@
   "mine.emeraldweapons.aurore.opened": "Les grottes s'ouvrent : %s puits d'Aurore, %s paire(s) de brumes étoilées.",
   "mine.emeraldweapons.aurore.closing": "Les puits d'Aurore s'éteignent dans %s secondes.",
   "block.emeraldweapons.aurore_light": "Puits d'Aurore",
-  "block.emeraldweapons.star_mist": "Brume étoilée"
+  "block.emeraldweapons.star_mist": "Brume étoilée",
+  "mine.emeraldweapons.echo.souffle": "Un souffle passe.",
+  "mine.emeraldweapons.echo.secousse": "La paroi se fend.",
+  "mine.emeraldweapons.echo.chant": "Quelque chose chante dans la pierre.",
+  "mine.emeraldweapons.echo.chant.found": "Le chant s'arrête : la pierre s'ouvre.",
+  "mine.emeraldweapons.echo.chant.lost": "Le chant s'est tu.",
+  "mine.emeraldweapons.echo.yeux": "Quelque chose vous regarde."
 }
