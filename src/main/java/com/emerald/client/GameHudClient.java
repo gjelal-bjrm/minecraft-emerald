@@ -107,7 +107,8 @@ public class GameHudClient {
             // declenche aussi en lobby (/arcencium weather) et se voit deja par
             // son brouillard : la laisser sans etiquette n'aurait pas de sens
             weatherPanel(graphics, mc, MARGIN, MARGIN);
-            VeinHudClient.render(graphics, mc, MARGIN, MARGIN + 14);
+            int used = VeinHudClient.render(graphics, mc, MARGIN, MARGIN + 14);
+            StreakHudClient.render(graphics, mc, MARGIN, MARGIN + 14 + used);
             return;
         }
 
@@ -175,7 +176,8 @@ public class GameHudClient {
         // LES FILONS SOUS LA METEO : c'est une information de meteo, elle
         // appartient a la meme colonne. Quatorze pixels sous elle -- douze de
         // panneau et deux de respiration.
-        VeinHudClient.render(graphics, mc, x, weatherY + 14);
+        int used = VeinHudClient.render(graphics, mc, x, weatherY + 14);
+        StreakHudClient.render(graphics, mc, x, weatherY + 14 + used);
     }
 
     /**

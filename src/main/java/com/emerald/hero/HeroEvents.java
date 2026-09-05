@@ -61,9 +61,9 @@ public final class HeroEvents {
         // sentir sur la fiche du personnage, pas seulement dans le sac.
         if (com.emerald.weather.WeatherManager.current()
                 == com.emerald.weather.Weather.BATTUE) {
-            worth = (int) Math.round(worth * 1.5);
+            worth = (int) Math.round(worth * 1.5 * com.emerald.weather.BattueHunt.multiplier(player));
         }
-        award(player, Math.min(160, worth));
+        award(player, Math.min(240, worth));
     }
 
     /** Une recompense franche, pour un objectif franc. */

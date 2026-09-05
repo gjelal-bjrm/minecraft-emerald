@@ -70,7 +70,8 @@ public final class RuneDrops {
         // non une simple facilite de visee : moitie plus de plumes, de pierres
         // de forge, de cristaux et de runes tant qu'elle dure.
         double hunt = com.emerald.weather.WeatherManager.current()
-                == com.emerald.weather.Weather.BATTUE ? 1.5 : 1.0;
+                == com.emerald.weather.Weather.BATTUE
+                ? 1.5 * com.emerald.weather.BattueHunt.multiplier(killer) : 1.0;
         // Pas de bonus de Butin : depuis la 1.21 il ne passe plus par un
         // niveau lisible sur l'evenement mais par un effet d'enchantement
         // applique en amont. Plutot que de deviner une API, on s'en passe --
@@ -78,7 +79,7 @@ public final class RuneDrops {
         // a la partie -- donc rare sur le menu fretin, presque sure sur un
         // puissant. Elle se tire AVANT la porte des runes : c'est un butin a part.
         double featherChance = (0.25 + 0.40 * Math.min(1.0, health / 200.0)) * hunt;
-        if (random.nextDouble() < featherChance) {
+        for (int k = rolls(random, featherChance); k > 0; k--) {
             event.getDrops().add(new net.minecraft.world.entity.item.ItemEntity(
                     victim.level(), victim.getX(), victim.getY(), victim.getZ(),
                     new ItemStack(com.emerald.item.ModItems.ARCENCIUM_FEATHER.get(),
@@ -96,7 +97,8 @@ public final class RuneDrops {
 
         // et le taux ci-dessous est cale sans elle.
         double chance = (CHANCE + CHANCE_BONUS * Math.min(1.0, health / TOUGH)) * hunt;
-        if (random.nextDouble() >= chance) {
+        int runes = rolls(random, chance);
+        if (runes == 0) {
             return;
         }
 
@@ -108,8 +110,8 @@ public final class RuneDrops {
         // etre un projet, seulement un detour.
         com.emerald.element.Element flavour =
                 com.emerald.element.Attunement.of(victim);
-        if (flavour != com.emerald.element.Element.NEUTRE
-                && random.nextDouble() < STONE_DROP_CHANCE * hunt) {
+        for (int k = flavour == com.emerald.element.Element.NEUTRE ? 0
+                : rolls(random, STONE_DROP_CHANCE * hunt); k > 0; k--) {
             event.getDrops().add(new net.minecraft.world.entity.item.ItemEntity(
                     victim.level(), victim.getX(), victim.getY(), victim.getZ(),
                     com.emerald.element.ElementStoneItem.stack(flavour,
@@ -123,7 +125,7 @@ public final class RuneDrops {
         // le COMBAT : le metal se ramasse en creusant, et si la pierre se
         // ramassait aussi en creusant, tout le systeme d'amelioration
         // recompenserait le temps passe plutot que le jeu joue.
-        if (random.nextDouble() < STONE_CHANCE * hunt) {
+        for (int k = rolls(random, STONE_CHANCE * hunt); k > 0; k--) {
             event.getDrops().add(new net.minecraft.world.entity.item.ItemEntity(
                     victim.level(), victim.getX(), victim.getY(), victim.getZ(),
                     new ItemStack(com.emerald.item.ModItems.FORGE_STONE.get(),
@@ -131,12 +133,40 @@ public final class RuneDrops {
         }
 
         RuneFamily[] families = RuneFamily.values();
+        for (int k = 0; k < runes; k++) {
+            RuneFamily family = families[random.nextInt(families.length)];
+            ItemStack drop = RuneItem.stack(
+                    RuneMark.roll(family, rank(health, phaseCeiling(event.getEntity().level()), random), random),
+                    com.emerald.item.ModItems.RUNE.get());
+            event.getDrops().add(new net.minecraft.world.entity.item.ItemEntity(
+                    victim.level(), victim.getX(), victim.getY(), victim.getZ(), drop));
+        }
+    }
+
+    /**
+     * COMBIEN DE FOIS UNE CHANCE TOMBE, quand elle depasse un.
+     *
+     * Une serie a x3 porte la chance d'une plume a plus de cent pour cent ;
+     * plafonner a un serait mentir sur le multiplicateur. La partie entiere
+     * est due, la fraction se joue : une chance de 2,4 rend deux, et une
+     * troisieme quatre fois sur dix.
+     */
+    private static int rolls(RandomSource random, double chance) {
+        int whole = (int) chance;
+        return whole + (random.nextDouble() < chance - whole ? 1 : 0);
+    }
+
+    /**
+     * LA RUNE DE LA PROIE : au plafond de la phase, garantie.
+     *
+     * C'est ce qui rend la traque digne d'etre courue : pas un tirage de plus,
+     * la meilleure rune que la partie autorise a cet instant.
+     */
+    public static ItemStack preyRune(net.minecraft.server.level.ServerLevel level, RandomSource random) {
+        RuneFamily[] families = RuneFamily.values();
         RuneFamily family = families[random.nextInt(families.length)];
-        ItemStack drop = RuneItem.stack(
-                RuneMark.roll(family, rank(health, phaseCeiling(event.getEntity().level()), random), random),
+        return RuneItem.stack(RuneMark.roll(family, phaseCeiling(level), random),
                 com.emerald.item.ModItems.RUNE.get());
-        event.getDrops().add(new net.minecraft.world.entity.item.ItemEntity(
-                victim.level(), victim.getX(), victim.getY(), victim.getZ(), drop));
     }
 
     /**

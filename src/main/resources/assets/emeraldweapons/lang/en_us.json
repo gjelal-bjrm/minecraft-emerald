@@ -492,5 +492,13 @@
   "weather.emeraldweapons.heure_doree": "The Golden Hour",
   "weather.emeraldweapons.heure_doree.sub": "The sun lingers. The Forge holds better, and the Shard costs nothing.",
   "weather.emeraldweapons.omen.heure_doree": "The light thickens and yellows, like an afternoon refusing to end.",
-  "socket.emeraldweapons.golden": "The Golden Hour returns your Shard of Fate"
+  "socket.emeraldweapons.golden": "The Golden Hour returns your Shard of Fate",
+  "game.emeraldweapons.hud.streak": "STREAK",
+  "game.emeraldweapons.hud.streak.kills": "%s kill(s)",
+  "game.emeraldweapons.hud.streak.lost": "Streak lost",
+  "game.emeraldweapons.battue.prey.spawned": "%s roams nearby. Good hunting.",
+  "game.emeraldweapons.battue.prey.killed": "Halloo! %s has fallen.",
+  "game.emeraldweapons.battue.prey.escaped": "The Prey got away.",
+  "weather.emeraldweapons.vein.prey": "Prey",
+  "weather.emeraldweapons.vein.mist": "Mist"
 }

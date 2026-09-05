@@ -111,6 +111,7 @@ public final class BattueScene {
             raiseRavens(level, player);
         }
         horn(level, 0);
+        BattueHunt.begin(level);
     }
 
     static void tick(ServerLevel level) {
@@ -124,6 +125,7 @@ public final class BattueScene {
             nextHowl = now + HOWL_MIN + level.random.nextInt(HOWL_SPAN);
         }
         flyRavens(level);
+        BattueHunt.tick(level);
         for (ServerPlayer player : level.players()) {
             drum(level, player, now);
         }
@@ -146,6 +148,7 @@ public final class BattueScene {
         }
         ravenPhase.clear();
         nextDrum.clear();
+        BattueHunt.end(level);
         clearTeams(level);
         // le cor de retraite : deux notes basses, la chasse est finie
         for (ServerPlayer player : level.players()) {

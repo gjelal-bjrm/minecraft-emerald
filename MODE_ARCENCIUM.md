@@ -3793,3 +3793,42 @@ tout pack de shaders.
 Verifie en jeu : captures de l'aube aux corbeaux, des contours blancs, du
 zombie passe au rouge en prenant le joueur pour cible ; `blanc present`,
 `rouge present`, `equipes videes`, `corbeaux partis`.
+
+### 47.3 Etape 2 : la Proie et la Serie
+
+**La Proie** (`weather/BattueHunt`). Une seule par Battue, tiree au sort entre
+`twilightforest:deer` et `twilightforest:boar` -- deux betes terrestres, ni
+nageuses ni volantes. Grossie a 1,6 par l'attribut `generic.scale` du jeu (pas
+de retexture), 60 PV, nommee (*Cerf Noir, Seize-Cors, Cerf de Prisme, Grand
+Brocard / Solitaire, Vieille Bete, Ecorche, Ragot*), lueur OR par l'equipe de
+scoreboard. Ses buts d'IA sont remplaces : flotter, FUIR les joueurs a 24
+blocs, errer, regarder. Sa vitesse est calee sur le sprint du joueur --
+l'attribut vaut 0,10, et le but de fuite le multiplie par 1,45 pour le cerf
+(0,145 : on ne le rattrape pas en ligne droite) et 1,3 pour le sanglier (a
+egalite : on le rattrape en coupant). Le sanglier accule CHARGE : six de degats
+et un recul toutes les quatre secondes, puis il refuit avec un eclair de
+vitesse. Une laisse de 120 blocs la ramene vers son point d'apparition ; elle
+brame toutes les vingt secondes ; sa position est sur la boussole (« Proie 72m
+▼36 », en or). L'abattre sonne l'hallali (la corne « call » du jeu) et rend une
+**rune au plafond de la phase**, 3 a 5 plumes et 60 d'experience de Heros. La
+rater ne coute rien : « La Proie s'est echappee ».
+
+**La Serie.** Deux kills a moins de huit secondes ouvrent une serie : x1,5 de
+butin, x2 a cinq, x3 a dix, sur TOUT ce que la Battue rend deja (plumes,
+pierres, cristaux, runes, experience). Elle tombe si l'on s'arrete. Le
+serveur ne parle qu'aux kills (`StreakPayload` : compte, multiplicateur, tic
+du dernier kill) ; le client (`StreakHudClient`) dessine la barre qui se vide
+depuis ce tic, le « ×2 ! » au centre a chaque palier, et « Serie perdue » une
+seconde quand elle tombe. Le gestionnaire de kill passe en priorite HAUTE pour
+que le kill qui ouvre un palier en profite lui-meme.
+
+**Les chances au-dela de un** : une serie a x3 porte la chance d'une plume a
+plus de cent pour cent ; plafonner serait mentir. La partie entiere est due, la
+fraction se joue (`RuneDrops.rolls`).
+
+**La boussole sert a tout** : `VeinSyncPayload` porte desormais deux bits par
+entree -- Arcencium, diamant, Proie, et la Brume d'Aurore a venir.
+
+Verifie en jeu : « Battue : la Proie « Seize-Cors » (cerf) », « ↙ Proie 72m
+▼36 », « SERIE ×1,5 4 kill(s) » puis « ×2 5 kill(s) », « Hallali ! Seize-Cors
+est tombe. », Proie partie a l'arret.

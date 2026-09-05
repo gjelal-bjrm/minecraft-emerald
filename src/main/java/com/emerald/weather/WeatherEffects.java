@@ -734,7 +734,7 @@ public final class WeatherEffects {
             for (int i = 0; i < veins.size(); i++) {
                 packed.add(veins.get(i).asLong());
                 if (!level.getBlockState(veins.get(i)).is(ModBlocks.ARCENCIUM_ORE.get())) {
-                    kinds |= 1 << i;                       // ce n'est pas de l'Arcencium : diamant
+                    kinds |= com.emerald.network.VeinSyncPayload.KIND_DIAMOND << (2 * i);
                 }
             }
             net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player,

@@ -17,12 +17,23 @@ import net.minecraft.resources.ResourceLocation;
  * changent a chaque pas, et le client les recalcule a chaque image sans qu'on
  * ait a lui reparler. Le serveur ne parle donc que toutes les deux secondes.
  *
- * {@code kinds} : un bit par filon, allume pour le diamant, eteint pour
- * l'Arcencium. Deux entiers valent mieux qu'une liste d'objets pour six
- * elements.
+ * {@code kinds} : DEUX bits par entree -- 0 Arcencium, 1 diamant, 2 la Proie
+ * de la Battue, 3 reserve aux Brumes d'Aurore. Un entier vaut mieux qu'une
+ * liste d'objets pour six elements, et la boussole sert a tout ce qui se
+ * cherche : un filon, une bete, une sortie.
  */
 public record VeinSyncPayload(java.util.List<Long> positions, int kinds)
         implements CustomPacketPayload {
+
+    public static final int KIND_ARCENCIUM = 0;
+    public static final int KIND_DIAMOND = 1;
+    public static final int KIND_PREY = 2;
+    public static final int KIND_MIST = 3;
+
+    /** Le genre de la n-ieme entree. */
+    public static int kindAt(int kinds, int index) {
+        return (kinds >> (2 * index)) & 3;
+    }
 
     public static final CustomPacketPayload.Type<VeinSyncPayload> TYPE =
             new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(

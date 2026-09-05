@@ -43,6 +43,8 @@ public final class VeinHudClient {
 
     private static final int DIAMOND = 0xFF6BE0FF;
     private static final int ARCENCIUM = 0xFFE478FF;
+    private static final int PREY = 0xFFFFC46B;
+    private static final int MIST = 0xFFC8D8FF;
 
     private static java.util.List<Long> positions = java.util.List.of();
     private static int kinds;
@@ -83,18 +85,27 @@ public final class VeinHudClient {
         double pz = mc.player.getZ();
         for (int i = 0; i < rows; i++) {
             BlockPos pos = BlockPos.of(positions.get(i));
-            boolean diamond = (kinds & (1 << i)) != 0;
+            int kind = VeinSyncPayload.kindAt(kinds, i);
             double dx = pos.getX() + 0.5 - px;
             double dy = pos.getY() + 0.5 - py;
             double dz = pos.getZ() + 0.5 - pz;
             int flat = (int) Math.round(Math.sqrt(dx * dx + dz * dz));
+            String key = switch (kind) {
+                case VeinSyncPayload.KIND_DIAMOND -> "weather.emeraldweapons.vein.diamond";
+                case VeinSyncPayload.KIND_PREY -> "weather.emeraldweapons.vein.prey";
+                case VeinSyncPayload.KIND_MIST -> "weather.emeraldweapons.vein.mist";
+                default -> "weather.emeraldweapons.vein.arcencium";
+            };
+            int colour = switch (kind) {
+                case VeinSyncPayload.KIND_DIAMOND -> DIAMOND;
+                case VeinSyncPayload.KIND_PREY -> PREY;
+                case VeinSyncPayload.KIND_MIST -> MIST;
+                default -> ARCENCIUM;
+            };
             Component line = Component.literal(arrow(mc, dx, dz) + " ")
-                    .append(Component.translatable(diamond
-                            ? "weather.emeraldweapons.vein.diamond"
-                            : "weather.emeraldweapons.vein.arcencium"))
+                    .append(Component.translatable(key))
                     .append(Component.literal(" " + flat + "m " + depth(dy)));
-            graphics.drawString(mc.font, line, x + 3, y + 2 + i * LINE,
-                    diamond ? DIAMOND : ARCENCIUM, false);
+            graphics.drawString(mc.font, line, x + 3, y + 2 + i * LINE, colour, false);
         }
         return 2 + rows * LINE + 2;
     }
