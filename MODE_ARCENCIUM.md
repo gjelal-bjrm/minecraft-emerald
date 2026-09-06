@@ -4151,13 +4151,13 @@ en a ete fait :
 - **Cerne retiree** (« bizarre sur une arme ») : elle reste dans l'enum pour
   que les runes deja tirees se relisent, tous ses maxima a zero, et
   `Rune.of` ne la tire plus. **Execution** la remplace : degats majores sur
-  une cible sous 30 %% de vie -- le miroir de l'Acharnement, qui joue sur SA
+  une cible sous 30 % de vie -- le miroir de l'Acharnement, qui joue sur SA
   propre vie.
 - **Trois options d'armure ajoutees**, C a A, en points fixes : **Garde**
   (melee), **Pavois** (distance, `IS_PROJECTILE`), **Sceau** (magie,
   `neoforge:is_magic`). Et **Riposte**, S, qui renvoie une part des degats :
   il fallait une troisieme option S d'armure pour remplir « SSS ».
-- **Corrections acceptees** : Aubaine affiche sa vraie chance (41-60 %%) ;
+- **Corrections acceptees** : Aubaine affiche sa vraie chance (41-60 %) ;
   Percee ignore reellement une part de l'armure (`CombatRules` avant/apres) ;
   Egide progresse de C a B (3,0 / 3,8 / 4,7) ; Bastion reduit TOUS les degats
   subis, comme son texte le dit. Le tout dans `RuneEvents.onIncoming`, dans
