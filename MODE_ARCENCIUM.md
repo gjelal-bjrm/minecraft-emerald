@@ -4242,3 +4242,51 @@ Deux pannes d'environnement sur le chemin, notees pour la prochaine fois :
 too far back » a l'analyse des mods) -- on le supprime, Gradle le refait ; et
 Distant Horizons qui ne trouve plus `sqlScripts/scriptList.txt` dans son propre
 jar une fois sur trois au demarrage -- le jar est sain, on relance.
+
+## 52. L'amelioration qui se voit *(6 sept. 2026)*
+
+« Entre le +1 et le +7, je ne les remarque vraiment pas beaucoup. Entre le +8
+et le +10, j'aime bien, mais ca ne se voit pas assez, surtout sur notre epee. »
+Trois propositions acceptees, sur toutes les armes, et calibrees par captures
+(le harnais `shoot_auras.sh` : neuf armes en barre, une capture par cran a la
+troisieme puis a la premiere personne, de nuit).
+
+**Mesure de depart** : le +1 etait un contour blanc a 40 % d'intensite,
+dessine a 1,07 fois l'arme avec 0,42 d'alpha -- un voile a peine plus fort
+qu'un enchantement ; la couche large du +8 etait a 0,09 d'alpha, invisible par
+construction. Sur la capture « avant », +1 et +4 ne se distinguent pas d'une
+arme nue.
+
+1. **Le halo recalibre** (`UpgradeGlow`, `UpgradeHaloRenderer`) : 75 % des le
+   +1, 100 % au +4 ; contour a 1,12 et 0,45 d'alpha, seconde couche a 1,30
+   des le +5, couche large a 1,50 et 0,18 au +8. Un premier essai a 0,80
+   d'alpha blanchissait la lame entiere et tuait tout le reste : la mesure a
+   ramene a 0,45.
+2. **La jauge sur la lame** (`Notched`). J'avais promis des encoches, une par
+   cran, qu'on compte : la mesure les a refusees -- une epee tient sur seize
+   pixels, sa lame sur onze, sept traits n'y tiennent pas et l'on ne voyait
+   qu'une lame blanchie. A la place, la lame se REMPLIT DEPUIS LA POINTE, un
+   septieme par cran, d'un bleu froid de +1 a +4 (blanche, la jauge se
+   confondait avec le fer), puis de la couleur du palier, avec un trait sombre
+   a la frontiere. Au +8 la lame entiere prend la couleur -- or, turquoise,
+   puis la teinte tournante du prismatique -- et une lumiere blanche la balaie
+   de la garde a la pointe. Meme technique que la vague des raretes : chaque
+   face du modele est teintee d'apres sa hauteur, ce qui vaut pour toutes les
+   armes sans une texture de plus.
+3. **Les etincelles**, posees PAR LE RENDU. Le serveur ne sait pas ou est la
+   main (§ UpgradeAuraEvents) ; le rendu tient la matrice de l'objet. A la
+   premiere personne, un point pris au hasard le long de la lame passe par la
+   pose puis par la rotation de la camera (mesure a lacet 90 : la rotation
+   DIRECTE pose le point devant et a droite, l'inverse derriere). A la
+   troisieme personne la pose de la couche est reecrite par les mods
+   d'animation et par le rendu du corps en vue subjective -- le point retombait
+   a trois ou quatre metres quelle que soit la rotation -- on prend alors la
+   main dans le repere du corps (`yBodyRot`). 0,12 etincelle par cran et par
+   tique, la couleur du palier ; au +8, six de plus le long de la lame a chaque
+   coup : la trainee.
+
+Captures « apres », premiere personne : +1 pointe bleue et contour, +4 lame
+bleue aux quatre septiemes, +7 violette entiere, +8 or avec ses etincelles,
++10 blanc tournant ; le coup au +10 laisse un nuage d'etincelles de la couleur
+de l'instant, sur l'epee de fer comme sur l'epee d'emeraude. Troisieme
+personne : les trois auras se lisent a quatre metres.

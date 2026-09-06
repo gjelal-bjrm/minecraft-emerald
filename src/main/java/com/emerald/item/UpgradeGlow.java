@@ -35,8 +35,9 @@ public final class UpgradeGlow {
      * @param large     le second tour : double contour et pulsation
      * @param prismatic la teinte tourne avec le temps
      * @param width     epaisseur du lisere : 1 fin, 2 moyen, 3 large
+     * @param layers    couches du halo de l'arme : une seule jusqu'a +4, deux de +5 a +7, trois au-dela
      */
-    public record Aura(int colour, float intensity, boolean large, boolean prismatic, int width) {
+    public record Aura(int colour, float intensity, boolean large, boolean prismatic, int width, int layers) {
 
         public float red() {
             return ((this.colour >> 16) & 0xFF) / 255.0F;
@@ -74,7 +75,7 @@ public final class UpgradeGlow {
     private static final int VIOLET = 0xB98CFF;
     private static final int PRISM = 0xFFFFFF;
 
-    private static final Aura NONE = new Aura(0, 0.0F, false, false, 0);
+    private static final Aura NONE = new Aura(0, 0.0F, false, false, 0, 0);
 
     /** Duree d'un aller de la pulsation, des pieds a la tete, en ticks. */
     public static final float PULSE_PERIOD = 44.0F;
@@ -82,20 +83,30 @@ public final class UpgradeGlow {
     private UpgradeGlow() {
     }
 
-    /** L'aura d'un cran. */
+    /**
+     * L'aura d'un cran.
+     *
+     * RECALIBREE : « entre le +1 et le +7, je ne les remarque vraiment pas
+     * beaucoup ». Le +1 partait a quarante pour cent d'un contour deja fin : un
+     * voile a peine plus fort qu'un enchantement. On part desormais de
+     * soixante-quinze, on est a cent des le +4, et ce sont les COUCHES qui
+     * separent les paliers -- une jusqu'a +4, deux de +5 a +7, trois au-dela.
+     * A cela s'ajoutent les encoches et les etincelles (UpgradeHaloRenderer),
+     * qui ne lisent que le cran.
+     */
     public static Aura of(int level) {
         return switch (Math.max(0, Math.min(Upgrade.MAX, level))) {
             case 0 -> NONE;
-            case 1 -> new Aura(FAINT, 0.40F, false, false, 1);
-            case 2 -> new Aura(FAINT, 0.55F, false, false, 1);
-            case 3 -> new Aura(FAINT, 0.55F, false, false, 2);
-            case 4 -> new Aura(FAINT, 0.70F, false, false, 2);
-            case 5 -> new Aura(GOLD, 0.85F, false, false, 2);
-            case 6 -> new Aura(TEAL, 0.85F, false, false, 2);
-            case 7 -> new Aura(VIOLET, 0.85F, false, false, 2);
-            case 8 -> new Aura(GOLD, 1.0F, true, false, 3);
-            case 9 -> new Aura(TEAL, 1.0F, true, false, 3);
-            default -> new Aura(PRISM, 1.0F, true, true, 3);
+            case 1 -> new Aura(FAINT, 0.75F, false, false, 1, 1);
+            case 2 -> new Aura(FAINT, 0.85F, false, false, 1, 1);
+            case 3 -> new Aura(FAINT, 0.92F, false, false, 2, 1);
+            case 4 -> new Aura(FAINT, 1.0F, false, false, 2, 1);
+            case 5 -> new Aura(GOLD, 1.0F, false, false, 2, 2);
+            case 6 -> new Aura(TEAL, 1.0F, false, false, 2, 2);
+            case 7 -> new Aura(VIOLET, 1.0F, false, false, 2, 2);
+            case 8 -> new Aura(GOLD, 1.0F, true, false, 3, 3);
+            case 9 -> new Aura(TEAL, 1.0F, true, false, 3, 3);
+            default -> new Aura(PRISM, 1.0F, true, true, 3, 3);
         };
     }
 
