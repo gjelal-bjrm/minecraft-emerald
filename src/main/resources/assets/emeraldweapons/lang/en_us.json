@@ -475,7 +475,7 @@
   "weather.emeraldweapons.omen.embellie": "The calm returns.",
   "weather.emeraldweapons.omen.clear": "Nothing is coming.",
   "specialization.emeraldweapons.legacy": "An older character exists, shared by every world. /arcencium personnage importer to take it over here.",
-  "weather.emeraldweapons.aurore.veins": "The Aurora lights %s vein(s) around you: %s diamond, %s Arcencium — the nearest %s blocks away. Follow the arrows top-left: the outlines glow through the rock.",
+  "weather.emeraldweapons.aurore.veins": "The Aurora lights %s vein(s) around you: %s diamond, %s Arcencium — the nearest %s blocks away. A diamond marks each one on screen, exactly where it is; the panel arrow turns into a bullseye ◎ when you are lined up.",
   "weather.emeraldweapons.aurore.double": "The Aurora doubles the Arcencium vein",
   "weather.emeraldweapons.aurore.diamond": "The Aurora enriches diamond, and sometimes mixes Arcencium in",
   "weather.emeraldweapons.vein.diamond": "Diamond",

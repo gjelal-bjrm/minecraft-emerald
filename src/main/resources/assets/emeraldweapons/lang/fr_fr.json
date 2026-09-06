@@ -475,7 +475,7 @@
   "weather.emeraldweapons.omen.embellie": "Le calme revient.",
   "weather.emeraldweapons.omen.clear": "Rien ne vient.",
   "specialization.emeraldweapons.legacy": "Un personnage d'avant existe, commun à tous les mondes. /arcencium personnage importer pour le reprendre ici.",
-  "weather.emeraldweapons.aurore.veins": "L'Aurore éclaire %s filon(s) autour de vous : %s de diamant, %s d'Arcencium — le plus proche à %s blocs. Suivez les flèches en haut à gauche : les silhouettes brillent à travers la roche.",
+  "weather.emeraldweapons.aurore.veins": "L'Aurore éclaire %s filon(s) autour de vous : %s de diamant, %s d'Arcencium — le plus proche à %s blocs. Un losange marque chacun à l'écran, à sa place exacte ; la flèche du panneau devient une cible ◎ quand vous êtes aligné.",
   "weather.emeraldweapons.aurore.double": "L'Aurore double la veine d'Arcencium",
   "weather.emeraldweapons.aurore.diamond": "L'Aurore enrichit le diamant, et y mêle parfois l'Arcencium",
   "weather.emeraldweapons.vein.diamond": "Diamant",

@@ -72,6 +72,12 @@ public final class Jalons {
      * differentes en meme temps.
      */
     public static void glow(ServerLevel level, BlockPos pos, BlockState state, int ticks, int colour) {
+        glow(level, pos, state, ticks, colour, null);
+    }
+
+    /** Le meme, avec une etiquette de plus : le poseur veut parfois balayer les siens. */
+    public static void glow(ServerLevel level, BlockPos pos, BlockState state, int ticks, int colour,
+                            @javax.annotation.Nullable String extraTag) {
         Entity display = EntityType.BLOCK_DISPLAY.create(level);
         if (display == null) {
             return;
@@ -91,6 +97,9 @@ public final class Jalons {
         display.load(tag);
         display.setGlowingTag(true);
         display.addTag(TAG);
+        if (extraTag != null) {
+            display.addTag(extraTag);
+        }
         display.getPersistentData().putLong(DIE_AT, level.getGameTime() + ticks);
         level.addFreshEntity(display);
     }

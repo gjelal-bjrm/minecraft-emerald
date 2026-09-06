@@ -12,6 +12,7 @@ import com.emerald.network.StormStrikePayload;
 import com.emerald.network.WeatherPulsePayload;
 import com.emerald.game.WorldSetup;
 import com.emerald.item.ModItems;
+import com.emerald.mine.Jalons;
 import com.emerald.main.EmeraldWeaponsMod;
 import com.emerald.particles.ModParticles;
 import net.minecraft.world.entity.LightningBolt;
@@ -732,7 +733,12 @@ public final class WeatherEffects {
         if (level.getGameTime() % 40 != 0) {
             return;
         }
-        sweepMarks(level);
+        // PLUS DE BALAYAGE SYSTEMATIQUE ICI. Il effacait puis reposait les
+        // jalons toutes les deux secondes -- la lueur clignotait, et le cache
+        // du sondage ne servait a rien. `markVeins` ne repose que si la liste
+        // a change, et l'on lui donne l'union de ce que voient tous les
+        // joueurs, une seule fois, apres la boucle.
+        List<BlockPos> toMark = new ArrayList<>();
         for (ServerPlayer player : level.players()) {
             boons(player);
             List<BlockPos> all = scannedVeins(player);
@@ -767,7 +773,9 @@ public final class WeatherEffects {
             if (veins.isEmpty()) {
                 continue;
             }
-            markVeins(level, veins);
+            for (int i = 0; i < Math.min(AURORE_MARKS, veins.size()); i++) {
+                toMark.add(veins.get(i));
+            }
             BlockPos nearest = veins.get(0);
             double near = Math.sqrt(player.blockPosition().distSqr(nearest));
             // LE CARILLON MONTE QUAND ON APPROCHE : chaud, froid, sans regarder
@@ -797,6 +805,7 @@ public final class WeatherEffects {
                         .withStyle(style -> style.withColor(Weather.AURORE.color).withItalic(true)));
             }
         }
+        markVeins(level, toMark);
     }
 
     /**
@@ -816,42 +825,37 @@ public final class WeatherEffects {
         player.getFoodData().setExhaustion(player.getFoodData().getExhaustionLevel() * 0.5F);
     }
 
+    /** Ce qui est deja jalonne : on ne repose que si la liste a change. */
+    private static final java.util.Set<BlockPos> marked = new java.util.HashSet<>();
+
     /**
-     * LES JALONS : une silhouette lumineuse dans la roche, a l'endroit du filon.
+     * LES JALONS : le FILON LUI-MEME, lumineux, a travers la roche.
      *
-     * La lueur d'entite est dessinee A TRAVERS les murs -- c'est exactement ce
-     * qu'il fallait, et rien d'autre dans le jeu ne le fait pour un BLOC. Un
-     * porte-armure minuscule, invisible, sans collision ni hitbox : invisible
-     * et luisant, le rendu ne dessine plus que son contour.
+     * Le porte-armure marqueur n'a pas de corps : son contour tient en un
+     * pixel, et de vingt metres on ne voyait rien. C'est le meme defaut que
+     * les etablis de l'atelier (§51), trouve la par une capture et corrige
+     * la : `Jalons.glow` pose un `block_display` a la forme du bloc, agrandi
+     * d'un centieme, avec sa couleur de contour. Un filon de diamant se voit
+     * donc comme un cube bleu dans la pierre, a la distance ou on le cherche.
+     *
+     * ON NE REPOSE QUE SI LA LISTE A CHANGE : recreer les entites toutes les
+     * deux secondes faisait clignoter la lueur.
      */
     private static void markVeins(ServerLevel level, List<BlockPos> veins) {
-        int made = 0;
-        for (BlockPos pos : veins) {
-            if (made++ >= AURORE_MARKS) {
-                return;
-            }
-            net.minecraft.world.entity.decoration.ArmorStand mark =
-                    new net.minecraft.world.entity.decoration.ArmorStand(level,
-                            pos.getX() + 0.5, pos.getY() + 0.1, pos.getZ() + 0.5);
-            mark.setInvisible(true);
-            mark.setNoGravity(true);
-            mark.setSilent(true);
-            mark.setInvulnerable(true);
-            mark.setNoBasePlate(true);
-            mark.setGlowingTag(true);
-            mark.addTag(TAG_VEIN);
-            // PETIT ET SANS CORPS. `setSmall` et `setMarker` sont prives ; on
-            // passe donc par la sauvegarde, qui est publique et complete -- on
-            // relit le jalon avec les deux drapeaux poses. Sans « Marker », le
-            // porte-armure garde sa boite de collision : on s'y cognerait en
-            // percant la paroi, sur un obstacle qu'on ne voit pas.
-            net.minecraft.nbt.CompoundTag tag = new net.minecraft.nbt.CompoundTag();
-            mark.saveWithoutId(tag);
-            tag.putBoolean("Marker", true);
-            tag.putBoolean("Small", true);
-            mark.load(tag);
-            level.addFreshEntity(mark);
+        java.util.Set<BlockPos> wanted = new java.util.HashSet<>(veins);
+        if (wanted.equals(marked)) {
+            return;
         }
+        sweepMarks(level);
+        marked.clear();
+        marked.addAll(wanted);
+        for (BlockPos pos : wanted) {
+            net.minecraft.world.level.block.state.BlockState state = level.getBlockState(pos);
+            int colour = state.is(ModBlocks.ARCENCIUM_ORE.get()) ? 0xFFE478FF : 0xFF6BE0FF;
+            // large : la lueur doit survivre a un balayage manque, jamais s'accumuler
+            Jalons.glow(level, pos, state, 20 * 30, colour, TAG_VEIN);
+        }
+        LOGGER.info("Aurore : {} jalon(s) poses sur {}", wanted.size(), wanted);
     }
 
     /**
@@ -864,6 +868,7 @@ public final class WeatherEffects {
      * entity is null ». La liste d'abord, la suppression apres.
      */
     static void sweepMarks(ServerLevel level) {
+        marked.clear();
         List<net.minecraft.world.entity.Entity> doomed = new ArrayList<>();
         for (net.minecraft.world.entity.Entity entity : level.getEntities().getAll()) {
             if (entity != null && entity.getTags().contains(TAG_VEIN)) {

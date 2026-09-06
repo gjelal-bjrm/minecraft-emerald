@@ -4290,3 +4290,47 @@ bleue aux quatre septiemes, +7 violette entiere, +8 or avec ses etincelles,
 +10 blanc tournant ; le coup au +10 laisse un nuage d'etincelles de la couleur
 de l'instant, sur l'epee de fer comme sur l'epee d'emeraude. Troisieme
 personne : les trois auras se lisent a quatre metres.
+
+## 53. La boussole de l'Aurore, qui vise enfin *(6 sept. 2026)*
+
+« Une fois arrive a l'etage du diamant, ca ne me disait pas dans quelle
+direction il se trouve. J'ai mine dans toutes les directions et je ne l'ai pas
+trouve. » Capture a l'appui : le panneau annoncait « Diamant 23m » avec une
+fleche vers la gauche. Deux causes, mesurees toutes les deux.
+
+**1. La fleche etait trop grossiere.** Huit secteurs, donc quarante-cinq
+degres par case : au bout d'un tunnel de vingt-trois blocs, on pouvait passer
+a NEUF BLOCS ET DEMI a cote du filon. Elle passe a seize secteurs (quatre et
+demi), avec deux nouveautes : « « » et « » » disent de quel cote corriger
+quand on est entre deux fleches, et une CIBLE ◎ s'affiche sous six degres --
+le signal qu'on peut creuser tout droit, a deux blocs pres.
+
+**2. « Les silhouettes brillent a travers la roche » etait faux.** Le jalon
+etait un porte-armure marqueur : sans corps, son contour tient en un pixel
+(meme defaut que les etablis de l'atelier, §51). Corrige d'abord en
+`block_display` -- et la mesure a montre que cela ne suffisait pas : UNE LUEUR
+D'ENTITE NE SE DESSINE QUE SI L'ENTITE EST RENDUE, et Sodium ne rend pas ce qui
+se trouve dans une section de terrain masquee. Trois captures au meme endroit :
+a vingt-trois blocs dans un massif plein, un fantome a peine visible ; a quatre
+blocs dans la pierre, RIEN ; les deux memes blocs otes, le contour cyan eclate.
+Un filon enterre est precisement le cas ou la lueur ne marche pas.
+
+**Le repere a l'ecran** (`client/VeinMarkerClient`) : on projette soi-meme la
+position du filon dans l'interface, apres tout le rendu du monde. Ni la roche,
+ni Sodium, ni les shaders d'Iris n'ont leur mot a dire -- c'est le seul canal
+dont on soit maitre de bout en bout. Un losange creux, de la couleur de la
+sorte, a la place EXACTE du filon ; trois au plus, comme le panneau ; rien
+quand le filon est hors champ, la fleche s'en charge (coller des losanges aux
+bords encombrait l'ecran de six marques immobiles, capture a l'appui).
+
+Verifie en jeu, un diamant plante a vingt-trois blocs plein est dans un massif
+de pierre : plein est, le losange est au centre et le panneau affiche ◎ ; a
+trente degres, le losange glisse et la fleche devient « ‹ » ; dos au filon,
+plus de losange et la fleche pointe en bas ; a quatre blocs dans la pierre, le
+losange tient toujours. Le journal confirme le jalon serveur sur le bon bloc
+(-377, 20, -400).
+
+Les jalons `block_display` restent : ils servent quand le filon donne sur une
+grotte ouverte. Ils ne sont plus reposes que si la liste change -- les recreer
+toutes les deux secondes faisait clignoter la lueur -- et le message d'annonce
+ne promet plus ce qu'ils ne tiennent pas.

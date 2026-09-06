@@ -60,6 +60,29 @@ public final class VeinHudClient {
         seenAt = mc.level == null ? -1L : mc.level.getGameTime();
     }
 
+    /** Les filons connus, ou rien si le panneau est perime : le repere lit la meme source. */
+    public static java.util.List<Long> shown() {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level == null || seenAt < 0 || mc.level.getGameTime() - seenAt > STALE) {
+            return java.util.List.of();
+        }
+        return positions;
+    }
+
+    public static int kinds() {
+        return kinds;
+    }
+
+    /** La couleur d'une sorte, partagee entre le panneau et le repere. */
+    public static int colourOf(int kind) {
+        return switch (kind) {
+            case VeinSyncPayload.KIND_DIAMOND -> DIAMOND;
+            case VeinSyncPayload.KIND_PREY -> PREY;
+            case VeinSyncPayload.KIND_MIST -> MIST;
+            default -> ARCENCIUM;
+        };
+    }
+
     /** Vide le panneau : l'Aurore s'est terminee, ou l'on a change de monde. */
     public static void clear() {
         positions = java.util.List.of();
@@ -96,12 +119,7 @@ public final class VeinHudClient {
                 case VeinSyncPayload.KIND_MIST -> "weather.emeraldweapons.vein.mist";
                 default -> "weather.emeraldweapons.vein.arcencium";
             };
-            int colour = switch (kind) {
-                case VeinSyncPayload.KIND_DIAMOND -> DIAMOND;
-                case VeinSyncPayload.KIND_PREY -> PREY;
-                case VeinSyncPayload.KIND_MIST -> MIST;
-                default -> ARCENCIUM;
-            };
+            int colour = colourOf(kind);
             Component line = Component.literal(arrow(mc, dx, dz) + " ")
                     .append(Component.translatable(key))
                     .append(Component.literal(" " + flat + "m " + depth(dy)));
@@ -130,8 +148,23 @@ public final class VeinHudClient {
         // pose a l'est s'affichait a droite. Une boussole qui ment est pire
         // qu'aucune boussole ; celle-ci se relit sur une image, pas sur un
         // raisonnement.
-        int step = (int) Math.round((delta + 360.0) / 45.0) % 8;
-        return switch (step) {
+        // SEIZE SECTEURS, ET UNE CIBLE QUAND ON EST ALIGNE.
+        //
+        // Mesure du defaut rapporte (« ca ne me disait pas dans quelle
+        // direction ») : a huit secteurs, une case fait quarante-cinq degres,
+        // et au bout d'un tunnel de vingt-trois blocs on pouvait passer a NEUF
+        // BLOCS ET DEMI a cote du filon. A seize, l'ecart tombe a quatre et
+        // demi ; et sous six degres on affiche une cible : c'est le signal
+        // qu'on peut creuser tout droit, a deux blocs pres.
+        if (Math.abs(delta) <= 6.0) {
+            return "◎";
+        }
+        int step = (int) Math.round((delta + 360.0) / 22.5) % 16;
+        if (step % 2 == 1) {
+            // entre deux fleches : on dit de quel cote corriger
+            return delta > 0 ? "»" : "«";
+        }
+        return switch (step / 2) {
             case 0 -> "↑";      // droit devant
             case 1 -> "↗";
             case 2 -> "→";
