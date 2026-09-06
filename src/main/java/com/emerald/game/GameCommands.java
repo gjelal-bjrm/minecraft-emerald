@@ -20,6 +20,8 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
 @EventBusSubscriber(modid = EmeraldWeaponsMod.MODID)
 public class GameCommands {
 
+    private static final org.slf4j.Logger LOGGER = com.mojang.logging.LogUtils.getLogger();
+
     /** Arrete ou relance l'horloge de la partie. */
     private static int setPaused(CommandSourceStack source, boolean value) {
         ServerLevel level = source.getServer().overworld();
@@ -831,9 +833,17 @@ public class GameCommands {
             return 0;
         }
         for (int i = 0; i < count; i++) {
-            player.getInventory().add(com.emerald.rune.RuneItem.stack(
-                    com.emerald.rune.RuneMark.roll(family, rank, player.getRandom()),
-                    com.emerald.item.ModItems.RUNE.get()));
+            com.emerald.rune.RuneMark mark = com.emerald.rune.RuneMark.roll(family, rank, player.getRandom());
+            // le journal dit ce qui a ete tire : c'est ce que lit le banc d'essai
+            StringBuilder lines = new StringBuilder();
+            for (com.emerald.rune.RuneMark.Option option : mark.options()) {
+                lines.append(option.grade().name()).append(':')
+                        .append(option.stat().getSerializedName()).append('=')
+                        .append(String.format(java.util.Locale.ROOT, "%.2f", option.value())).append(' ');
+            }
+            LOGGER.info("Rune {} rang {} : {} option(s) {}", family.getSerializedName(), rank,
+                    mark.options().size(), lines.toString().trim());
+            player.getInventory().add(com.emerald.rune.RuneItem.stack(mark, com.emerald.item.ModItems.RUNE.get()));
         }
         source.sendSuccess(() -> Component.literal(String.format(
                 "%d rune(s) %s de rang %d  (schema %s)", count,

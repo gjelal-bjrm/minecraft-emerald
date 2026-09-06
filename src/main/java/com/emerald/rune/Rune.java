@@ -43,7 +43,7 @@ public enum Rune implements StringRepresentable {
 
     /** Attaque augmentee : C a A, 95 / 142 / 190. L'option de base. */
     TRANCHANT(RuneFamily.WEAPON, RuneGrade.C, RuneGrade.A, 0.95, 1.42, 1.90, 0),
-    /** Chance de critique : C seulement, 9. */
+    /** Precision (chance de critique) : C seulement, 9. Renommee : « Chance » ne disait pas quoi. */
     CHANCE(RuneFamily.WEAPON, RuneGrade.C, RuneGrade.C, 6.0, 0, 0, 0),
     /** Degats critiques : C seulement, +39 a +57 % -- les chiffres donnes par le joueur. */
     FUREUR(RuneFamily.WEAPON, RuneGrade.C, RuneGrade.C, 57.0, 0, 0, 0),
@@ -51,8 +51,8 @@ public enum Rune implements StringRepresentable {
     CADENCE(RuneFamily.WEAPON, RuneGrade.B, RuneGrade.A, 0, 0.09, 0.14, 0),
     /** Portee, en blocs. Sans equivalent : B a A. */
     ALLONGE(RuneFamily.WEAPON, RuneGrade.B, RuneGrade.A, 0, 0.20, 0.32, 0),
-    /** Armure adverse ignoree. Sans equivalent : A seulement. */
-    PERCEE(RuneFamily.WEAPON, RuneGrade.A, RuneGrade.A, 0, 0, 5.0, 0),
+    /** Part de l'armure adverse ignoree, POUR DE VRAI (voir RuneEvents). Sans equivalent : A seulement. */
+    PERCEE(RuneFamily.WEAPON, RuneGrade.A, RuneGrade.A, 0, 0, 20.0, 0),
     /** SL Attaque : C a A -- des NIVEAUX de fiche, 9-10 / 11-13 / 14-17. */
     SL_ATTAQUE(RuneFamily.WEAPON, RuneGrade.C, RuneGrade.A,
             new double[]{9, 11, 14, 0}, new double[]{10, 13, 17, 0}),
@@ -70,12 +70,18 @@ public enum Rune implements StringRepresentable {
     SAIGNEE(RuneFamily.WEAPON, RuneGrade.C, RuneGrade.C, 4.0, 0, 0, 0),
     /** Regeneration HP par victoire : B a A, 142 / 190. */
     CUREE(RuneFamily.WEAPON, RuneGrade.B, RuneGrade.A, 0, 1.42, 1.90, 0),
-    /** Recharges effacees a la mise a mort. Sans equivalent : B seulement. */
-    AUBAINE(RuneFamily.WEAPON, RuneGrade.B, RuneGrade.B, 0, 6.0, 0, 0),
+    /** Chance d'effacer les recharges a la mise a mort, EN POUR CENT AFFICHES : B seulement, 41-60. */
+    AUBAINE(RuneFamily.WEAPON, RuneGrade.B, RuneGrade.B, 0, 60.0, 0, 0),
     /** Degats sous trente pour cent de vie. Sans equivalent : A seulement. */
     ACHARNEMENT(RuneFamily.WEAPON, RuneGrade.A, RuneGrade.A, 0, 0, 8.0, 0),
-    /** Armure face a trois ennemis. Sans equivalent : A seulement. */
-    CERNE(RuneFamily.WEAPON, RuneGrade.A, RuneGrade.A, 0, 0, 1.4, 0),
+    /**
+     * RETIREE. « Cerne, c'est bizarre sur une arme. » Elle reste dans l'enum
+     * pour que les runes deja tirees se relisent ; tous ses maxima a zero, elle
+     * ne se tire plus (voir {@link #of}) et ne fait plus rien.
+     */
+    CERNE(RuneFamily.WEAPON, RuneGrade.A, RuneGrade.A, 0, 0, 0, 0),
+    /** Execution : degats majores sur une CIBLE sous trente pour cent de vie. A seulement. */
+    EXECUTION(RuneFamily.WEAPON, RuneGrade.A, RuneGrade.A, 0, 0, 10.0, 0),
     /** Frappe tout autour de la cible. Sans equivalent : S seulement. */
     CATACLYSME(RuneFamily.WEAPON, RuneGrade.S, RuneGrade.S, 0, 0, 0, 4.0),
     /**
@@ -93,8 +99,8 @@ public enum Rune implements StringRepresentable {
 
     /** Defense : C a A, 66 / 114 / 190. */
     CARAPACE(RuneFamily.ARMOR, RuneGrade.C, RuneGrade.A, 0.66, 1.14, 1.90, 0),
-    /** Reduction des critiques subis : C a A, d'apres les reductions 38 / 38 / 47. */
-    EGIDE(RuneFamily.ARMOR, RuneGrade.C, RuneGrade.A, 3.8, 3.8, 4.7, 0),
+    /** Reduction des critiques subis : C a A. Le releve donnait 38 / 38 / 47 ; un B qui vaut un C n'est pas un B. */
+    EGIDE(RuneFamily.ARMOR, RuneGrade.C, RuneGrade.A, 3.0, 3.8, 4.7, 0),
     /** Max HP : B a A. */
     ENDURANCE(RuneFamily.ARMOR, RuneGrade.B, RuneGrade.A, 0, 1.3, 2.0, 0),
     /** Esquive : B a A. */
@@ -103,8 +109,16 @@ public enum Rune implements StringRepresentable {
     ABSORPTION(RuneFamily.ARMOR, RuneGrade.A, RuneGrade.A, 0, 0, 0.5, 0),
     /** Recuperation HP en defense : S seulement. */
     REGENERATION(RuneFamily.ARMOR, RuneGrade.S, RuneGrade.S, 0, 0, 0, 0.30),
-    /** Toutes les defenses en pour cent : S seulement. */
+    /** Bastion : TOUS les degats subis reduits en pour cent, S seulement. L'option du tank. */
     SAUVEGARDE(RuneFamily.ARMOR, RuneGrade.S, RuneGrade.S, 0, 0, 0, 4.5),
+    /** Degats de melee reduits, en points fixes : C a A. */
+    GARDE(RuneFamily.ARMOR, RuneGrade.C, RuneGrade.A, 0.8, 1.3, 2.0, 0),
+    /** Degats a distance reduits, en points fixes : C a A. */
+    PAVOIS(RuneFamily.ARMOR, RuneGrade.C, RuneGrade.A, 0.8, 1.3, 2.0, 0),
+    /** Degats magiques reduits, en points fixes : C a A. */
+    SCEAU(RuneFamily.ARMOR, RuneGrade.C, RuneGrade.A, 0.8, 1.3, 2.0, 0),
+    /** Riposte : une part des degats subis renvoyee a l'assaillant. S seulement : la troisieme case S des armures. */
+    RIPOSTE(RuneFamily.ARMOR, RuneGrade.S, RuneGrade.S, 0, 0, 0, 20.0),
     /** SL Defense : C a A, 9-10 / 11-13 / 14-17. */
     SL_DEFENSE(RuneFamily.ARMOR, RuneGrade.C, RuneGrade.A,
             new double[]{9, 11, 14, 0}, new double[]{10, 13, 17, 0}),
@@ -212,11 +226,11 @@ public enum Rune implements StringRepresentable {
         return a + random.nextDouble() * (b - a);
     }
 
-    /** Toutes les options d'une famille. */
+    /** Toutes les options d'une famille qui se tirent encore (une option retiree a tous ses maxima a zero). */
     public static List<Rune> of(RuneFamily family) {
         List<Rune> out = new ArrayList<>();
         for (Rune rune : values()) {
-            if (rune.family == family) {
+            if (rune.family == family && rune.max[0] + rune.max[1] + rune.max[2] + rune.max[3] > 0) {
                 out.add(rune);
             }
         }

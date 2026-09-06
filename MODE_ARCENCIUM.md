@@ -4134,3 +4134,48 @@ travers un mur de pierre dresse entre le joueur et l'atelier.
 
 Voir aussi `RUNES.md`, ecrit le meme jour : le releve complet des options de
 runes, leurs fourchettes par grade et ce qu'elles font vraiment.
+
+## 50. Les runes, revues avec le joueur *(6 sept. 2026)*
+
+Le releve `RUNES.md` a ete relu par le joueur ; ce qu'il en a dit, et ce qui
+en a ete fait :
+
+- **« Une rune peut avoir de 1 a 10 options : CC/BB/AAA/SSS. »** Mon schema
+  s'arretait a six ; il etait faux. `RuneMark.PATTERN` monte desormais vers ce
+  plein : C, CC, CCB, CCBB, CCBBA, CCBBAAA, CCBBAAASS, CCBBAAASSS. Mesure sur
+  133 runes tirees en jeu : rang 1 = 1 option, rang 8 = 8 a 10, jamais plus de
+  deux C, deux B, trois A, trois S, jamais un doublon.
+- **Renommages** (langues seules, les identifiants ne bougent pas) : Chance
+  devient **Precision** ; les « SL » deviennent **PC** (PC Attaque, PC Element,
+  PC Defense, PC PV/PM, PC Generale) ; Sauvegarde devient **Bastion**.
+- **Cerne retiree** (« bizarre sur une arme ») : elle reste dans l'enum pour
+  que les runes deja tirees se relisent, tous ses maxima a zero, et
+  `Rune.of` ne la tire plus. **Execution** la remplace : degats majores sur
+  une cible sous 30 %% de vie -- le miroir de l'Acharnement, qui joue sur SA
+  propre vie.
+- **Trois options d'armure ajoutees**, C a A, en points fixes : **Garde**
+  (melee), **Pavois** (distance, `IS_PROJECTILE`), **Sceau** (magie,
+  `neoforge:is_magic`). Et **Riposte**, S, qui renvoie une part des degats :
+  il fallait une troisieme option S d'armure pour remplir « SSS ».
+- **Corrections acceptees** : Aubaine affiche sa vraie chance (41-60 %%) ;
+  Percee ignore reellement une part de l'armure (`CombatRules` avant/apres) ;
+  Egide progresse de C a B (3,0 / 3,8 / 4,7) ; Bastion reduit TOUS les degats
+  subis, comme son texte le dit. Le tout dans `RuneEvents.onIncoming`, dans
+  l'ordre esquive, fixes, pour cent, armure.
+- **Raretes** : famille B, « la lumiere » -- Limpide, Diaphane, Splendide,
+  Magnifique, Solaire, Celeste, Feerique, Prismatique. Huit mots identiques au
+  masculin et au feminin : le mot precede le nom de l'objet, et « Excellente
+  Glaive » ne pouvait pas s'accorder.
+
+**L'element, en sursis.** Le joueur songe a retirer le systeme entier :
+resistances a attribuer a chaque monstre, calculs de degats, pierres de
+changement, bonus d'ailes specifiques. Mesure de l'empreinte : huit classes
+dans `element/` (969 lignes), la voie Element de la fiche, les pierres
+d'element (`ELEMENT_STONE`), deux ailes (Braise, Eau) et le tooltip d'arme.
+Rien n'est retire tant qu'il n'a pas tranche ; le plan est dans la reponse du
+jour.
+
+**Les monstres suivent-ils la courbe ?** Oui, et c'est mesure dans `MobGear` :
+cinq echelons du cuir a la netherite, amelioration jusqu'a +3 pour l'armure et
++6 pour l'arme, rarete jusqu'au rang 4 et 6, tires sur le STADE de la partie --
+le plus avance du temps ecoule, des ancres tenues et du palier du siege.

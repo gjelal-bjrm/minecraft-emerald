@@ -55,9 +55,6 @@ public final class RuneEvents {
 
     /** Sous ce rapport de vie, l'Acharnement s'allume. */
     private static final double DESPERATE = 0.30;
-    /** A partir de tant d'ennemis proches, la rune Cerne s'allume. */
-    private static final int SURROUNDED = 3;
-    private static final double SURROUND_RANGE = 5.0;
     /** Portee a laquelle le Cataclysme se propage. */
     private static final double CATACLYSM_RANGE = 4.0;
     /** Duree du saignement et de la syncope. */
@@ -85,15 +82,7 @@ public final class RuneEvents {
     }
 
     public static void apply(Player player) {
-        // La rune Cerne s'invite parmi les permanents : son bonus est une
-        // valeur d'armure, et la reposer avec les autres evite un second
-        // modificateur qui ferait double emploi.
-        double crowded = surrounded(player) ? Runes.total(player, Rune.CERNE) : 0.0;
-        // La Sauvegarde est un POURCENTAGE sur l'armure deja acquise : on la
-        // convertit ici, une fois, plutot que de l'appliquer au moment du coup.
         AttributeInstance armour = player.getAttribute(Attributes.ARMOR);
-        double bulwark = armour == null ? 0.0
-                : armour.getBaseValue() * Runes.total(player, Rune.SAUVEGARDE) / 100.0;
 
         set(player.getAttribute(Attributes.ATTACK_DAMAGE), id("tranchant"),
                 Runes.total(player, Rune.TRANCHANT));
@@ -101,8 +90,7 @@ public final class RuneEvents {
                 Runes.total(player, Rune.CADENCE));
         set(player.getAttribute(Attributes.ENTITY_INTERACTION_RANGE), id("allonge"),
                 Runes.total(player, Rune.ALLONGE));
-        set(armour, id("carapace"),
-                Runes.total(player, Rune.CARAPACE) + crowded + bulwark);
+        set(armour, id("carapace"), Runes.total(player, Rune.CARAPACE));
         set(player.getAttribute(Attributes.ARMOR_TOUGHNESS), id("absorption"),
                 Runes.total(player, Rune.ABSORPTION));
 
@@ -191,14 +179,29 @@ public final class RuneEvents {
             amount *= (float) (1.0 + ravage / 100.0);
         }
 
-        // PERCEE : une part de l'armure adverse ne compte plus. On la simule en
-        // ajoutant des degats plutot qu'en touchant l'attribut de la victime :
-        // modifier la cible reviendrait a la laisser affaiblie apres le coup.
+        // EXECUTION : la CIBLE est basse, on l'acheve. Le miroir de l'Acharnement.
+        double execution = Runes.total(attacker, Rune.EXECUTION);
+        if (execution > 0.0 && victim.getHealth() <= victim.getMaxHealth() * DESPERATE) {
+            amount *= (float) (1.0 + execution / 100.0);
+        }
+        // PERCEE : une part de l'armure adverse ne compte plus -- POUR DE VRAI.
+        // On calcule ce que le coup donnerait apres l'armure entiere, puis apres
+        // l'armure amputee de cette part, et l'on gonfle le coup du rapport des
+        // deux : le jeu applique ensuite l'armure entiere, et il en sort
+        // exactement ce qu'aurait donne l'armure reduite. Contre une cible sans
+        // armure, le rapport vaut un, et la rune ne fait rien -- c'est juste.
         double pierce = Runes.total(attacker, Rune.PERCEE);
         if (pierce > 0.0) {
-            double armour = victim.getAttributeValue(Attributes.ARMOR);
-            amount += (float) (amount * Math.min(0.60, pierce / 100.0)
-                    * Math.min(1.0, armour / 20.0));
+            float armour = (float) victim.getAttributeValue(Attributes.ARMOR);
+            float toughness = (float) victim.getAttributeValue(Attributes.ARMOR_TOUGHNESS);
+            float full = net.minecraft.world.damagesource.CombatRules.getDamageAfterAbsorb(
+                    victim, amount, event.getSource(), armour, toughness);
+            float reduced = net.minecraft.world.damagesource.CombatRules.getDamageAfterAbsorb(
+                    victim, amount, event.getSource(),
+                    armour * (float) (1.0 - Math.min(1.0, pierce / 100.0)), toughness);
+            if (full > 0.0F && reduced > full) {
+                amount *= reduced / full;
+            }
         }
 
         if (amount != event.getAmount()) {
@@ -262,8 +265,9 @@ public final class RuneEvents {
         // AUBAINE : elle efface ce qui recharge. Le Glaive est le seul objet du
         // mode dont la recharge se voie vraiment ; le sceptre y gagne aussi
         // sans qu'il faille les citer un par un.
+        // Le chiffre affiche EST la chance : plus de « x 10 » cache.
         double haste = Runes.total(killer, Rune.AUBAINE);
-        if (haste > 0.0 && killer.getRandom().nextDouble() * 100.0 < haste * 10.0) {
+        if (haste > 0.0 && killer.getRandom().nextDouble() * 100.0 < haste) {
             for (net.minecraft.world.item.Item item : new net.minecraft.world.item.Item[]{
                     com.emerald.item.ModItems.ARCENCIUM_GLAIVE.get(),
                     com.emerald.item.ModItems.ARCENCIUM_SCEPTER.get()}) {
@@ -274,16 +278,54 @@ public final class RuneEvents {
         }
     }
 
-    /** Vrai si assez d'ennemis pressent le porteur pour allumer la rune Cerne. */
-    private static boolean surrounded(Player player) {
-        if (Runes.total(player, Rune.CERNE) <= 0.0) {
-            return false;                   // on ne compte pas pour rien
+    /**
+     * CE QUE L'ARMURE RETIENT, coup par coup.
+     *
+     * Trois reductions FIXES selon la nature du coup -- la Garde contre la
+     * melee, le Pavois contre ce qui vole, le Sceau contre la magie -- puis le
+     * Bastion, en pour cent de tout ce qui reste, puis la Riposte, qui renvoie
+     * une part de ce qu'on a pris. Les fixes avant le pour cent : c'est l'ordre
+     * qui rend les petites runes utiles sur les petits coups, et le Bastion
+     * utile sur les gros.
+     */
+    @SubscribeEvent
+    public static void onIncoming(LivingIncomingDamageEvent event) {
+        if (!(event.getEntity() instanceof Player defender) || event.getAmount() <= 0.0F) {
+            return;
         }
-        return player.level().getEntitiesOfClass(LivingEntity.class,
-                player.getBoundingBox().inflate(SURROUND_RANGE),
-                e -> e.isAlive() && e != player && !e.isAlliedTo(player)
-                        && e instanceof net.minecraft.world.entity.monster.Enemy)
-                .size() >= SURROUNDED;
+        net.minecraft.world.damagesource.DamageSource source = event.getSource();
+        if (source.is(net.minecraft.tags.DamageTypeTags.BYPASSES_INVULNERABILITY)) {
+            return;                         // le vide, et ce qui lui ressemble
+        }
+        float amount = event.getAmount();
+        double flat;
+        if (source.is(net.minecraft.tags.DamageTypeTags.IS_PROJECTILE)) {
+            flat = Runes.total(defender, Rune.PAVOIS);
+        } else if (source.is(net.neoforged.neoforge.common.Tags.DamageTypes.IS_MAGIC)) {
+            flat = Runes.total(defender, Rune.SCEAU);
+        } else if (source.getEntity() instanceof LivingEntity) {
+            flat = Runes.total(defender, Rune.GARDE);
+        } else {
+            flat = 0.0;                     // chute, feu, noyade : aucune rune ne les connait
+        }
+        if (flat > 0.0) {
+            amount = Math.max(0.0F, amount - (float) flat);
+        }
+        double bastion = Runes.total(defender, Rune.SAUVEGARDE);
+        if (bastion > 0.0) {
+            amount *= (float) (1.0 - Math.min(0.90, bastion / 100.0));
+        }
+        if (amount != event.getAmount()) {
+            event.setAmount(amount);
+        }
+        // RIPOSTE : jamais sur une riposte, sinon deux porteurs se renverraient
+        // le meme coup jusqu'a ce qu'il ne reste rien a renvoyer.
+        double riposte = Runes.total(defender, Rune.RIPOSTE);
+        if (riposte > 0.0 && amount > 0.0F
+                && !source.is(net.minecraft.world.damagesource.DamageTypes.THORNS)
+                && source.getEntity() instanceof LivingEntity attacker && attacker != defender) {
+            attacker.hurt(defender.damageSources().thorns(defender), amount * (float) (riposte / 100.0));
+        }
     }
 
     /** Sert a rappeler que la fiche du Heros et les runes partagent le meme jet. */

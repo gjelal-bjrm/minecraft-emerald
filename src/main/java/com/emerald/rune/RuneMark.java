@@ -85,14 +85,14 @@ public record RuneMark(RuneFamily family, int rank, List<Option> options) {
      * sans qualite ne donne rien plutot qu'une valeur par defaut qu'on croirait
      * acquise.
      *
-     * LE RANG HUIT EST NOTRE AJOUT. Le releve donne le meme schema au sept et
-     * au huit (CBAAS dans les deux cas), ce qui rendrait chez nous le
-     * Phenomenal strictement inutile -- il est deja le plus dur a obtenir. On
-     * lui ajoute donc un second S. C'est le seul endroit ou l'on s'ecarte de la
-     * source, et c'est parce qu'elle nous laisserait un rang vide.
+     * DE UNE A DIX OPTIONS, et les maxima par grade sont ceux que le joueur a
+     * donnes : deux C, deux B, trois A, trois S -- « CC/BB/AAA/SSS ». Mon
+     * premier schema s'arretait a six ; il etait faux. Les rangs montent vers
+     * ce plein : le sept ouvre deux S d'un coup (c'est la marche qui compte),
+     * le huit ajoute le troisieme.
      */
     private static final String[] PATTERN = {
-            "", "C", "CC", "CB", "CBB", "CBA", "CBAA", "CBAAS", "CBAASS"
+            "", "C", "CC", "CCB", "CCBB", "CCBBA", "CCBBAAA", "CCBBAAASS", "CCBBAAASSS"
     };
 
     public static String pattern(int rank) {
