@@ -562,22 +562,27 @@ public class GameCommands {
         // Le drop est rare a dessein -- dix-huit runes pour une partie entiere --
         // ce qui le rend intestable en jeu : verifier un schema de rang huit
         // demanderait des heures. Ces trois commandes le rendent immediat.
+        // DEUX NOMS POUR CHAQUE FAMILLE : celui du code (weapon / armor) et
+        // celui qu'on tape (arme / armure). Le joueur ecrit en francais.
         var rune = Commands.literal("rune");
         for (com.emerald.rune.RuneFamily family : com.emerald.rune.RuneFamily.values()) {
-            rune.then(Commands.literal(family.getSerializedName())
-                    .then(Commands.argument("rang",
-                                    com.mojang.brigadier.arguments.IntegerArgumentType.integer(1, 8))
-                            .executes(ctx -> giveRune(ctx.getSource(), family,
-                                    com.mojang.brigadier.arguments.IntegerArgumentType
-                                            .getInteger(ctx, "rang"), 1))
-                            .then(Commands.argument("combien",
-                                            com.mojang.brigadier.arguments.IntegerArgumentType
-                                                    .integer(1, 36))
-                                    .executes(ctx -> giveRune(ctx.getSource(), family,
-                                            com.mojang.brigadier.arguments.IntegerArgumentType
-                                                    .getInteger(ctx, "rang"),
-                                            com.mojang.brigadier.arguments.IntegerArgumentType
-                                                    .getInteger(ctx, "combien"))))));
+            String french = family == com.emerald.rune.RuneFamily.WEAPON ? "arme" : "armure";
+            for (String word : new String[]{family.getSerializedName(), french}) {
+                rune.then(Commands.literal(word)
+                        .then(Commands.argument("rarete",
+                                        com.mojang.brigadier.arguments.IntegerArgumentType.integer(1, 8))
+                                .executes(ctx -> giveRune(ctx.getSource(), family,
+                                        com.mojang.brigadier.arguments.IntegerArgumentType
+                                                .getInteger(ctx, "rarete"), 1))
+                                .then(Commands.argument("combien",
+                                                com.mojang.brigadier.arguments.IntegerArgumentType
+                                                        .integer(1, 64))
+                                        .executes(ctx -> giveRune(ctx.getSource(), family,
+                                                com.mojang.brigadier.arguments.IntegerArgumentType
+                                                        .getInteger(ctx, "rarete"),
+                                                com.mojang.brigadier.arguments.IntegerArgumentType
+                                                        .getInteger(ctx, "combien"))))));
+            }
         }
         rune.then(Commands.literal("drop")
                 .then(Commands.argument("pv",
@@ -843,12 +848,21 @@ public class GameCommands {
             }
             LOGGER.info("Rune {} rang {} : {} option(s) {}", family.getSerializedName(), rank,
                     mark.options().size(), lines.toString().trim());
-            player.getInventory().add(com.emerald.rune.RuneItem.stack(mark, com.emerald.item.ModItems.RUNE.get()));
+            // DANS LE SAC, ou aux pieds s'il est plein : `add` rend faux et
+            // JETTE la pile en silence, ce qui perdait les runes au-dela de la
+            // trente-sixieme sans le dire.
+            net.minecraft.world.item.ItemStack stack =
+                    com.emerald.rune.RuneItem.stack(mark, com.emerald.item.ModItems.RUNE.get());
+            if (!player.getInventory().add(stack)) {
+                player.drop(stack, false);
+            }
         }
-        source.sendSuccess(() -> Component.literal(String.format(
-                "%d rune(s) %s de rang %d  (schema %s)", count,
-                family.getSerializedName(), rank,
-                com.emerald.rune.RuneMark.pattern(rank))), false);
+        com.emerald.item.GearRarity rarity = com.emerald.item.GearRarity.values()[rank];
+        source.sendSuccess(() -> Component.translatable("command.emeraldweapons.rune.given",
+                count,
+                Component.translatable("rune.emeraldweapons.family." + family.getSerializedName() + ".short"),
+                rarity.label(), com.emerald.rune.RuneMark.pattern(rank))
+                .withStyle(style -> style.withColor(rarity.colour())), false);
         return count;
     }
 

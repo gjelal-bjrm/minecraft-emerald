@@ -4179,3 +4179,25 @@ jour.
 cinq echelons du cuir a la netherite, amelioration jusqu'a +3 pour l'armure et
 +6 pour l'arme, rarete jusqu'au rang 4 et 6, tires sur le STADE de la partie --
 le plus avance du temps ecoule, des ancres tenues et du palier du siege.
+
+**La commande qui fait apparaitre des runes.** Elle existait deja sous son nom
+anglais ; elle parle desormais francais et dit ce qu'elle a donne :
+
+    /arcencium rune arme|armure <rarete 1-8> [combien 1-64]
+    /arcencium rune weapon|armor <rarete 1-8> [combien 1-64]   (les deux marchent)
+
+La rarete est celle de la piece : 1 = Limpide, 8 = Prismatique. Le message
+rappelle la rareté et le schema de cases (« 5 rune(s) -- Rune d'arme de rarete
+Prismatique (cases CCBBAAASSS) »), et chaque tirage part au journal, option par
+option, ce qui rend le banc d'essai possible.
+
+Verifie en jeu : cinq runes d'arme de rang 8 dans la barre, douze runes
+d'armure de rang 3 reparties en neuf plus trois, le nom anglais toujours
+accepte. Au-dela de trente-six, le sac est plein : `Inventory.add` rend faux et
+JETAIT la pile en silence -- les runes en trop tombent maintenant aux pieds.
+Mesure : 9 dans la barre, 27 dans le sac, et des objets au sol.
+
+Cinquieme piege d'essai : ne jamais taper `+=` dans une commande envoyee par
+SendKeys -- le plus y signifie MAJ, et la commande part tronquee. On compte les
+deux zones separement. Et un objet lache par un joueur qui VOLE sort du rayon
+en deux secondes : le compter avec `distance=..8` ne trouve rien.

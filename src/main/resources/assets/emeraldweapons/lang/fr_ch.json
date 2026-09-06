@@ -530,5 +530,6 @@
   "rune.emeraldweapons.sceau": "Sceau",
   "rune.emeraldweapons.sceau.effect": "Dégâts magiques réduits de %s",
   "rune.emeraldweapons.riposte": "Riposte",
-  "rune.emeraldweapons.riposte.effect": "%s %% des dégâts subis renvoyés à l'assaillant"
+  "rune.emeraldweapons.riposte.effect": "%s %% des dégâts subis renvoyés à l'assaillant",
+  "command.emeraldweapons.rune.given": "%s rune(s) — %s de rareté %s (cases %s)"
 }

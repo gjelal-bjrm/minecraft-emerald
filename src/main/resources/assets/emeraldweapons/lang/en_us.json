@@ -530,5 +530,6 @@
   "rune.emeraldweapons.sceau": "Seal",
   "rune.emeraldweapons.sceau.effect": "Magic damage reduced by %s",
   "rune.emeraldweapons.riposte": "Riposte",
-  "rune.emeraldweapons.riposte.effect": "%s %% of damage taken returned to the attacker"
+  "rune.emeraldweapons.riposte.effect": "%s %% of damage taken returned to the attacker",
+  "command.emeraldweapons.rune.given": "%s rune(s) — %s, rarity %s (slots %s)"
 }
