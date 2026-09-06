@@ -73,13 +73,17 @@ public final class AuroreCaves {
     private static final int RETRY = 10 * 20;
     private static final int LATE = 60 * 20;
     /** Un vide digne d'un puits : six blocs d'air au moins ; dix pour un vrai gouffre. */
-    private static final int MIN_AIR = 6;
+    private static final int MIN_AIR = 4;
     private static final int BIG_AIR = 10;
     private static final int COLUMN_CAP = 28;
-    private static final int WELLS_MIN = 2;
-    private static final int WELLS_MAX = 4;
-    private static final int PAIRS_MIN = 1;
-    private static final int PAIRS_MAX = 2;
+    private static final int WELLS_MIN = 4;
+    private static final int WELLS_MAX = 6;
+    private static final int PAIRS_MIN = 2;
+    private static final int PAIRS_MAX = 3;
+    /** Une nouvelle levee des qu'on s'est eloigne d'autant de la precedente. */
+    private static final double REFRESH = 48.0;
+    /** La brume de rappel de fin d'Aurore reste tant de tiques. */
+    private static final int RECALL_TICKS = 45 * 20;
     private static final double PAIR_MIN = 30.0;
     private static final double PAIR_MAX = 120.0;
     /** Les avertissements, en tiques avant la fin. */
@@ -130,7 +134,11 @@ public final class AuroreCaves {
     /** Les pieds des puits leves : pour le journal, et donc pour les essais. */
     private static final List<BlockPos> wellFloors = new ArrayList<>();
     /** Les joueurs autour de qui quelque chose s'est leve, et quand les autres peuvent reessayer. */
-    private static final Set<UUID> served = new HashSet<>();
+    private static final Map<UUID, BlockPos> servedAt = new HashMap<>();
+    /** Les brumes de rappel de la fin : d'ou, vers ou, et jusqu'a quand. */
+    private static final Map<BlockPos, BlockPos> recalls = new HashMap<>();
+    private static final List<BlockPos> recallBlocks = new ArrayList<>();
+    private static long recallUntil = -1L;
     private static final Map<UUID, Long> nextTry = new HashMap<>();
 
     private AuroreCaves() {
@@ -166,7 +174,7 @@ public final class AuroreCaves {
         int wells = raiseWells(level, spots);
         int pairs = raiseMists(level, spots);
         if (wells + pairs > 0) {
-            served.add(player.getUUID());
+            servedAt.put(player.getUUID(), player.blockPosition());
         }
         return new int[]{wells, pairs};
     }
@@ -181,7 +189,10 @@ public final class AuroreCaves {
         long now = level.getGameTime();
         for (ServerPlayer player : level.players()) {
             BlockPos pos = player.blockPosition();
-            if (served.contains(player.getUUID()) || !Underground.allowed(level, pos)
+            // QUI S'ELOIGNE RETROUVE : une levee ne vaut que pour ses 48 blocs.
+            // Le joueur creusait a cent blocs de ce qui s'etait leve au depart.
+            BlockPos last = servedAt.get(player.getUUID());
+            if ((last != null && Underground.flat(last, pos) < REFRESH) || !Underground.allowed(level, pos)
                     || level.canSeeSky(pos.above()) || now < nextTry.getOrDefault(player.getUUID(), 0L)) {
                 continue;
             }
@@ -260,12 +271,101 @@ public final class AuroreCaves {
         mistBlocks.clear();
         links.clear();
         arrivedAt.clear();
+        // LE RAPPEL : qui est encore sous terre voit une brume se lever a ses
+        // pieds. Y entrer, c'est le voyage a travers la roche, droit vers le
+        // haut, jusqu'au premier bloc a ciel ouvert. L'Aurore ne laisse
+        // personne au fond.
+        clearRecalls(level);
+        for (ServerPlayer player : level.players()) {
+            placeRecall(level, player);
+        }
+    }
+
+    /** La brume de rappel d'un joueur, s'il est sous terre et qu'il y a un jour au-dessus. */
+    private static void placeRecall(ServerLevel level, ServerPlayer player) {
+        BlockPos feet = player.blockPosition();
+        if (feet.getY() >= Underground.CEILING || level.canSeeSky(feet.above())
+                || !level.getBlockState(feet).isAir()) {
+            return;
+        }
+        BlockPos top = level.getHeightmapPos(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, feet);
+        if (top.getY() <= feet.getY() + 3) {
+            return;
+        }
+        recalls.put(feet, top);
+        links.put(feet, top);                          // un seul sens : on ne redescend pas par la
+        BlockPos[] cloud = {feet, feet.above(), feet.north(), feet.south(), feet.east(), feet.west()};
+        for (BlockPos pos : cloud) {
+            if (level.getBlockState(pos).isAir()) {
+                level.setBlock(pos, ModBlocks.RECALL_MIST.get().defaultBlockState(), 3);
+                mistBlocks.put(pos, feet);
+                recallBlocks.add(pos);
+            }
+        }
+        recallUntil = level.getGameTime() + RECALL_TICKS;
+        player.sendSystemMessage(Component.translatable("mine.emeraldweapons.aurore.recall")
+                .withStyle(style -> style.withColor(0xFFD24A)));
+        player.playNotifySound(SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.AMBIENT, 1.0F, 1.6F);
+        LOGGER.info("Aurore : brume de rappel pour {} en {} vers {}", player.getName().getString(), feet, top);
+    }
+
+    private static void clearRecalls(ServerLevel level) {
+        for (BlockPos pos : recallBlocks) {
+            if (level.getBlockState(pos).is(ModBlocks.RECALL_MIST.get())) {
+                level.setBlock(pos, Blocks.AIR.defaultBlockState(), 3);
+            }
+            mistBlocks.remove(pos);
+        }
+        for (BlockPos anchor : recalls.keySet()) {
+            links.remove(anchor);
+        }
+        recallBlocks.clear();
+        recalls.clear();
+        recallUntil = -1L;
+    }
+
+    /**
+     * UNE PAIRE A LA DEMANDE : la Chambre d'Aurore pose la sienne ici. Les deux
+     * ancres doivent etre de l'air avec de l'air au-dessus.
+     */
+    public static boolean placePair(ServerLevel level, BlockPos anchorA, BlockPos anchorB) {
+        if (!level.getBlockState(anchorA).isAir() || !level.getBlockState(anchorB).isAir()) {
+            return false;
+        }
+        links.put(anchorA, anchorB);
+        links.put(anchorB, anchorA);
+        placeMist(level, anchorA);
+        placeMist(level, anchorB);
+        active = true;
+        return true;
+    }
+
+    /** La plus grande grotte connue autour d'un point : son sol, ou rien. */
+    @javax.annotation.Nullable
+    public static BlockPos bestCave(ServerLevel level, BlockPos centre) {
+        Spot best = null;
+        for (Spot spot : spots(level, centre)) {
+            if (best == null || spot.air() > best.air()) {
+                best = spot;
+            }
+        }
+        return best == null ? null : best.floor().above();
+    }
+
+    /** Les pieds des puits leves, pour la boussole. */
+    public static List<BlockPos> wells() {
+        List<BlockPos> out = new ArrayList<>();
+        for (BlockPos floor : wellFloors) {
+            out.add(floor.above());
+        }
+        return out;
     }
 
     /** Oublie tout sans rien retirer du monde : au debut d'une Aurore, ou a l'arret. */
     private static void forget(ServerLevel level) {
-        served.clear();
+        servedAt.clear();
         nextTry.clear();
+        clearRecalls(level);
         // ce qu'une Aurore precedente aurait laisse (serveur arrete en pleine meteo)
         for (BlockPos pos : lit) {
             if (level.getBlockState(pos).is(ModBlocks.AURORE_LIGHT.get())) {
@@ -551,8 +651,12 @@ public final class AuroreCaves {
             level.sendParticles(com.emerald.particles.ModParticles.PRISM_MOTE.get(),
                     down.getX() + 0.5, down.getY() + 0.5, down.getZ() + 0.5, 2, 0.3, 0.3, 0.3, 0.0);
         }
+        // la brume de rappel se dissipe au bout de son temps
+        if (recallUntil >= 0 && level.getGameTime() > recallUntil) {
+            clearRecalls(level);
+        }
         // les departs : qui vient d'ENTRER dans une brume, et n'en revient pas a l'instant
-        if (active) {
+        if (active || !recalls.isEmpty()) {
             long now = level.getGameTime();
             for (UUID id : touching) {
                 if (wasTouching.contains(id) || transits.containsKey(id)

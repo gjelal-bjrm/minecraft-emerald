@@ -232,7 +232,7 @@ public final class BattueHunt {
         if (now % 40 == 0) {
             for (ServerPlayer player : level.players()) {
                 PacketDistributor.sendToPlayer(player, new com.emerald.network.VeinSyncPayload(
-                        List.of(beast.blockPosition().asLong()), com.emerald.network.VeinSyncPayload.KIND_PREY));
+                        List.of(beast.blockPosition().asLong()), (long) com.emerald.network.VeinSyncPayload.KIND_PREY));
             }
         }
         // LA CHARGE DU SANGLIER : accule, il rend un coup, puis il refuit

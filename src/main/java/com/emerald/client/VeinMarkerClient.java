@@ -35,8 +35,6 @@ public final class VeinMarkerClient {
     private static final double RANGE = 64.0;
     /** Taille du losange, en pixels d'interface. */
     private static final int SIZE = 5;
-    /** Autant que le panneau : trois lignes, trois reperes. */
-    private static final int SHOWN = 3;
     /** Marge du bord : au-dela, on laisse la fleche du panneau faire son travail. */
     private static final int EDGE = 14;
 
@@ -61,7 +59,7 @@ public final class VeinMarkerClient {
         // la moitie de l'ouverture verticale, en tangente : le facteur d'echelle
         double half = Math.tan(Math.toRadians(mc.options.fov().get() / 2.0));
 
-        for (int i = 0; i < Math.min(SHOWN, veins.size()); i++) {
+        for (int i : VeinHudClient.order()) {
             BlockPos pos = BlockPos.of(veins.get(i));
             Vec3 delta = new Vec3(pos.getX() + 0.5 - eye.x, pos.getY() + 0.5 - eye.y,
                     pos.getZ() + 0.5 - eye.z);

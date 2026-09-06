@@ -534,5 +534,11 @@
   "command.emeraldweapons.rune.given": "%s rune(s) — %s de rareté %s (cases %s)",
   "socket.emeraldweapons.rune.refuse.family": "Cette rune ne se grave pas sur cette pièce : une rune d'arme va sur une arme ou un casque, une rune d'armure sur une pièce d'armure.",
   "socket.emeraldweapons.rune.refuse.rank": "Rune %s : trop haute pour une pièce %s. Montez d'abord la rareté de la pièce.",
-  "socket.emeraldweapons.rune.refuse.empty": "Posez d'abord la pièce à graver."
+  "socket.emeraldweapons.rune.refuse.empty": "Posez d'abord la pièce à graver.",
+  "block.emeraldweapons.recall_mist": "Brume de rappel",
+  "weather.emeraldweapons.vein.well": "Puits",
+  "mine.emeraldweapons.aurore.chamber.vein": "La roche s'ouvre. Une brume d'Aurore, et sa jumelle contre un filon de %s, à %s blocs.",
+  "mine.emeraldweapons.aurore.chamber.cave": "La roche s'ouvre. Une brume d'Aurore, et sa jumelle dans une grotte, à %s blocs.",
+  "mine.emeraldweapons.aurore.chamber.surface": "La roche s'ouvre. Une brume d'Aurore, et sa jumelle au jour, %s blocs au-dessus.",
+  "mine.emeraldweapons.aurore.recall": "Une brume de rappel se lève à vos pieds : entrez-y, elle vous ramène au jour."
 }

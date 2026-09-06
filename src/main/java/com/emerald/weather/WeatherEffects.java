@@ -307,6 +307,7 @@ public final class WeatherEffects {
             auroreTold.clear();
             auroreMined.clear();
             veinScans.clear();
+            guided.clear();
             veinJobs.clear();
             // et les grottes s'ouvrent : puits de lumiere, brumes etoilees
             com.emerald.mine.AuroreCaves.begin(level);
@@ -747,12 +748,20 @@ public final class WeatherEffects {
             }
             boolean pick = hasArcenciumPick(player);
             List<BlockPos> veins = prioritise(level, pick, all);
-            int kinds = 0;
+            // LE FILON DESIGNE, retenu pour la Chambre d'Aurore : c'est la que
+            // sa jumelle ira (AuroreChamber).
+            if (veins.isEmpty()) {
+                guided.remove(player.getUUID());
+            } else {
+                guided.put(player.getUUID(), veins.get(0));
+            }
+            long kinds = 0L;
             List<Long> packed = new ArrayList<>();
             for (int i = 0; i < veins.size(); i++) {
                 packed.add(veins.get(i).asLong());
                 if (!level.getBlockState(veins.get(i)).is(ModBlocks.ARCENCIUM_ORE.get())) {
-                    kinds |= com.emerald.network.VeinSyncPayload.KIND_DIAMOND << (2 * i);
+                    kinds = com.emerald.network.VeinSyncPayload.put(kinds, i,
+                            com.emerald.network.VeinSyncPayload.KIND_DIAMOND);
                 }
             }
             // LES SORTIES SUR LA BOUSSOLE : la brume la plus proche, apres les
@@ -765,8 +774,23 @@ public final class WeatherEffects {
                 }
             }
             if (nearestMist != null && packed.size() < 15) {
-                kinds |= com.emerald.network.VeinSyncPayload.KIND_MIST << (2 * packed.size());
+                kinds = com.emerald.network.VeinSyncPayload.put(kinds, packed.size(),
+                        com.emerald.network.VeinSyncPayload.KIND_MIST);
                 packed.add(nearestMist.asLong());
+            }
+            // ET LE PUITS LE PLUS PROCHE : la remontee facile, sur la meme ligne
+            // que la sortie. Le joueur ne les trouvait pas ; on les lui montre.
+            BlockPos nearestWell = null;
+            for (BlockPos well : com.emerald.mine.AuroreCaves.wells()) {
+                if (nearestWell == null || well.distSqr(player.blockPosition())
+                        < nearestWell.distSqr(player.blockPosition())) {
+                    nearestWell = well;
+                }
+            }
+            if (nearestWell != null && packed.size() < 15) {
+                kinds = com.emerald.network.VeinSyncPayload.put(kinds, packed.size(),
+                        com.emerald.network.VeinSyncPayload.KIND_WELL);
+                packed.add(nearestWell.asLong());
             }
             net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player,
                     new com.emerald.network.VeinSyncPayload(packed, kinds));
@@ -984,6 +1008,14 @@ public final class WeatherEffects {
                         job.found.size(), at, job.total, now - job.started);
             }
         }
+    }
+
+    /** Le filon que la boussole designe a ce joueur, ou rien. */
+    private static final java.util.Map<java.util.UUID, BlockPos> guided = new java.util.HashMap<>();
+
+    @javax.annotation.Nullable
+    public static BlockPos guidedVein(ServerPlayer player) {
+        return guided.get(player.getUUID());
     }
 
     /** Le dernier sondage acheve d'un joueur, ou rien tant que le premier n'est pas fini. */

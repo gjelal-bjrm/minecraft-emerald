@@ -4334,3 +4334,46 @@ Les jalons `block_display` restent : ils servent quand le filon donne sur une
 grotte ouverte. Ils ne sont plus reposes que si la liste change -- les recreer
 toutes les deux secondes faisait clignoter la lueur -- et le message d'annonce
 ne promet plus ce qu'ils ne tiennent pas.
+
+## 54. Les grottes qui suivent, la Chambre d'Aurore, le Rappel *(6 sept. 2026)*
+
+« Je tombe tres rarement sur les portails etoiles, et je ne suis pas tombe
+non plus sur les colonnes. » Mesure dans le journal du joueur : son Aurore
+avait bien leve 3 puits et 1 paire -- entre 80 et 115 blocs SOUS la surface
+ou il se tenait, une seule fois, et la brume la plus proche de sa galerie
+n'est jamais montee sur le panneau (quatrieme ligne d'un panneau qui en
+montre trois). Trois causes : trop peu, leves une fois autour du point de
+depart, invisibles.
+
+**A. Plus, et qui suivent** (`AuroreCaves`). 4 a 6 puits et 2 a 3 paires par
+levee ; une grotte de 4 blocs d'air suffit (6 avant). `servedAt` retient OU
+la levee a eu lieu : a 48 blocs de la, une nouvelle levee. Et le panneau
+reserve leurs lignes a la brume et au puits les plus proches, apres les
+trois filons (`VeinHudClient.order`) ; le paquet passe a trois bits par
+entree (`VeinSyncPayload.put`), avec le genre Puits.
+
+**B. La Chambre d'Aurore** (`mine/AuroreChamber`), l'idee du joueur. En
+cassant de la roche sous y = 48 pendant l'Aurore, une chance sur 40, trente
+secondes de repit : une chambre de 5 x 4 x 5 s'ouvre devant soi, bloc par bloc
+(la mecanique des Percees), et une brume se leve au centre. Sa jumelle se
+leve dans l'ordre : contre le filon que la boussole designe (une poche de 3 x
+3 x 3 creusee contre le minerai, qui reste en place), sinon dans la plus grande
+grotte du sondage, sinon au jour. Le message dit ou elle mene.
+`WeatherEffects.guidedVein` retient le filon designe a chaque joueur ;
+`AuroreCaves.placePair` pose une paire a la demande. `/arcencium chambre`
+l'ouvre sans casser quarante pierres.
+
+**C. Le Rappel** (`AuroreCaves.placeRecall`, bloc `recall_mist`, la brume
+teinte or). A la fin de l'Aurore, chaque joueur sous terre voit une brume de
+rappel se lever a ses pieds, 45 s. Y entrer, c'est le voyage a travers la
+roche, droit vers le premier bloc a ciel ouvert au-dessus (`Heightmap
+MOTION_BLOCKING_NO_LEAVES`). Un seul sens ; le depart reste possible apres
+la fin de l'Aurore tant qu'une brume de rappel existe.
+
+Verifie en jeu : premiere levee « 4 puits et 2 paires » ; la chambre ouverte
+en (-396, 20, -400) avec sa brume au centre, la jumelle en (-379, 19, -400)
+contre le diamant plante en (-377, 20, -400) qui reste intact, « ... contre un
+filon de Diamant, a 17 blocs » ; entre dans la brume, le joueur arrive dans la
+poche ; la brume de rappel posee a ses pieds, et le joueur remonte au jour ;
+une seconde Aurore, puis 60 blocs plus loin sous terre : « a la descente de
+Dev, 4 puits et 3 paires ». Le panneau montre les lignes Brume et Puits.

@@ -271,6 +271,14 @@ public class GameCommands {
         }
         root.then(percee);
         // Les grottes de l'Aurore, a la demande : ouvrir, puis refermer.
+        // la Chambre d'Aurore, sans casser quarante pierres : ouvre-la devant soi
+        root.then(Commands.literal("chambre").executes(ctx -> {
+            net.minecraft.server.level.ServerPlayer player = ctx.getSource().getPlayerOrException();
+            boolean ok = com.emerald.mine.AuroreChamber.open(player.serverLevel(), player);
+            ctx.getSource().sendSuccess(() -> Component.literal(ok ? "Chambre : la roche cede."
+                    : "Chambre : l'emprise n'est pas de la roche pleine."), false);
+            return ok ? 1 : 0;
+        }));
         root.then(Commands.literal("grottes")
                 .then(Commands.literal("ouvrir").executes(ctx -> {
                     com.emerald.mine.AuroreCaves.begin(ctx.getSource().getServer().overworld());

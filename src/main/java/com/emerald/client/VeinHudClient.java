@@ -45,9 +45,10 @@ public final class VeinHudClient {
     private static final int ARCENCIUM = 0xFFE478FF;
     private static final int PREY = 0xFFFFC46B;
     private static final int MIST = 0xFFC8D8FF;
+    private static final int WELL = 0xFFB9FFE0;
 
     private static java.util.List<Long> positions = java.util.List.of();
-    private static int kinds;
+    private static long kinds;
     private static long seenAt = -1L;
 
     private VeinHudClient() {
@@ -69,8 +70,34 @@ public final class VeinHudClient {
         return positions;
     }
 
-    public static int kinds() {
+    public static long kinds() {
         return kinds;
+    }
+
+    /**
+     * LES ENTREES A MONTRER, dans l'ordre : trois filons au plus, puis la brume
+     * et le puits s'ils existent. Avant, la brume venait apres six filons et
+     * tombait hors des trois lignes : le joueur ne l'a jamais vue.
+     */
+    public static java.util.List<Integer> order() {
+        java.util.List<Integer> out = new java.util.ArrayList<>();
+        java.util.List<Long> shown = shown();
+        int veins = 0;
+        for (int i = 0; i < shown.size(); i++) {
+            int kind = VeinSyncPayload.kindAt(kinds, i);
+            boolean exit = kind == VeinSyncPayload.KIND_MIST || kind == VeinSyncPayload.KIND_WELL;
+            if (!exit && veins < SHOWN) {
+                out.add(i);
+                veins++;
+            }
+        }
+        for (int i = 0; i < shown.size(); i++) {
+            int kind = VeinSyncPayload.kindAt(kinds, i);
+            if (kind == VeinSyncPayload.KIND_MIST || kind == VeinSyncPayload.KIND_WELL) {
+                out.add(i);
+            }
+        }
+        return out;
     }
 
     /** La couleur d'une sorte, partagee entre le panneau et le repere. */
@@ -79,6 +106,7 @@ public final class VeinHudClient {
             case VeinSyncPayload.KIND_DIAMOND -> DIAMOND;
             case VeinSyncPayload.KIND_PREY -> PREY;
             case VeinSyncPayload.KIND_MIST -> MIST;
+            case VeinSyncPayload.KIND_WELL -> WELL;
             default -> ARCENCIUM;
         };
     }
@@ -101,12 +129,14 @@ public final class VeinHudClient {
                 || seenAt < 0 || mc.level.getGameTime() - seenAt > STALE) {
             return 0;
         }
-        int rows = Math.min(SHOWN, positions.size());
+        java.util.List<Integer> order = order();
+        int rows = order.size();
         graphics.fill(x, y, x + WIDTH, y + 2 + rows * LINE, 0x8C060608);
         double px = mc.player.getX();
         double py = mc.player.getY();
         double pz = mc.player.getZ();
-        for (int i = 0; i < rows; i++) {
+        for (int row = 0; row < rows; row++) {
+            int i = order.get(row);
             BlockPos pos = BlockPos.of(positions.get(i));
             int kind = VeinSyncPayload.kindAt(kinds, i);
             double dx = pos.getX() + 0.5 - px;
@@ -117,13 +147,14 @@ public final class VeinHudClient {
                 case VeinSyncPayload.KIND_DIAMOND -> "weather.emeraldweapons.vein.diamond";
                 case VeinSyncPayload.KIND_PREY -> "weather.emeraldweapons.vein.prey";
                 case VeinSyncPayload.KIND_MIST -> "weather.emeraldweapons.vein.mist";
+                case VeinSyncPayload.KIND_WELL -> "weather.emeraldweapons.vein.well";
                 default -> "weather.emeraldweapons.vein.arcencium";
             };
             int colour = colourOf(kind);
             Component line = Component.literal(arrow(mc, dx, dz) + " ")
                     .append(Component.translatable(key))
                     .append(Component.literal(" " + flat + "m " + depth(dy)));
-            graphics.drawString(mc.font, line, x + 3, y + 2 + i * LINE, colour, false);
+            graphics.drawString(mc.font, line, x + 3, y + 2 + row * LINE, colour, false);
         }
         return 2 + rows * LINE + 2;
     }

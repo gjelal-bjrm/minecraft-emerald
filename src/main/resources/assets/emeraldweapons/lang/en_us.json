@@ -534,5 +534,11 @@
   "command.emeraldweapons.rune.given": "%s rune(s) — %s, rarity %s (slots %s)",
   "socket.emeraldweapons.rune.refuse.family": "This rune does not fit this piece: a weapon rune goes on a weapon or helmet, an armour rune on an armour piece.",
   "socket.emeraldweapons.rune.refuse.rank": "%s rune: too high for a %s piece. Raise the piece's rarity first.",
-  "socket.emeraldweapons.rune.refuse.empty": "Place the piece to engrave first."
+  "socket.emeraldweapons.rune.refuse.empty": "Place the piece to engrave first.",
+  "block.emeraldweapons.recall_mist": "Recall Mist",
+  "weather.emeraldweapons.vein.well": "Well",
+  "mine.emeraldweapons.aurore.chamber.vein": "The rock opens. An Aurora mist, and its twin against a %s vein, %s blocks away.",
+  "mine.emeraldweapons.aurore.chamber.cave": "The rock opens. An Aurora mist, and its twin in a cave, %s blocks away.",
+  "mine.emeraldweapons.aurore.chamber.surface": "The rock opens. An Aurora mist, and its twin in daylight, %s blocks above.",
+  "mine.emeraldweapons.aurore.recall": "A recall mist rises at your feet: step in, it takes you back to daylight."
 }

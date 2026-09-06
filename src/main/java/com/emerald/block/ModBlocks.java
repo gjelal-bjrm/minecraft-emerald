@@ -222,6 +222,14 @@ public class ModBlocks {
                     .strength(-1.0F, 3600000.0F).noLootTable()
                     .pushReaction(net.minecraft.world.level.material.PushReaction.DESTROY)
                     .sound(net.minecraft.world.level.block.SoundType.AMETHYST)));
+    /** La Brume de rappel : la meme brume, teinte or, qui ne va que vers le jour (AuroreCaves.placeRecall). */
+    public static final DeferredBlock<StarMistBlock> RECALL_MIST = registerBlockOnly("recall_mist",
+            () -> new StarMistBlock(BlockBehaviour.Properties.of()
+                    .noCollission().noOcclusion().lightLevel(s -> 13)
+                    .strength(-1.0F, 3600000.0F).noLootTable()
+                    .pushReaction(net.minecraft.world.level.material.PushReaction.DESTROY)
+                    .sound(net.minecraft.world.level.block.SoundType.AMETHYST)));
+
     public static final DeferredBlock<StarMistBlock> STAR_MIST = registerBlockOnly("star_mist",
             () -> new StarMistBlock(BlockBehaviour.Properties.of()
                     .noCollission().noOcclusion().lightLevel(s -> 12)
