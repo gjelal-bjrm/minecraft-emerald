@@ -515,5 +515,10 @@
   "item.emeraldweapons.arcencium_shard": "Éclat d'Arcencium",
   "mine.emeraldweapons.shards.hint": "Une pioche en fer n'en tire que des éclats — quatre font un brut. La pioche en diamant en tire le brut.",
   "weather.emeraldweapons.aurore.veins.nopick": "Sans pioche en diamant sur vous, l'Aurore mène au diamant d'abord : c'est lui, la clef.",
-  "weather.emeraldweapons.aurore.veins.pick": "Pioche en diamant sur vous : l'Aurore mène à l'Arcencium d'abord."
+  "weather.emeraldweapons.aurore.veins.pick": "Pioche en diamant sur vous : l'Aurore mène à l'Arcencium d'abord.",
+  "game.emeraldweapons.first_forge": "Le village tient. Les artisans vous paient en matière.",
+  "game.emeraldweapons.first_forge.forge": "%s %s — à la Forge d'Arcencium : montez une pièce d'armure au cran +1, puis votre arme. Neuf chances sur dix à ce cran.",
+  "game.emeraldweapons.first_forge.altar": "%s plumes d'Arcencium — à l'Autel de spécialisation : votre premier palier d'ailes, garanti.",
+  "game.emeraldweapons.first_forge.bench": "L'Établi à sertir grave les runes et élève la rareté d'une pièce. Gardez-lui vos premières runes.",
+  "game.emeraldweapons.first_forge.where": "L'atelier est à %s blocs vers le %s (%s, %s, %s) — ses trois établis brillent à travers les murs pendant dix minutes."
 }

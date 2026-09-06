@@ -515,5 +515,10 @@
   "item.emeraldweapons.arcencium_shard": "Arcencium Shard",
   "mine.emeraldweapons.shards.hint": "An iron pickaxe only chips shards off it — four make a raw piece. A diamond pickaxe yields the raw ore.",
   "weather.emeraldweapons.aurore.veins.nopick": "No diamond pickaxe on you: the Aurora leads to diamond first — that is the key.",
-  "weather.emeraldweapons.aurore.veins.pick": "Diamond pickaxe on you: the Aurora leads to Arcencium first."
+  "weather.emeraldweapons.aurore.veins.pick": "Diamond pickaxe on you: the Aurora leads to Arcencium first.",
+  "game.emeraldweapons.first_forge": "The village holds. The craftsmen pay you in material.",
+  "game.emeraldweapons.first_forge.forge": "%s %s — at the Arcencium Forge: take one armour piece to +1, then your weapon. Nine chances in ten at this step.",
+  "game.emeraldweapons.first_forge.altar": "%s Arcencium feathers — at the Specialization Altar: your first wing tier, guaranteed.",
+  "game.emeraldweapons.first_forge.bench": "The Socketing Bench engraves runes and raises a piece's rarity. Save your first runes for it.",
+  "game.emeraldweapons.first_forge.where": "The workshop is %s blocks to the %s (%s, %s, %s) — its three benches glow through walls for ten minutes."
 }

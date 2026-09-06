@@ -732,6 +732,9 @@ public class GameManager {
         announce(level, "game.emeraldweapons.anchors_risen",
                 "game.emeraldweapons.anchors_risen.sub", 0x9CE8FF);
         announceLandmarks(level, center);
+        // LA PREMIERE FORGE : de quoi faire une fois chacun des trois gestes du
+        // mode, et l'atelier enfin visible. Voir FirstForge.
+        FirstForge.award(level, center);
         // le titre passe ; les coordonnees restent dans le journal du chat, et
         // l'interface les rappelle en permanence
         int index = 1;

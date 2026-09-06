@@ -85,6 +85,8 @@ public class GameState extends SavedData {
     private int anchorsActive;
     private int anchorsInProgress;
     private BlockPos village = BlockPos.ZERO;
+    /** Le centre de l'atelier : ses trois etablis en dependent (voir FirstForge). */
+    private BlockPos workshop = BlockPos.ZERO;
     /** Vrai des que le monde a ete prepare : la mise en place ne se joue qu'une fois. */
     private boolean prepared;
     private final List<BlockPos> anchors = new ArrayList<>();
@@ -111,6 +113,7 @@ public class GameState extends SavedData {
         state.anchorsActive = tag.getInt("AnchorsActive");
         state.anchorsInProgress = tag.getInt("AnchorsInProgress");
         state.village = BlockPos.of(tag.getLong("Village"));
+        state.workshop = BlockPos.of(tag.getLong("Workshop"));
         state.prepared = tag.getBoolean("Prepared");
         state.finale = BlockPos.of(tag.getLong("Finale"));
         state.finaleBoss = tag.getString("FinaleBoss");
@@ -136,6 +139,7 @@ public class GameState extends SavedData {
         tag.putInt("AnchorsActive", this.anchorsActive);
         tag.putInt("AnchorsInProgress", this.anchorsInProgress);
         tag.putLong("Village", this.village.asLong());
+        tag.putLong("Workshop", this.workshop.asLong());
         tag.putBoolean("Prepared", this.prepared);
         tag.putLong("Finale", this.finale.asLong());
         tag.putString("FinaleBoss", this.finaleBoss);
@@ -234,6 +238,16 @@ public class GameState extends SavedData {
 
     public BlockPos village() {
         return this.village;
+    }
+
+    /** Le centre de l'atelier, ou ZERO tant qu'il n'a pas ete pose. */
+    public BlockPos workshop() {
+        return this.workshop;
+    }
+
+    public void setWorkshop(BlockPos pos) {
+        this.workshop = pos;
+        setDirty();
     }
 
     public boolean isPrepared() {

@@ -5,7 +5,10 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.decoration.ArmorStand;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.nbt.NbtUtils;
 import net.minecraft.world.level.Level;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -53,6 +56,59 @@ public final class Jalons {
         tag.putBoolean("Small", true);
         mark.load(tag);
         level.addFreshEntity(mark);
+    }
+
+    /**
+     * UN BLOC ENTIER DETOURE, et non un point.
+     *
+     * Le porte-armure marqueur n'a pas de corps : son contour tient en un pixel,
+     * et l'on ne voyait rien la ou l'on croyait signaler un etabli (capture a
+     * l'appui). Un `block_display` porte, lui, la forme du bloc : agrandi d'un
+     * centieme et pose dessus, il en dessine le contour exact -- a travers les
+     * murs, comme toute lueur d'entite, sans collision et sans rien cacher.
+     *
+     * `glow_color_override` donne la couleur sans passer par une equipe de
+     * tableau d'affichage : c'est le seul moyen d'avoir deux jalons de couleurs
+     * differentes en meme temps.
+     */
+    public static void glow(ServerLevel level, BlockPos pos, BlockState state, int ticks, int colour) {
+        Entity display = EntityType.BLOCK_DISPLAY.create(level);
+        if (display == null) {
+            return;
+        }
+        display.setPos(pos.getX(), pos.getY(), pos.getZ());
+        CompoundTag tag = new CompoundTag();
+        display.saveWithoutId(tag);
+        tag.put("block_state", NbtUtils.writeBlockState(state));
+        tag.putInt("glow_color_override", colour);
+        tag.putFloat("view_range", 4.0F);           // visible de loin, pas seulement de pres
+        CompoundTag shape = new CompoundTag();
+        shape.put("translation", vec(-0.005, -0.005, -0.005));
+        shape.put("scale", vec(1.01, 1.01, 1.01));
+        shape.put("left_rotation", quat());
+        shape.put("right_rotation", quat());
+        tag.put("transformation", shape);
+        display.load(tag);
+        display.setGlowingTag(true);
+        display.addTag(TAG);
+        display.getPersistentData().putLong(DIE_AT, level.getGameTime() + ticks);
+        level.addFreshEntity(display);
+    }
+
+    private static net.minecraft.nbt.ListTag vec(double x, double y, double z) {
+        net.minecraft.nbt.ListTag list = new net.minecraft.nbt.ListTag();
+        list.add(net.minecraft.nbt.FloatTag.valueOf((float) x));
+        list.add(net.minecraft.nbt.FloatTag.valueOf((float) y));
+        list.add(net.minecraft.nbt.FloatTag.valueOf((float) z));
+        return list;
+    }
+
+    private static net.minecraft.nbt.ListTag quat() {
+        net.minecraft.nbt.ListTag list = new net.minecraft.nbt.ListTag();
+        for (float f : new float[]{0F, 0F, 0F, 1F}) {
+            list.add(net.minecraft.nbt.FloatTag.valueOf(f));
+        }
+        return list;
     }
 
     @SubscribeEvent

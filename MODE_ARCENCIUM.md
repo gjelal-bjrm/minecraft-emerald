@@ -4088,3 +4088,49 @@ provider produirait, et le provider reste la source. Une vraie casse de bloc se
 fait a la souris (`mouse_event` bouton gauche tenu, P/Invoke) : SendKeys ne
 tient pas un clic. Et `execute if items entity @s inventory.*` ne regarde PAS
 la barre d'outils : c'est `hotbar.*` qui recoit ce qu'on ramasse.
+
+## 49. La Premiere Forge, et l'atelier qu'on voit *(6 sept. 2026)*
+
+`game/FirstForge`, appele a la victoire du prologue (`GameManager.openTheGame`).
+
+Le prologue enseignait a se battre et rien d'autre. On en sortait avec trois
+sanctuaires a prendre et aucune raison de toucher aux trois etablis -- que le
+joueur, faute d'avoir essaye une fois, ne cherchait meme plus : « j'ai du mal a
+les trouver dans le village ». Chaque defenseur repart donc avec DE QUOI FAIRE
+LES TROIS GESTES DU MODE, une fois chacun :
+
+- **huit lingots de fer** -- le cout de deux ameliorations au premier cran, lu
+  dans `Upgrade.cost(1)` et non recopie : une piece defensive, puis l'arme ;
+- **trois plumes d'Arcencium** -- `Specialization.COST[1]`, le premier palier
+  d'ailes, garanti (cent pour cent de reussite a ce cran) ;
+- **trois lignes** qui disent a quoi sert chaque etabli, et ou il est.
+
+On donne la MATIERE, jamais le resultat : le geste reste a faire, et c'est lui
+qu'on veut enseigner. Une piece deja amelioree n'aurait rien appris.
+
+**L'atelier signale.** Les trois etablis sont detoures d'or pendant dix
+minutes, et le message donne la distance, la direction et les coordonnees.
+
+Deux corrections en chemin, l'une et l'autre trouvees par la capture :
+
+1. **Le jalon marqueur ne se voyait pas.** `Jalons.place` pose un porte-armure
+   MARQUEUR : sans corps, son contour tient en un pixel. Sur un filon, le bloc
+   colore fait le travail ; sur un etabli, on ne voyait rien (premiere capture a
+   l'appui). `Jalons.glow` pose desormais un `block_display` qui porte la forme
+   du bloc, agrandi d'un centieme, avec `glow_color_override` pour la couleur :
+   le contour exact du bloc, a travers les murs, sans collision.
+2. **L'atelier ne se souvenait pas de lui-meme.** On cherchait les trois blocs
+   autour de la Lame, et dans un monde d'essai remis en place plusieurs fois la
+   recherche tombait sur les etablis d'un atelier precedent (six blocs plus bas).
+   `Workshop.place` ecrit desormais son centre dans `GameState` (`Workshop` en
+   NBT), et la recherche part de la ; le balayage autour du village reste la
+   porte de secours des parties commencees avant ce changement.
+
+Verifie en jeu : huit lingots et trois plumes comptes dans le sac, trois
+contours poses, et les etablis trouves EXACTEMENT la ou l'atelier venait d'etre
+pose (-659, 279, 269 / 271 / 273 pour un centre en -659, 279, 271). Les deux
+captures montrent les trois contours dores a quatorze blocs a decouvert, puis a
+travers un mur de pierre dresse entre le joueur et l'atelier.
+
+Voir aussi `RUNES.md`, ecrit le meme jour : le releve complet des options de
+runes, leurs fourchettes par grade et ce qu'elles font vraiment.

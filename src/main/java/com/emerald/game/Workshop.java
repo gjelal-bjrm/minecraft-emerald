@@ -51,6 +51,10 @@ public final class Workshop {
         station(level, centre.offset(0, 0, -2), ModBlocks.ARCENCIUM_FORGE.get().defaultBlockState());
         station(level, centre.offset(0, 0, 0), ModBlocks.SOCKET_BENCH.get().defaultBlockState());
         station(level, centre.offset(0, 0, 2), ModBlocks.SPECIALIZATION_ALTAR.get().defaultBlockState());
+        // ON RETIENT L'ENDROIT. Sans cela, il faut chercher les trois blocs
+        // autour de la Lame -- et dans un monde d'essai remis en place plusieurs
+        // fois, la recherche tombait sur les etablis d'un atelier precedent.
+        GameState.get(level).setWorkshop(centre);
         LOGGER.info("Atelier pose en {} (Lame en {})", centre, blade);
         // deux lanternes sur des piliers, aux coins vers la Lame
         for (int dz : new int[]{-2, 2}) {
