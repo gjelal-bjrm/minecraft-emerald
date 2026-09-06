@@ -531,5 +531,8 @@
   "rune.emeraldweapons.sceau.effect": "Magic damage reduced by %s",
   "rune.emeraldweapons.riposte": "Riposte",
   "rune.emeraldweapons.riposte.effect": "%s %% of damage taken returned to the attacker",
-  "command.emeraldweapons.rune.given": "%s rune(s) — %s, rarity %s (slots %s)"
+  "command.emeraldweapons.rune.given": "%s rune(s) — %s, rarity %s (slots %s)",
+  "socket.emeraldweapons.rune.refuse.family": "This rune does not fit this piece: a weapon rune goes on a weapon or helmet, an armour rune on an armour piece.",
+  "socket.emeraldweapons.rune.refuse.rank": "%s rune: too high for a %s piece. Raise the piece's rarity first.",
+  "socket.emeraldweapons.rune.refuse.empty": "Place the piece to engrave first."
 }

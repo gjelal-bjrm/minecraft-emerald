@@ -28,6 +28,8 @@ import javax.annotation.Nullable;
  */
 public class SocketBenchMenu extends AbstractContainerMenu {
 
+    private static final org.slf4j.Logger LOGGER = com.mojang.logging.LogUtils.getLogger();
+
     // Index dans le MENU : c'est ce que manipulent quickMoveStack et le reseau.
     public static final int SLOT_GEAR = 0;
     public static final int SLOT_ARTIFACT = 1;
@@ -230,13 +232,49 @@ public class SocketBenchMenu extends AbstractContainerMenu {
 
     /** Le resultat, ou une pile vide si la combinaison ne tient pas. */
     @Nullable
-    private static ItemStack socket(ItemStack gear, ItemStack artifactStack, Player forge) {
-        // L'AMELIORATION : comme les eclats, on montre la piece TELLE QUELLE.
+    public static ItemStack socket(ItemStack gear, ItemStack artifactStack, Player forge) {
+        // LA RUNE D'ABORD. L'apercu d'amelioration passait avant elle et se
+        // declenchait des que le joueur avait le metal du cran suivant dans le
+        // sac -- QUOI QU'IL Y AIT dans l'autre case : la piece sortait telle
+        // quelle, la rune etait consommee, et rien n'etait grave. C'est le bogue
+        // rapporte (« la rune a disparu, je ne la voyais pas sur l'arme »), et
+        // la Premiere Forge, qui donne justement ce metal, le rendait certain.
+        //
+        // La gravure se montre en entier : son resultat est deja connu. Le
+        // joueur voit donc la piece gravee avant de la prendre, et peut renoncer.
+        // Et quand elle refuse, elle DIT POURQUOI : un refus muet devant trois
+        // regles est indiscernable d'une panne.
+        com.emerald.rune.RuneMark mark = com.emerald.rune.Runes.of(artifactStack);
+        if (mark != null) {
+            if (gear.isEmpty()) {
+                return ItemStack.EMPTY;
+            }
+            String why = com.emerald.rune.Runes.refuse(gear, mark);
+            if (why != null) {
+                if (forge instanceof net.minecraft.server.level.ServerPlayer sp) {
+                    LOGGER.info("Etabli : gravure refusee ({}) -- rune rang {} sur {} rarete {}", why,
+                            mark.rank(), gear.getItem(), com.emerald.item.GearRarity.of(gear).rank());
+                    sp.displayClientMessage(net.minecraft.network.chat.Component.translatable(
+                                    "socket.emeraldweapons.rune.refuse." + why,
+                                    com.emerald.item.GearRarity.values()[mark.rank()].label(),
+                                    com.emerald.item.GearRarity.of(gear).label())
+                            .withStyle(net.minecraft.ChatFormatting.RED), true);
+                }
+                return ItemStack.EMPTY;
+            }
+            ItemStack graved = gear.copy();
+            com.emerald.rune.Runes.engrave(graved, mark);
+            return graved;
+        }
+
+        // L'AMELIORATION : comme les eclats, on montre la piece TELLE QUELLE --
+        // mais seulement quand c'est une PIERRE DE FORGE qui est posee.
         //
         // Le cran se joue aux des ; afficher un +8 avant de l'avoir obtenu
         // serait un mensonge, et afficher le +7 actuel dit exactement la
         // verite -- voila ce que vous posez, voila ce que vous risquez.
         if (forge != null && !gear.isEmpty()
+                && artifactStack.is(com.emerald.item.ModItems.FORGE_STONE.get())
                 && com.emerald.item.Upgrade.of(gear) < com.emerald.item.GearEligibility.upgradeMax(gear)
                 && com.emerald.item.Upgrade.affordable(forge, gear)) {
             return gear.copy();
@@ -261,19 +299,6 @@ public class SocketBenchMenu extends AbstractContainerMenu {
             }
             return gear.copy();
         }
-        // LA GRAVURE, elle, se montre en entier : contrairement au tirage de
-        // rarete, son resultat est deja connu. Le joueur voit donc la piece
-        // gravee avant de la prendre, et peut renoncer.
-        com.emerald.rune.RuneMark mark = com.emerald.rune.Runes.of(artifactStack);
-        if (mark != null) {
-            if (!com.emerald.rune.Runes.canEngrave(gear, mark)) {
-                return ItemStack.EMPTY;
-            }
-            ItemStack graved = gear.copy();
-            com.emerald.rune.Runes.engrave(graved, mark);
-            return graved;
-        }
-
         Artifact artifact = Artifacts.of(artifactStack);
         if (gear.isEmpty() || artifact == null || !artifact.fits(gear)) {
             return ItemStack.EMPTY;
@@ -314,7 +339,10 @@ public class SocketBenchMenu extends AbstractContainerMenu {
     @Override
     public void removed(Player player) {
         super.removed(player);
-        this.access.execute((level, pos) -> this.clearContainer(player, this.inputs));
+        // SANS PASSER PAR L'ACCES : ouvert par commande, l'acces est NULL et
+        // `execute` ne fait rien -- ce qui etait pose disparaissait a la
+        // fermeture. `clearContainer` sait deja ne rien faire cote client.
+        this.clearContainer(player, this.inputs);
     }
 
     @Override

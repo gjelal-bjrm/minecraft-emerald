@@ -531,5 +531,8 @@
   "rune.emeraldweapons.sceau.effect": "Dégâts magiques réduits de %s",
   "rune.emeraldweapons.riposte": "Riposte",
   "rune.emeraldweapons.riposte.effect": "%s %% des dégâts subis renvoyés à l'assaillant",
-  "command.emeraldweapons.rune.given": "%s rune(s) — %s de rareté %s (cases %s)"
+  "command.emeraldweapons.rune.given": "%s rune(s) — %s de rareté %s (cases %s)",
+  "socket.emeraldweapons.rune.refuse.family": "Cette rune ne se grave pas sur cette pièce : une rune d'arme va sur une arme ou un casque, une rune d'armure sur une pièce d'armure.",
+  "socket.emeraldweapons.rune.refuse.rank": "Rune %s : trop haute pour une pièce %s. Montez d'abord la rareté de la pièce.",
+  "socket.emeraldweapons.rune.refuse.empty": "Posez d'abord la pièce à graver."
 }

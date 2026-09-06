@@ -4201,3 +4201,44 @@ Cinquieme piege d'essai : ne jamais taper `+=` dans une commande envoyee par
 SendKeys -- le plus y signifie MAJ, et la commande part tronquee. On compte les
 deux zones separement. Et un objet lache par un joueur qui VOLE sort du rayon
 en deux secondes : le compter avec `distance=..8` ne trouve rien.
+
+## 51. L'etabli qui avalait les runes *(6 sept. 2026)*
+
+Rapport du joueur : « une epee en fer de rarete 4, une rune de rarete 2 : ca ne
+m'a pas dit que ca n'a pas marche, la rune a disparu et je ne la voyais pas sur
+l'arme. »
+
+**La cause, lue dans `SocketBenchMenu.socket`** : l'apercu d'amelioration
+passait AVANT la gravure, et il se declenchait des que le joueur avait dans le
+sac le metal du cran suivant -- quoi qu'il y ait dans l'autre case. La piece
+sortait telle quelle, la rune posee etait consommee a la prise, et rien n'etait
+grave. La Premiere Forge, qui donne justement huit lingots de fer, rendait le
+bogue certain pour tout le monde.
+
+Trois corrections :
+
+1. **La rune d'abord**, et l'apercu d'amelioration seulement quand c'est une
+   Pierre de forge qui est posee.
+2. **Un refus se dit.** `Runes.refuse` rendait deja la raison, l'etabli ne la
+   montrait pas. Barre d'action, en rouge : « Cette rune ne se grave pas sur
+   cette piece : une rune d'arme va sur une arme ou un casque... » ou « Rune
+   Solaire : trop haute pour une piece Magnifique. Montez d'abord la rarete de
+   la piece. » Et le journal le note.
+3. **Fermer l'etabli rend ce qui est pose**, meme ouvert par commande : l'acces
+   NULL rendait `access.execute` muet, et ce qui etait pose disparaissait.
+
+`/arcencium etabli` ouvre l'ecran sans le bloc ; `/arcencium etabli essai` joue
+l'etabli reel (piece en main, objet en main gauche) et ecrit au journal ce qui
+en sort : c'est le banc d'essai.
+
+Verifie en jeu, dans les conditions du rapport (epee en fer de rarete 4, huit
+lingots dans le sac) : la rune d'arme de rang 2 est gravee, les huit lingots
+intacts, la rune consommee, « Rune gravee : Rune d'arme Diaphane » ; une rune
+d'armure est refusee (`family`) et rendue au sac ; une rune d'arme de rang 6 est
+refusee (`rank`) et rendue.
+
+Deux pannes d'environnement sur le chemin, notees pour la prochaine fois :
+`build/moddev/artifacts/neoforge-21.1.193.jar` corrompu (« invalid distance
+too far back » a l'analyse des mods) -- on le supprime, Gradle le refait ; et
+Distant Horizons qui ne trouve plus `sqlScripts/scriptList.txt` dans son propre
+jar une fois sur trois au demarrage -- le jar est sain, on relance.

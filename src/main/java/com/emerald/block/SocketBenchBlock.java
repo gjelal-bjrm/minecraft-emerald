@@ -26,7 +26,7 @@ import org.jetbrains.annotations.Nullable;
  */
 public class SocketBenchBlock extends Block {
 
-    private static final Component TITLE =
+    public static final Component TITLE =
             Component.translatable("container.emeraldweapons.socket_bench");
 
     public SocketBenchBlock(Properties properties) {

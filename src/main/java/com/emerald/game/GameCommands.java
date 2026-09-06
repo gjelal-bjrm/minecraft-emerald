@@ -151,6 +151,24 @@ public class GameCommands {
             return 0;
         }));
 
+        // ------------------------------------------------------------- etabli
+        // pour l'essai : l'etabli a sertir sans son ecran. La piece en main, ce
+        // qu'on pose en main gauche ; le menu reel calcule et prend, le journal
+        // dit ce qui en sort. `/arcencium etabli` ouvre l'ecran, `essai` le joue.
+        var bench = Commands.literal("etabli");
+        bench.executes(ctx -> {
+            if (ctx.getSource().getEntity() instanceof net.minecraft.server.level.ServerPlayer player) {
+                player.openMenu(new net.minecraft.world.SimpleMenuProvider((id, inventory, p) ->
+                        new com.emerald.menu.SocketBenchMenu(id, inventory,
+                                net.minecraft.world.inventory.ContainerLevelAccess.NULL),
+                        com.emerald.block.SocketBenchBlock.TITLE));
+                return 1;
+            }
+            return 0;
+        });
+        bench.then(Commands.literal("essai").executes(ctx -> benchTrial(ctx.getSource())));
+        root.then(bench);
+
         // -------------------------------------------------------------- forge
         // pour l'essai : ouvre la Forge d'Arcencium sans avoir a poser le bloc
         root.then(Commands.literal("forge").executes(ctx -> {
@@ -831,6 +849,42 @@ public class GameCommands {
      * tourne en partie. Une commande qui construirait ses propres runes
      * validerait la commande, pas le jeu.
      */
+    /** Joue l'etabli sur la piece en main et l'objet en main gauche, et dit ce qui en sort. */
+    private static int benchTrial(CommandSourceStack source) {
+        if (!(source.getEntity() instanceof net.minecraft.server.level.ServerPlayer player)) {
+            source.sendFailure(Component.literal("A executer en jeu."));
+            return 0;
+        }
+        net.minecraft.world.item.ItemStack gear = player.getMainHandItem().copy();
+        net.minecraft.world.item.ItemStack fee = player.getOffhandItem().copy();
+        com.emerald.menu.SocketBenchMenu menu = new com.emerald.menu.SocketBenchMenu(
+                0, player.getInventory(), net.minecraft.world.inventory.ContainerLevelAccess.NULL);
+        player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, net.minecraft.world.item.ItemStack.EMPTY);
+        player.setItemInHand(net.minecraft.world.InteractionHand.OFF_HAND, net.minecraft.world.item.ItemStack.EMPTY);
+        menu.getSlot(com.emerald.menu.SocketBenchMenu.SLOT_GEAR).set(gear);
+        menu.getSlot(com.emerald.menu.SocketBenchMenu.SLOT_ARTIFACT).set(fee);
+        net.minecraft.world.item.ItemStack result =
+                menu.getSlot(com.emerald.menu.SocketBenchMenu.SLOT_RESULT).getItem();
+        String outcome;
+        if (result.isEmpty()) {
+            outcome = "refuse";
+        } else {
+            net.minecraft.world.item.ItemStack taken = result.copy();
+            menu.getSlot(com.emerald.menu.SocketBenchMenu.SLOT_RESULT).onTake(player, taken);
+            player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, taken);
+            outcome = "pris";
+        }
+        // ce qui reste pose revient au joueur, comme a la fermeture de l'ecran
+        menu.removed(player);
+        net.minecraft.world.item.ItemStack held = player.getMainHandItem();
+        LOGGER.info("Etabli : {} ; piece {} avec {} rune(s), cran +{}, rarete {} ; main gauche {}",
+                outcome, held.getItem(), com.emerald.rune.Runes.on(held).size(),
+                com.emerald.item.Upgrade.of(held), com.emerald.item.GearRarity.of(held).rank(),
+                player.getOffhandItem().isEmpty() ? "vide" : player.getOffhandItem().getItem());
+        source.sendSuccess(() -> Component.literal("Etabli : " + outcome), false);
+        return 1;
+    }
+
     private static int giveRune(CommandSourceStack source,
                                 com.emerald.rune.RuneFamily family, int rank, int count) {
         if (!(source.getEntity() instanceof net.minecraft.server.level.ServerPlayer player)) {
