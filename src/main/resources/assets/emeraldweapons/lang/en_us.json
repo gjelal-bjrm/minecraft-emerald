@@ -475,7 +475,7 @@
   "weather.emeraldweapons.omen.embellie": "The calm returns.",
   "weather.emeraldweapons.omen.clear": "Nothing is coming.",
   "specialization.emeraldweapons.legacy": "An older character exists, shared by every world. /arcencium personnage importer to take it over here.",
-  "weather.emeraldweapons.aurore.veins": "The Aurora lights %s vein(s) around you — the nearest %s blocks away. Follow the arrows top-left: the markers glow through the rock.",
+  "weather.emeraldweapons.aurore.veins": "The Aurora lights %s vein(s) around you: %s diamond, %s Arcencium — the nearest %s blocks away. Follow the arrows top-left: the outlines glow through the rock.",
   "weather.emeraldweapons.aurore.double": "The Aurora doubles the Arcencium vein",
   "weather.emeraldweapons.aurore.diamond": "The Aurora enriches diamond, and sometimes mixes Arcencium in",
   "weather.emeraldweapons.vein.diamond": "Diamond",
@@ -511,5 +511,9 @@
   "mine.emeraldweapons.echo.chant": "Something sings in the stone.",
   "mine.emeraldweapons.echo.chant.found": "The song stops: the stone opens.",
   "mine.emeraldweapons.echo.chant.lost": "The song has gone quiet.",
-  "mine.emeraldweapons.echo.yeux": "Something is watching you."
+  "mine.emeraldweapons.echo.yeux": "Something is watching you.",
+  "item.emeraldweapons.arcencium_shard": "Arcencium Shard",
+  "mine.emeraldweapons.shards.hint": "An iron pickaxe only chips shards off it — four make a raw piece. A diamond pickaxe yields the raw ore.",
+  "weather.emeraldweapons.aurore.veins.nopick": "No diamond pickaxe on you: the Aurora leads to diamond first — that is the key.",
+  "weather.emeraldweapons.aurore.veins.pick": "Diamond pickaxe on you: the Aurora leads to Arcencium first."
 }

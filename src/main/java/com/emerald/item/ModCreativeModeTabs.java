@@ -22,6 +22,7 @@ public class ModCreativeModeTabs {
                     .title(Component.translatable("creativetab.emeraldweaponsmod.arcencium_items"))
                     .displayItems((itemDisplayParameters, output) -> {
                         output.accept(ModItems.RAW_ARCENCIUM);
+                        output.accept(ModItems.ARCENCIUM_SHARD);
                         output.accept(ModItems.ARCENCIUM_INGOT);
                         output.accept(ModItems.PRISM_BRANCH);
                         output.accept(ModItems.PRISM_FIBER);

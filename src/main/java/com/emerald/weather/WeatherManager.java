@@ -318,7 +318,9 @@ public final class WeatherManager {
                         .withStyle(style -> style.withColor(Weather.AURORE.color)), true);
             }
         }
-        if (aurore && event.getState().is(com.emerald.block.ModBlocks.ARCENCIUM_ORE.get())) {
+        // (la pioche en fer n'en tire que des eclats, doubles par l'Aurore dans ArcenciumShards)
+        if (aurore && event.getState().is(com.emerald.block.ModBlocks.ARCENCIUM_ORE.get())
+                && event.getPlayer().hasCorrectToolForDrops(event.getState())) {
             net.minecraft.world.level.block.Block.popResource(level, event.getPos(),
                     new net.minecraft.world.item.ItemStack(ModItems.RAW_ARCENCIUM.get(),
                             1 + level.random.nextInt(2)));

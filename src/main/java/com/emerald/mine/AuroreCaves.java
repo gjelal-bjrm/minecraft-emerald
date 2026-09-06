@@ -67,6 +67,11 @@ public final class AuroreCaves {
     /** Ou l'on cherche des grottes, et combien de colonnes on sonde. */
     private static final int RADIUS = 64;
     private static final int SAMPLES = 400;
+    /** On sonde du plafond d'Underground jusqu'ici : sous le joueur, jusqu'au fond. */
+    private static final int FLOOR = -60;
+    /** Qui descend sans rien autour de lui reessaie toutes les dix secondes, et pas dans la derniere minute. */
+    private static final int RETRY = 10 * 20;
+    private static final int LATE = 60 * 20;
     /** Un vide digne d'un puits : six blocs d'air au moins ; dix pour un vrai gouffre. */
     private static final int MIN_AIR = 6;
     private static final int BIG_AIR = 10;
@@ -124,6 +129,9 @@ public final class AuroreCaves {
     private static final Map<UUID, Long> arrivedAt = new HashMap<>();
     /** Les pieds des puits leves : pour le journal, et donc pour les essais. */
     private static final List<BlockPos> wellFloors = new ArrayList<>();
+    /** Les joueurs autour de qui quelque chose s'est leve, et quand les autres peuvent reessayer. */
+    private static final Set<UUID> served = new HashSet<>();
+    private static final Map<UUID, Long> nextTry = new HashMap<>();
 
     private AuroreCaves() {
     }
@@ -137,9 +145,9 @@ public final class AuroreCaves {
         int wells = 0;
         int pairs = 0;
         for (ServerPlayer player : level.players()) {
-            List<Spot> spots = spots(level, player.blockPosition());
-            wells += raiseWells(level, spots);
-            pairs += raiseMists(level, spots);
+            int[] got = raiseAround(level, player);
+            wells += got[0];
+            pairs += got[1];
         }
         if (wells + pairs > 0) {
             Component line = Component.translatable("mine.emeraldweapons.aurore.opened", wells, pairs)
@@ -152,9 +160,52 @@ public final class AuroreCaves {
                 wells, pairs, wellFloors, links.keySet());
     }
 
-    /** Chaque tique de l'Aurore : les avertissements de fin. */
+    /** Leve puits et brumes autour d'un joueur, et le retient s'il a ete servi. */
+    private static int[] raiseAround(ServerLevel level, ServerPlayer player) {
+        List<Spot> spots = spots(level, player.blockPosition());
+        int wells = raiseWells(level, spots);
+        int pairs = raiseMists(level, spots);
+        if (wells + pairs > 0) {
+            served.add(player.getUUID());
+        }
+        return new int[]{wells, pairs};
+    }
+
+    /**
+     * QUI DESCEND TROUVE. Un joueur autour de qui rien ne s'est leve (en
+     * surface sans grotte dessous, ou parti miner ailleurs) recoit ses puits
+     * et ses brumes en passant sous terre -- une fois, et pas dans la
+     * derniere minute, ou ils n'auraient pas le temps de servir.
+     */
+    private static void descents(ServerLevel level) {
+        long now = level.getGameTime();
+        for (ServerPlayer player : level.players()) {
+            BlockPos pos = player.blockPosition();
+            if (served.contains(player.getUUID()) || !Underground.allowed(level, pos)
+                    || level.canSeeSky(pos.above()) || now < nextTry.getOrDefault(player.getUUID(), 0L)) {
+                continue;
+            }
+            nextTry.put(player.getUUID(), now + RETRY);
+            int[] got = raiseAround(level, player);
+            if (got[0] + got[1] == 0) {
+                continue;
+            }
+            player.sendSystemMessage(Component.translatable("mine.emeraldweapons.aurore.opened", got[0], got[1])
+                    .withStyle(style -> style.withColor(0x9CE8FF)));
+            LOGGER.info("Aurore : a la descente de {}, {} puits et {} paire(s) de brumes ; puits {} ; brumes {}",
+                    player.getName().getString(), got[0], got[1], wellFloors, links.keySet());
+        }
+    }
+
+    /** Chaque tique de l'Aurore : qui descend, puis les avertissements de fin. */
     public static void tick(ServerLevel level, int remaining) {
-        if (!active || lit.isEmpty() && links.isEmpty()) {
+        if (!active) {
+            return;
+        }
+        if (level.getGameTime() % 40 == 0 && remaining > LATE) {
+            descents(level);
+        }
+        if (lit.isEmpty() && links.isEmpty()) {
             return;
         }
         if (!warnedFirst && remaining <= WARN_FIRST) {
@@ -213,6 +264,8 @@ public final class AuroreCaves {
 
     /** Oublie tout sans rien retirer du monde : au debut d'une Aurore, ou a l'arret. */
     private static void forget(ServerLevel level) {
+        served.clear();
+        nextTry.clear();
         // ce qu'une Aurore precedente aurait laisse (serveur arrete en pleine meteo)
         for (BlockPos pos : lit) {
             if (level.getBlockState(pos).is(ModBlocks.AURORE_LIGHT.get())) {
@@ -247,8 +300,11 @@ public final class AuroreCaves {
         RandomSource random = level.random;
         List<Spot> found = new ArrayList<>();
         Set<Long> columns = new HashSet<>();
-        int top = Math.min(Underground.CEILING - 1, centre.getY() + 16);
-        int bottom = Math.max(level.getMinBuildHeight() + 4, centre.getY() - 48);
+        // SOUS LE JOUEUR, JUSQU'AU FOND. L'Aurore est annoncee en surface, et
+        // c'est en bas qu'elle doit avoir prepare quelque chose : sonder
+        // autour de la hauteur du joueur donnait une plage vide a y = 99.
+        int top = Underground.CEILING - 1;
+        int bottom = Math.max(level.getMinBuildHeight() + 4, FLOOR);
         BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
         for (int i = 0; i < SAMPLES; i++) {
             double angle = random.nextDouble() * Math.PI * 2;

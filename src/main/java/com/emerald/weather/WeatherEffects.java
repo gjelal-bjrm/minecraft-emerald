@@ -305,6 +305,8 @@ public final class WeatherEffects {
             // chaque Aurore reparle : ce qu'on a dit la fois d'avant est loin
             auroreTold.clear();
             auroreMined.clear();
+            veinScans.clear();
+            veinJobs.clear();
             // et les grottes s'ouvrent : puits de lumiere, brumes etoilees
             com.emerald.mine.AuroreCaves.begin(level);
         }
@@ -726,13 +728,19 @@ public final class WeatherEffects {
      */
     private static void tickAurore(ServerLevel level) {
         com.emerald.mine.AuroreCaves.tick(level, WeatherManager.remainingTicks());
+        advanceVeinScans(level);
         if (level.getGameTime() % 40 != 0) {
             return;
         }
         sweepMarks(level);
         for (ServerPlayer player : level.players()) {
             boons(player);
-            List<BlockPos> veins = findVeins(level, player.blockPosition());
+            List<BlockPos> all = scannedVeins(player);
+            if (all == null) {
+                continue;               // le premier sondage n'est pas fini : une seconde et demie
+            }
+            boolean pick = hasArcenciumPick(player);
+            List<BlockPos> veins = prioritise(level, pick, all);
             int kinds = 0;
             List<Long> packed = new ArrayList<>();
             for (int i = 0; i < veins.size(); i++) {
@@ -773,10 +781,20 @@ public final class WeatherEffects {
                     nearest.getX() + 0.5, nearest.getY() + 0.9, nearest.getZ() + 0.5,
                     2, 0.35, 0.35, 0.35, 0.0);
             if (auroreTold.add(player.getUUID())) {
+                int arcencium = 0;
+                for (BlockPos pos : veins) {
+                    if (level.getBlockState(pos).is(ModBlocks.ARCENCIUM_ORE.get())) {
+                        arcencium++;
+                    }
+                }
                 player.sendSystemMessage(net.minecraft.network.chat.Component.translatable(
                                 "weather.emeraldweapons.aurore.veins", veins.size(),
-                                (int) Math.round(near))
+                                veins.size() - arcencium, arcencium, (int) Math.round(near))
                         .withStyle(style -> style.withColor(Weather.AURORE.color)));
+                player.sendSystemMessage(net.minecraft.network.chat.Component.translatable(
+                                pick ? "weather.emeraldweapons.aurore.veins.pick"
+                                        : "weather.emeraldweapons.aurore.veins.nopick")
+                        .withStyle(style -> style.withColor(Weather.AURORE.color).withItalic(true)));
             }
         }
     }
@@ -857,47 +875,150 @@ public final class WeatherEffects {
         }
     }
 
-    /** Les filons les plus proches, un par colonne, du plus proche au plus loin. */
-    private static List<BlockPos> findVeins(ServerLevel level, BlockPos center) {
-        List<BlockPos> found = new ArrayList<>();
-        int minY = Math.max(level.getMinBuildHeight(), center.getY() - 48);
-        int maxY = Math.min(level.getMaxBuildHeight() - 1, center.getY() + 16);
-        int chunkRange = AURORE_RANGE >> 4;
-        for (int cx = -chunkRange; cx <= chunkRange; cx++) {
-            for (int cz = -chunkRange; cz <= chunkRange; cz++) {
-                ChunkPos cp = new ChunkPos(SectionPos.blockToSectionCoord(center.getX()) + cx,
-                        SectionPos.blockToSectionCoord(center.getZ()) + cz);
-                if (!level.hasChunk(cp.x, cp.z)) {
-                    continue;                       // jamais de generation forcee
-                }
-                LevelChunk chunk = level.getChunk(cp.x, cp.z);
-                LevelChunkSection[] sections = chunk.getSections();
-                for (int i = 0; i < sections.length; i++) {
-                    LevelChunkSection section = sections[i];
-                    int baseY = chunk.getMinBuildHeight() + (i << 4);
-                    if (section.hasOnlyAir() || baseY + 15 < minY || baseY > maxY) {
-                        continue;
-                    }
-                    // la palette repond sans qu'on ouvre la section
-                    if (!section.maybeHas(WeatherEffects::auroreTarget)) {
-                        continue;
-                    }
-                    scanSection(level, section, cp, baseY, minY, maxY, center, found);
-                }
+    /**
+     * LA BOUSSOLE SAIT CE QU'ON PEUT MINER.
+     *
+     * Le joueur trouvait l'Arcencium avant le diamant qui sert a le miner, et
+     * la boussole l'y menait : une porte fermee. Sans pioche capable d'en
+     * tirer le brut, le diamant passe devant -- c'est lui, la clef. Avec, l'
+     * Arcencium d'abord. A rang egal, le plus proche (le tri est stable).
+     */
+    private static List<BlockPos> prioritise(ServerLevel level, boolean pick, List<BlockPos> veins) {
+        List<BlockPos> sorted = new ArrayList<>(veins);
+        sorted.sort(java.util.Comparator.comparingInt(pos ->
+                level.getBlockState(pos).is(ModBlocks.ARCENCIUM_ORE.get()) == pick ? 0 : 1));
+        return sorted.size() > AURORE_BEAMS ? sorted.subList(0, AURORE_BEAMS) : sorted;
+    }
+
+    /** Une pioche qui tire le brut de l'Arcencium, quelque part sur soi. */
+    static boolean hasArcenciumPick(ServerPlayer player) {
+        net.minecraft.world.level.block.state.BlockState ore = ModBlocks.ARCENCIUM_ORE.get().defaultBlockState();
+        for (net.minecraft.world.item.ItemStack stack : player.getInventory().items) {
+            if (stack.is(net.minecraft.tags.ItemTags.PICKAXES) && stack.isCorrectToolForDrops(ore)) {
+                return true;
             }
         }
-        found.sort((a, b) -> Double.compare(a.distSqr(center), b.distSqr(center)));
-        return found.size() > AURORE_BEAMS ? found.subList(0, AURORE_BEAMS) : found;
+        net.minecraft.world.item.ItemStack off = player.getOffhandItem();
+        return off.is(net.minecraft.tags.ItemTags.PICKAXES) && off.isCorrectToolForDrops(ore);
+    }
+
+    /** Le dernier sondage d'un joueur : d'ou, quand, et ce qu'il a trouve. */
+    private record VeinScan(BlockPos at, long tick, List<BlockPos> veins) {
+    }
+
+    private static final java.util.Map<java.util.UUID, VeinScan> veinScans = new java.util.HashMap<>();
+    /** On ne resonde que toutes les dix secondes, ou apres seize blocs de marche : les filons ne bougent pas. */
+    private static final int SCAN_TICKS = 200;
+    private static final double SCAN_MOVE_SQ = 16.0 * 16.0;
+
+    /** Un sondage en cours : les chunks qui restent, du plus proche au plus loin, et ce qu'on a deja. */
+    private static final class VeinJob {
+        final BlockPos at;
+        final long started;
+        final java.util.ArrayDeque<ChunkPos> chunks = new java.util.ArrayDeque<>();
+        final List<BlockPos> found = new ArrayList<>();
+        final java.util.Set<Long> columns = new java.util.HashSet<>();
+        final int total;
+
+        VeinJob(BlockPos at, long started) {
+            this.at = at;
+            this.started = started;
+            int range = AURORE_RANGE >> 4;
+            int cx0 = SectionPos.blockToSectionCoord(at.getX());
+            int cz0 = SectionPos.blockToSectionCoord(at.getZ());
+            List<ChunkPos> order = new ArrayList<>();
+            for (int cx = -range; cx <= range; cx++) {
+                for (int cz = -range; cz <= range; cz++) {
+                    order.add(new ChunkPos(cx0 + cx, cz0 + cz));
+                }
+            }
+            order.sort(java.util.Comparator.comparingInt(cp ->
+                    (cp.x - cx0) * (cp.x - cx0) + (cp.z - cz0) * (cp.z - cz0)));
+            chunks.addAll(order);
+            total = order.size();
+        }
+    }
+
+    private static final java.util.Map<java.util.UUID, VeinJob> veinJobs = new java.util.HashMap<>();
+    /** Trois chunks par tique : le sondage complet tient en une seconde et demie, sans a-coup. */
+    private static final int CHUNKS_PER_TICK = 3;
+
+    /**
+     * LE SONDAGE, ETALE. Sonder d'un coup les 81 chunks jusqu'a la roche-mere
+     * coutait 100 a 170 ms -- trois tiques sautees toutes les dix secondes.
+     * On avance de trois chunks par tique, les plus proches d'abord ; le
+     * resultat precedent reste affiche jusqu'a ce que le nouveau soit complet.
+     */
+    private static void advanceVeinScans(ServerLevel level) {
+        long now = level.getGameTime();
+        for (ServerPlayer player : level.players()) {
+            java.util.UUID id = player.getUUID();
+            VeinJob job = veinJobs.get(id);
+            if (job == null) {
+                VeinScan scan = veinScans.get(id);
+                BlockPos at = player.blockPosition();
+                if (scan != null && now - scan.tick() < SCAN_TICKS && scan.at().distSqr(at) < SCAN_MOVE_SQ) {
+                    continue;
+                }
+                job = new VeinJob(at, now);
+                veinJobs.put(id, job);
+            }
+            for (int i = 0; i < CHUNKS_PER_TICK && !job.chunks.isEmpty(); i++) {
+                scanChunk(level, job, job.chunks.poll());
+            }
+            if (!job.chunks.isEmpty()) {
+                continue;
+            }
+            BlockPos at = job.at;
+            job.found.sort((a, b) -> Double.compare(a.distSqr(at), b.distSqr(at)));
+            boolean first = !veinScans.containsKey(id);
+            veinScans.put(id, new VeinScan(at, now, job.found));
+            veinJobs.remove(id);
+            if (first) {
+                LOGGER.info("Aurore : {} filon(s) sondes autour de {} ({} chunks en {} tiques)",
+                        job.found.size(), at, job.total, now - job.started);
+            }
+        }
+    }
+
+    /** Le dernier sondage acheve d'un joueur, ou rien tant que le premier n'est pas fini. */
+    @javax.annotation.Nullable
+    private static List<BlockPos> scannedVeins(ServerPlayer player) {
+        VeinScan scan = veinScans.get(player.getUUID());
+        return scan == null ? null : scan.veins();
+    }
+
+    /** Un chunk du sondage : ses sections entre la roche-mere et le plafond d'Underground. */
+    private static void scanChunk(ServerLevel level, VeinJob job, ChunkPos cp) {
+        if (!level.hasChunk(cp.x, cp.z)) {
+            return;                                 // jamais de generation forcee
+        }
+        // JUSQU'AU FOND, SOUS LE PLAFOND D'UNDERGROUND : l'Arcencium vit sous
+        // zero et l'appel de l'Aurore se recoit en surface. Sonder 48 blocs sous
+        // le joueur ne montrait rien a y = 99 ; on sonde de y = 47 (ou seize
+        // blocs au-dessus de lui s'il est plus bas) jusqu'a la roche-mere.
+        int minY = level.getMinBuildHeight();
+        int maxY = Math.min(com.emerald.mine.Underground.CEILING - 1, job.at.getY() + 16);
+        LevelChunk chunk = level.getChunk(cp.x, cp.z);
+        LevelChunkSection[] sections = chunk.getSections();
+        for (int i = 0; i < sections.length; i++) {
+            LevelChunkSection section = sections[i];
+            int baseY = chunk.getMinBuildHeight() + (i << 4);
+            if (section.hasOnlyAir() || baseY + 15 < minY || baseY > maxY) {
+                continue;
+            }
+            // la palette repond sans qu'on ouvre la section
+            if (!section.maybeHas(WeatherEffects::auroreTarget)) {
+                continue;
+            }
+            scanSection(level, section, cp, baseY, minY, maxY, job.at, job.found, job.columns);
+        }
     }
 
     /** Un filon par colonne : quatre-vingts rais pour une seule veine ne diraient rien de plus. */
     private static void scanSection(ServerLevel level, LevelChunkSection section, ChunkPos cp,
                                     int baseY, int minY, int maxY, BlockPos center,
-                                    List<BlockPos> found) {
-        java.util.Set<Long> columns = new java.util.HashSet<>();
-        for (BlockPos pos : found) {
-            columns.add(ChunkPos.asLong(pos.getX(), pos.getZ()));
-        }
+                                    List<BlockPos> found, java.util.Set<Long> columns) {
         for (int y = 0; y < 16; y++) {
             int wy = baseY + y;
             if (wy < minY || wy > maxY) {

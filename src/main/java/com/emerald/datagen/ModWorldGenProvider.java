@@ -68,7 +68,7 @@ public class ModWorldGenProvider extends DatapackBuiltinEntriesProvider {
                                 ModBlocks.ARCENCIUM_ORE.get().defaultBlockState()),
                         OreConfiguration.target(new TagMatchTest(BlockTags.DEEPSLATE_ORE_REPLACEABLES),
                                 ModBlocks.ARCENCIUM_ORE.get().defaultBlockState())
-                ), 8))); // veine de 8 blocs
+                ), 5, 0.5F))); // veine de 5 blocs, et la moitie de celles a l'air libre est jetee, comme le diamant
 
         // Arbre de Prisme : tronc qui se courbe + feuillage en nuage irregulier
         // (silhouette azalee), plus organique qu'un chene droit
@@ -89,19 +89,22 @@ public class ModWorldGenProvider extends DatapackBuiltinEntriesProvider {
         ctx.register(ARCENCIUM_ORE_PF, new PlacedFeature(
                 cfLookup.getOrThrow(ARCENCIUM_ORE_CF),
                 List.of(
-                        // NEUF VEINES PAR CHUNK, ET NON QUATRE.
+                        // PLUS RARE ET PLUS PROFOND QUE LE DIAMANT.
                         //
-                        // L'Arcencium paie les ancres, l'equipement, les runes
-                        // ET l'amelioration : c'est la seule monnaie du mode.
-                        // A quatre veines par chunk, quarante minutes de jeu ne
-                        // suffisaient pas a tenir le premier sanctuaire. La
-                        // plage monte aussi jusqu'a la surface des grottes, pour
-                        // qu'on en trouve sans descendre au fond du monde.
-                        CountPlacement.of(9),
+                        // A neuf veines de huit entre -48 et 64, l'Arcencium
+                        // etait douze fois plus abondant que le diamant, et il
+                        // culminait a y = 8 la ou le diamant n'est presque pas :
+                        // on tombait sur l'Arcencium AVANT le diamant qui sert a
+                        // le miner. Deux veines de cinq entre -64 et 0 (pic a
+                        // -32) : on rencontre le diamant d'abord, l'Arcencium
+                        // ensuite, et l'Aurore le double. Ce qui manque au
+                        // compte vient des Poches, des Percees, des Echos et des
+                        // coffres des sanctuaires -- le sous-sol vit, desormais.
+                        CountPlacement.of(2),
                         InSquarePlacement.spread(),
                         HeightRangePlacement.triangle(
-                                VerticalAnchor.absolute(-48),
-                                VerticalAnchor.absolute(64)),
+                                VerticalAnchor.absolute(-64),
+                                VerticalAnchor.absolute(0)),
                         BiomeFilter.biome()
                 )));
     }

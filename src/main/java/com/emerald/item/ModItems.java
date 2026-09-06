@@ -22,6 +22,10 @@ public class ModItems {
     public static final DeferredItem<Item> RAW_ARCENCIUM = ITEMS.register("raw_arcencium",
             () -> new Item(new Item.Properties()));
 
+    /** Ce qu'une pioche en fer tire du filon d'Arcencium : quatre eclats font un brut (ArcenciumShards). */
+    public static final DeferredItem<Item> ARCENCIUM_SHARD = ITEMS.register("arcencium_shard",
+            () -> new Item(new Item.Properties()));
+
     public static final DeferredItem<SwordItem> EMERALD_SWORD =
             ITEMS.register("emerald_sword", () ->
                     new EmeraldWindblade(

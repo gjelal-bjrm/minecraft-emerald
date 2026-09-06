@@ -4014,3 +4014,77 @@ du jeu garde le focus entre deux commandes, donc `Echap` OUVRE le menu pause
 au lieu de le fermer -- une commande sur deux se perdait. Desormais
 `pauseOnLostFocus:false` dans `run/options.txt`, et le chat tape `t`,
 `Ctrl+A`, la commande : plus d'Echap nulle part.
+
+## 48. L'Aurore, revue sur mesure *(6 sept. 2026)*
+
+« J'ai mine pendant deux minutes en vertical, presque aucune fissure, et j'ai
+fini par decouvrir DE L'ARCENCIUM alors que je n'avais toujours pas de
+diamant. » Mesure dans le journal de la session (9 h 58) et dans les reglages,
+avant de toucher a quoi que ce soit :
+
+- **L'Arcencium etait douze fois plus abondant que le diamant** : neuf veines
+  de huit par chunk entre -48 et 64 (pic a y = 8), contre 7 + 2 + 4 tentatives
+  de diamant de taille 4 a 8, la moitie jetees a l'air libre, entre -144 et 16
+  (pic a -64). A y = 16-20 on tombe sur l'Arcencium avant le diamant,
+  mathematiquement.
+- **La boussole menait a une porte fermee** : le filon le plus proche, toutes
+  sortes confondues -- donc presque toujours de l'Arcencium, inminable sans
+  diamant.
+- **« 0 puits et 0 brume »** : l'Aurore a ete annoncee au joueur en surface
+  (y = 99) et le sondage des grottes se faisait autour de SA hauteur (plafonne a
+  47) : une plage vide.
+- Les Percees n'etaient pas en cause : sous y = 48 seulement, une sur 45, vingt
+  secondes de repit ; parti de y = 99 il avait casse ~30 blocs eligibles, soit
+  0,7 percee attendue. Elles restent telles quelles (le joueur n'a pas retenu
+  cette proposition-la).
+
+Quatre changements, acceptes sur proposition :
+
+1. **L'Arcencium, plus rare et plus profond que le diamant**
+   (`ModWorldGenProvider`) : deux veines de cinq par chunk entre -64 et 0, la
+   moitie de celles exposees a l'air jetees, comme le diamant. On rencontre le
+   diamant d'abord, l'Arcencium ensuite, et l'Aurore le double. Ce qui manque
+   au compte vient des Poches, des Percees, des Echos et des coffres.
+2. **Les Eclats d'Arcencium** (`mine/ArcenciumShards`, objet
+   `arcencium_shard`, recette 4 eclats = 1 brut) : le filon reste un bloc a
+   pioche de diamant pour le brut, l'experience et la Fortune ; mais une pioche
+   d'un cran en dessous n'en repart plus les mains vides : un ou deux eclats
+   (plus un ou deux pendant l'Aurore), et un mot une fois sur la barre
+   d'action. Le fer est le chemin lent, le diamant le chemin plein ; aucun n'est
+   un mur. La texture est decoupee dans celle du brut (l'image du joueur), rien
+   d'invente.
+3. **La boussole sait ce qu'on peut miner** (`WeatherEffects.prioritise`,
+   `hasArcenciumPick`) : sans pioche capable de tirer le brut quelque part sur
+   soi, le diamant passe devant (a rang egal, le plus proche) ; avec, l'
+   Arcencium d'abord. Le message compte ce qu'on montre : « 6 filon(s) : 6 de
+   diamant, 0 d'Arcencium -- le plus proche a 70 blocs », suivi de « Sans pioche
+   en diamant sur vous, l'Aurore mene au diamant d'abord : c'est lui, la clef »
+   ou de « Pioche en diamant sur vous : l'Aurore mene a l'Arcencium d'abord ».
+   Le sondage descend desormais du plafond d'Underground jusqu'a la roche-mere
+   (l'Arcencium vit sous zero, et l'appel se recoit en surface), et il est
+   ETALE : trois chunks par tique, les plus proches d'abord, 81 chunks en 26
+   tiques, un resultat garde dix secondes ou seize blocs de marche. D'un coup,
+   il coutait 100 a 170 ms.
+4. **Les Puits et les Brumes se levent SOUS le joueur** (`AuroreCaves`) :
+   sondage fixe de y = 47 a -60 sous sa position, quelle que soit sa hauteur.
+   Et « qui descend trouve » : un joueur autour de qui rien ne s'est leve
+   (en surface sans grotte dessous, ou parti miner ailleurs) recoit ses puits
+   et ses brumes en passant sous terre, une fois, jamais dans la derniere
+   minute (`descents`, reessai toutes les dix secondes).
+
+Verifie en jeu, en quatre passages : la pioche en fer casse le filon et laisse
+UN eclat en poche, pas de brut ; la pioche en diamant laisse le brut, pas
+d'eclat ; l'Aurore lancee avec le joueur a y = 75 leve « 2 puits et 1 paire »
+a y = -1 et -26 sous lui ; la boussole affiche « Diamant 18m ▼46 » sans pioche
+et « Arcencium 18m ▼31 » avec ; le joueur envoye dans le Nether pendant le
+debut (« 0 puits ») recoit « a la descente de Dev, 2 puits et 1 paire » huit
+secondes apres son retour sous terre ; le sondage fait « 81 chunks en 26
+tiques ».
+
+Pieges d'essai, cinquieme serie : `runData` plante dans le GatherDataEvent de
+`lootr` (il cherche `../logo.png`) avant d'ecrire quoi que ce soit -- les deux
+JSON generes de l'Arcencium ont ete ecrits a la main, identiques a ce que le
+provider produirait, et le provider reste la source. Une vraie casse de bloc se
+fait a la souris (`mouse_event` bouton gauche tenu, P/Invoke) : SendKeys ne
+tient pas un clic. Et `execute if items entity @s inventory.*` ne regarde PAS
+la barre d'outils : c'est `hotbar.*` qui recoit ce qu'on ramasse.
