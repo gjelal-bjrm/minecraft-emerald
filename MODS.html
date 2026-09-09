@@ -1,0 +1,641 @@
+<title>Le tri des 438 mods</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Karla:wght@400;500;700&family=JetBrains+Mono:wght@400;700&display=swap">
+<style>
+:root{--paper:#F0F1F5;--surface:#FFFFFF;--surface-2:#E7E9EF;--ink:#1A1922;--ink-soft:#4A4857;
+--muted:#6E6B7C;--line:#D6D8E0;--line-soft:#E3E5EC;--accent:#0E7355;--accent-bg:#E2F1EB;
+--keep:#0E7355;--keep-bg:#E2F1EB;--drop:#A33A52;--drop-bg:#F7E6EA;--maybe:#8A6A12;--maybe-bg:#F7EFDA;
+--shadow:0 1px 2px rgba(26,25,34,.06),0 8px 24px -16px rgba(26,25,34,.32);}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+--paper:#121118;--surface:#1A1923;--surface-2:#23222E;--ink:#EDECF2;--ink-soft:#C2C0CE;
+--muted:#918EA1;--line:#2E2C3A;--line-soft:#26242F;--accent:#56DFB2;--accent-bg:#16302A;
+--keep:#56DFB2;--keep-bg:#16302A;--drop:#FF8AA3;--drop-bg:#33161E;--maybe:#F0C560;--maybe-bg:#2E2612;
+--shadow:0 1px 2px rgba(0,0,0,.5),0 10px 30px -18px rgba(0,0,0,.9);}}
+:root[data-theme="dark"]{
+--paper:#121118;--surface:#1A1923;--surface-2:#23222E;--ink:#EDECF2;--ink-soft:#C2C0CE;
+--muted:#918EA1;--line:#2E2C3A;--line-soft:#26242F;--accent:#56DFB2;--accent-bg:#16302A;
+--keep:#56DFB2;--keep-bg:#16302A;--drop:#FF8AA3;--drop-bg:#33161E;--maybe:#F0C560;--maybe-bg:#2E2612;
+--shadow:0 1px 2px rgba(0,0,0,.5),0 10px 30px -18px rgba(0,0,0,.9);}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);
+font-family:"Karla",ui-sans-serif,system-ui,sans-serif;font-size:16.5px;line-height:1.6;
+-webkit-font-smoothing:antialiased}
+.page{max-width:980px;margin:0 auto;padding:0 24px 96px}
+h1,h2,h3{font-family:"Fraunces",Georgia,serif;font-variation-settings:"SOFT" 20,"WONK" 1;
+text-wrap:balance;margin:0}
+p{margin:0 0 1em}p:last-child{margin-bottom:0}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:3px}
+
+.cover{padding:68px 0 8px}
+.eyebrow{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:11px;letter-spacing:.14em;
+text-transform:uppercase;color:var(--muted);margin:0 0 16px}
+.cover h1{font-size:clamp(36px,6vw,58px);font-weight:600;line-height:1.05;
+letter-spacing:-.02em;margin-bottom:18px}
+.lede{font-size:19px;color:var(--ink-soft);max-width:60ch;line-height:1.5}
+
+.tally{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;
+background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin:34px 0 8px}
+.tally div{background:var(--surface);padding:14px 16px}
+.tally .v{font-family:"JetBrains Mono",monospace;font-size:26px;font-weight:700;
+line-height:1.1;font-variant-numeric:tabular-nums}
+.tally .k{font-size:12.5px;color:var(--muted);margin-top:3px}
+
+section{padding-top:52px}
+section>h2{font-size:26px;font-weight:600;letter-spacing:-.015em;line-height:1.2;margin-bottom:8px}
+.tag{display:inline-block;font-family:"JetBrains Mono",monospace;font-size:10.5px;
+letter-spacing:.1em;text-transform:uppercase;padding:3px 8px;border-radius:20px;margin-bottom:10px}
+.tag.keep{color:var(--keep);background:var(--keep-bg)}
+.tag.drop{color:var(--drop);background:var(--drop-bg)}
+.tag.maybe{color:var(--maybe);background:var(--maybe-bg)}
+section>h2+p{margin-top:12px}
+.why{color:var(--ink-soft);max-width:66ch}
+
+.mods{list-style:none;margin:20px 0 0;padding:0;display:grid;gap:8px;
+grid-template-columns:repeat(auto-fill,minmax(280px,1fr))}
+.mods li{background:var(--surface);border:1px solid var(--line);border-radius:8px;
+padding:9px 12px;font-size:14.5px;line-height:1.35}
+.mods li b{font-weight:700;display:block}
+.mods li span{color:var(--muted);font-size:13px}
+.flat{list-style:none;margin:18px 0 0;padding:0;display:grid;gap:2px 18px;
+grid-template-columns:repeat(auto-fill,minmax(215px,1fr));font-size:14px;color:var(--ink-soft)}
+.flat li{padding:2px 0;border-bottom:1px solid var(--line-soft)}
+.count{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--muted);
+margin-left:8px;font-weight:400}
+.note{border-left:2px solid var(--accent);padding:2px 0 2px 16px;color:var(--ink-soft);
+margin:22px 0;font-size:15.5px}
+.scroll{overflow-x:auto;margin:20px 0}
+table{border-collapse:collapse;width:100%;font-size:14.5px;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:8px 14px 8px 0;border-bottom:1px solid var(--line-soft);vertical-align:top}
+th{font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;
+color:var(--muted);font-weight:400;border-bottom-color:var(--line);white-space:nowrap}
+tbody tr:last-child td{border-bottom:none}
+.n{font-family:"JetBrains Mono",monospace;white-space:nowrap}
+footer{margin-top:70px;padding-top:20px;border-top:1px solid var(--line);
+font-size:13.5px;color:var(--muted)}
+</style>
+
+<div class="page">
+<header class="cover">
+  <p class="eyebrow">Profil Mode Arcencium · 9 septembre 2026</p>
+  <h1>Le tri des 438 mods</h1>
+  <p class="lede">Ton profil CurseForge porte la liste de mods d'All the Mods 10.
+    Voici ce que le Mode Arcencium en utilise vraiment, mesuré dans le code, dans
+    les gabarits de structures et dans le graphe de dépendances — et ce qui peut partir.</p>
+  <div class="tally">
+    <div><div class="v">438</div><div class="k">mods installés</div></div>
+    <div><div class="v" style="color:var(--keep)">86</div><div class="k">à garder</div></div>
+    <div><div class="v" style="color:var(--drop)">352</div><div class="k">à retirer</div></div>
+    <div><div class="v">14</div><div class="k">cités par notre code</div></div>
+  </div>
+</header>
+
+<main>
+
+<section>
+  <span class="tag keep">Indispensable</span>
+  <h2>Le noyau : ce que le mode appelle par son nom<span class="count">14</span></h2>
+  <p class="why">Mesuré : ce sont les seuls espaces de noms étrangers que notre code Java et
+    nos fichiers de données citent. Retirer l'un d'eux casse quelque chose de visible.</p>
+  <ul class="mods"><li><b>Actually Additions</b><span>un seul objet, dans le lot de depart</span></li>
+<li><b>Apotheosis</b><span>gemmes, affixes, et le socle de rarete que le mode etend</span></li>
+<li><b>Apothic Attributes</b><span>les attributs que nos runes modifient</span></li>
+<li><b>Apothic Enchanting</b><span>l&#x27;enchantement d&#x27;Apotheosis</span></li>
+<li><b>Apothic Spawners</b><span>les spawners de nos sanctuaires</span></li>
+<li><b>Deeper and Darker</b><span>les creatures sculk des paliers hauts</span></li>
+<li><b>Gateways to Eternity</b><span>les portails d&#x27;invocation d&#x27;Apotheosis</span></li>
+<li><b>Iron&#x27;s Spells &#x27;n Spellbooks</b><span>les lanceurs de sorts des vagues</span></li>
+<li><b>L_Ender &#x27;s Cataclysm</b><span>la pyramide des sanctuaires et plusieurs boss</span></li>
+<li><b>Lootr (Forge &amp; NeoForge)</b><span>chaque joueur a son propre tirage dans un coffre</span></li>
+<li><b>Sophisticated Backpacks</b><span>un seul objet, dans le lot de depart</span></li>
+<li><b>Supplementaries</b><span>cordes, poulies, brasiers : le decor du village</span></li>
+<li><b>The Twilight Forest</b><span>des creatures de la Battue et des sieges</span></li>
+<li><b>The Undergarden</b><span>des creatures des paliers hauts</span></li></ul>
+  <p class="note">Deux d'entre eux ne servent qu'à <strong>un seul objet</strong> du lot de départ :
+    Actually Additions et Sophisticated Backpacks. Remplace ces deux objets et ces deux mods
+    partent aussi.</p>
+</section>
+
+<section>
+  <span class="tag maybe">Otages du décor</span>
+  <h2>Ceux dont nos structures posent les blocs<span class="count">11</span></h2>
+  <p class="why">Notre village, notre citadelle et notre cathédrale ont été capturés dans un monde
+    qui avait ces mods : leurs blocs sont littéralement dans nos gabarits. Les retirer laisse
+    des trous. Mais ce n'est pas une dépendance de jeu, c'est une dépendance de décor :
+    refaire les gabarits avec des blocs du jeu de base les libère tous.</p>
+  <div class="scroll"><table>
+    <thead><tr><th>Mod</th><th>Blocs posés</th><th>Où</th></tr></thead><tbody>
+    <tr><td><strong>When Dungeons Arise</strong></td><td class="n">458</td><td>les spawners de la citadelle et de la cathédrale</td></tr>
+    <tr><td><strong>Create</strong></td><td class="n">380</td><td>le décor du village : cuves, engrenages, machines à vapeur</td></tr>
+    <tr><td><strong>Farmer's Delight</strong></td><td class="n">37</td><td>les cuisines du village</td></tr>
+    <tr><td><strong>PneumaticCraft</strong></td><td class="n">36</td><td>murs et briques du village</td></tr>
+    <tr><td><strong>CC: Tweaked</strong></td><td class="n">19</td><td>des écrans posés en décor</td></tr>
+    <tr><td><strong>ChoiceTheorem's Overhauled Village</strong></td><td class="n">19</td><td>le village d'origine, dont le nôtre est tiré</td></tr>
+    <tr><td><strong>Immersive Engineering</strong></td><td class="n">12</td><td>quelques pièces de décor</td></tr>
+    <tr><td><strong>Oh The Biomes We've Gone</strong></td><td class="n">10</td><td>des bois du village</td></tr>
+    <tr><td><strong>Advanced Peripherals</strong></td><td class="n">8</td><td>avec les écrans</td></tr>
+    <tr><td><strong>Iron's Gems 'n Jewelry</strong></td><td class="n">2</td><td>deux objets de décor</td></tr>
+    <tr><td><strong>Sawmill</strong></td><td class="n">1</td><td>un bloc</td></tr>
+    </tbody></table></div>
+  <p class="note">Trente-six autres mods sont cités par les gabarits mais <strong>ne sont
+    pas installés</strong> : leurs blocs manquent déjà aujourd'hui, et tu ne l'as jamais
+    remarqué. C'est la meilleure preuve que ce décor est remplaçable.</p>
+</section>
+
+<section>
+  <span class="tag keep">Le rendu</span>
+  <h2>La vue : shaders, distance, animations<span class="count">13</span></h2>
+  <p class="why">Ce que tu as choisi de voir. Les six premiers ne sont pas des add-ons
+    CurseForge : ce sont des jars posés à la main, que l'export embarque tels quels.</p>
+  <ul class="mods"><li><b>Distant Horizons</b><span>la vue au loin</span></li>
+<li><b>Better Combat</b><span>les animations d&#x27;attaque</span></li>
+<li><b>Entity Texture Features</b><span>les textures d&#x27;entites</span></li>
+<li><b>Entity Model Features</b><span>les modeles d&#x27;entites</span></li>
+<li><b>Not Enough Animations</b><span>les gestes du joueur</span></li>
+<li><b>Player Animation Lib</b><span>le socle des animations</span></li></ul>
+  <ul class="flat"><li>Athena</li>
+<li>Connected Glass</li>
+<li>ConnectedTexturesMod</li>
+<li>Embeddium</li>
+<li>Euphoria Patches</li>
+<li>Fusion (Connected Textures)</li>
+<li>Iris Shaders</li></ul>
+</section>
+
+<section>
+  <span class="tag keep">Le socle</span>
+  <h2>Les bibliothèques entraînées<span class="count">14</span></h2>
+  <p class="why">Personne ne les choisit : elles sont exigées par les mods ci-dessus.
+    Calculé sur le graphe de dépendances de CurseForge, pas deviné.</p>
+  <ul class="flat"><li>Atlas API</li>
+<li>Bookshelf</li>
+<li>CorgiLib</li>
+<li>GeckoLib</li>
+<li>Lionfish API</li>
+<li>Lithostitched</li>
+<li>Moonlight Lib</li>
+<li>Oh The Trees You&#x27;ll Grow</li>
+<li>Patchouli</li>
+<li>Placebo</li>
+<li>Prickle</li>
+<li>Searchables</li>
+<li>SuperMartijn642&#x27;s Core Lib</li>
+<li>TerraBlender (NeoForge)</li></ul>
+</section>
+
+<section>
+  <span class="tag keep">Performance</span>
+  <h2>Ce qui tient le jeu debout<span class="count">18</span></h2>
+  <p class="why">Ces mods n'ajoutent rien au jeu, ils l'empêchent de ramer ou de planter.
+    Aucun n'est indispensable au mode, mais retirer un chargeur de chunks ou un correctif
+    de fuite mémoire se paie tout de suite.</p>
+  <ul class="flat"><li>AI Improvements: Performance Tuning</li>
+<li>AllTheLeaks (Memory Leak Fix)</li>
+<li>Bad Wither No Cookie - Reloaded</li>
+<li>Balm</li>
+<li>Better Compatibility Checker</li>
+<li>Clean Swing Through Grass</li>
+<li>Cobweb</li>
+<li>Connectivity</li>
+<li>Crash Assistant</li>
+<li>Crash Utilities</li>
+<li>Cupboard</li>
+<li>FastFurnace</li>
+<li>FastSuite</li>
+<li>FastWorkbench</li>
+<li>FerriteCore ((Neo)Forge)</li>
+<li>Framework</li>
+<li>I&#x27;m Fast</li>
+<li>ImmediatelyFast</li></ul>
+</section>
+
+<section>
+  <span class="tag maybe">Au choix</span>
+  <h2>Le confort de jeu<span class="count">22</span></h2>
+  <p class="why">Gardés par choix, pas par nécessité : la carte, les recettes, l'infobulle,
+    les points de téléportation. Le mode tourne sans eux. C'est la liste où tu peux tailler
+    selon tes goûts.</p>
+  <ul class="flat"><li>Akashic Tome</li>
+<li>AppleSkin</li>
+<li>Better Advancements</li>
+<li>Colorful Hearts</li>
+<li>Comforts</li>
+<li>Controlling</li>
+<li>Corail Tombstone</li>
+<li>Cosmetic Armor Reworked</li>
+<li>Crafting Tweaks</li>
+<li>Curios API</li>
+<li>Dark Mode Everywhere</li>
+<li>Enchantment Descriptions</li>
+<li>Explorer&#x27;s Compass</li>
+<li>Extreme sound muffler - (Neo)Forge</li>
+<li>Harvest with ease</li>
+<li>Inventory Essentials</li>
+<li>Inventory Tweaks - ReFoxed</li>
+<li>Jade 🔍</li>
+<li>JourneyMap</li>
+<li>Just Enough Items (JEI)</li>
+<li>Sophisticated Core</li>
+<li>Waystones</li></ul>
+</section>
+
+<section>
+  <span class="tag drop">À retirer</span>
+  <h2>Ce que le mode ne touche jamais<span class="count">352</span></h2>
+  <p class="why">Aucun de ces mods n'est cité par notre code, ne pose un bloc dans nos
+    structures, ni n'est exigé par ceux qu'on garde. Une partie de quatre-vingt-dix minutes
+    n'a le temps d'en ouvrir aucun.</p>
+
+  <h3 style="font-size:18px;font-weight:600;margin:34px 0 6px">Le reste<span class="count">149</span></h3>
+  <p class="why" style="font-size:15px">Le solde : petits utilitaires, intégrations croisées, add-ons d'add-ons.</p>
+  <ul class="flat"><li>ATO - All the Ores</li>
+<li>AllTheCompressed</li>
+<li>Allthemodium</li>
+<li>AttributeFix</li>
+<li>Create Crafts &amp; Additions</li>
+<li>Create: Dragons Plus</li>
+<li>Create: Enchantment Industry</li>
+<li>Cryonic Config</li>
+<li>Dis-Enchanting Table</li>
+<li>Fireproof Boats</li>
+<li>FlickerFix</li>
+<li>GuideME</li>
+<li>Hey Berry! SHUT UP</li>
+<li>Jonn&#x27;s Trophies</li>
+<li>Jumpy Boats</li>
+<li>Just Dire Things</li>
+<li>Just Enough Archaeology</li>
+<li>Just Enough Breeding (JEBr)</li>
+<li>Just Enough Professions (JEP)</li>
+<li>Just Zoom</li>
+<li>KeyBind Bundles</li>
+<li>KeybindsPurger</li>
+<li>Konkrete</li>
+<li>KubeJS</li>
+<li>Legendary Tooltips [Neo/Forge]</li>
+<li>Let Me Despawn</li>
+<li>LivingThings</li>
+<li>Load My F***ing Tags</li>
+<li>Luminax</li>
+<li>ME Requester</li>
+<li>MEGA Cells</li>
+<li>MES - Moog&#x27;s End Structures</li>
+<li>MNS - Moog&#x27;s Nether Structures</li>
+<li>MSS - Moog&#x27;s Soaring Structures</li>
+<li>MVS - Moog&#x27;s Voyager Structures</li>
+<li>Mahou Tsukai</li>
+<li>Mama&#x27;s Herbs and Harvest</li>
+<li>Mama&#x27;s Merrymaking - A Minecraft Christmas and Winter Holiday Mod</li>
+<li>Measurements</li>
+<li>Memory Settings</li>
+<li>MmmMmmMmmMmm (Target Dummy)</li>
+<li>Mo&#x27; Structures (NeoForge/Fabric)</li>
+<li>Mob Grinding Utils</li>
+<li>Model Gap Fix</li>
+<li>Modern Dynamics</li>
+<li>ModernFix</li>
+<li>Modonomicon</li>
+<li>Monocle</li>
+<li>More Dragon Eggs</li>
+<li>More Overlays Updated</li>
+<li>More Red</li>
+<li>More Red x CC:Tweaked Compat</li>
+<li>Mouse Tweaks</li>
+<li>MrCrayfish&#x27;s Furniture Mod: Refurbished</li>
+<li>Mystical Customization</li>
+<li>Nature&#x27;s Aura</li>
+<li>Nature&#x27;s Compass</li>
+<li>NeoAuth</li>
+<li>NetherPortalFix</li>
+<li>No Chat Reports</li>
+<li>No Villager Death Messages</li>
+<li>Nolijium</li>
+<li>Not Enough Glyphs</li>
+<li>Nullscape</li>
+<li>Observable</li>
+<li>OpenBlocks Elevator</li>
+<li>Overloaded Armor Bar</li>
+<li>PackMenu</li>
+<li>Pam&#x27;s HarvestCraft 2 - Crops</li>
+<li>Pam&#x27;s HarvestCraft 2 - Food Extended</li>
+<li>Pam&#x27;s HarvestCraft 2 - Trees</li>
+<li>Pocket Storage</li>
+<li>Polymorph (Fabric/Forge/Quilt)</li>
+<li>Polymorphic Energistics</li>
+<li>Potions Master</li>
+<li>Prism [Neo/Forge]</li>
+<li>Productive Bees</li>
+<li>Productive Metalworks</li>
+<li>Productive Trees</li>
+<li>Pylons</li>
+<li>Rainbows!</li>
+<li>Ranged Pumps</li>
+<li>Reap Mod</li>
+<li>Rebind Narrator</li>
+<li>Redstone Pen</li>
+<li>Regions Unexplored</li>
+<li>Relics</li>
+<li>Repeatable Trial Vaults</li>
+<li>Repurposed Structures (Neoforge/Forge)</li>
+<li>Restrictions</li>
+<li>Rhino</li>
+<li>Roots Classic</li>
+<li>Scalable Cat&#x27;s Force</li>
+<li>Security Craft</li>
+<li>Shrink.</li>
+<li>Silent Gear</li>
+<li>Silent Gear Metalworks</li>
+<li>Silent&#x27;s Gems</li>
+<li>Simple Backups</li>
+<li>Simple Magnets</li>
+<li>Simple Weather</li>
+<li>Simply Light</li>
+<li>Smithing Template Viewer for JEI/EMI</li>
+<li>Sophisticated Backpacks Create Integration</li>
+<li>Soulplied Energistics</li>
+<li>Spice of Life: Carrot Edition</li>
+<li>StarbuncleMania</li>
+<li>Storage Delight (Forge &amp; Neoforge)</li>
+<li>Structory</li>
+<li>Structory: Towers</li>
+<li>Stylecolonies</li>
+<li>Super Factory Manager ( SFM )</li>
+<li>Sushi Go Crafting</li>
+<li>Sussy Sniffers</li>
+<li>Tempad</li>
+<li>The Bumblezone (NeoForge/Forge)</li>
+<li>Titanium</li>
+<li>Toast Control</li>
+<li>Tool Belt</li>
+<li>Torchmaster</li>
+<li>TownTalk</li>
+<li>Towns and Towers</li>
+<li>Transfer Labels</li>
+<li>Trash Cans</li>
+<li>TrashSlot</li>
+<li>Tree Tap</li>
+<li>Underground Villages</li>
+<li>Universal Grid</li>
+<li>Utilitarian</li>
+<li>Variants&amp;Ventures</li>
+<li>Villages&amp;Pillages</li>
+<li>WITS (What Is This Structure?)</li>
+<li>Wireless Chargers</li>
+<li>Wither Skeleton Tweaks</li>
+<li>WorldEdit</li>
+<li>XNet</li>
+<li>Xtones Reworked</li>
+<li>YUNG&#x27;s Better Desert Temples (NeoForge) [1.20.4 - 1.21.1 ONLY]</li>
+<li>YUNG&#x27;s Better Dungeons (NeoForge) [1.20.4 - 1.21.1 ONLY]</li>
+<li>YUNG&#x27;s Better End Island (NeoForge) [1.20.4 - 1.21.1 ONLY]</li>
+<li>YUNG&#x27;s Better Jungle Temples (NeoForge) [1.20.4 - 1.21.1 ONLY]</li>
+<li>YUNG&#x27;s Better Mineshafts (NeoForge) [1.20.4 - 1.21.1 ONLY]</li>
+<li>YUNG&#x27;s Better Nether Fortresses (NeoForge) [1.20.4 - 1.21.1 ONLY]</li>
+<li>YUNG&#x27;s Better Ocean Monuments (NeoForge) [1.20.4 - 1.21.1 ONLY]</li>
+<li>YUNG&#x27;s Better Strongholds (NeoForge) [1.20.4 - 1.21.1 ONLY]</li>
+<li>YUNG&#x27;s Better Witch Huts (NeoForge) [1.20.4 - 1.21.1 ONLY]</li>
+<li>YUNG&#x27;s Extras (NeoForge) [1.20.4 - 1.21.1 ONLY]</li>
+<li>Yeetus Experimentus</li>
+<li>spark</li></ul>
+
+  <h3 style="font-size:18px;font-weight:600;margin:34px 0 6px">La machinerie<span class="count">91</span></h3>
+  <p class="why" style="font-size:15px">L'automatisation, le stockage et l'énergie. C'est le cœur d'All the Mods, et c'est un jeu de plusieurs dizaines d'heures : l'opposé exact du nôtre.</p>
+  <ul class="flat"><li>AE2 Import Export Card</li>
+<li>AE2 JEI Integration</li>
+<li>AE2 Network Analyser</li>
+<li>AE2: Crafting Tree</li>
+<li>AEInfinityBooster</li>
+<li>Accelerated Decay</li>
+<li>Additional Enchanted Miner</li>
+<li>AdvancedAE</li>
+<li>Almost Unified</li>
+<li>Applied Energistics 2</li>
+<li>Applied Energistics 2 Wireless Terminals</li>
+<li>Applied Flux</li>
+<li>Applied Mekanistics</li>
+<li>Bridging Mod</li>
+<li>Building Gadgets</li>
+<li>Cable Tiers</li>
+<li>Charging Gadgets</li>
+<li>Cobblegen Galore</li>
+<li>CodeChicken Lib 1.8.+</li>
+<li>Common Capabilities</li>
+<li>Compact Machines</li>
+<li>Construction Sticks</li>
+<li>Crafting on a stick</li>
+<li>CreeperHost Presents Steve&#x27;s Carts</li>
+<li>Cucumber Library</li>
+<li>Cyclops Core</li>
+<li>DimStorage</li>
+<li>Ender IO</li>
+<li>Ender Storage 1.8.+</li>
+<li>EnderDrives</li>
+<li>Entangled</li>
+<li>Extended Industrialization</li>
+<li>ExtendedAE</li>
+<li>Extra Disks</li>
+<li>ExtraStorage</li>
+<li>Extreme Reactors</li>
+<li>Flux Networks</li>
+<li>Fuel Goes Here</li>
+<li>Functional Storage</li>
+<li>Generator Galore</li>
+<li>Glodium</li>
+<li>Gravitational Modulating Additional Unit</li>
+<li>Hostile Neural Networks</li>
+<li>Hyperbox</li>
+<li>Immersive Energistics</li>
+<li>Industrial Foregoing</li>
+<li>Industrial Foregoing Souls</li>
+<li>Integrated Crafting</li>
+<li>Integrated Dynamics</li>
+<li>Integrated Scripting</li>
+<li>Integrated Terminals</li>
+<li>Integrated Tunnels</li>
+<li>Interdimensional Wireless Transmitter</li>
+<li>Iron Furnaces</li>
+<li>Iron Jetpacks</li>
+<li>Item Collectors</li>
+<li>Just Enough Mekanism Multiblocks</li>
+<li>Laser Bridges &amp; Doors [Fabric/Forge/NeoForge]</li>
+<li>LaserIO</li>
+<li>Mekanism</li>
+<li>Mekanism Covers</li>
+<li>Mekanism Generators</li>
+<li>Mekanism Tools</li>
+<li>Mining Gadgets</li>
+<li>Modern Industrialization</li>
+<li>Modular Force Field Systems (MFFS)</li>
+<li>Modular Machinery Reborn</li>
+<li>Modular Machinery Reborn Ars Nouveau</li>
+<li>Modular Machinery Reborn Mekanism</li>
+<li>Modular Routers</li>
+<li>More Industrial Foregoing Addons (MIFA)</li>
+<li>Pipez</li>
+<li>Powah! (Rearchitected)</li>
+<li>RFTools Base</li>
+<li>RFTools Builder</li>
+<li>RFTools Power</li>
+<li>RFTools Utility</li>
+<li>Railcraft Reborn</li>
+<li>Refined Storage</li>
+<li>Refined Storage - Curios Integration</li>
+<li>Refined Storage - JEI Integration</li>
+<li>Refined Storage - Mekanism Integration</li>
+<li>Refined Storage - Quartz Arsenal</li>
+<li>Sophisticated Storage</li>
+<li>Sophisticated Storage Create Integration</li>
+<li>Sophisticated Storage in Motion</li>
+<li>Time in a Bottle</li>
+<li>XyCraft</li>
+<li>XyCraft: Machines</li>
+<li>XyCraft: Override</li>
+<li>XyCraft: World</li></ul>
+
+  <h3 style="font-size:18px;font-weight:600;margin:34px 0 6px">La magie et l&#x27;aventure d&#x27;ATM10<span class="count">37</span></h3>
+  <p class="why" style="font-size:15px">D'autres systèmes de progression, qui entrent en concurrence avec le nôtre plutôt qu'ils ne le servent.</p>
+  <ul class="flat"><li>All The Arcanist Gear</li>
+<li>All the Wizard Gear</li>
+<li>Aquaculture 2</li>
+<li>Ars Additions</li>
+<li>Ars Elemancy</li>
+<li>Ars Elemental</li>
+<li>Ars Nouveau</li>
+<li>Ars Ocultas</li>
+<li>Ars Technica</li>
+<li>Ars Énergistique</li>
+<li>Artifacts</li>
+<li>Auroras</li>
+<li>Baubley Heart Canisters</li>
+<li>Bibliobiomes Legacy</li>
+<li>Blue Flame Burning</li>
+<li>Cat Jammies</li>
+<li>Creeper Overhaul</li>
+<li>Dungeon Crawl</li>
+<li>Enderman Overhaul</li>
+<li>Eternal Starlight</li>
+<li>Everything is Copper</li>
+<li>EvilCraft</li>
+<li>Explorify – Dungeons &amp; Structures</li>
+<li>Forbidden and Arcanus</li>
+<li>Formations (Structure Library)</li>
+<li>Formations Nether</li>
+<li>Formations Overworld</li>
+<li>Hardened Armadillos</li>
+<li>Illager Warship</li>
+<li>Mystical Agradditions</li>
+<li>Mystical Agriculture</li>
+<li>Occultism</li>
+<li>Occultism KubeJS</li>
+<li>Reliquary Reincarnations</li>
+<li>Reliquified Artifacts</li>
+<li>Theurgy</li>
+<li>Theurgy KubeJS</li></ul>
+
+  <h3 style="font-size:18px;font-weight:600;margin:34px 0 6px">La construction et la decoration<span class="count">31</span></h3>
+  <p class="why" style="font-size:15px">Des milliers de blocs de décor qu'on ne pose jamais.</p>
+  <ul class="flat"><li>Additional Lights</li>
+<li>Amendments</li>
+<li>Bibliocraft Legacy</li>
+<li>Bibliowoods Legacy</li>
+<li>Byzantine Styles Pack for Minecolonies</li>
+<li>Camol</li>
+<li>Chipped</li>
+<li>Chisel Reborn [Forge/Fabric/NeoForge]</li>
+<li>Cloud Glass</li>
+<li>Crystalix</li>
+<li>Domum Ornamentum</li>
+<li>Dyenamics</li>
+<li>Dyenamics and Friends</li>
+<li>Factory Blocks [Forge/Fabric/NeoForge]</li>
+<li>FramedBlocks</li>
+<li>Glassential Renewed</li>
+<li>Handcrafted</li>
+<li>Macaw&#x27;s Bridges</li>
+<li>Macaw&#x27;s Doors</li>
+<li>Macaw&#x27;s Fences and Walls</li>
+<li>Macaw&#x27;s Furniture</li>
+<li>Macaw&#x27;s Holidays</li>
+<li>Macaw&#x27;s Lights and Lamps</li>
+<li>Macaw&#x27;s Paths and Pavings</li>
+<li>Macaw&#x27;s Roofs</li>
+<li>Macaw&#x27;s Stairs</li>
+<li>Macaw&#x27;s Trapdoors</li>
+<li>Macaw&#x27;s Windows</li>
+<li>Rechiseled</li>
+<li>Rechiseled: Chipped</li>
+<li>Rechiseled: Create</li></ul>
+
+  <h3 style="font-size:18px;font-weight:600;margin:34px 0 6px">Les bibliotheques<span class="count">26</span></h3>
+  <p class="why" style="font-size:15px">Des bibliothèques qui ne servent qu'aux mods ci-dessus. Elles partent avec eux.</p>
+  <ul class="flat"><li>Almanac Lib</li>
+<li>Architectury API</li>
+<li>Caelus API</li>
+<li>Cloth Config API (Fabric/Forge/NeoForge)</li>
+<li>Deimos Lib</li>
+<li>EdivadLib</li>
+<li>ExperienceLib</li>
+<li>Fzzy Config</li>
+<li>Iceberg [Neo/Forge]</li>
+<li>Kotlin for Forge</li>
+<li>McJtyLib</li>
+<li>MonoLib</li>
+<li>Pam&#x27;s HarvestCraft 2 - Food Core</li>
+<li>PolyLib</li>
+<li>Resourceful Config</li>
+<li>Resourceful Lib</li>
+<li>ServerCore</li>
+<li>ShatterLib | OctoLib</li>
+<li>Silent Lib (silentlib)</li>
+<li>SmartBrainLib (Forge/Fabric/Quilt)</li>
+<li>SuperMartijn642&#x27;s Config Lib</li>
+<li>Tesseract API (NeoForge)</li>
+<li>Valhelsia Core</li>
+<li>YUNG&#x27;s API (NeoForge) [1.20.4-1.21.1 ONLY]</li>
+<li>YetAnotherConfigLib</li>
+<li>ZeroCore 2</li></ul>
+
+  <h3 style="font-size:18px;font-weight:600;margin:34px 0 6px">La colonie et les quetes<span class="count">18</span></h3>
+  <p class="why" style="font-size:15px">Minecolonies, FTB Quests et leurs satellites : une autre façon de jouer, avec son propre livre de quêtes.</p>
+  <ul class="flat"><li>BlockUI</li>
+<li>Cooking for Blockheads</li>
+<li>Cristel Lib</li>
+<li>Easy Villagers</li>
+<li>FTB Chunks (NeoForge)</li>
+<li>FTB Essentials (Forge &amp; Fabric)</li>
+<li>FTB Filter System</li>
+<li>FTB JEI Extras</li>
+<li>FTB Library (NeoForge)</li>
+<li>FTB Quests (NeoForge)</li>
+<li>FTB Ranks (NeoForge)</li>
+<li>FTB Teams (NeoForge)</li>
+<li>FTB Ultimine (NeoForge)</li>
+<li>FTB XMod Compat</li>
+<li>Farming for Blockheads</li>
+<li>MineColonies</li>
+<li>Multi-Piston</li>
+<li>Structurize</li></ul>
+
+</section>
+
+<section>
+  <span class="tag keep">La suite</span>
+  <h2>Comment s'y prendre</h2>
+  <p>Trois étapes, dans cet ordre, chacune vérifiable avant de passer à la suivante.</p>
+  <div class="scroll"><table>
+    <thead><tr><th></th><th>Étape</th><th>Ce que ça donne</th></tr></thead><tbody>
+    <tr><td class="n">1</td><td>Retirer les 352 mods sans emploi</td><td>Le profil tombe à 86 mods. Rien de ce que le mode appelle ne bouge, mais les gabarits gardent leurs trous du décor.</td></tr>
+    <tr><td class="n">2</td><td>Refaire les gabarits avec des blocs du jeu</td><td>Onze mods de plus peuvent partir, dont Create et When Dungeons Arise. Il reste environ 75 mods.</td></tr>
+    <tr><td class="n">3</td><td>Trancher dans le confort</td><td>Ton choix : carte, recettes, téléportation. Un socle minimal tient sous 50 mods.</td></tr>
+    </tbody></table></div>
+  <p class="note">À faire sur une <strong>copie</strong> du profil, et en gardant la liste actuelle :
+    un mod retiré par erreur ne se voit parfois qu'une demi-heure plus tard, quand un coffre
+    est vide ou qu'un mur a un trou.</p>
+</section>
+
+</main>
+<footer>Relevé du profil « Mode Arcencium » le 9 septembre 2026. Le noyau et le décor sont
+mesurés dans les sources du mod ; les dépendances viennent du fichier d'instance de CurseForge.</footer>
+</div>
