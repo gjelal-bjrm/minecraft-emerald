@@ -4996,3 +4996,35 @@ monde.
 
 Le monde T5 ne portait aucune entite PneumaticCraft dans ses regions : elle
 n'a vecu que le temps d'une tique, ce qui confirme le scenario.
+
+### E. Le chantier ne genere plus rien sur le fil serveur : il demande
+
+Le premier correctif fermait la tique apres chaque chunk fini. C'etait juste,
+mais chaque `getChunk(..., true)` BLOQUAIT encore le fil serveur le temps de la
+generation, quel que soit le palier demande : le chunk se fabrique sur les fils
+de travail, mais le fil serveur attend la reponse. Chez le joueur, avec quatre
+cent quarante mods de generation, cela faisait vingt-sept secondes de fil
+serveur par sanctuaire.
+
+Un TICKET fait exactement ce que fait un joueur qui marche : il dit au systeme
+de chunks « je veux celui-la fini », et le systeme le fabrique en arriere-plan,
+sur ses fils, sur autant de tiques qu'il faut. Le fil serveur n'y touche que
+pour la promotion finale. Le chantier pose donc un ticket par chunk du site
+(`TicketType arcencium_chantier`, niveau 33 : fini, mais ni entites ni blocs
+qui tiquent, et qui expire seul apres deux minutes), puis une etape d'ATTENTE
+se represente a chaque tique tant qu'un chunk manque -- en fermant sa tique a
+chaque fois, ce qui garde la protection contre le plantage « charge_pad ». Le
+compte rendu dit combien de tiques on a attendu. Les tickets sont rendus a la
+fin.
+
+Mesure en dev, trois sanctuaires sur sol vierge par le chemin normal du jeu :
+
+| | avant (getChunk bloquant) | apres (tickets) |
+| --- | --- | --- |
+| fil serveur par sanctuaire | 9 000 a 9 900 ms | 1 329 a 2 408 ms |
+| pire etape | prechargement, 1 700 ms | pyramide, 343 ms |
+| « Can't keep up » pendant les trois chantiers | 3 | 0 |
+| chunks attendus en arriere-plan | -- | 229, 47 et 34 tiques |
+
+Le prechargement a disparu du classement des pires etapes : il ne coute plus
+rien au fil serveur. Ce qui reste est de la pose de blocs, deja en bandes.

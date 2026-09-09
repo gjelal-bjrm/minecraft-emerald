@@ -84,20 +84,16 @@ public final class Sanctuary {
     private static final int TOWER_TOP = 42;
 
     /**
-     * Les paliers de maturite par lesquels on fait passer le terrain du site.
-     *
-     * On ne les prend pas tous : entre deux crans voisins la cascade est deja
-     * bornee, et cinq arrets suffisent a la casser (structures, relief, roche,
-     * decors, fini). Les crans sautes sont montes par le suivant, sur des
-     * voisins qui sont deja presque a niveau.
+     * Le ticket du chantier : tient un chunk du site a l'etat FINI, sans le
+     * faire vivre (niveau 33, ni entites ni blocs qui tiquent). Il expire seul
+     * apres deux minutes, si jamais un chantier meurt sans rendre les siens.
      */
-    private static final java.util.List<net.minecraft.world.level.chunk.status.ChunkStatus>
-            PRELOAD_STAGES = java.util.List.of(
-                    net.minecraft.world.level.chunk.status.ChunkStatus.STRUCTURE_STARTS,
-                    net.minecraft.world.level.chunk.status.ChunkStatus.BIOMES,
-                    net.minecraft.world.level.chunk.status.ChunkStatus.NOISE,
-                    net.minecraft.world.level.chunk.status.ChunkStatus.FEATURES,
-                    net.minecraft.world.level.chunk.status.ChunkStatus.FULL);
+    private static final net.minecraft.server.level.TicketType<net.minecraft.world.level.ChunkPos> CHANTIER =
+            net.minecraft.server.level.TicketType.create("arcencium_chantier",
+                    java.util.Comparator.comparingLong(net.minecraft.world.level.ChunkPos::toLong), 2400);
+    /** Tiques d'attente au plus avant de passer outre : deux minutes. */
+    private static final int AWAIT_MAX = 2400;
+
 
     /** Les mesures de la Pyramide Maudite, relevees dans ses onze modeles. */
     private static final int PYRAMID_W = 89;
@@ -232,6 +228,29 @@ public final class Sanctuary {
         }
 
         private final java.util.ArrayDeque<Step> steps = new java.util.ArrayDeque<>();
+        /** Les chunks du site, tenus par ticket le temps du chantier. */
+        private java.util.List<net.minecraft.world.level.ChunkPos> tickets = java.util.List.of();
+        /** Combien de tiques on a attendu les chunks : dit au compte rendu. */
+        private int waited;
+
+        /**
+         * Tant qu'un chunk du site n'est pas fini, on se represente a la tique
+         * suivante. Au-dela de deux minutes on passe outre : le deblaiement sait
+         * redemander un chunk manquant, et un chantier qui n'avance jamais
+         * serait pire qu'un gel.
+         */
+        private void awaitChunks() {
+            int missing = 0;
+            for (net.minecraft.world.level.ChunkPos pos : tickets) {
+                if (level.getChunkSource().getChunkNow(pos.x, pos.z) == null) {
+                    missing++;
+                }
+            }
+            if (missing > 0 && waited < AWAIT_MAX) {
+                waited++;
+                steps.addFirst(new Step("prechargement attente", this::awaitChunks, true));
+            }
+        }
         private String worstName = "?";
 
         private int apex = -1;
@@ -324,32 +343,37 @@ public final class Sanctuary {
             int cTo = (cx + HALF + TOWER_RADIUS) >> 4;
             int kFrom = (cz - HALF - TOWER_RADIUS) >> 4;
             int kTo = (cz + HALF + TOWER_RADIUS) >> 4;
-            for (net.minecraft.world.level.chunk.status.ChunkStatus step : PRELOAD_STAGES) {
-                for (int ccx = cFrom; ccx <= cTo; ccx++) {
-                    for (int ccz = kFrom; ccz <= kTo; ccz++) {
-                        final int fx = ccx;
-                        final int fz = ccz;
-                        final net.minecraft.world.level.chunk.status.ChunkStatus at = step;
-                        // LE DERNIER PALIER CLOT LA TIQUE. Le plantage du 9
-                        // septembre a 16:04 : « Cannot set property charge_pad
-                        // ... in Block{minecraft:air} », lance par une station
-                        // de charge de PneumaticCraft posee par une structure
-                        // d'un autre mod. En finissant un chunk, le jeu inscrit
-                        // ses entites de bloc fraiches pour leur `onLoad` A LA
-                        // TIQUE SUIVANTE ; si dans la MEME tique une etape de
-                        // deblaiement remplace leur bloc par de l'air, `onLoad`
-                        // s'execute quand meme sur une entite dont le bloc n'est
-                        // plus la, et la station tente de poser une propriete
-                        // sur de l'air. Une etape qui finit un chunk est donc la
-                        // derniere de sa tique : les entites se chargent, puis
-                        // seulement on deblaie. Cent quatre-vingt-seize tiques
-                        // de plus par sanctuaire, dix secondes, que personne ne
-                        // voit.
-                        boolean last = at == net.minecraft.world.level.chunk.status.ChunkStatus.FULL;
-                        steps.add(new Step("prechargement", () -> level.getChunk(fx, fz, at, true), last));
-                    }
+            // ON NE GENERE PLUS RIEN SUR LE FIL SERVEUR : ON LE DEMANDE.
+            //
+            // Chaque `getChunk(..., true)` BLOQUAIT le fil serveur le temps de
+            // la generation, quel que soit le palier demande : le chunk se
+            // fabrique sur les fils de travail, mais le fil serveur attend la
+            // reponse. Chez le joueur, avec quatre cent quarante mods de
+            // generation, un sanctuaire coutait vingt-sept secondes de fil
+            // serveur et deux gels de treize et dix-neuf secondes.
+            //
+            // Un TICKET fait exactement ce que fait un joueur qui marche : il
+            // dit au systeme de chunks « je veux celui-la fini », et le systeme
+            // le fabrique en arriere-plan, sur ses fils, sur autant de tiques
+            // qu'il faut. Le fil serveur n'y touche que pour la promotion
+            // finale, quelques millisecondes. On pose donc un ticket par chunk
+            // du site, puis on ATTEND -- une etape qui se represente a chaque
+            // tique tant qu'un chunk manque, et qui clot sa tique a chaque
+            // fois pour que les entites de bloc fraiches passent leur onLoad
+            // avant le deblaiement (le plantage « charge_pad » du 9 septembre).
+            java.util.List<net.minecraft.world.level.ChunkPos> wanted = new java.util.ArrayList<>();
+            for (int ccx = cFrom; ccx <= cTo; ccx++) {
+                for (int ccz = kFrom; ccz <= kTo; ccz++) {
+                    wanted.add(new net.minecraft.world.level.ChunkPos(ccx, ccz));
                 }
             }
+            this.tickets = wanted;
+            add("prechargement demande", () -> {
+                for (net.minecraft.world.level.ChunkPos pos : wanted) {
+                    level.getChunkSource().addRegionTicket(CHANTIER, pos, 0, pos);
+                }
+            });
+            steps.add(new Step("prechargement attente", this::awaitChunks, true));
             // LE DEBLAIEMENT, EN BANDES. C'est la partie la plus lourde du
             // chantier : deux colonnes par etape, cent six etapes.
             int from = -HALF - TOWER_RADIUS;
@@ -436,7 +460,15 @@ public final class Sanctuary {
             steps.add(new Step(name, run));
         }
 
+        /** On rend les tickets : le site n'a plus besoin d'etre tenu charge. */
+        private void releaseChunks() {
+            for (net.minecraft.world.level.ChunkPos pos : tickets) {
+                level.getChunkSource().removeRegionTicket(CHANTIER, pos, 0, pos);
+            }
+        }
+
         private void report() {
+            releaseChunks();
             BlockState found = level.getBlockState(anchor);
             String occupant = BuiltInRegistries.BLOCK.getKey(found.getBlock()).toString();
             // LES SURVIVANTS, PAS LES POSES. Compter les poses laissait passer
@@ -451,9 +483,9 @@ public final class Sanctuary {
             }
             org.slf4j.LoggerFactory.getLogger(EmeraldWeaponsMod.MODID).info(
                     "Sanctuaire palier {} : {} coffres poses, {} survivants, bati en {} ms "
-                            + "de fil serveur (pire etape : {} en {} ms)",
+                            + "de fil serveur (pire etape : {} en {} ms), chunks attendus {} tiques",
                     rank, chestsPlaced, alive, spentNanos / 1_000_000L, worstName,
-                    worstNanos / 1_000_000L);
+                    worstNanos / 1_000_000L, waited);
             if (source == null) {
                 return;                  // bati par la partie : rien a dire
             }
