@@ -644,12 +644,21 @@ public final class AuroreCaves {
                         1.0F + (up.getY() & 15) * 0.05F);
             }
         }
-        // et s'eteignent de meme, de haut en bas
-        BlockPos down = fading.poll();
-        if (down != null && level.getBlockState(down).is(ModBlocks.AURORE_LIGHT.get())) {
-            level.setBlock(down, Blocks.AIR.defaultBlockState(), 3);
-            level.sendParticles(com.emerald.particles.ModParticles.PRISM_MOTE.get(),
-                    down.getX() + 0.5, down.getY() + 0.5, down.getZ() + 0.5, 2, 0.3, 0.3, 0.3, 0.0);
+        // et s'eteignent de meme, de haut en bas, HUIT PAR TIQUE.
+        //
+        // Un bloc par tique suffisait quand l'Aurore durait deux minutes ; a
+        // cinq, les colonnes montent a plusieurs centaines de blocs et l'on
+        // voyait des puits orphelins briller vingt secondes apres la fin.
+        for (int n = 0; n < 8; n++) {
+            BlockPos down = fading.poll();
+            if (down == null) {
+                break;
+            }
+            if (level.getBlockState(down).is(ModBlocks.AURORE_LIGHT.get())) {
+                level.setBlock(down, Blocks.AIR.defaultBlockState(), 3);
+                level.sendParticles(com.emerald.particles.ModParticles.PRISM_MOTE.get(),
+                        down.getX() + 0.5, down.getY() + 0.5, down.getZ() + 0.5, 2, 0.3, 0.3, 0.3, 0.0);
+            }
         }
         // la brume de rappel se dissipe au bout de son temps
         if (recallUntil >= 0 && level.getGameTime() > recallUntil) {

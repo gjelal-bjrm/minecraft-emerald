@@ -519,7 +519,7 @@
   "game.emeraldweapons.first_forge": "The village holds. The craftsmen pay you in material.",
   "game.emeraldweapons.first_forge.forge": "%s %s — at the Arcencium Forge: take one armour piece to +1, then your weapon. Nine chances in ten at this step.",
   "game.emeraldweapons.first_forge.altar": "%s Arcencium feathers — at the Specialization Altar: your first wing tier, guaranteed.",
-  "game.emeraldweapons.first_forge.bench": "The Socketing Bench engraves runes and raises a piece's rarity. Save your first runes for it.",
+  "game.emeraldweapons.first_forge.bench": "%s Fate Shards — at the Socketing Bench: one rarity attempt on the piece of your choice, %s %% to reach Splendid. It also engraves runes.",
   "game.emeraldweapons.first_forge.where": "The workshop is %s blocks to the %s (%s, %s, %s) — its three benches glow through walls for ten minutes.",
   "rune.emeraldweapons.execution": "Execution",
   "rune.emeraldweapons.execution.effect": "+%s %% damage to a target under 30 %% health",
@@ -540,5 +540,15 @@
   "mine.emeraldweapons.aurore.chamber.vein": "The rock opens. An Aurora mist, and its twin against a %s vein, %s blocks away.",
   "mine.emeraldweapons.aurore.chamber.cave": "The rock opens. An Aurora mist, and its twin in a cave, %s blocks away.",
   "mine.emeraldweapons.aurore.chamber.surface": "The rock opens. An Aurora mist, and its twin in daylight, %s blocks above.",
-  "mine.emeraldweapons.aurore.recall": "A recall mist rises at your feet: step in, it takes you back to daylight."
+  "mine.emeraldweapons.aurore.recall": "A recall mist rises at your feet: step in, it takes you back to daylight.",
+  "block.emeraldweapons.golden_gate": "Golden Gate",
+  "weather.emeraldweapons.vein.gate": "Gate",
+  "weather.emeraldweapons.gate.opened": "A Golden Gate opens %s blocks away: it leads to the village workshop, and back.",
+  "weather.emeraldweapons.gate.to_village": "The village workshop. The gate will take you back.",
+  "weather.emeraldweapons.gate.to_field": "Back where you were.",
+  "weather.emeraldweapons.gate.no_return": "Your field gate has faded: you will walk back.",
+  "weather.emeraldweapons.gate.closing": "The Golden Hour ends. The Gates hold for %s more seconds.",
+  "weather.emeraldweapons.gate.countdown": "Golden Gates: %s s",
+  "weather.emeraldweapons.gate.closed": "The Golden Gates have faded.",
+  "weather.emeraldweapons.gate.nowhere": "No clear ground around you: the Golden Gate could not open here."
 }

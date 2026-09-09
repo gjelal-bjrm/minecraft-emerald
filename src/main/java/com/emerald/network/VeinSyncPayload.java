@@ -30,6 +30,7 @@ public record VeinSyncPayload(java.util.List<Long> positions, long kinds)
     public static final int KIND_PREY = 2;
     public static final int KIND_MIST = 3;
     public static final int KIND_WELL = 4;
+    public static final int KIND_GATE = 5;
     /** Bits par entree. */
     public static final int BITS = 3;
 

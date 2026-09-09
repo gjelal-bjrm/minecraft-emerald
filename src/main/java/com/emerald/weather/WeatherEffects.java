@@ -312,6 +312,9 @@ public final class WeatherEffects {
             // et les grottes s'ouvrent : puits de lumiere, brumes etoilees
             com.emerald.mine.AuroreCaves.begin(level);
         }
+        if (weather == Weather.HEURE_DOREE) {
+            GoldenGate.begin(level);
+        }
         if (weather == Weather.BATTUE) {
             BattueScene.begin(level);
         }
@@ -336,6 +339,7 @@ public final class WeatherEffects {
                 unglow(level);
                 BattueScene.end(level);
             }
+            case HEURE_DOREE -> GoldenGate.end(level);
             case DECHIRURE -> endDechirure(level);
             case METEORES -> {
                 meteors.clear();
@@ -356,6 +360,7 @@ public final class WeatherEffects {
         switch (weather) {
             case BATTUE -> tickBattue(level);
             case AURORE -> tickAurore(level);
+            case HEURE_DOREE -> tickHeureDoree(level);
             case NUIT -> tickNuit(level);
             case METEORES -> tickMeteores(level);
             case DECHIRURE -> tickDechirure(level);
@@ -567,6 +572,13 @@ public final class WeatherEffects {
      * l'information : le seul echange qu'un joueur accepte volontiers.
      */
     private static void tickBattue(ServerLevel level) {
+        // LA MEME RETENUE QUE L'HEURE DOREE. La Battue pose 23 000 -- l'aube --
+        // et le temps courait : en cinquante secondes on etait en plein jour,
+        // et l'aube de chasse avait disparu pour les quatre-vingt-dix
+        // dernieres. Un tiers de vitesse : 23 000 a 23 800 sur les deux
+        // minutes, la lune reste basse et le jour ne se leve jamais tout a fait.
+        long elapsed = Math.max(0L, level.getGameTime() - WeatherManager.startedAt());
+        level.setDayTime(Math.min(23800L, 23000L + elapsed / 3L));
         // l'ambiance -- corbeaux, cor, hurlements, tambour, blanc/rouge -- vit
         // dans BattueScene ; ici ne reste que ce qui touche au jeu
         BattueScene.tick(level);
@@ -833,6 +845,39 @@ public final class WeatherEffects {
     }
 
     /**
+     * L'HEURE DOREE : la porte sur la boussole.
+     *
+     * On ne sonde rien, on n'allume rien -- une seule ligne, la porte la plus
+     * proche, avec sa fleche et son losange. C'est tout ce que la fenetre
+     * demande : savoir de quel cote est l'atelier.
+     */
+    private static void tickHeureDoree(ServerLevel level) {
+        // L'HORLOGE RETENUE. La fenetre pose 11 800 une fois, au debut, et
+        // laisse ensuite le temps courir : sur cinq minutes elle finissait a
+        // 17 800, c'est-a-dire deux cents tiques avant minuit. Le joueur avait
+        // soixante-dix secondes de lumiere doree, puis TROIS MINUTES ET DEMIE
+        // de nuit noire avec des monstres -- pendant la fenetre censee le faire
+        // rentrer s'asseoir a l'etabli. On avance donc l'horloge six fois moins
+        // vite : de 11 800 a 12 800 sur les six mille tiques, le soleil reste
+        // rasant du debut a la fin. Le plafond protege les essais forces.
+        long elapsed = Math.max(0L, level.getGameTime() - WeatherManager.startedAt());
+        level.setDayTime(Math.min(12800L, 11800L + elapsed / 6L));
+        if (level.getGameTime() % 20 != 0 || !GoldenGate.open()) {
+            return;
+        }
+        for (ServerPlayer player : level.players()) {
+            BlockPos gate = GoldenGate.nearest(player.blockPosition());
+            if (gate == null) {
+                continue;
+            }
+            net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player,
+                    new com.emerald.network.VeinSyncPayload(List.of(gate.asLong()),
+                            com.emerald.network.VeinSyncPayload.put(0L, 0,
+                                    com.emerald.network.VeinSyncPayload.KIND_GATE)));
+        }
+    }
+
+    /**
      * CE QUE L'AURORE DONNE AU CORPS.
      *
      * « Elle n'aide pas du tout a miner. » Elle le fait desormais : Hate II
@@ -842,8 +887,10 @@ public final class WeatherEffects {
      * les mains, pas seulement se lire dans le ciel.
      */
     private static void boons(ServerPlayer player) {
-        player.addEffect(new MobEffectInstance(MobEffects.DIG_SPEED, 100, 1, true, false, false));
-        player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, 100, 0, true, false, false));
+        // AVEC LEUR ICONE. C'est le principal cadeau de l'Aurore -- quarante
+        // pour cent de vitesse de minage -- et rien a l'ecran ne le nommait.
+        player.addEffect(new MobEffectInstance(MobEffects.DIG_SPEED, 100, 1, true, false, true));
+        player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, 100, 0, true, false, true));
         // La faim ne se met pas en pause -- ce serait une invulnerabilite
         // deguisee -- on lui reprend la moitie de ce qu'elle vient de prendre.
         player.getFoodData().setExhaustion(player.getFoodData().getExhaustionLevel() * 0.5F);

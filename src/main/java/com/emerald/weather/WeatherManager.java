@@ -60,6 +60,8 @@ public final class WeatherManager {
     private static int warningTicks;
     private static int gapTicks = 200;
     private static Weather lastRolled = Weather.CLEAR;
+    /** Faux tant qu'aucune meteo n'est tombee dans cette partie : la premiere est l'Aurore. */
+    private static boolean firstDrawn;
     private static long savedDayTime = -1;
 
     private WeatherManager() {
@@ -151,6 +153,17 @@ public final class WeatherManager {
         if (pool.isEmpty()) {
             return null;
         }
+        // LA PREMIERE EST TOUJOURS L'AURORE. Le joueur l'a demande, et la raison
+        // tient : c'est la seule qui APPREND quelque chose -- elle montre les
+        // filons, ouvre les grottes, et donne le diamant sans lequel rien ne
+        // s'ameliore. Tirer l'Heure Doree en premiere ouvre l'atelier a un
+        // joueur qui n'a encore rien a y forger.
+        if (!firstDrawn && pool.contains(Weather.AURORE)) {
+            firstDrawn = true;
+            lastRolled = Weather.AURORE;
+            return Weather.AURORE;
+        }
+        firstDrawn = true;
         // jamais deux fois la meme de suite : la variete est le contrat du mode
         List<Weather> filtered = pool.size() > 1
                 ? pool.stream().filter(w -> w != lastRolled).toList() : pool;
@@ -259,6 +272,34 @@ public final class WeatherManager {
         current = Weather.CLEAR;
         begin(level, weather,
                 durationTicks > 0 ? durationTicks : weather.rollDuration(level.random));
+    }
+
+    /** La tique de monde ou la meteo en cours a commence. */
+    public static long startedAt() {
+        return startedAt;
+    }
+
+    /**
+     * Force le TIRAGE a la tique suivante, sans dire laquelle : c'est le vrai
+     * chemin (roll, presage, attente), joue tout de suite. Pour les essais --
+     * sans cela, verifier « la premiere est l'Aurore » demandait d'attendre
+     * les deux a quatre minutes de l'ecart normal.
+     */
+    public static void rollNow() {
+        gapTicks = 1;
+    }
+
+    /** Une partie neuve : la prochaine meteo sera l'Aurore. Appele par GameManager. */
+    public static void resetSchedule() {
+        firstDrawn = false;
+        lastRolled = Weather.CLEAR;
+        // SOIXANTE SECONDES, ET C'EST MESURE. Sur un serveur neuf l'ecart vaut
+        // deux cents tiques : l'Aurore d'ouverture tombait DIX SECONDES apres
+        // le debut, pendant que les trois sanctuaires se dressent encore. Une
+        // partie reprise, elle, attendait deux a quatre minutes. Un chiffre
+        // fixe, plus long que le chantier (une trentaine de secondes avec le
+        // prechargement des chunks), rend l'ouverture identique a chaque partie.
+        gapTicks = 1200;
     }
 
     public static void stop(ServerLevel level) {
@@ -389,6 +430,7 @@ public final class WeatherManager {
         remaining = 0;
         warningTicks = 0;
         gapTicks = 200;
+        firstDrawn = false;               // la prochaine partie recommence par l'Aurore
         lastRolled = Weather.CLEAR;
         savedDayTime = -1;
         startedAt = 0L;

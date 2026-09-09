@@ -56,6 +56,7 @@ public final class Jalons {
         tag.putBoolean("Small", true);
         mark.load(tag);
         level.addFreshEntity(mark);
+        live++;
     }
 
     /**
@@ -102,6 +103,7 @@ public final class Jalons {
         }
         display.getPersistentData().putLong(DIE_AT, level.getGameTime() + ticks);
         level.addFreshEntity(display);
+        live++;
     }
 
     private static net.minecraft.nbt.ListTag vec(double x, double y, double z) {
@@ -120,10 +122,17 @@ public final class Jalons {
         return list;
     }
 
+    /** Combien de jalons vivent : sans eux, on ne balaie pas le monde pour rien. */
+    private static int live;
+
     @SubscribeEvent
     public static void onLevelTick(LevelTickEvent.Post event) {
         if (!(event.getLevel() instanceof ServerLevel level) || level.getGameTime() % 10 != 0
-                || !level.dimension().equals(Level.OVERWORLD)) {
+                || !level.dimension().equals(Level.OVERWORLD) || live <= 0) {
+            // ON NE PARCOURT PAS TOUTES LES ENTITES DU MONDE POUR RIEN. Ce
+            // balayage tournait toutes les dix tiques du debut a la fin de la
+            // partie -- dix mille huit cents fois en quatre-vingt-dix minutes --
+            // alors qu'un jalon existe quelques minutes en tout.
             return;
         }
         long now = level.getGameTime();
@@ -136,6 +145,7 @@ public final class Jalons {
         }
         for (Entity entity : dead) {
             entity.discard();
+            live--;
         }
     }
 }

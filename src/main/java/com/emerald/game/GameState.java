@@ -91,6 +91,23 @@ public class GameState extends SavedData {
     private boolean prepared;
     private final List<BlockPos> anchors = new ArrayList<>();
     private final List<BlockPos> activated = new ArrayList<>();
+    /**
+     * Les sites DEJA DRESSES, qu'on ne rebatira pas.
+     *
+     * La reprise regardait le bloc d'ancre : absent, elle remettait le
+     * chantier en file. Trois choses lui echappaient. Une ancre activee n'est
+     * plus une ancre ; une ancre cassee par un joueur n'en est plus une ; et
+     * surtout, quand la pose de l'ancre echoue -- elle coiffe le faite de la
+     * pyramide, et la position enregistree est CELLE DU FAITE -- le prochain
+     * demarrage rebatit un sanctuaire entier en prenant cet ancien faite pour
+     * sol. Le monde d'essai en portait la trace : trois sanctuaires empiles a
+     * y = 322, 335 et 342, au-dessus du plafond du monde, refaits a CHAQUE
+     * ouverture, sans un coffre qui tienne. Un chantier de huit secondes de
+     * fil serveur a chaque connexion, pour rien.
+     *
+     * On retient donc ce qu'on a bati, et non ce qu'on croit lire du terrain.
+     */
+    private final List<BlockPos> built = new ArrayList<>();
     /** L'arene finale : ZERO tant que l'Arc-en-ciel n'est pas leve. */
     private BlockPos finale = BlockPos.ZERO;
     private String finaleBoss = "";
@@ -124,6 +141,9 @@ public class GameState extends SavedData {
         for (long packed : tag.getLongArray("Activated")) {
             state.activated.add(BlockPos.of(packed));
         }
+        for (long packed : tag.getLongArray("Built")) {
+            state.built.add(BlockPos.of(packed));
+        }
         return state;
     }
 
@@ -146,6 +166,7 @@ public class GameState extends SavedData {
         tag.putLong("FinaleTick", this.finaleTick);
         tag.putLongArray("Anchors", this.anchors.stream().mapToLong(BlockPos::asLong).toArray());
         tag.putLongArray("Activated", this.activated.stream().mapToLong(BlockPos::asLong).toArray());
+        tag.putLongArray("Built", this.built.stream().mapToLong(BlockPos::asLong).toArray());
         return tag;
     }
 
@@ -226,6 +247,7 @@ public class GameState extends SavedData {
         this.anchorsActive = 0;
         this.anchorsInProgress = 0;
         this.activated.clear();
+        this.built.clear();
         this.finale = BlockPos.ZERO;
         this.finaleBoss = "";
         this.finaleTick = 0L;
@@ -285,6 +307,31 @@ public class GameState extends SavedData {
 
     public boolean isActivated(BlockPos pos) {
         return this.activated.contains(pos);
+    }
+
+    /** Ce site a-t-il deja porte son sanctuaire ? */
+    public boolean wasBuilt(BlockPos pos) {
+        return this.built.contains(pos);
+    }
+
+    /**
+     * Le site est dresse : on le retient, au sol VISE comme au faite obtenu.
+     *
+     * Les deux, parce que la liste des ancres passe de l'un a l'autre une fois
+     * le chantier fini, et que la reprise peut lire l'une ou l'autre selon le
+     * moment ou la partie s'est arretee.
+     */
+    public void markBuilt(BlockPos asked, BlockPos raised) {
+        boolean changed = false;
+        for (BlockPos pos : new BlockPos[]{asked, raised}) {
+            if (pos != null && !this.built.contains(pos)) {
+                this.built.add(pos);
+                changed = true;
+            }
+        }
+        if (changed) {
+            setDirty();
+        }
     }
 
     /**
@@ -376,6 +423,7 @@ public class GameState extends SavedData {
         this.anchorsActive = 0;
         this.anchorsInProgress = 0;
         this.activated.clear();
+        this.built.clear();
         this.finale = BlockPos.ZERO;
         this.finaleBoss = "";
         this.finaleTick = 0L;
@@ -435,6 +483,7 @@ public class GameState extends SavedData {
         this.anchorsInProgress = 0;
         this.anchors.clear();
         this.activated.clear();
+        this.built.clear();
         this.finale = BlockPos.ZERO;
         this.finaleBoss = "";
         this.finaleTick = 0L;

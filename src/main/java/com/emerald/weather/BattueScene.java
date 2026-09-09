@@ -84,6 +84,8 @@ public final class BattueScene {
     private static final int HOWL_SPAN = 200;
     /** Le tambour : portee, et tempo entre le plus lent et le plus rapide. */
     private static final double DRUM_RANGE = 16.0;
+    /** Pour la Proie seule : elle se tient a distance, le tambour doit la suivre. */
+    private static final double PREY_DRUM_RANGE = 24.0;
     private static final int DRUM_SLOW = 30;
     private static final int DRUM_FAST = 8;
 
@@ -266,15 +268,24 @@ public final class BattueScene {
         }
         double best = Double.MAX_VALUE;
         for (Mob mob : level.getEntitiesOfClass(Mob.class,
-                player.getBoundingBox().inflate(DRUM_RANGE), m -> m instanceof Enemy && m.isAlive()
-                        && !(m.getTarget() instanceof Player))) {
-            best = Math.min(best, mob.distanceTo(player));
+                player.getBoundingBox().inflate(PREY_DRUM_RANGE), m -> m.isAlive()
+                        && (m.getTags().contains(TAG_PREY)
+                            || m instanceof Enemy && !(m.getTarget() instanceof Player)))) {
+            // LA PROIE COMPTE, ET DE PLUS LOIN. Le tambour ne battait que pour
+            // les hostiles qui ne vous avaient pas vu : pendant la poursuite --
+            // le coeur de la Battue -- il se taisait. La bete se stabilise a
+            // sept blocs, hors de portee de l'ancien rayon de seize.
+            double range = mob.getTags().contains(TAG_PREY) ? PREY_DRUM_RANGE : DRUM_RANGE;
+            double d = mob.distanceTo(player);
+            if (d <= range) {
+                best = Math.min(best, d);
+            }
         }
-        if (best > DRUM_RANGE) {
+        if (best > PREY_DRUM_RANGE) {
             nextDrum.put(player.getUUID(), now + 10);
             return;
         }
-        double t = best / DRUM_RANGE;                                  // 0 pres, 1 loin
+        double t = Math.min(1.0, best / DRUM_RANGE);                   // 0 pres, 1 loin
         int interval = (int) Math.round(DRUM_FAST + (DRUM_SLOW - DRUM_FAST) * t);
         player.playNotifySound(SoundEvents.NOTE_BLOCK_BASEDRUM.value(), SoundSource.AMBIENT,
                 0.55F, 0.5F);
@@ -284,12 +295,25 @@ public final class BattueScene {
     // ------------------------------------------------------- blanc / rouge
 
     private static PlayerTeam team(ServerScoreboard board, String name, ChatFormatting colour) {
+        return team(board, name, colour, net.minecraft.world.scores.Team.Visibility.NEVER);
+    }
+
+    /**
+     * LA PROIE PORTE SON NOM, LES AUTRES NON.
+     *
+     * `Visibility.NEVER` s'appliquait aux trois equipes : « Seize-Cors » etait
+     * bien nomme par BattueHunt et son nom n'apparaissait jamais. On le rend
+     * visible pour la seule equipe doree -- sur le blanc et le rouge, chaque
+     * vache et chaque zombie des soixante-quatre blocs afficherait le sien.
+     */
+    private static PlayerTeam team(ServerScoreboard board, String name, ChatFormatting colour,
+                                   net.minecraft.world.scores.Team.Visibility visibility) {
         PlayerTeam team = board.getPlayerTeam(name);
         if (team == null) {
             team = board.addPlayerTeam(name);
         }
         team.setColor(colour);
-        team.setNameTagVisibility(net.minecraft.world.scores.Team.Visibility.NEVER);
+        team.setNameTagVisibility(visibility);
         return team;
     }
 
@@ -297,7 +321,8 @@ public final class BattueScene {
         ServerScoreboard board = level.getScoreboard();
         team(board, TEAM_WHITE, ChatFormatting.WHITE);
         team(board, TEAM_RED, ChatFormatting.RED);
-        team(board, TEAM_GOLD, ChatFormatting.GOLD);
+        team(board, TEAM_GOLD, ChatFormatting.GOLD,
+                net.minecraft.world.scores.Team.Visibility.ALWAYS);
     }
 
     /** Range chaque creature detouree dans l'equipe de son etat. */

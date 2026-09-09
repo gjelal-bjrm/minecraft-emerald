@@ -222,6 +222,14 @@ public class ModBlocks {
                     .strength(-1.0F, 3600000.0F).noLootTable()
                     .pushReaction(net.minecraft.world.level.material.PushReaction.DESTROY)
                     .sound(net.minecraft.world.level.block.SoundType.AMETHYST)));
+    /** La Porte doree de l'Heure Doree : elle mene a l'atelier et en revient (weather/GoldenGate). */
+    public static final DeferredBlock<GoldenGateBlock> GOLDEN_GATE = registerBlockOnly("golden_gate",
+            () -> new GoldenGateBlock(BlockBehaviour.Properties.of()
+                    .noCollission().noOcclusion().lightLevel(s -> 14)
+                    .strength(-1.0F, 3600000.0F).noLootTable()
+                    .pushReaction(net.minecraft.world.level.material.PushReaction.DESTROY)
+                    .sound(net.minecraft.world.level.block.SoundType.AMETHYST)));
+
     /** La Brume de rappel : la meme brume, teinte or, qui ne va que vers le jour (AuroreCaves.placeRecall). */
     public static final DeferredBlock<StarMistBlock> RECALL_MIST = registerBlockOnly("recall_mist",
             () -> new StarMistBlock(BlockBehaviour.Properties.of()

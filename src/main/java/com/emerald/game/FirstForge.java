@@ -1,6 +1,7 @@
 package com.emerald.game;
 
 import com.emerald.block.ModBlocks;
+import com.emerald.item.GearRarity;
 import com.emerald.item.ModItems;
 import com.emerald.item.Upgrade;
 import com.emerald.mine.Jalons;
@@ -68,10 +69,18 @@ public final class FirstForge {
         Upgrade.Cost first = Upgrade.cost(1);
         int metal = first.amount() * 2;                 // une defense, une arme
         int feathers = Specialization.COST[1];
+        // SIX ECLATS DU DESTIN, et le compte n'est pas rond par hasard : c'est
+        // PITY_PER_DRAW (GearRarity), donc six essais d'un coup, et 45 % de
+        // chances d'atteindre Splendide sur la piece qu'on y met. Le joueur
+        // ressortait du village sans rien pour la RARETE -- « je peux passer
+        // l'arme +1 et monter la specialisation, mais pas la rarete » -- et
+        // les Eclats ne tombent qu'une fois sur douze au combat.
+        int shards = GearRarity.pityPerDraw();
 
         for (ServerPlayer player : level.players()) {
             give(player, new ItemStack(first.material(), metal));
             give(player, new ItemStack(ModItems.ARCENCIUM_FEATHER.get(), feathers));
+            give(player, new ItemStack(ModItems.FATE_SHARD.get(), shards));
             player.sendSystemMessage(Component.translatable("game.emeraldweapons.first_forge")
                     .withStyle(style -> style.withColor(0xFFD24A).withBold(true)));
             player.sendSystemMessage(Component.translatable("game.emeraldweapons.first_forge.forge",
@@ -79,7 +88,8 @@ public final class FirstForge {
                     .withStyle(ChatFormatting.GRAY));
             player.sendSystemMessage(Component.translatable("game.emeraldweapons.first_forge.altar", feathers)
                     .withStyle(ChatFormatting.GRAY));
-            player.sendSystemMessage(Component.translatable("game.emeraldweapons.first_forge.bench")
+            player.sendSystemMessage(Component.translatable("game.emeraldweapons.first_forge.bench",
+                            shards, com.emerald.item.GearRarity.oddsPercent(3, shards))
                     .withStyle(ChatFormatting.GRAY));
             player.playNotifySound(SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.PLAYERS, 1.0F, 1.2F);
         }

@@ -46,6 +46,7 @@ public final class VeinHudClient {
     private static final int PREY = 0xFFFFC46B;
     private static final int MIST = 0xFFC8D8FF;
     private static final int WELL = 0xFFB9FFE0;
+    private static final int GATE = 0xFFFFC46B;
 
     private static java.util.List<Long> positions = java.util.List.of();
     private static long kinds;
@@ -85,7 +86,8 @@ public final class VeinHudClient {
         int veins = 0;
         for (int i = 0; i < shown.size(); i++) {
             int kind = VeinSyncPayload.kindAt(kinds, i);
-            boolean exit = kind == VeinSyncPayload.KIND_MIST || kind == VeinSyncPayload.KIND_WELL;
+            boolean exit = kind == VeinSyncPayload.KIND_MIST || kind == VeinSyncPayload.KIND_WELL
+                    || kind == VeinSyncPayload.KIND_GATE;
             if (!exit && veins < SHOWN) {
                 out.add(i);
                 veins++;
@@ -93,7 +95,8 @@ public final class VeinHudClient {
         }
         for (int i = 0; i < shown.size(); i++) {
             int kind = VeinSyncPayload.kindAt(kinds, i);
-            if (kind == VeinSyncPayload.KIND_MIST || kind == VeinSyncPayload.KIND_WELL) {
+            if (kind == VeinSyncPayload.KIND_MIST || kind == VeinSyncPayload.KIND_WELL
+                    || kind == VeinSyncPayload.KIND_GATE) {
                 out.add(i);
             }
         }
@@ -107,6 +110,7 @@ public final class VeinHudClient {
             case VeinSyncPayload.KIND_PREY -> PREY;
             case VeinSyncPayload.KIND_MIST -> MIST;
             case VeinSyncPayload.KIND_WELL -> WELL;
+            case VeinSyncPayload.KIND_GATE -> GATE;
             default -> ARCENCIUM;
         };
     }
@@ -148,6 +152,7 @@ public final class VeinHudClient {
                 case VeinSyncPayload.KIND_PREY -> "weather.emeraldweapons.vein.prey";
                 case VeinSyncPayload.KIND_MIST -> "weather.emeraldweapons.vein.mist";
                 case VeinSyncPayload.KIND_WELL -> "weather.emeraldweapons.vein.well";
+                case VeinSyncPayload.KIND_GATE -> "weather.emeraldweapons.vein.gate";
                 default -> "weather.emeraldweapons.vein.arcencium";
             };
             int colour = colourOf(kind);

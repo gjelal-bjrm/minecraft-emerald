@@ -13,6 +13,24 @@ deux ne venaient pas de DH :
  3. la generation etait bridee -- quatre fils a 35 % du temps -- reglage pris
     quand on cherchait la cause des lags, qui etait en fait le tas de 32 Go.
 
+Puis le joueur a signale autre chose : « parfois les choses tres loin sont mal
+chargees et on voit l'interieur, ou alors c'est moche et mal charge ». Ce
+n'est plus une question de portee mais de TROUS, et deux reglages les font :
+
+ 4. `upsampleLowerDetailLodsToFillHoles` etait faux. Quand DH passe d'un
+    niveau de detail au suivant -- ce qui arrive a chaque pas vers l'horizon --
+    le maillage grossier ne couvre pas exactement le fin, et la difference
+    reste vide : on voit au travers, donc l'interieur du relief. Le fichier de
+    configuration le dit lui-meme en commentaire, une ligne au-dessus ;
+ 5. `overdrawPrevention` valait 0. Les LOD etaient alors dessines par-dessus
+    les vrais chunks au lieu de s'arreter a leur bordure : deux surfaces au
+    meme endroit, celle qui gagne change avec l'angle, et le relief lointain
+    scintille et s'ouvre. Six dixiemes, la valeur d'origine du mod, les
+    arrete a la bonne distance.
+
+On ne touche PAS aux fils : le bridage de la session precedente traitait des
+lags qui venaient du chantier des sanctuaires, corrige a la source depuis.
+
 Ce script pose le profil dans les trois configurations (dev et les deux
 instances CurseForge). Il ne touche QUE les cles listees : le reste du fichier,
 y compris ce que le joueur aurait regle a la main, est laisse tel quel.
@@ -41,6 +59,9 @@ PROFILE = {
     # ---- la qualite du relief lointain
     "verticalQuality": '"EXTREME"',
     "horizontalQuality": '"EXTREME"',
+    # ---- les trous : voir le point 4 et le point 5 en tete de fichier
+    "upsampleLowerDetailLodsToFillHoles": "true",   # etait false
+    "overdrawPrevention": '"0.6"',                  # etait 0.0
 }
 
 TARGETS = [

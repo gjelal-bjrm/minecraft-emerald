@@ -50,6 +50,11 @@ public enum GearRarity {
     /** Combien d'eclats depenses valent un jet supplementaire. */
     private static final int PITY_PER_DRAW = 6;
 
+    /** Combien d'eclats valent un essai de plus : la Premiere Forge en donne autant. */
+    public static int pityPerDraw() {
+        return PITY_PER_DRAW;
+    }
+
     private final String key;
     private final int colour;
     private final ChatFormatting style;
@@ -139,17 +144,22 @@ public enum GearRarity {
         // avait qu'une loi trop maigre.
         //
         // Tout ce qu'on a deja verse sur CETTE piece-ci lui reste donc acquis :
-        // trois eclats depenses valent un jet de plus, indefiniment. On
+        // six eclats depenses valent un jet de plus, et ce jet est retire du compte. On
         // n'achete toujours pas un rang -- on accumule des essais, et un joueur
         // obstine finit par y arriver. C'est ce que « les chances augmentent de
         // plus en plus » veut dire.
-        int draws = Math.max(1, shards) + spent / PITY_PER_DRAW;
+        // LA PITIE SE CONSOMME. Sans cela, deposer cent trente eclats un par
+        // un donnait mille quatre cent soixante-quatorze jets la ou une seule
+        // prise de cent trente en donnait cent trente : onze fois plus, pour la
+        // meme depense. On retire donc ce que la pitie vient de payer.
+        int bonus = spent / PITY_PER_DRAW;
+        int draws = Math.max(1, shards) + bonus;
         int best = of(stack).rank();
         for (int i = 0; i < draws; i++) {
             best = Math.max(best, draw(random));
         }
 
-        tag.putInt(TAG_SPENT, spent + Math.max(1, shards));
+        tag.putInt(TAG_SPENT, spent - bonus * PITY_PER_DRAW + Math.max(1, shards));
         stack.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
         // l'equipement vanilla s'arrete a l'Ancestral (voir GearEligibility)
         return values()[Math.min(GearEligibility.rarityMax(stack), best)];

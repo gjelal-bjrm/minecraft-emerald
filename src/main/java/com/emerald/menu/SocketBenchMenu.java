@@ -63,6 +63,8 @@ public class SocketBenchMenu extends AbstractContainerMenu {
         }
     };
     private final Container result = new SimpleContainer(1);
+    /** Quelle fenetre doree a deja offert sa tentative, par joueur. */
+    private static final java.util.Map<java.util.UUID, Long> goldenUsed = new java.util.HashMap<>();
 
     public SocketBenchMenu(int id, Inventory inventory) {
         this(id, inventory, ContainerLevelAccess.NULL);
@@ -111,18 +113,30 @@ public class SocketBenchMenu extends AbstractContainerMenu {
 
             @Override
             public void onTake(Player player, ItemStack stack) {
-                // LE TIRAGE SE FAIT ICI, au moment ou la piece quitte l'etabli.
+                // LE TIRAGE SE FAIT ICI, au moment ou la piece quitte l'etabli,
+                // ET SEULEMENT SUR LE SERVEUR.
                 //
                 // C'est le seul instant honnete : plus tot, il faudrait
                 // afficher un resultat qui pourrait encore changer ; plus tard,
-                // la piece serait deja dans l'inventaire. Le nombre d'eclats
-                // consommes est celui qui etait pose -- on n'en rend pas.
+                // la piece serait deja dans l'inventaire.
+                //
+                // La garde de cote est indispensable : `clicked()` s'execute
+                // AUSSI chez le client, meme en solo, et le de y etait relance
+                // avec une autre graine. Le journal en porte la trace -- « La
+                // piece s'eleve : Excellent » a 09:50:23.238 puis « Legendaire »
+                // douze millisecondes plus tard, pour une seule prise. Le
+                // joueur voyait deux rangs et n'en gardait qu'un.
+                boolean served = !player.level().isClientSide;
+                boolean stoneUsed = false;
                 ItemStack fee = SocketBenchMenu.this.inputs.getItem(SLOT_ARTIFACT);
-                if (fee.is(com.emerald.item.ModItems.FATE_SHARD.get())) {
+                if (served && fee.is(com.emerald.item.ModItems.FATE_SHARD.get())) {
                     com.emerald.item.GearRarity before =
                             com.emerald.item.GearRarity.of(stack);
+                    // SEIZE ECLATS AU PLUS PAR PRISE : une pile pleine posait
+                    // soixante-quatre jets d'un coup, et le haut de table
+                    // s'achetait en une fois.
                     com.emerald.item.GearRarity after = com.emerald.item.GearRarity.roll(
-                            stack, fee.getCount(), player.level().random);
+                            stack, Math.min(16, fee.getCount()), player.level().random);
                     com.emerald.item.GearRarity.set(stack, after);
                     player.displayClientMessage(after == before
                             ? net.minecraft.network.chat.Component.translatable(
@@ -143,12 +157,13 @@ public class SocketBenchMenu extends AbstractContainerMenu {
                                 after.colour(), after.rank());
                     }
                 }
-                if (fee.is(com.emerald.item.ModItems.FORGE_STONE.get())) {
+                if (served && fee.is(com.emerald.item.ModItems.FORGE_STONE.get())) {
                     // ON PAIE D'ABORD, ON TIRE ENSUITE. Un tirage qui se
                     // solderait par un echec de paiement laisserait la piece
                     // amelioree sans que rien n'ait ete depense.
                     int before = com.emerald.item.Upgrade.of(stack);
                     if (com.emerald.item.Upgrade.charge(player, stack)) {
+                        stoneUsed = true;
                         int after = com.emerald.item.Upgrade.attempt(
                                 before, player.level().random);
                         com.emerald.item.Upgrade.set(stack, after);
@@ -177,7 +192,7 @@ public class SocketBenchMenu extends AbstractContainerMenu {
                 }
                 com.emerald.rune.RuneMark graved =
                         com.emerald.rune.Runes.of(fee);
-                if (graved != null) {
+                if (served && graved != null) {
                     player.displayClientMessage(
                             net.minecraft.network.chat.Component.translatable(
                                     "socket.emeraldweapons.rune.engraved", graved.label()),
@@ -197,12 +212,33 @@ public class SocketBenchMenu extends AbstractContainerMenu {
                 // rune ou un artefact serti reste consomme, sans quoi la
                 // fenetre ne serait plus une aubaine mais une exploitation.
                 ItemStack spent = SocketBenchMenu.this.inputs.getItem(SLOT_ARTIFACT);
+                // UNE SEULE FOIS PAR FENETRE. Le remboursement etait rendu a
+                // CHAQUE prise : avec une pile d'Eclats et cinq minutes de
+                // fenetre, on enchainait des centaines de tirages et le
+                // Phenomenal devenait certain. Une tentative offerte, pas une
+                // imprimante -- c'est ce que le commentaire promettait deja.
                 boolean golden = com.emerald.weather.WeatherManager.current()
                         == com.emerald.weather.Weather.HEURE_DOREE
-                        && spent.is(com.emerald.item.ModItems.FATE_SHARD.get());
-                if (!golden) {
+                        && spent.is(com.emerald.item.ModItems.FATE_SHARD.get())
+                        && goldenUsed.getOrDefault(player.getUUID(), -1L)
+                                != com.emerald.weather.WeatherManager.startedAt();
+                if (stoneUsed) {
+                    // UNE PIERRE PAR TENTATIVE, pas la pile entiere. Poser
+                    // vingt pierres en detruisait vingt pour un seul jet.
+                    if (spent.getCount() <= 1) {
+                        SocketBenchMenu.this.inputs.setItem(SLOT_ARTIFACT, ItemStack.EMPTY);
+                    } else {
+                        spent.shrink(1);
+                        SocketBenchMenu.this.inputs.setChanged();
+                    }
+                } else if (graved != null && spent.getCount() > 1) {
+                    // et une rune par gravure, pour la meme raison
+                    spent.shrink(1);
+                    SocketBenchMenu.this.inputs.setChanged();
+                } else if (!golden) {
                     SocketBenchMenu.this.inputs.setItem(SLOT_ARTIFACT, ItemStack.EMPTY);
                 } else if (player instanceof net.minecraft.server.level.ServerPlayer sp) {
+                    goldenUsed.put(player.getUUID(), com.emerald.weather.WeatherManager.startedAt());
                     sp.displayClientMessage(net.minecraft.network.chat.Component.translatable(
                                     "socket.emeraldweapons.golden")
                             .withStyle(net.minecraft.ChatFormatting.GOLD), true);
@@ -313,6 +349,16 @@ public class SocketBenchMenu extends AbstractContainerMenu {
 
     @Override
     public ItemStack quickMoveStack(Player player, int index) {
+        // LA CASE DE RESULTAT NE SE PREND QU'AU CLIC SIMPLE.
+        //
+        // Au clic-Maj, `moveItemStackTo` emporte la piece SANS passer par
+        // `onTake` -- or c'est `onTake` qui vide la piece et la mise. Le joueur
+        // repartait donc avec une copie, gardait l'original ET sa mise, et
+        // `slotsChanged` refabriquait aussitot un resultat : duplication
+        // illimitee d'armes, d'armures, d'artefacts sertis et de gravures.
+        if (index == SLOT_RESULT) {
+            return ItemStack.EMPTY;
+        }
         ItemStack moved = ItemStack.EMPTY;
         Slot slot = this.slots.get(index);
         if (slot == null || !slot.hasItem()) {

@@ -83,6 +83,22 @@ public final class Sanctuary {
      */
     private static final int TOWER_TOP = 42;
 
+    /**
+     * Les paliers de maturite par lesquels on fait passer le terrain du site.
+     *
+     * On ne les prend pas tous : entre deux crans voisins la cascade est deja
+     * bornee, et cinq arrets suffisent a la casser (structures, relief, roche,
+     * decors, fini). Les crans sautes sont montes par le suivant, sur des
+     * voisins qui sont deja presque a niveau.
+     */
+    private static final java.util.List<net.minecraft.world.level.chunk.status.ChunkStatus>
+            PRELOAD_STAGES = java.util.List.of(
+                    net.minecraft.world.level.chunk.status.ChunkStatus.STRUCTURE_STARTS,
+                    net.minecraft.world.level.chunk.status.ChunkStatus.BIOMES,
+                    net.minecraft.world.level.chunk.status.ChunkStatus.NOISE,
+                    net.minecraft.world.level.chunk.status.ChunkStatus.FEATURES,
+                    net.minecraft.world.level.chunk.status.ChunkStatus.FULL);
+
     /** Les mesures de la Pyramide Maudite, relevees dans ses onze modeles. */
     private static final int PYRAMID_W = 89;
     private static final int PYRAMID_D = 94;
@@ -218,6 +234,8 @@ public final class Sanctuary {
         private int apex = -1;
         private boolean pyramidOk = true;
         private int repainted;
+        /** Le faite du batiment, mesure une fois avant les bandes de rhabillage. */
+        private int crest;
         private int calque;
         private BlockPos anchor;
         /** Pour le compte rendu : temps total, et la pire etape. */
@@ -230,7 +248,19 @@ public final class Sanctuary {
             this.source = source;
             this.rank = Math.max(1, Math.min(3, tier));
             this.cx = ground.getX();
-            this.y = ground.getY();
+            // ET JAMAIS AU-DESSUS DU MONDE. Une pyramide monte de quarante-deux
+            // blocs : plantee a y = 322 elle demande des blocs au-dela du
+            // plafond, ou le jeu ne rend que du vide -- ni ancre, ni coffre,
+            // rien. C'est arrive, et pendant des semaines. La cause est
+            // corrigee ailleurs (GameState.markBuilt) ; ce garde-fou-ci coute
+            // une comparaison et evite qu'un chantier entier s'evapore.
+            int ceiling = level.getMaxBuildHeight() - TOWER_TOP - 8;
+            if (ground.getY() > ceiling) {
+                org.slf4j.LoggerFactory.getLogger(EmeraldWeaponsMod.MODID).warn(
+                        "Sanctuaire demande a y={}, ramene a {} : le plafond du monde est a {}",
+                        ground.getY(), ceiling, level.getMaxBuildHeight());
+            }
+            this.y = Math.min(ground.getY(), ceiling);
             this.cz = ground.getZ();
             // On POSE la pyramide au centre, on ne la cherche plus : les quatre
             // quadrants font 47 et 42 de large sur 47 de profond, et leur
@@ -249,7 +279,58 @@ public final class Sanctuary {
                 // et de retrouver la ligne qui en est responsable.
                 SanctuaryLedger.begin(new BlockPos(cx, y, cz));
                 chestsPlaced = 0;             // on COMPTE, on ne suppose plus
+                chestSpots.clear();
             });
+            // LES CHUNKS D'ABORD, UN PAR ETAPE.
+            //
+            // Voila le vrai cout du chantier, et il n'etait pas ou l'on
+            // croyait. Un sanctuaire se dresse a quatre cent cinquante blocs du
+            // village, sur du terrain que PERSONNE n'a jamais charge : la
+            // premiere bande de deblaiement demandait au jeu de GENERER
+            // jusqu'a quatorze chunks d'un coup, dans la meme tique. Mesure au
+            // journal : trois mille quatre cent soixante-quatorze
+            // millisecondes pour une seule etape, contre cinq cents pour le
+            // meme chantier sur terrain deja connu. Le budget de douze
+            // millisecondes n'y pouvait rien -- il compte APRES l'etape, et une
+            // etape ne se coupe pas en deux.
+            //
+            // On demande donc les chunks un par un -- et, surtout, PAR PALIER
+            // DE MATURITE. Un chunk par etape ne suffisait pas : demander un
+            // seul chunk fini en entraine une vingtaine derriere lui, car
+            // chaque etage de la generation veut ses voisins a l'etage
+            // precedent. Le journal l'a dit sans detour : les deux premiers
+            // sanctuaires d'une partie reprise ont passe 2 446 ms et 1 049 ms
+            // dans UNE etape de prechargement, la premiere -- toute la cascade
+            // d'un coup -- et le troisieme, dont les chunks etaient deja
+            // connus, 170 ms au pire. Une etape ne se coupe pas : le budget
+            // n'y pouvait rien.
+            //
+            // On monte donc toute la zone d'un etage a la fois. Chaque appel ne
+            // reclame plus qu'un cran de plus a ses voisins, qui l'ont deja :
+            // la cascade est bornee a un etage, et le pic avec elle. Le total
+            // ne bouge pas, le nombre d'etapes est multiplie par cinq, et
+            // chacune tient dans la tique.
+            //
+            // Sans ticket de chargement : un chunk deja genere se relit sur le
+            // disque en une fraction du cout de sa generation, et forcer deux
+            // cents chunks en tique-entite a quatre cent cinquante blocs du
+            // joueur -- avec les apparitions et les entites de bloc d'un gros
+            // modpack -- couterait sans doute plus cher que le pic qu'on
+            // supprime.
+            int cFrom = (cx - HALF - TOWER_RADIUS) >> 4;
+            int cTo = (cx + HALF + TOWER_RADIUS) >> 4;
+            int kFrom = (cz - HALF - TOWER_RADIUS) >> 4;
+            int kTo = (cz + HALF + TOWER_RADIUS) >> 4;
+            for (net.minecraft.world.level.chunk.status.ChunkStatus step : PRELOAD_STAGES) {
+                for (int ccx = cFrom; ccx <= cTo; ccx++) {
+                    for (int ccz = kFrom; ccz <= kTo; ccz++) {
+                        final int fx = ccx;
+                        final int fz = ccz;
+                        final net.minecraft.world.level.chunk.status.ChunkStatus at = step;
+                        add("prechargement", () -> level.getChunk(fx, fz, at, true));
+                    }
+                }
+            }
             // LE DEBLAIEMENT, EN BANDES. C'est la partie la plus lourde du
             // chantier : deux colonnes par etape, cent six etapes.
             int from = -HALF - TOWER_RADIUS;
@@ -272,7 +353,13 @@ public final class Sanctuary {
             } else {
                 add("pyramide", () -> apex = greatPyramid(level, source, cx, y, cz));
             }
-            add("rhabillage", () -> repainted = reskin(level, bounds, y));
+            // LE RHABILLAGE, EN BANDES LUI AUSSI, avec un faite mesure une fois.
+            add("faite", () -> crest = crestOf(level, bounds, y));
+            for (int band = bounds[0]; band <= bounds[2]; band += RESKIN_BAND) {
+                final int xa = band;
+                final int xb = Math.min(bounds[2], band + RESKIN_BAND - 1);
+                add("rhabillage", () -> repainted += reskin(level, bounds, y, crest, xa, xb));
+            }
             for (int band = -HALF; band <= HALF; band += WALL_BAND) {
                 final int a = band;
                 final int b = Math.min(HALF, band + WALL_BAND - 1);
@@ -333,10 +420,20 @@ public final class Sanctuary {
         private void report() {
             BlockState found = level.getBlockState(anchor);
             String occupant = BuiltInRegistries.BLOCK.getKey(found.getBlock()).toString();
+            // LES SURVIVANTS, PAS LES POSES. Compter les poses laissait passer
+            // quatre coffres ecrases par sanctuaire, en silence, pendant des
+            // semaines. Un coffre pose par Lootr n'est pas un ChestBlock
+            // vanilla : on demande donc s'il reste un bloc avec une entite.
+            long alive = 0;
+            for (BlockPos spot : chestSpots) {
+                if (!level.getBlockState(spot).isAir() && level.getBlockEntity(spot) != null) {
+                    alive++;
+                }
+            }
             org.slf4j.LoggerFactory.getLogger(EmeraldWeaponsMod.MODID).info(
-                    "Sanctuaire palier {} : {} coffres poses, bati en {} ms de fil serveur "
-                            + "(pire etape : {} en {} ms)",
-                    rank, chestsPlaced, spentNanos / 1_000_000L, worstName,
+                    "Sanctuaire palier {} : {} coffres poses, {} survivants, bati en {} ms "
+                            + "de fil serveur (pire etape : {} en {} ms)",
+                    rank, chestsPlaced, alive, spentNanos / 1_000_000L, worstName,
                     worstNanos / 1_000_000L);
             if (source == null) {
                 return;                  // bati par la partie : rien a dire
@@ -710,7 +807,13 @@ public final class Sanctuary {
     // ------------------------------------------------------------- l'enceinte
 
     /** Largeur d'une bande de deblaiement, en colonnes : de quoi tenir dans une tique. */
-    private static final int CLEAR_BAND = 2;
+    // UNE COLONNE PAR ETAPE. Deux valaient 778 ms sur terrain vierge -- la
+    // pire etape du chantier depuis que le prechargement se fait par paliers.
+    // Une seule les coupe en deux, et le chantier ne se voit toujours pas.
+    private static final int CLEAR_BAND = 1;
+
+    /** Colonnes rhabillees par etape : huit tiennent largement dans la tique. */
+    private static final int RESKIN_BAND = 8;
 
     private static void clearSite(ServerLevel level, int cx, int y, int cz, int[] keep) {
         clearSite(level, cx, y, cz, keep, -HALF - TOWER_RADIUS, HALF + TOWER_RADIUS);
@@ -752,10 +855,21 @@ public final class Sanctuary {
                 // exactement jusqu'ou monter. Deux blocs de marge pour la neige
                 // et le feuillage, et un plafond de deux cents pour qu'une
                 // montagne ne fasse pas boucler jusqu'au ciel.
+                // LE CHUNK D'ABORD. `Level.getHeight` teste `hasChunk` et rend
+                // le PLANCHER DU MONDE quand le chunk n'est pas la : la
+                // premiere colonne de chaque chunk neuf etait deblayee au
+                // jugé, avec le repli, au lieu de sa vraie hauteur. L'etape de
+                // prechargement les a tous demandes, mais un chunk peut s'etre
+                // decharge depuis : on le redemande, c'est une relecture.
+                level.getChunk((cx + dx) >> 4, (cz + dz) >> 4);
                 int surface = level.getHeight(
                         net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING,
                         cx + dx, cz + dz);
-                int top = Math.min(200, Math.max(TOWER_TOP + 6, surface - y + 2));
+                // ET PLUS DE PLANCHER DE QUARANTE-HUIT. La carte des hauteurs
+                // dit exactement jusqu'ou monter ; imposer quarante-huit blocs
+                // sur un terrain plat coutait deux millions de lectures d'air
+                // par sanctuaire, pour rien. Huit suffisent comme garde-fou.
+                int top = Math.min(200, Math.max(8, surface - y + 2));
                 for (int dy = 1; dy <= top; dy++) {
                     BlockPos pos = new BlockPos(cx + dx, y + dy, cz + dz);
                     // on ne PAIE que le plein : une case vide coute une lecture
@@ -1110,20 +1224,41 @@ public final class Sanctuary {
      * porte le relief du batiment, et les remplacer par des blocs pleins
      * l'aplatirait.
      */
-    private static int reskin(ServerLevel level, int[] bounds, int y) {
-        SanctuaryLedger.part("reskin");
-        int painted_total = 0;
-        // On mesure d'abord la hauteur reelle du batiment, pour que le degrade
-        // se repartisse dessus au lieu de dependre de chiffres ecrits en dur.
+    /**
+     * La hauteur du faite, pour que le degrade se repartisse dessus.
+     *
+     * Elle etait recalculee au debut du rhabillage ; depuis que le rhabillage
+     * se fait en bandes, on la mesure UNE fois et on la passe a chacune --
+     * sans quoi chaque bande refaisait le sondage complet, et les bandes du
+     * bas auraient reparti le degrade sur une autre hauteur que celles du haut.
+     */
+    private static int crestOf(ServerLevel level, int[] bounds, int y) {
         int crest = y;
         for (int x = bounds[0]; x <= bounds[2]; x += 4) {
             for (int z = bounds[1]; z <= bounds[3]; z += 4) {
                 crest = Math.max(crest, probeTop(level, x, y, z));
             }
         }
+        return crest;
+    }
+
+    /**
+     * Le rhabillage d'UNE BANDE de colonnes, de `xa` a `xb`.
+     *
+     * Il se faisait d'un bloc : deux cent onze colonnes de large sur deux cent
+     * onze de profond, chacune sondee depuis le haut du sanctuaire puis
+     * repeinte sur quatre blocs. Mesure au journal : entre 389 et 593 ms dans
+     * une seule etape, la deuxieme du chantier apres le deblaiement. La bande
+     * n'a rien change au resultat -- l'ordre des colonnes ne compte pas, chacune
+     * ne lit qu'elle-meme -- et le pic se divise par le nombre de bandes.
+     */
+    private static int reskin(ServerLevel level, int[] bounds, int y, int crest,
+                              int xa, int xb) {
+        SanctuaryLedger.part("reskin");
+        int painted_total = 0;
         int span = Math.max(1, crest - y);
 
-        for (int x = bounds[0]; x <= bounds[2]; x++) {
+        for (int x = xa; x <= xb; x++) {
             for (int z = bounds[1]; z <= bounds[3]; z++) {
                 // On DESCEND depuis le ciel, comme pour le sommet : la carte
                 // des hauteurs ne connaissait pas encore la pyramide qu'on
@@ -1271,11 +1406,25 @@ public final class Sanctuary {
         return to.setValue(property, from.getValue(property));
     }
 
-    /** La hauteur du premier bloc plein, sondee depuis le plafond du monde. */
+    /**
+     * La hauteur du premier bloc plein, sondee depuis le HAUT DU SANCTUAIRE.
+     *
+     * Elle partait du plafond du monde -- trois cent dix-neuf -- et redescendait
+     * a vide : neuf mille appels par chantier, deux cent trente lectures
+     * chacun, deux millions de lectures d'air. Or rien ici ne depasse le
+     * parapet des tours ni le faite de la pyramide, et le terrain a deja ete
+     * rase par le deblaiement. On part donc six blocs au-dessus du plus haut
+     * des deux : cinq fois moins de lectures, et pas une allocation.
+     *
+     * On ne passe PAS par la carte des hauteurs : elle ignore la pyramide posee
+     * par la commande, et c'est precisement le defaut qu'on avait corrige en
+     * venant a la sonde.
+     */
     private static int probeTop(ServerLevel level, int x, int y, int z) {
-        for (int probe = level.getMaxBuildHeight() - 1;
-                probe > level.getMinBuildHeight(); probe--) {
-            if (!level.getBlockState(new BlockPos(x, probe, z)).isAir()) {
+        int from = Math.min(level.getMaxBuildHeight() - 1, y + TOWER_TOP + 6);
+        BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
+        for (int probe = from; probe > level.getMinBuildHeight(); probe--) {
+            if (!level.getBlockState(cursor.set(x, probe, z)).isAir()) {
                 return probe;
             }
         }
@@ -1594,11 +1743,25 @@ public final class Sanctuary {
             // fouille que si chaque etage paie. Les deux se font face, de part
             // et d'autre de la trémie, pour qu'on en voie un en arrivant et
             // l'autre en repartant.
-            int chestY = y + base + storey + 1;
-            int offX = (int) (dx == 0 ? inner - 2 : 0);
-            int offZ = (int) (dz == 0 ? inner - 2 : 0);
+            // LE PLANCHER DE SON ETAGE, PAS DE CELUI DU DESSUS.
+            //
+            // `base + storey + 1` visait l'etage AU-DESSUS : le coffre de
+            // l'etage 2 se posait en y+19, exactement la ou la vis de l'etage 3
+            // passe -- elle l'ecrasait -- et le dernier tombait en y+43, un bloc
+            // AU-DESSUS du parapet, sur la terrasse a ciel ouvert. Quatre
+            // coffres sur vingt disparaissaient a chaque sanctuaire, et le
+            // compte rendu n'en savait rien puisqu'il comptait les POSES.
+            int floorY = y + base + 1;
+            // ET CHACUN DANS SON COIN. `dx`/`dz` ne prennent que deux valeurs
+            // sur les paliers payants : les quatre coffres d'une tour se
+            // posaient dans la MEME colonne, et trois quarts de la salle
+            // restaient nus. On tourne donc sur le rang du coffre.
+            int corner = (base / storey) / 2;
+            int off = Math.max(1, (int) inner - 3);
+            int offX = (corner == 0 || corner == 3) ? off : -off;
+            int offZ = corner < 2 ? off : -off;
             if (loot && (base / storey) % 2 == 0) {
-                lootChest(level, tx + offX, chestY, tz + offZ, sanctuaryTable(rank),
+                lootChest(level, tx + offX, floorY, tz + offZ, sanctuaryTable(rank),
                         Direction.NORTH);
             }
             // UN GARDIEN PAR PALIER, ATTACHE A SON PALIER.
@@ -1608,7 +1771,7 @@ public final class Sanctuary {
             // ressortait sans avoir combattu -- le joueur a trouve la faille en
             // une partie. Le rayon de cinq le garde a son etage : il ne descend
             // pas rejoindre la cour, et il ne peut pas etre attire dehors.
-            SanctuaryGarrison.postGuard(level, new BlockPos(tx, chestY, tz), 5);
+            SanctuaryGarrison.postGuard(level, new BlockPos(tx, floorY, tz), 5);
 
             int reach = (int) inner - 1;
             for (int i = 0; i < storey; i++) {
@@ -1734,6 +1897,8 @@ public final class Sanctuary {
      * Il est desormais compte et rapporte, comme le reste.
      */
     private static int chestsPlaced;
+    /** Ou les coffres ont ete poses : on relit a la fin qui a survecu. */
+    private static final java.util.List<BlockPos> chestSpots = new java.util.ArrayList<>();
 
     private static void lootChest(ServerLevel level, int x, int y, int z, String table,
                                   @Nullable Direction facing) {
@@ -1751,6 +1916,7 @@ public final class Sanctuary {
         }
         level.setBlock(pos, chestBlock, 2);
         chestsPlaced++;
+        chestSpots.add(pos);
         if (level.getBlockEntity(pos) instanceof
                 net.minecraft.world.level.block.entity.RandomizableContainerBlockEntity chest) {
             chest.setLootTable(net.minecraft.resources.ResourceKey.create(

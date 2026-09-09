@@ -60,6 +60,8 @@ import java.util.UUID;
 @EventBusSubscriber(modid = EmeraldWeaponsMod.MODID)
 public final class Breakthrough {
 
+    private static final org.slf4j.Logger LOGGER = com.mojang.logging.LogUtils.getLogger();
+
     /** Une chance sur tant, par bloc de pierre casse. */
     private static final int CHANCE = 45;
     /** Le repit entre deux percees pour un meme joueur : vingt secondes. */
@@ -149,6 +151,10 @@ public final class Breakthrough {
         level.playSound(null, from, SoundEvents.ANCIENT_DEBRIS_BREAK, SoundSource.BLOCKS, 1.0F, 0.5F);
         player.displayClientMessage(Component.translatable("mine.emeraldweapons.breakthrough")
                 .withStyle(ChatFormatting.GRAY), true);
+        // LE SEUL SYSTEME SOUTERRAIN QU'ON NE POUVAIT PAS MESURER. Sans cette
+        // ligne, « je n'ai presque eu aucune fissure » restait invérifiable.
+        LOGGER.info("Percee {} pour {} depuis {} vers {} ({} tranches)", shape,
+                player.getName().getString(), from, facing, plan.slices.size());
         return true;
     }
 

@@ -41,7 +41,20 @@ public enum Weather {
      * doit pas s'installer.
      */
     BATTUE("battue", false, GamePhase.EXPLORATION, 120 * 20, 120 * 20, 0xC8C8C8),
-    AURORE("aurore", false, GamePhase.EXPLORATION, 120 * 20, 240 * 20, 0x9CE8FF),
+    /**
+     * L'AURORE : la fenetre de LA MINE. CINQ MINUTES, et c'est mesure.
+     *
+     * Elle a dure deux a quatre minutes, et le joueur l'a jugee trop courte :
+     * « il faut compter le temps pour descendre dans les bonnes couches, et
+     * ensuite se diriger vers les diamants ; on n'a jamais assez de temps. »
+     * Le compte lui donne raison -- de la surface a y = 12, un puits vertical
+     * fait quatre-vingts blocs, soit une minute et demie a la pioche de fer
+     * sous Hate II, et le filon le plus proche est souvent a vingt metres de
+     * roche. Deux minutes ne laissaient pas de quoi arriver, encore moins de
+     * quoi miner. Cinq minutes fixes : le temps de descendre, de suivre la
+     * boussole et de remplir un sac.
+     */
+    AURORE("aurore", false, GamePhase.EXPLORATION, 300 * 20, 300 * 20, 0x9CE8FF),
     /**
      * L'HEURE DOREE : la fenetre de L'ATELIER.
      *
@@ -57,10 +70,12 @@ public enum Weather {
      * nous ayons une seule chance de le rater. L'horloge est rendue a la fin,
      * exactement comme pour la Nuit d'Arcencium.
      *
-     * Deux minutes trente : le temps d'une serie de tentatives, pas d'une
-     * seance entiere.
+     * CINQ MINUTES, et des Portes vers le village (weather/GoldenGate). Deux
+     * minutes trente ne suffisaient pas : la fenetre recompense de s'asseoir a
+     * l'atelier, et l'atelier est au village -- que le joueur avait quitte. On
+     * lui ouvre donc une porte a cote de lui, et cinq minutes pour s'en servir.
      */
-    HEURE_DOREE("heure_doree", false, GamePhase.EXPLORATION, 150 * 20, 150 * 20, 0xFFC46B),
+    HEURE_DOREE("heure_doree", false, GamePhase.EXPLORATION, 300 * 20, 300 * 20, 0xFFC46B),
     NUIT("nuit", true, GamePhase.MONTEE, 150 * 20, 240 * 20, 0xB98CFF),
     METEORES("meteores", true, GamePhase.PRESSION, 120 * 20, 200 * 20, 0xFF9C4A),
     DECHIRURE("dechirure", true, GamePhase.PRESSION, 120 * 20, 200 * 20, 0xE478FF),

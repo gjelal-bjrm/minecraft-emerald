@@ -99,13 +99,6 @@ public final class RuneDrops {
                             com.emerald.item.ModItems.SKIN_FEATHER.get())));
         }
 
-        // et le taux ci-dessous est cale sans elle.
-        double chance = (CHANCE + CHANCE_BONUS * Math.min(1.0, health / TOUGH)) * hunt;
-        int runes = rolls(random, chance);
-        if (runes == 0) {
-            return;
-        }
-
         // LE CRISTAL DE L'ELEMENT DE LA BETE, bien plus souvent que la rune.
         //
         // C'est la boucle du systeme : pour accorder une arme contre l'Obscur
@@ -134,6 +127,31 @@ public final class RuneDrops {
                     victim.level(), victim.getX(), victim.getY(), victim.getZ(),
                     new ItemStack(com.emerald.item.ModItems.FORGE_STONE.get(),
                             1 + random.nextInt(3))));
+        }
+
+        // ET LA PORTE DES RUNES SEULEMENT MAINTENANT.
+        //
+        // Elle etait posee AVANT le cristal et la pierre, et les emportait
+        // avec elle : « plus souvent qu'une rune » etait faux par
+        // construction, puisque rien ne tombait sans rune.
+        //
+        // Le compte. Un zombie laisse une rune une fois sur dix ; la pierre
+        // valait donc vingt pour cent de ce dixieme, soit UNE POUR CINQUANTE
+        // MONSTRES. Une tentative d'amelioration coute une pierre, et une
+        // partie en demande une quarantaine sur l'arme et les quatre pieces :
+        // il fallait tuer deux mille creatures en quatre-vingt-dix minutes.
+        // Voila la raison de fond du « je n'ai pas de quoi ameliorer », et
+        // elle n'etait pas dans la table de butin des sanctuaires.
+        //
+        // Les deux taux ne bougent pas -- vingt et vingt-deux pour cent, les
+        // chiffres ecrits ici depuis le debut. Ils s'appliquent enfin, ce qui
+        // donne une pierre tous les cinq monstres : de quoi tenter, echouer,
+        // et retenter.
+        // et le taux ci-dessous est cale sans elle.
+        double chance = (CHANCE + CHANCE_BONUS * Math.min(1.0, health / TOUGH)) * hunt;
+        int runes = rolls(random, chance);
+        if (runes == 0) {
+            return;
         }
 
         RuneFamily[] families = RuneFamily.values();

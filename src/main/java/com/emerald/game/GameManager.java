@@ -190,6 +190,9 @@ public class GameManager {
         BlockPos asked = siteAt;
         site = null;
         siteAt = BlockPos.ZERO;
+        // ON RETIENT QU'IL EST BATI, avant meme de deplacer l'ancre : c'est la
+        // seule chose que la reprise pourra croire sur parole.
+        GameState.get(level).markBuilt(asked, raised);
         // L'ancre BOUGE : elle coiffe le faite de la pyramide, non le sol vise.
         // Sans cette mise a jour, l'interface et la boussole montreraient le
         // pied du monument et le siege ne saurait pas ou se declencher.
@@ -729,6 +732,8 @@ public class GameManager {
         pending.clear();
         pending.addAll(state.anchors());
         state.begin(level);
+        // la premiere meteo de la partie sera l'Aurore : elle apprend le mode
+        com.emerald.weather.WeatherManager.resetSchedule();
         announce(level, "game.emeraldweapons.anchors_risen",
                 "game.emeraldweapons.anchors_risen.sub", 0x9CE8FF);
         announceLandmarks(level, center);
@@ -848,6 +853,16 @@ public class GameManager {
         }
         int missing = 0;
         for (BlockPos anchor : state.anchors()) {
+            // ET SURTOUT PAS CE QUI EST DEJA BATI. Le bloc d'ancre absent ne
+            // veut pas dire « chantier inacheve » : une ancre activee n'en est
+            // plus une, un joueur peut l'avoir cassee, et sa pose peut avoir
+            // echoue. Dans ce dernier cas la position retenue est le FAITE de
+            // la pyramide, si bien que chaque ouverture du monde rebatissait un
+            // sanctuaire entier quarante blocs plus haut que le precedent --
+            // jusqu'au plafond du monde, ou plus rien ne tient.
+            if (state.wasBuilt(anchor) || state.isActivated(anchor)) {
+                continue;
+            }
             if (!level.getBlockState(anchor).is(ModBlocks.PRISMATIC_ANCHOR.get())
                     && !pending.contains(anchor) && !anchor.equals(siteAt)) {
                 pending.add(anchor);

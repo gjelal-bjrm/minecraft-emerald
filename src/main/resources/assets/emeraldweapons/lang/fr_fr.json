@@ -519,7 +519,7 @@
   "game.emeraldweapons.first_forge": "Le village tient. Les artisans vous paient en matière.",
   "game.emeraldweapons.first_forge.forge": "%s %s — à la Forge d'Arcencium : montez une pièce d'armure au cran +1, puis votre arme. Neuf chances sur dix à ce cran.",
   "game.emeraldweapons.first_forge.altar": "%s plumes d'Arcencium — à l'Autel de spécialisation : votre premier palier d'ailes, garanti.",
-  "game.emeraldweapons.first_forge.bench": "L'Établi à sertir grave les runes et élève la rareté d'une pièce. Gardez-lui vos premières runes.",
+  "game.emeraldweapons.first_forge.bench": "%s Éclats du Destin — à l'Établi à sertir : une tentative de rareté sur la pièce de votre choix, %s %% d'atteindre Splendide. Il grave aussi les runes.",
   "game.emeraldweapons.first_forge.where": "L'atelier est à %s blocs vers le %s (%s, %s, %s) — ses trois établis brillent à travers les murs pendant dix minutes.",
   "rune.emeraldweapons.execution": "Exécution",
   "rune.emeraldweapons.execution.effect": "+%s %% de dégâts sur une cible sous 30 %% de vie",
@@ -540,5 +540,15 @@
   "mine.emeraldweapons.aurore.chamber.vein": "La roche s'ouvre. Une brume d'Aurore, et sa jumelle contre un filon de %s, à %s blocs.",
   "mine.emeraldweapons.aurore.chamber.cave": "La roche s'ouvre. Une brume d'Aurore, et sa jumelle dans une grotte, à %s blocs.",
   "mine.emeraldweapons.aurore.chamber.surface": "La roche s'ouvre. Une brume d'Aurore, et sa jumelle au jour, %s blocs au-dessus.",
-  "mine.emeraldweapons.aurore.recall": "Une brume de rappel se lève à vos pieds : entrez-y, elle vous ramène au jour."
+  "mine.emeraldweapons.aurore.recall": "Une brume de rappel se lève à vos pieds : entrez-y, elle vous ramène au jour.",
+  "block.emeraldweapons.golden_gate": "Porte dorée",
+  "weather.emeraldweapons.vein.gate": "Porte",
+  "weather.emeraldweapons.gate.opened": "Une Porte dorée s'ouvre à %s blocs : elle mène à l'atelier du village, et vous ramène.",
+  "weather.emeraldweapons.gate.to_village": "L'atelier du village. La porte vous ramènera.",
+  "weather.emeraldweapons.gate.to_field": "De retour là où vous étiez.",
+  "weather.emeraldweapons.gate.no_return": "Votre porte des champs s'est dissipée : le retour se fera à pied.",
+  "weather.emeraldweapons.gate.closing": "L'Heure dorée s'achève. Les Portes tiennent encore %s secondes.",
+  "weather.emeraldweapons.gate.countdown": "Portes dorées : %s s",
+  "weather.emeraldweapons.gate.closed": "Les Portes dorées se sont dissipées.",
+  "weather.emeraldweapons.gate.nowhere": "Aucun sol dégagé autour de vous : la Porte dorée n'a pas pu s'ouvrir ici."
 }

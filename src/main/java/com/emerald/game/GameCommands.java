@@ -66,6 +66,9 @@ public class GameCommands {
             GameState.get(level).begin(level);
             ctx.getSource().sendSuccess(() ->
                     Component.translatable("command.emeraldweapons.started"), true);
+            // ce chemin court-circuite openTheGame : on rearme l'ordonnanceur
+            // ici aussi, sans quoi la partie d'essai ne commence pas par l'Aurore
+            com.emerald.weather.WeatherManager.resetSchedule();
             return 1;
         }));
 
@@ -88,6 +91,13 @@ public class GameCommands {
 
         // ------------------------------------------------------------- meteo
         var weatherNode = Commands.literal("weather");
+        // pour l'essai : declenche le TIRAGE tout de suite, au lieu d'attendre
+        // les deux a quatre minutes de l'ecart normal
+        weatherNode.then(Commands.literal("suivante").executes(ctx -> {
+            com.emerald.weather.WeatherManager.rollNow();
+            ctx.getSource().sendSuccess(() -> Component.literal("Tirage force a la tique suivante."), false);
+            return 1;
+        }));
         weatherNode.then(Commands.literal("stop").executes(ctx -> {
             com.emerald.weather.WeatherManager.stop(ctx.getSource().getServer().overworld());
             ctx.getSource().sendSuccess(() ->
@@ -362,6 +372,19 @@ public class GameCommands {
 
         // Le sanctuaire, bati sur place : c'est l'outil pour le regarder en
         // monde plat sans jouer une partie entiere pour l'atteindre.
+        // LE CYCLE SUIVANT, A LA DEMANDE.
+        //
+        // `/arcencium sanctuary` batit d'un seul tenant, sous les pieds du
+        // joueur, sur du terrain qu'il vient de charger : c'est commode pour
+        // regarder un batiment, et cela ne mesure RIEN du chantier reel, qui
+        // se fait par etapes a quatre cent cinquante blocs de la, sur du sol
+        // vierge. La seule autre facon d'y arriver etait de gagner la finale.
+        root.then(Commands.literal("cycle").executes(ctx -> {
+            ServerLevel level = ctx.getSource().getServer().overworld();
+            GameManager.raiseNextCycle(level);
+            return 1;
+        }));
+
         root.then(Commands.literal("sanctuary")
                 .then(Commands.argument("palier",
                                 com.mojang.brigadier.arguments.IntegerArgumentType.integer(1, 3))

@@ -4377,3 +4377,205 @@ filon de Diamant, a 17 blocs » ; entre dans la brume, le joueur arrive dans la
 poche ; la brume de rappel posee a ses pieds, et le joueur remonte au jour ;
 une seconde Aurore, puis 60 blocs plus loin sous terre : « a la descente de
 Dev, 4 puits et 3 paires ». Le panneau montre les lignes Brume et Puits.
+
+## 55. L'audit : quarante-cinq agents, et ce qu'ils ont trouve *(9 sept. 2026)*
+
+Le joueur a rendu une liste apres son essai : l'Aurore trop courte et jamais
+premiere, l'Heure Doree sans moyen de rentrer, la rarete introuvable apres le
+village, les lags qui « bloquent totalement le jeu », et « gros bug : il n'y a
+plus aucun coffre dans les tours des sanctuaires ». Plutot que de traiter les
+points un par un, huit enqueteurs ont fouille le mode en parallele, chaque
+trouvaille a ete confiee a un contradicteur charge de la refuter, et la
+synthese n'a garde que ce qui a survecu. Plusieurs affirmations du dossier
+sont mortes la : l'equipement des monstres, le rythme des phases et le
+perimetre de minage ont ete laisses intacts, faute de preuve.
+
+### A. Les coffres : la cause, et pourquoi personne ne l'avait vue
+
+`chestY = y + base + storey + 1` visait le plancher de l'etage AU-DESSUS.
+Le coffre de l'etage 2 se posait exactement la ou passe la vis de l'etage 3 --
+elle l'ecrasait -- et le dernier tombait un bloc au-dessus du parapet, sur la
+terrasse. Quatre coffres sur vingt disparaissaient a chaque sanctuaire.
+
+Le compte rendu ne pouvait pas le dire : il comptait les POSES. Il relit
+maintenant chaque emplacement et annonce « 20 poses, 20 survivants ». Les
+quatre coffres d'une tour tournent aussi sur les quatre coins de leur salle
+(`corner`) au lieu de s'empiler dans la meme colonne.
+
+### B. L'etabli : quatre defauts, tous verifies au journal
+
+- **La duplication.** Un clic-maj sur la case de resultat rendait la piece ET
+  la gardait, sans limite. `quickMoveStack` s'arrete desormais sur cette case.
+- **Le double de.** `onTake` s'executait aussi chez le client, avec une autre
+  graine : « Excellent » a 09:50:23.238, « Legendaire » douze millisecondes
+  plus tard, pour une seule prise. Une garde de cote, et le de est unique.
+- **L'imprimante a Eclats.** L'Heure Doree remboursait l'Eclat a CHAQUE prise :
+  cinq minutes de fenetre suffisaient a monter au Phenomenal. Une tentative
+  offerte par fenetre, retenue par joueur (`goldenUsed`).
+- **La pile detruite.** Une pile entiere de Pierres de Forge partait par
+  tentative ; on n'en consomme plus qu'une, et la mise en Eclats est plafonnee
+  a seize par prise.
+
+### C. Le vrai probleme de l'amelioration n'etait pas au village
+
+`RuneDrops` posait la porte des runes AVANT le cristal elementaire et la
+Pierre de Forge : rien ne tombait sans rune. Un zombie laisse une rune une
+fois sur dix, donc une Pierre une fois sur cinquante. Une tentative coute une
+Pierre, une partie en demande une quarantaine : il aurait fallu deux mille
+morts en quatre-vingt-dix minutes. Les deux boucles passent devant la porte.
+Les taux ecrits (20 % et 22 %) ne bougent pas -- ils s'appliquent enfin.
+
+Et la defense du village donne desormais six Eclats du Destin, ce qui n'est
+pas un chiffre rond : c'est `PITY_PER_DRAW`, donc six essais d'un coup. Le
+message annonce la chance reelle d'atteindre Splendide. La pitie, elle, se
+CONSOMME maintenant : sans cela, deposer cent trente Eclats un par un donnait
+onze fois plus de jets que la meme depense en une prise.
+
+### D. Les lags : trois secondes et demie, dans une seule etape
+
+Mesure : 542 a 7 372 ms de fil serveur par sanctuaire, pire etape 3 474 ms.
+La cause n'etait pas le nombre de blocs mais la GENERATION du terrain -- un
+sanctuaire se dresse a quatre cent cinquante blocs du village, sur du sol que
+personne n'a jamais charge, et la premiere bande de deblaiement en reclamait
+quatorze chunks d'un coup. Le budget de douze millisecondes par tique n'y
+pouvait rien : il compte apres l'etape, et une etape ne se coupe pas.
+
+Quatre corrections :
+
+1. **Le prechargement par paliers.** Demander un chunk fini en entraine une
+   vingtaine derriere lui. On monte donc toute la zone d'un etage a la fois
+   (structures, biomes, relief, decors, fini) : la cascade est bornee a un
+   etage.
+2. **Le deblaiement a une colonne** par etape au lieu de deux, et **le
+   rhabillage en bandes de huit** au lieu d'un seul bloc de 211 x 211.
+3. **La sonde du sommet** partait du plafond du monde et redescendait a vide :
+   deux millions de lectures d'air par chantier. Elle part six blocs au-dessus
+   du parapet.
+4. **Le balayage des jalons** parcourait toutes les entites du monde toutes
+   les dix tiques, du debut a la fin de la partie, pour des reperes qui vivent
+   quelques minutes. Un compteur, et il ne tourne plus a vide.
+
+Il restait le pire, et le banc d'essai l'a trouve tout seul.
+
+### D bis. Le sanctuaire qui se rebatissait a chaque connexion
+
+Le journal du monde d'essai, a chaque ouverture, sans exception :
+
+    Partie reprise : 3 sanctuaire(s) a rebatir
+    Pyramide de Cataclysm non posee a y=322 : repli sur la notre
+    Ancre non posee en BlockPos{x=-670, y=324, z=716} : minecraft:void_air
+    Sanctuaire palier 1 : 20 coffres poses, 0 survivants
+
+Trois sanctuaires refaits a CHAQUE lancement -- huit, quatre et quatre
+secondes de fil serveur, plus le pic de generation -- et refaits pour rien,
+puisqu'ils se dressaient au-dessus du plafond du monde, ou le jeu ne rend que
+du vide : ni ancre, ni coffre.
+
+La mecanique. La reprise decidait « ce site est inacheve » en regardant si le
+bloc d'ancre est la. Or l'ancre coiffe le FAITE de la pyramide, et la position
+retenue devient celle du faite. Que la pose echoue une fois -- ou qu'un joueur
+casse l'ancre, ou simplement qu'il l'active -- et l'ouverture suivante rebatit
+un sanctuaire entier en prenant cet ancien faite pour sol, quarante blocs plus
+haut. Puis la suivante, quarante blocs plus haut encore. Le monde d'essai en
+etait a 322, 335 et 342.
+
+`GameState` retient donc ce qu'il a BATI (`markBuilt`, sauvegarde sous
+`Built`) au lieu de le deduire du terrain, et la reprise ne remet en file que
+les sites qui n'ont jamais porte leur monument. Un garde-fou refuse en plus de
+batir au-dela du plafond du monde. C'est probablement la moitie des « lags qui
+reviennent souvent » : ils revenaient a chaque connexion.
+
+### E. L'Aurore premiere, et cinq minutes
+
+`firstDrawn` force l'Aurore au premier tirage : c'est la seule meteo qui
+APPREND quelque chose, et elle donne le diamant sans lequel rien ne
+s'ameliore. Elle passe de deux-quatre minutes a cinq fixes -- de la surface a
+y = 12 il y a quatre-vingts blocs, soit une minute et demie a la pioche de fer
+sous Hate II, avant meme de chercher un filon. L'ecart avant la premiere
+meteo est fixe a soixante secondes : sur un serveur neuf il valait dix
+secondes, pendant que les sanctuaires se dressaient encore.
+
+La Hate II et la Vitesse s'affichent enfin comme effets : quarante pour cent
+de vitesse de minage, et rien a l'ecran ne le nommait.
+
+### F. L'Heure Doree : les Portes, et l'horloge retenue
+
+La fenetre recompense de s'asseoir a l'atelier, et l'atelier est au village --
+que le joueur avait quitte. `weather/GoldenGate` ouvre donc une Porte doree a
+neuf a quinze blocs de chaque joueur et une seconde a l'atelier ; y entrer
+tient du pas de cote, et la porte du village renvoie chacun a la sienne. La
+boussole les designe (genre 5 du paquet). A la fin de la fenetre elles tiennent
+QUARANTE-CINQ SECONDES de plus, avec le compte a rebours en barre d'action.
+
+L'horloge, elle, etait posee une fois a 11 800 et laissait courir le temps :
+sur cinq minutes on finissait a 17 800, soit soixante-dix secondes de lumiere
+doree puis trois minutes et demie de nuit noire. Elle avance six fois moins
+vite, de 11 800 a 12 800. La Battue recoit la meme retenue, de 23 000 a
+23 800 : son aube de chasse disparaissait au bout de cinquante secondes.
+
+### G. La Battue : le tambour bat pendant la poursuite
+
+Le tambour ne sonnait que pour les hostiles qui ne vous avaient pas vu :
+pendant la poursuite -- le coeur de la Battue -- il se taisait. La Proie y
+entre, avec un rayon de vingt-quatre blocs puisqu'elle se stabilise a sept
+blocs devant. Et son nom s'affiche : `Visibility.NEVER` valait pour les trois
+equipes, si bien que « Seize-Cors » etait nomme et invisible.
+
+### H. Distant Horizons : les trous, pas la portee
+
+« Parfois les choses tres loin sont mal chargees et on voit l'interieur. » La
+portee avait ete reglee en septembre (section 38) ; ce sont deux autres cles.
+`upsampleLowerDetailLodsToFillHoles` etait faux : au passage d'un niveau de
+detail au suivant, le maillage grossier ne recouvre pas exactement le fin et
+la difference reste vide -- on voit au travers. `overdrawPrevention` valait
+zero : les LOD se dessinaient par-dessus les vrais chunks, deux surfaces au
+meme endroit, celle qui gagne changeant avec l'angle. Les deux sont passees
+dans `tools/dh_profile.py`, qui les pose dans les trois configurations.
+
+Les fils de generation ne bougent PAS : les avoir brides en cours de route
+traitait des lags qui venaient du chantier des sanctuaires, corrige a la
+source ici meme.
+
+### I. Ce qui a ete verifie, et comment
+
+Trois passages du banc d'essai, journal purge avant chacun.
+
+| ce qu'on mesure | avant | apres |
+| --- | --- | --- |
+| coffres survivants par sanctuaire | 16 sur 20 | 20 sur 20 |
+| pire etape du chantier | 3 474 ms | 552 a 1 013 ms |
+| sanctuaires rebatis a chaque connexion | 3 | 0 |
+| horloge de l'Heure Doree sur 100 s | vers la nuit | 11 823 -> 12 176 |
+| horloge de la Battue sur 45 s | vers le plein jour | 23 046 -> 23 365 |
+
+La premiere meteo tiree a bien ete l'Aurore, avec « 4 puits d'Aurore, 2 paires
+de brumes etoilees » et six filons de diamant montres. Une Porte doree s'est
+ouverte a treize blocs, a annonce « les Portes tiennent encore 45 secondes » a
+la fin de la fenetre, puis s'est dissipee.
+
+Les trois sanctuaires du cycle suivant, sur du sol jamais visite et par le
+chemin normal du jeu (la file d'etapes, pas la commande), ont rendu « 20
+coffres poses, 20 survivants » chacun, avec 552 a 1 013 ms pour la pire etape.
+
+Le banc des butins, enfin : cinquante zombies tues par le joueur, inventaire
+vide au depart.
+
+| ce qui tombe | attendu | ramasse |
+| --- | --- | --- |
+| Pierres de Forge | ~10 | 12 |
+| cristaux elementaires | ~11 | 18 |
+| runes | ~5 | 3 |
+| plumes d'Arcencium | ~14 | 16 |
+
+Avant la correction, la Pierre et le cristal etaient enfermes derriere les
+trois jets de runes : au plus trois monstres sur cinquante pouvaient en
+laisser.
+
+Le banc lui-meme a coute trois essais, et les deux premiers etaient faux --
+c'est la lecon utile. Une fonction de datapack ne renvoie PAS le resultat de
+ses commandes a la conversation : `data get` et `scoreboard players get` n'y
+ecrivent rien, il faut un `tellraw`. Et cinquante zombies convoques sur le
+meme bloc s'ecrasent les uns les autres (`maxEntityCramming`, vingt-quatre) :
+ils mouraient par ecrasement avant le coup du joueur, et l'evenement de butin
+ne passait que deux fois sur cinquante. Une sonde posee dans `RuneDrops` l'a
+dit en une ligne, la ou trois heures de raisonnement auraient tourne en rond.
