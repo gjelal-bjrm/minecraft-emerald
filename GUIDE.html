@@ -1,0 +1,840 @@
+<title>Manuel du Mode Arcencium</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Karla:wght@400;500;700&family=JetBrains+Mono:wght@400;700&display=swap">
+
+<style>
+/* ------------------------------------------------------------------ jetons */
+:root {
+  --paper:      #F0F1F5;
+  --surface:    #FFFFFF;
+  --surface-2:  #E7E9EF;
+  --ink:        #1A1922;
+  --ink-soft:   #4A4857;
+  --muted:      #6E6B7C;
+  --line:       #D6D8E0;
+  --line-soft:  #E3E5EC;
+  --accent:     #0E7355;
+  --accent-ink: #FFFFFF;
+  --accent-bg:  #E2F1EB;
+  --shadow:     0 1px 2px rgba(26, 25, 34, .06), 0 8px 24px -16px rgba(26, 25, 34, .32);
+
+  /* Les couleurs du jeu, reprises telles quelles. */
+  --r1: #A0C8FF; --r2: #6FD1FF; --r3: #5CE68A; --r4: #C8F050;
+  --r5: #FFD24A; --r6: #C77DFF; --r7: #FF9B3D; --r8: #FF4D6D;
+  --eau: #61C4FF; --feu: #FF7A3D; --lumiere: #FFE96B; --obscur: #9C6BFF; --neutre: #C8C8D4;
+  --w-aurore: #9CE8FF; --w-battue: #C8C8C8; --w-doree: #FFC46B; --w-nuit: #B98CFF;
+  --w-meteores: #FF9C4A; --w-dechirure: #E478FF; --w-orage: #FF616B; --w-embellie: #C0E8FF;
+
+  --wrap: 68ch;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper:      #121118;
+    --surface:    #1A1923;
+    --surface-2:  #23222E;
+    --ink:        #EDECF2;
+    --ink-soft:   #C2C0CE;
+    --muted:      #918EA1;
+    --line:       #2E2C3A;
+    --line-soft:  #26242F;
+    --accent:     #56DFB2;
+    --accent-ink: #0B1F19;
+    --accent-bg:  #16302A;
+    --shadow:     0 1px 2px rgba(0, 0, 0, .5), 0 10px 30px -18px rgba(0, 0, 0, .9);
+  }
+}
+:root[data-theme="dark"] {
+  --paper:      #121118;
+  --surface:    #1A1923;
+  --surface-2:  #23222E;
+  --ink:        #EDECF2;
+  --ink-soft:   #C2C0CE;
+  --muted:      #918EA1;
+  --line:       #2E2C3A;
+  --line-soft:  #26242F;
+  --accent:     #56DFB2;
+  --accent-ink: #0B1F19;
+  --accent-bg:  #16302A;
+  --shadow:     0 1px 2px rgba(0, 0, 0, .5), 0 10px 30px -18px rgba(0, 0, 0, .9);
+}
+
+/* ------------------------------------------------------------------- socle */
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: "Karla", ui-sans-serif, system-ui, sans-serif;
+  font-size: 17px;
+  line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+}
+.page {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 24px 96px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0 56px;
+}
+@media (min-width: 1080px) {
+  .page { grid-template-columns: 190px minmax(0, 1fr); }
+  .toc { grid-column: 1; }
+  .body { grid-column: 2; }
+  .cover { grid-column: 1 / -1; }
+}
+.body { max-width: var(--wrap); min-width: 0; }
+
+h1, h2, h3 {
+  font-family: "Fraunces", Georgia, "Times New Roman", serif;
+  font-variation-settings: "SOFT" 20, "WONK" 1;
+  text-wrap: balance;
+  margin: 0;
+}
+p { margin: 0 0 1em; }
+p:last-child { margin-bottom: 0; }
+a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+strong { font-weight: 700; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 3px; }
+
+/* --------------------------------------------------------------- ouverture */
+.cover { padding: 72px 0 44px; }
+.eyebrow {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0 0 18px;
+}
+.cover h1 {
+  font-size: clamp(40px, 7vw, 68px);
+  font-weight: 600;
+  line-height: 1.03;
+  letter-spacing: -.02em;
+  margin-bottom: 20px;
+}
+.cover .lede {
+  font-size: 20px;
+  color: var(--ink-soft);
+  max-width: 56ch;
+  line-height: 1.5;
+}
+/* La règle de réfraction : un trait qui s'ouvre en spectre. */
+.prism {
+  height: 3px;
+  border-radius: 2px;
+  background: linear-gradient(90deg,
+    var(--r1), var(--r2) 16%, var(--r3) 30%, var(--r4) 44%,
+    var(--r5) 58%, var(--r6) 72%, var(--r7) 86%, var(--r8));
+  margin: 34px 0 0;
+}
+
+/* --------------------------------------------------------------- sommaire */
+.toc { padding-top: 40px; }
+@media (min-width: 1080px) {
+  .toc-inner { position: sticky; top: 32px; }
+}
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 7px; }
+.toc a {
+  display: block;
+  font-size: 13.5px;
+  line-height: 1.35;
+  color: var(--muted);
+  text-decoration: none;
+  padding: 3px 0;
+}
+.toc a:hover { color: var(--accent); }
+.toc .n {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  color: var(--line);
+  margin-right: 7px;
+}
+@media (max-width: 1079px) {
+  .toc { border-bottom: 1px solid var(--line); padding-bottom: 24px; margin-bottom: 8px; }
+  .toc ol { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+}
+
+/* --------------------------------------------------------------- sections */
+section { padding-top: 56px; }
+section > h2 {
+  font-size: 30px;
+  font-weight: 600;
+  letter-spacing: -.015em;
+  line-height: 1.15;
+  margin-bottom: 6px;
+}
+.sec-n {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  letter-spacing: .14em;
+  color: var(--accent);
+  display: block;
+  margin-bottom: 10px;
+}
+section > h2 + p { margin-top: 14px; }
+h3 {
+  font-size: 19px;
+  font-weight: 600;
+  margin: 34px 0 10px;
+  letter-spacing: -.01em;
+}
+
+/* ------------------------------------------------------------------ blocs */
+.note {
+  border-left: 2px solid var(--accent);
+  padding: 2px 0 2px 16px;
+  color: var(--ink-soft);
+  margin: 22px 0;
+  font-size: 16px;
+}
+.scroll { overflow-x: auto; margin: 20px 0; }
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 15.5px;
+  font-variant-numeric: tabular-nums;
+}
+th, td {
+  text-align: left;
+  padding: 9px 14px 9px 0;
+  border-bottom: 1px solid var(--line-soft);
+  vertical-align: top;
+}
+th {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10.5px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 400;
+  border-bottom-color: var(--line);
+  white-space: nowrap;
+}
+td:last-child, th:last-child { padding-right: 0; }
+tbody tr:last-child td { border-bottom: none; }
+.num { font-family: "JetBrains Mono", monospace; font-size: 14px; white-space: nowrap; }
+
+/* --------------------------------------------------- grilles de fabrication */
+.recipes { display: grid; gap: 18px; margin: 22px 0; }
+@media (min-width: 620px) { .recipes { grid-template-columns: 1fr 1fr; } }
+.recipe {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 16px 18px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0 16px;
+  align-items: start;
+  box-shadow: var(--shadow);
+}
+.grid3 {
+  display: grid;
+  grid-template-columns: repeat(3, 26px);
+  grid-template-rows: repeat(3, 26px);
+  gap: 3px;
+}
+.grid3 i {
+  display: grid;
+  place-items: center;
+  border-radius: 4px;
+  background: var(--surface-2);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  font-weight: 700;
+  font-style: normal;
+  color: var(--ink);
+}
+.grid3 i[data-k="."] { background: transparent; border: 1px dashed var(--line); }
+.grid3 i[data-k="A"] { background: #C77DFF; color: #1A1922; }
+.grid3 i[data-k="E"] { background: #5CE68A; color: #1A1922; }
+.grid3 i[data-k="B"] { background: #9CE8FF; color: #1A1922; }
+.grid3 i[data-k="F"] { background: #FFD24A; color: #1A1922; }
+.grid3 i[data-k="N"] { background: #6FD1FF; color: #1A1922; }
+.grid3 i[data-k="R"] { background: #FF9B3D; color: #1A1922; }
+.recipe h4 {
+  font-family: "Fraunces", serif;
+  font-size: 17px;
+  font-weight: 600;
+  margin: 0 0 4px;
+}
+.recipe .cost {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--muted);
+  margin: 0;
+}
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12px;
+  color: var(--muted);
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.legend li { display: flex; align-items: center; gap: 7px; }
+.key {
+  width: 17px; height: 17px; border-radius: 4px;
+  display: grid; place-items: center;
+  font-size: 10px; font-weight: 700; color: #1A1922;
+}
+
+/* ------------------------------------------------------- échelle de rareté */
+.ladder { display: grid; gap: 2px; margin: 22px 0; }
+.rung {
+  display: grid;
+  grid-template-columns: 8px 1fr auto;
+  gap: 14px;
+  align-items: center;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+.rung:last-child { border-bottom: none; }
+.rung .chip { width: 8px; height: 22px; border-radius: 2px; }
+.rung .name { font-weight: 500; }
+.rung .cap {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12px;
+  color: var(--muted);
+  text-align: right;
+}
+
+/* ------------------------------------------------------------- vignettes */
+.tiles { display: grid; gap: 12px; margin: 22px 0; }
+@media (min-width: 640px) { .tiles { grid-template-columns: 1fr 1fr; } }
+.tile {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 14px 16px;
+  background: var(--surface);
+}
+.tile .t {
+  font-weight: 700;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 5px;
+}
+.dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+.tile p { font-size: 15px; color: var(--ink-soft); margin: 0; }
+
+footer {
+  margin-top: 72px;
+  padding-top: 22px;
+  border-top: 1px solid var(--line);
+  font-size: 13.5px;
+  color: var(--muted);
+}
+</style>
+
+<div class="page">
+
+  <header class="cover">
+    <p class="eyebrow">Minecraft · Manuel du joueur</p>
+    <h1>Mode Arcencium</h1>
+    <p class="lede">Une partie de quatre-vingt-dix minutes : on retire une épée d'un socle,
+      le village est attaqué, et tout commence. Voici ce qu'il faut savoir avant de jouer.</p>
+    <div class="prism"></div>
+  </header>
+
+  <nav class="toc" aria-label="Sommaire">
+    <div class="toc-inner">
+      <ol>
+        <li><a href="#s1"><span class="n">01</span>Le mode en deux minutes</a></li>
+        <li><a href="#s2"><span class="n">02</span>Les deux façons de jouer</a></li>
+        <li><a href="#s3"><span class="n">03</span>Le début d'une partie</a></li>
+        <li><a href="#s4"><span class="n">04</span>L'équipement</a></li>
+        <li><a href="#s5"><span class="n">05</span>La rareté</a></li>
+        <li><a href="#s6"><span class="n">06</span>L'amélioration</a></li>
+        <li><a href="#s7"><span class="n">07</span>Les runes</a></li>
+        <li><a href="#s8"><span class="n">08</span>Le personnage</a></li>
+        <li><a href="#s9"><span class="n">09</span>Les ailes</a></li>
+        <li><a href="#s10"><span class="n">10</span>Les éléments</a></li>
+        <li><a href="#s11"><span class="n">11</span>Les météos</a></li>
+        <li><a href="#s12"><span class="n">12</span>Les sanctuaires et la fin</a></li>
+      </ol>
+    </div>
+  </nav>
+
+  <main class="body">
+
+    <section id="s1">
+      <span class="sec-n">01</span>
+      <h2>Le mode en deux minutes</h2>
+      <p>Vous démarrez dans un village, à plusieurs ou seul. Au centre, une épée est plantée
+        dans un socle. Tant que personne ne la retire, rien ne se passe : c'est le temps de
+        s'organiser.</p>
+      <p>Quand quelqu'un la retire, le village est assailli. Le tenir fait apparaître
+        <strong>trois sanctuaires</strong> à quatre cent cinquante blocs de là. Il faut les
+        prendre l'un après l'autre, ce qui ouvre un <strong>Arc-en-ciel</strong> et le boss
+        qui l'occupe. Le tuer, c'est gagner.</p>
+      <p>Entre-temps, vous minez un métal qui n'existe que dans ce mode, l'<strong>Arcencium</strong>,
+        vous en forgez des armes, et vous les rendez plus fortes de quatre façons différentes :
+        la rareté, l'amélioration, les runes et la spécialisation de votre personnage.</p>
+      <p>Le ciel, lui, ne vous laisse pas tranquille : des <strong>météos</strong> se déclenchent
+        toutes les quelques minutes. Certaines vous aident, d'autres vous tombent dessus.</p>
+    </section>
+
+    <section id="s2">
+      <span class="sec-n">02</span>
+      <h2>Les deux façons de jouer</h2>
+      <p>À la première ouverture du monde, le jeu vous pose la question une seule fois. Le choix
+        vaut pour ce monde.</p>
+      <div class="tiles">
+        <div class="tile">
+          <div class="t"><span class="dot" style="background: var(--r8)"></span>Mode Défi</div>
+          <p>Une course de quatre-vingt-dix minutes. À la trente-sixième minute, la
+            <strong>Marée Prismatique</strong> commence à refermer la carte autour du village :
+            au-dehors, vous êtes rongé peu à peu. Le temps écoulé, c'est perdu.</p>
+        </div>
+        <div class="tile">
+          <div class="t"><span class="dot" style="background: var(--r3)"></span>Monde ouvert</div>
+          <p>Le même monde sans horloge et sans Marée. Sanctuaires, météos et boss reviennent
+            en cycles : le boss vaincu, trois sanctuaires se relèvent ailleurs, un peu plus
+            loin et un peu plus durs.</p>
+        </div>
+      </div>
+      <p class="note">Le Mode Défi est la version pour laquelle tout a été réglé : les durées,
+        la difficulté des monstres, la quantité de matériaux. Le Monde ouvert est le même jeu
+        pour ceux qui veulent l'explorer sans montre.</p>
+    </section>
+
+    <section id="s3">
+      <span class="sec-n">03</span>
+      <h2>Le début d'une partie</h2>
+      <p>Retirer la <strong>Lame du Serment</strong> déclenche le siège du village. Les autres
+        joueurs reçoivent au hasard un arc ou un sceptre, prêtés pour l'occasion. Vous perdez
+        seulement si tous les villageois meurent — pas si vous mourez, vous.</p>
+      <p>Le siège tenu, vous recevez de quoi démarrer pour de bon : du métal pour monter une
+        arme et une pièce d'armure d'un cran, des plumes pour la spécialisation, six
+        <strong>Éclats du Destin</strong> pour tenter la rareté, et du bois de prisme. Les trois
+        établis du village s'allument un moment pour que vous les trouviez.</p>
+      <h3>L'atelier du village</h3>
+      <p>À une douzaine de blocs de la Lame, une dalle porte tout ce qui sert à s'améliorer.
+        Trois postes sont à nous : la <strong>Forge d'Arcencium</strong> (l'amélioration),
+        l'<strong>Établi à sertir</strong> (la rareté, les runes, les artefacts) et l'<strong>Autel
+        de spécialisation</strong>. En face, sept postes empruntés au jeu et aux mods : enclume,
+        meule, table de forge, établi, et les tables de gemmes.</p>
+    </section>
+
+    <section id="s4">
+      <span class="sec-n">04</span>
+      <h2>L'équipement</h2>
+      <h3>Les matériaux</h3>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Matériau</th><th>Où le trouver</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Arcencium brut</strong></td><td>Un minerai qui ne se trouve que sous le niveau zéro, plus rare que le diamant. Il faut une pioche en diamant ; une pioche en fer n'en tire que des éclats, dont quatre font un brut. Il tombe aussi des cratères de météores et des cicatrices d'orage.</td></tr>
+            <tr><td><strong>Lingot d'Arcencium</strong></td><td>Un brut fondu. Sert à tout : les armes, l'armure, et à réveiller les sanctuaires.</td></tr>
+            <tr><td><strong>Branche et Fibre de Prisme</strong></td><td>De l'Arbre de Prisme, qui pousse en bosquets dans les plaines, forêts et taïgas, en trois tailles. On en trouve aussi dans les coffres des sanctuaires.</td></tr>
+            <tr><td><strong>Éclat du Destin</strong></td><td>Tombe au combat et dans les coffres. C'est la monnaie de la rareté.</td></tr>
+            <tr><td><strong>Pierre de Forge</strong></td><td>Tombe au combat, environ un monstre sur cinq. C'est la monnaie de l'amélioration.</td></tr>
+            <tr><td><strong>Plume d'Arcencium</strong></td><td>Tombe au combat. C'est la monnaie de la spécialisation, et elle survit à la partie.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Les armes, et comment les fabriquer</h3>
+      <p>Quatre armes, chacune avec sa mécanique propre. Toutes se fabriquent sur un établi
+        ordinaire.</p>
+
+      <div class="recipes">
+        <div class="recipe">
+          <div class="grid3" role="img" aria-label="Émeraude, épée en diamant, émeraude ; trois lingots ; branche, vide, branche">
+            <i data-k="E">E</i><i data-k="N">N</i><i data-k="E">E</i>
+            <i data-k="A">A</i><i data-k="A">A</i><i data-k="A">A</i>
+            <i data-k="B">B</i><i data-k=".">&nbsp;</i><i data-k="B">B</i>
+          </div>
+          <div>
+            <h4>Épée d'émeraude</h4>
+            <p class="cost">1 épée en diamant · 3 lingots<br>2 émeraudes · 2 branches</p>
+          </div>
+        </div>
+
+        <div class="recipe">
+          <div class="grid3" role="img" aria-label="Lingot, émeraude, lingot ; lingot, fibre, lingot ; émeraude, branche, émeraude">
+            <i data-k="A">A</i><i data-k="E">E</i><i data-k="A">A</i>
+            <i data-k="A">A</i><i data-k="F">F</i><i data-k="A">A</i>
+            <i data-k="E">E</i><i data-k="B">B</i><i data-k="E">E</i>
+          </div>
+          <div>
+            <h4>Glaive d'Arcencium</h4>
+            <p class="cost">4 lingots · 3 émeraudes<br>1 fibre · 1 branche</p>
+          </div>
+        </div>
+
+        <div class="recipe">
+          <div class="grid3" role="img" aria-label="Lingot, émeraude, lingot ; vide, lingot, vide ; vide, branche, vide">
+            <i data-k="A">A</i><i data-k="E">E</i><i data-k="A">A</i>
+            <i data-k=".">&nbsp;</i><i data-k="A">A</i><i data-k=".">&nbsp;</i>
+            <i data-k=".">&nbsp;</i><i data-k="B">B</i><i data-k=".">&nbsp;</i>
+          </div>
+          <div>
+            <h4>Sceptre d'Arcencium</h4>
+            <p class="cost">3 lingots · 1 émeraude<br>1 branche</p>
+          </div>
+        </div>
+
+        <div class="recipe">
+          <div class="grid3" role="img" aria-label="Émeraude, lingot, vide ; lingot, arc, branche ; émeraude, lingot, vide">
+            <i data-k="E">E</i><i data-k="A">A</i><i data-k=".">&nbsp;</i>
+            <i data-k="A">A</i><i data-k="R">R</i><i data-k="B">B</i>
+            <i data-k="E">E</i><i data-k="A">A</i><i data-k=".">&nbsp;</i>
+          </div>
+          <div>
+            <h4>Arc d'Arcencium</h4>
+            <p class="cost">3 lingots · 2 émeraudes<br>1 arc ordinaire · 1 branche</p>
+          </div>
+        </div>
+      </div>
+
+      <ul class="legend">
+        <li><span class="key" style="background:#C77DFF">A</span>Lingot d'Arcencium</li>
+        <li><span class="key" style="background:#5CE68A">E</span>Émeraude</li>
+        <li><span class="key" style="background:#9CE8FF">B</span>Branche de Prisme</li>
+        <li><span class="key" style="background:#FFD24A">F</span>Fibre de Prisme</li>
+        <li><span class="key" style="background:#6FD1FF">N</span>Épée en diamant</li>
+        <li><span class="key" style="background:#FF9B3D">R</span>Arc ordinaire</li>
+      </ul>
+
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Arme</th><th>Ce qu'elle fait de particulier</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Épée d'émeraude</strong></td><td>Frapper monte la Fureur Cristalline. À pleine fureur, les coups portent plus loin et plus fort.</td></tr>
+            <tr><td><strong>Glaive</strong></td><td>Plus lent et moins tranchant au repos. La Rage lui rend tout ce qui lui manque, à condition de ne jamais reculer.</td></tr>
+            <tr><td><strong>Sceptre</strong></td><td>Clic gauche, un rayon. Clic droit, une onde qui repousse. Tirer en rafale affaiblit les dégâts, qui remontent après une seconde de pause.</td></tr>
+            <tr><td><strong>Arc</strong></td><td>Bander monte la Tension Prismatique. À pleine tension, la flèche marque sa cible.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>L'armure</h3>
+      <p>Quatre pièces, un peu meilleures que la netherite, noires et parcourues de fissures
+        qui changent de couleur. La recette reprend la forme habituelle du jeu, avec une fibre
+        de prisme à la place d'un lingot.</p>
+
+      <div class="recipes">
+        <div class="recipe">
+          <div class="grid3" role="img" aria-label="Lingot, fibre, lingot ; lingot, vide, lingot">
+            <i data-k="A">A</i><i data-k="F">F</i><i data-k="A">A</i>
+            <i data-k="A">A</i><i data-k=".">&nbsp;</i><i data-k="A">A</i>
+            <i data-k=".">&nbsp;</i><i data-k=".">&nbsp;</i><i data-k=".">&nbsp;</i>
+          </div>
+          <div><h4>Casque</h4><p class="cost">4 lingots · 1 fibre</p></div>
+        </div>
+        <div class="recipe">
+          <div class="grid3" role="img" aria-label="Lingot, vide, lingot ; lingot, fibre, lingot ; trois lingots">
+            <i data-k="A">A</i><i data-k=".">&nbsp;</i><i data-k="A">A</i>
+            <i data-k="A">A</i><i data-k="F">F</i><i data-k="A">A</i>
+            <i data-k="A">A</i><i data-k="A">A</i><i data-k="A">A</i>
+          </div>
+          <div><h4>Plastron</h4><p class="cost">7 lingots · 1 fibre</p></div>
+        </div>
+        <div class="recipe">
+          <div class="grid3" role="img" aria-label="Lingot, fibre, lingot ; lingot, vide, lingot ; lingot, vide, lingot">
+            <i data-k="A">A</i><i data-k="F">F</i><i data-k="A">A</i>
+            <i data-k="A">A</i><i data-k=".">&nbsp;</i><i data-k="A">A</i>
+            <i data-k="A">A</i><i data-k=".">&nbsp;</i><i data-k="A">A</i>
+          </div>
+          <div><h4>Jambières</h4><p class="cost">6 lingots · 1 fibre</p></div>
+        </div>
+        <div class="recipe">
+          <div class="grid3" role="img" aria-label="Lingot, vide, lingot ; fibre, vide, lingot">
+            <i data-k="A">A</i><i data-k=".">&nbsp;</i><i data-k="A">A</i>
+            <i data-k="F">F</i><i data-k=".">&nbsp;</i><i data-k="A">A</i>
+            <i data-k=".">&nbsp;</i><i data-k=".">&nbsp;</i><i data-k=".">&nbsp;</i>
+          </div>
+          <div><h4>Bottes</h4><p class="cost">3 lingots · 1 fibre</p></div>
+        </div>
+      </div>
+
+      <p class="note">Les armes et armures des autres mods, et celles du jeu de base, passent
+        aussi par nos établis — mais elles plafonnent plus tôt. Voir la rareté et l'amélioration
+        ci-dessous.</p>
+    </section>
+
+    <section id="s5">
+      <span class="sec-n">05</span>
+      <h2>La rareté</h2>
+      <p>Chaque pièce d'équipement porte un rang de rareté, qui se voit à la couleur de son nom.
+        Un rang plus haut donne plus de chances de coup critique et des critiques plus violents —
+        et surtout, il autorise des <strong>runes plus puissantes</strong>.</p>
+      <p>On la tente à l'<strong>Établi à sertir</strong> : posez la pièce, posez des Éclats du
+        Destin à côté, reprenez la pièce. Le dé est lancé au moment où vous la reprenez. Plus
+        vous mettez d'éclats, plus vous avez de chances — et ce que vous avez déjà dépensé sur
+        <em>cette pièce-là</em> vous reste acquis : à force d'essayer, on finit par y arriver.</p>
+
+      <div class="ladder">
+        <div class="rung"><span class="chip" style="background:var(--r1)"></span><span class="name">Limpide</span><span class="cap">rang 1</span></div>
+        <div class="rung"><span class="chip" style="background:var(--r2)"></span><span class="name">Diaphane</span><span class="cap">rang 2</span></div>
+        <div class="rung"><span class="chip" style="background:var(--r3)"></span><span class="name">Splendide</span><span class="cap">rang 3</span></div>
+        <div class="rung"><span class="chip" style="background:var(--r4)"></span><span class="name">Magnifique</span><span class="cap">rang 4</span></div>
+        <div class="rung"><span class="chip" style="background:var(--r5)"></span><span class="name">Solaire</span><span class="cap">rang 5 · plafond des pièces empruntées</span></div>
+        <div class="rung"><span class="chip" style="background:var(--r6)"></span><span class="name">Céleste</span><span class="cap">rang 6</span></div>
+        <div class="rung"><span class="chip" style="background:var(--r7)"></span><span class="name">Féerique</span><span class="cap">rang 7</span></div>
+        <div class="rung"><span class="chip" style="background:var(--r8)"></span><span class="name">Prismatique</span><span class="cap">rang 8 · réservé à nos pièces</span></div>
+      </div>
+      <p>Une épée trouvée dans un autre mod, ou une épée en diamant, ne dépasse pas
+        <strong>Solaire</strong>. Seul l'équipement d'Arcencium va jusqu'au Prismatique : c'est
+        ce qui donne une raison de le chercher.</p>
+    </section>
+
+    <section id="s6">
+      <span class="sec-n">06</span>
+      <h2>L'amélioration, de +1 à +10</h2>
+      <p>À la <strong>Forge d'Arcencium</strong>, une pièce monte d'un cran à la fois. Chaque
+        tentative coûte une Pierre de Forge et du métal, et peut échouer — mais un échec ne fait
+        <strong>jamais redescendre</strong>. Il coûte la pierre et le métal, rien de plus.</p>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Passage</th><th>Chances</th><th>Ce que porte la pièce</th></tr></thead>
+          <tbody>
+            <tr><td>vers +1</td><td class="num">90 %</td><td class="num">+5 %</td></tr>
+            <tr><td>vers +3</td><td class="num">74 %</td><td class="num">+13 %</td></tr>
+            <tr><td>vers +5</td><td class="num">52 %</td><td class="num">+24 %</td></tr>
+            <tr><td>vers +7</td><td class="num">36 %</td><td class="num">+39 %</td></tr>
+            <tr><td>vers +8</td><td class="num">26 %</td><td class="num">+55 %</td></tr>
+            <tr><td>vers +9</td><td class="num">18 %</td><td class="num">+75 %</td></tr>
+            <tr><td>vers +10</td><td class="num">10 %</td><td class="num">+110 %</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Le niveau se voit sur l'arme : la lame se remplit, puis s'entoure d'un halo, puis
+        d'étincelles. Les pièces qui ne sont pas d'Arcencium s'arrêtent à <strong>+7</strong>.</p>
+      <p class="note">Pendant l'<strong>Heure Dorée</strong>, toutes les chances montent de
+        quinze points. C'est le moment de tenter les crans difficiles.</p>
+    </section>
+
+    <section id="s7">
+      <span class="sec-n">07</span>
+      <h2>Les runes</h2>
+      <p>Une rune se grave sur une arme ou sur une armure, à l'<strong>Établi à sertir</strong> :
+        posez la pièce, posez la rune, reprenez la pièce. C'est tout.</p>
+      <p>Une rune porte <strong>de une à dix options</strong>, tirées au hasard quand elle tombe.
+        Chaque option a une lettre — <strong>C, B, A, S</strong> — et une valeur tirée dans la
+        fourchette de cette lettre. Une bonne rune, c'est beaucoup d'options et de bonnes lettres.</p>
+      <p>Le <strong>rang</strong> de la rune, de 1 à 8, dit dans quel vivier de lettres elle a
+        été tirée. Et c'est là que la rareté compte : <strong>une pièce n'accepte pas une rune
+        d'un rang supérieur au sien</strong>. Une arme Solaire prend au mieux une rune de rang 5.</p>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Rang</th><th>Vivier de lettres</th><th>Options</th></tr></thead>
+          <tbody>
+            <tr><td class="num">1</td><td class="num">C</td><td class="num">1</td></tr>
+            <tr><td class="num">3</td><td class="num">CC B</td><td class="num">1 à 3</td></tr>
+            <tr><td class="num">5</td><td class="num">CC BB A</td><td class="num">3 à 5</td></tr>
+            <tr><td class="num">7</td><td class="num">CC BB AAA SS</td><td class="num">7 à 9</td></tr>
+            <tr><td class="num">8</td><td class="num">CC BB AAA SSS</td><td class="num">8 à 10</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Les <strong>runes d'arme</strong> donnent du tranchant, de la précision, de la cadence,
+        de l'allonge, de la percée d'armure, des saignements. Elles se gravent sur l'arme
+        <em>ou sur le casque</em>, qui tient lieu d'arme secondaire.</p>
+      <p>Les <strong>runes d'armure</strong> donnent de la vie, de l'esquive, de la défense, et
+        des réductions fixes de dégâts au corps à corps, à distance ou magiques.</p>
+      <p class="note">Les valeurs s'additionnent entre toutes les pièces portées. Une seule
+        exception : les options « PC », dont seule la meilleure compte par catégorie.</p>
+    </section>
+
+    <section id="s8">
+      <span class="sec-n">08</span>
+      <h2>Le personnage</h2>
+      <h3>Le niveau Héros</h3>
+      <p>Tuer des monstres fait monter votre <strong>niveau Héros</strong>, et chaque niveau donne
+        des points à placer vous-même. La touche <strong>H</strong> ouvre la fenêtre. Prendre un
+        sanctuaire en offre plusieurs d'un coup.</p>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Voie</th><th>Ce qu'elle donne</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Attaque</strong></td><td>Chance de coup critique et dégâts critiques</td></tr>
+            <tr><td><strong>Défense</strong></td><td>Esquive, et réduction des critiques que vous subissez</td></tr>
+            <tr><td><strong>Vitalité</strong></td><td>Attaque et armure en points fixes</td></tr>
+            <tr><td><strong>Élément</strong></td><td>Résistance élémentaire</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>La spécialisation</h3>
+      <p>À l'<strong>Autel de spécialisation</strong>, vos plumes d'Arcencium montent un niveau
+        de spécialisation, de +1 à +20. Comme à la Forge, une tentative peut échouer et ne fait
+        jamais redescendre — elle consomme seulement les plumes.</p>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Palier</th><th>Plumes</th><th>Chances</th></tr></thead>
+          <tbody>
+            <tr><td>vers +1</td><td class="num">3</td><td class="num">100 %</td></tr>
+            <tr><td>vers +5</td><td class="num">4</td><td class="num">80 %</td></tr>
+            <tr><td>vers +10</td><td class="num">7</td><td class="num">55 %</td></tr>
+            <tr><td>vers +15</td><td class="num">10</td><td class="num">30 %</td></tr>
+            <tr><td>vers +20</td><td class="num">20</td><td class="num">13 %</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Chaque palier renforce vos ailes et donne des points de héros. Cette progression
+        <strong>survit à la partie</strong> : elle est à vous, pas à votre équipement.</p>
+    </section>
+
+    <section id="s9">
+      <span class="sec-n">09</span>
+      <h2>Les ailes</h2>
+      <p>Vos ailes apparaissent avec votre premier niveau de spécialisation et grandissent
+        avec lui. Elles ne sont pas qu'un ornement : chaque apparence porte ses propres bonus,
+        actifs en permanence.</p>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Ailes</th><th>Ce qu'elles donnent</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Papillon</strong></td><td>+4 % esquive, +6 % vitesse</td></tr>
+            <tr><td><strong>Émeraude</strong></td><td>+12 % points de vie, +7 % défense, +8 % vitesse</td></tr>
+            <tr><td><strong>Rubis</strong></td><td>+10 % attaque, +7 % vitesse</td></tr>
+            <tr><td><strong>Obscures</strong></td><td>+6 % chance critique, +15 % dégâts critiques, +5 % vitesse</td></tr>
+            <tr><td><strong>Givre</strong></td><td>+6 % esquive, +8 % défense, givre sur coup critique, +5 % vitesse</td></tr>
+            <tr><td><strong>Braise</strong></td><td>+10 % dégâts de Feu, brûlure sur coup critique, +5 % vitesse</td></tr>
+            <tr><td><strong>Tempête</strong></td><td>+10 % cadence, +5 % chance de déferlement, +3 % vitesse</td></tr>
+            <tr><td><strong>Prismatiques</strong></td><td>+5 % dégâts élémentaires, +5 % vitesse</td></tr>
+            <tr><td><strong>Pierres précieuses</strong></td><td>+4 % attaque, défense, vie et élément, +5 % vitesse</td></tr>
+            <tr><td><strong>Aurore</strong></td><td>+7 résistance élémentaire, −5 % résistances de l'ennemi, régénération hors combat, +3 % vitesse</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <h3>Changer d'ailes</h3>
+      <p>Il faut une <strong>Plume d'apparence</strong>, qui tombe sur les monstres puissants et
+        dont la sorte dépend de l'élément de la bête et de la météo du moment. Clic droit avec
+        la plume en main : vos ailes changent d'apparence, et donc de bonus.</p>
+      <p class="note">Il faut des ailes d'un niveau suffisant pour en changer l'apparence. À
+        <strong>+15</strong> de spécialisation, les ailes sont complètes : elles vous portent en
+        vol plané si vous maintenez le saut, et au maximum elles donnent un double saut.</p>
+    </section>
+
+    <section id="s10">
+      <span class="sec-n">10</span>
+      <h2>Les éléments</h2>
+      <p>Vous portez un élément, et les créatures aussi. Il n'y a qu'une question à se poser
+        devant un ennemi : <strong>suis-je son contraire ?</strong></p>
+      <div class="tiles">
+        <div class="tile">
+          <div class="t"><span class="dot" style="background: var(--eau)"></span>Eau
+            <span style="color:var(--muted);font-weight:400">contre</span>
+            <span class="dot" style="background: var(--feu)"></span>Feu</div>
+          <p>Chacun frappe l'autre à <strong>160 %</strong>. L'opposition est symétrique : celui
+            qui frappe fort le reçoit fort en retour.</p>
+        </div>
+        <div class="tile">
+          <div class="t"><span class="dot" style="background: var(--lumiere)"></span>Lumière
+            <span style="color:var(--muted);font-weight:400">contre</span>
+            <span class="dot" style="background: var(--obscur)"></span>Obscur</div>
+          <p>Le second couple, sur la même règle. Entre les deux couples, rien : le Feu contre
+            la Lumière ne vaut ni plus ni moins que le Feu contre l'Obscur.</p>
+        </div>
+      </div>
+      <p>Un élément contre <strong>lui-même</strong> ne fait que <strong>45 %</strong> : une arme
+        de feu n'est pas le bon choix par défaut. Le <strong>Neutre</strong>, lui, n'a ni bonus
+        ni malus ni résistance.</p>
+      <p>Pour changer d'élément, il faut une <strong>Pierre élémentaire</strong>, qui tombe sur
+        les créatures de cet élément-là. Chasser des créatures de Lumière donne du cristal de
+        Lumière : c'est la boucle du système.</p>
+    </section>
+
+    <section id="s11">
+      <span class="sec-n">11</span>
+      <h2>Les météos</h2>
+      <p>Une météo touche toute la carte en même temps, dure <strong>cinq minutes</strong>, et
+        s'annonce quinze secondes à l'avance. Jamais deux fois la même de suite. La première
+        d'une partie est toujours l'Aurore.</p>
+
+      <h3>Celles qui vous aident</h3>
+      <div class="tiles">
+        <div class="tile">
+          <div class="t"><span class="dot" style="background: var(--w-aurore)"></span>Aurore</div>
+          <p>Des rideaux de lumière dans le ciel. Hâte et vitesse, les filons proches se montrent
+            à travers la roche, et le sous-sol s'ouvre : des puits de lumière pour descendre, des
+            brumes qui vous téléportent d'un filon à l'autre, et parfois une salle qui s'ouvre
+            devant votre pioche. À la fin, une brume se lève à côté de vous et vous ramène au
+            jour si vous le voulez.</p>
+        </div>
+        <div class="tile">
+          <div class="t"><span class="dot" style="background: var(--w-battue)"></span>La Battue</div>
+          <p>Le monde perd ses couleurs, en noir et blanc. Tout ce qui vit se détoure à travers
+            les murs, et une <strong>Proie</strong> est désignée : la poursuivre et l'abattre paie
+            mieux que tout le reste. Un tambour bat plus vite à mesure que vous approchez.</p>
+        </div>
+        <div class="tile">
+          <div class="t"><span class="dot" style="background: var(--w-doree)"></span>L'Heure Dorée</div>
+          <p>Le soleil s'attarde au ras de l'horizon. La Forge réussit quinze points plus
+            souvent, et une tentative de rareté est offerte. Des <strong>Portes dorées</strong>
+            s'ouvrent près de vous et vous ramènent à l'atelier du village, puis vous
+            redéposent où vous étiez. Elles tiennent quarante-cinq secondes après la fin.</p>
+        </div>
+        <div class="tile">
+          <div class="t"><span class="dot" style="background: var(--w-embellie)"></span>L'Embellie</div>
+          <p>L'accalmie qui suit chaque tempête. Une minute où plus rien n'apparaît. Respirez.</p>
+        </div>
+      </div>
+
+      <h3>Celles qui vous tombent dessus</h3>
+      <div class="tiles">
+        <div class="tile">
+          <div class="t"><span class="dot" style="background: var(--w-nuit)"></span>Nuit d'Arcencium</div>
+          <p>La nuit tombe en plein jour, et des éclairs colorés pleuvent. La couleur annonce
+            l'effet : rouge met le feu, bleu gèle, jaune envoie une onde au ras du sol qui
+            touche tout le monde, rose marque les monstres, vert laisse une cicatrice à miner
+            dans les trente secondes.</p>
+        </div>
+        <div class="tile">
+          <div class="t"><span class="dot" style="background: var(--w-meteores)"></span>Pluie de Météores</div>
+          <p>Un cercle de flammes marque le sol trois secondes avant chaque impact. Ça blesse,
+            ça casse, ça laisse de l'Arcencium, et ça perce parfois jusqu'aux grottes.</p>
+        </div>
+        <div class="tile">
+          <div class="t"><span class="dot" style="background: var(--w-dechirure)"></span>Déchirure Prismatique</div>
+          <p>La gravité tombe au cinquième. Vous sautez cinq fois plus haut, des éclats
+            d'Arcencium flottent hors d'atteinte le reste du temps, et des failles vous
+            déposent près d'un sanctuaire. Attention à la fin : la gravité revient d'un coup.</p>
+        </div>
+        <div class="tile">
+          <div class="t"><span class="dot" style="background: var(--w-orage)"></span>Orage Prismatique</div>
+          <p>Un cercle se resserre au sol avec un tic-tac qui s'accélère, puis la foudre tombe.
+            Mais rester dedans donne la <strong>Surcharge</strong> : force et vitesse pendant
+            trente secondes. La seule météo où l'on cherche à être touché.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="s12">
+      <span class="sec-n">12</span>
+      <h2>Les sanctuaires et la fin</h2>
+      <p>Les trois sanctuaires sont des monuments de pierre sombre : une pyramide, une muraille,
+        quatre tours d'angle et quatre portes. <strong>Vingt-huit coffres</strong> y attendent,
+        gardés étage par étage — on ne monte pas les vider sans combattre.</p>
+      <p>Au sommet de chacun, une <strong>ancre</strong>. L'alimenter en Arcencium — de plus en
+        plus cher à chaque fois — déclenche un siège qu'il faut tenir. Certaines ancres dorment
+        derrière des <strong>sceaux</strong> qu'il faut d'abord réveiller dans le monument.</p>
+      <p>Les trois ancres tenues, l'<strong>Arc-en-ciel</strong> se lève. Le boss est à son
+        sommet. Le tuer termine la partie — ou, en Monde ouvert, ouvre le cycle suivant.</p>
+      <div class="note">
+        <p><strong>En Mode Défi</strong>, la Marée Prismatique commence à la trente-sixième
+          minute et referme la carte jusqu'à cent vingt blocs autour du village. Au-dehors vous
+          n'êtes pas tué d'un coup, vous êtes rongé — mais c'est aussi là que tombent les
+          meilleurs matériaux. Les Jambières de Marée annulent cette morsure entièrement.</p>
+      </div>
+    </section>
+
+    <footer>
+      Mode Arcencium — manuel du joueur. Les chiffres de ce document sont ceux du jeu au
+      9 septembre 2026.
+    </footer>
+
+  </main>
+</div>
