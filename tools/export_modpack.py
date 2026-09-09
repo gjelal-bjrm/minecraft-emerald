@@ -29,8 +29,19 @@ import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+# L'INSTANCE DU MODE, PAS CELLE D'A COTE.
+#
+# Le pack partait de « All the Mods 10 - CUSTOM ». Ce profil n'est pas le
+# notre : c'est une copie d'ATM10 dans laquelle le mode avait ete glisse a
+# l'epoque ou il n'etait qu'un mod. Son `minecraftinstance.json` porte donc
+# `installedModpack: All the Mods 10 - ATM10`, et le zip heritait de cette
+# filiation, avec la liste d'add-ons et les reglages d'un autre pack.
+#
+# « Mode Arcencium » est le profil du mode : aucun modpack de base, et la
+# meme liste de mods a quatre fichiers pres -- trois jars desactives qui
+# trainaient, et AllTheTweaks, dont on ne veut pas (voir SKIP_MODS).
 DEFAULT_INSTANCE = Path(os.environ.get("USERPROFILE", "")) / "curseforge" / "minecraft" \
-    / "Instances" / "All the Mods 10 - CUSTOM"
+    / "Instances" / "Mode Arcencium"
 
 NAME = "Mode Arcencium"
 AUTHOR = "Gjelal"

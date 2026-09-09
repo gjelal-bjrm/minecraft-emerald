@@ -281,32 +281,96 @@ public final class AuroreCaves {
         }
     }
 
-    /** La brume de rappel d'un joueur, s'il est sous terre et qu'il y a un jour au-dessus. */
+    /**
+     * La brume de rappel d'un joueur, s'il est sous terre et qu'il y a un jour
+     * au-dessus.
+     *
+     * A COTE DE LUI, JAMAIS SUR LUI. Elle se levait « a ses pieds », au sens
+     * propre : sur son bloc et sur celui de sa tete. Le joueur etait donc
+     * DEDANS des la premiere tique, et le depart partait tout seul -- « ca me
+     * fait remonter directement ». Le rappel doit etre une porte offerte, pas
+     * une trappe : on la voit, on finit sa veine, et l'on entre quand on veut.
+     *
+     * ET L'ON CREUSE S'IL LE FAUT. Au fond d'un puits d'un bloc de large, il
+     * n'y a pas de « a cote » : les six voisins sont de la roche. On taille
+     * alors une alcove d'un bloc de large et de deux de haut dans la paroi, ce
+     * qui est exactement ce que le joueur demandait. Elle ne mange que de la
+     * roche naturelle -- jamais un bloc pose, jamais un minerai.
+     */
     private static void placeRecall(ServerLevel level, ServerPlayer player) {
         BlockPos feet = player.blockPosition();
-        if (feet.getY() >= Underground.CEILING || level.canSeeSky(feet.above())
-                || !level.getBlockState(feet).isAir()) {
+        if (feet.getY() >= Underground.CEILING || level.canSeeSky(feet.above())) {
             return;
         }
         BlockPos top = level.getHeightmapPos(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, feet);
         if (top.getY() <= feet.getY() + 3) {
             return;
         }
-        recalls.put(feet, top);
-        links.put(feet, top);                          // un seul sens : on ne redescend pas par la
-        BlockPos[] cloud = {feet, feet.above(), feet.north(), feet.south(), feet.east(), feet.west()};
+        BlockPos anchor = recallSpot(level, feet);
+        if (anchor == null) {
+            return;                         // ni place ni roche a tailler : on n'insiste pas
+        }
+        recalls.put(anchor, top);
+        links.put(anchor, top);                        // un seul sens : on ne redescend pas par la
+        BlockPos[] cloud = {anchor, anchor.above()};
         for (BlockPos pos : cloud) {
             if (level.getBlockState(pos).isAir()) {
                 level.setBlock(pos, ModBlocks.RECALL_MIST.get().defaultBlockState(), 3);
-                mistBlocks.put(pos, feet);
+                mistBlocks.put(pos, anchor);
                 recallBlocks.add(pos);
             }
         }
+        // ET IL N'Y EST PAS DEJA. Meme posee a cote, la brume pourrait toucher
+        // sa boite : on le declare « touchait deja », ce qui repousse le depart
+        // au moment ou il en sortira et y reviendra de lui-meme.
+        wasTouching.add(player.getUUID());
         recallUntil = level.getGameTime() + RECALL_TICKS;
         player.sendSystemMessage(Component.translatable("mine.emeraldweapons.aurore.recall")
                 .withStyle(style -> style.withColor(0xFFD24A)));
         player.playNotifySound(SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.AMBIENT, 1.0F, 1.6F);
         LOGGER.info("Aurore : brume de rappel pour {} en {} vers {}", player.getName().getString(), feet, top);
+    }
+
+    /**
+     * Ou poser la brume de rappel : a cote du joueur, ou dans la paroi.
+     *
+     * Trois passes, de la plus polie a la plus brutale. D'abord les quatre
+     * voisins de plain-pied, deja creux : rien a casser. Puis les quatre
+     * diagonales, pour le cas d'une galerie etroite. Enfin la taille : on
+     * ouvre une alcove d'un bloc sur deux dans la premiere paroi de roche
+     * naturelle venue. Null si les huit cotes sont autre chose que de la
+     * roche -- un coffre, une porte, un bloc pose -- car on ne casse jamais
+     * ce que le joueur a mis la.
+     */
+    @Nullable
+    private static BlockPos recallSpot(ServerLevel level, BlockPos feet) {
+        int[][] straight = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+        int[][] corners = {{1, 1}, {1, -1}, {-1, 1}, {-1, -1}};
+        for (int[][] ring : new int[][][]{straight, corners}) {
+            for (int[] d : ring) {
+                BlockPos spot = feet.offset(d[0], 0, d[1]);
+                if (level.getBlockState(spot).isAir() && level.getBlockState(spot.above()).isAir()) {
+                    return spot;
+                }
+            }
+        }
+        for (int[] d : straight) {
+            BlockPos spot = feet.offset(d[0], 0, d[1]);
+            BlockPos head = spot.above();
+            if (Underground.natural(level.getBlockState(spot))
+                    && (level.getBlockState(head).isAir()
+                        || Underground.natural(level.getBlockState(head)))) {
+                level.destroyBlock(spot, false);
+                if (!level.getBlockState(head).isAir()) {
+                    level.destroyBlock(head, false);
+                }
+                level.sendParticles(com.emerald.particles.ModParticles.PRISM_MOTE.get(),
+                        spot.getX() + 0.5, spot.getY() + 1.0, spot.getZ() + 0.5,
+                        12, 0.4, 0.6, 0.4, 0.02);
+                return spot;
+            }
+        }
+        return null;
     }
 
     private static void clearRecalls(ServerLevel level) {

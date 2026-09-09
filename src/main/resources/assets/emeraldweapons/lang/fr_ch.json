@@ -540,7 +540,7 @@
   "mine.emeraldweapons.aurore.chamber.vein": "La roche s'ouvre. Une brume d'Aurore, et sa jumelle contre un filon de %s, à %s blocs.",
   "mine.emeraldweapons.aurore.chamber.cave": "La roche s'ouvre. Une brume d'Aurore, et sa jumelle dans une grotte, à %s blocs.",
   "mine.emeraldweapons.aurore.chamber.surface": "La roche s'ouvre. Une brume d'Aurore, et sa jumelle au jour, %s blocs au-dessus.",
-  "mine.emeraldweapons.aurore.recall": "Une brume de rappel se lève à vos pieds : entrez-y, elle vous ramène au jour.",
+  "mine.emeraldweapons.aurore.recall": "Une brume de rappel s'ouvre juste à côté de vous : elle tient 45 secondes, entrez-y quand vous voulez remonter au jour.",
   "block.emeraldweapons.golden_gate": "Porte dorée",
   "weather.emeraldweapons.vein.gate": "Porte",
   "weather.emeraldweapons.gate.opened": "Une Porte dorée s'ouvre à %s blocs : elle mène à l'atelier du village, et vous ramène.",

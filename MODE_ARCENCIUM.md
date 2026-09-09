@@ -4649,3 +4649,104 @@ en puissance avec le temps -- leurs cadences sont plates -- cinq minutes
 d'Orage font deux fois et demie la foudre de deux minutes, sans courbe. Si le
 mode parait trop charge a l'essai, c'est l'ecart entre tirages qu'il faudra
 allonger, pas la duree qu'il faudra reprendre.
+
+## 57. Le sous-sol sous le village, le rappel qui attend, l'atelier elargi *(9 sept. 2026)*
+
+### A. « J'ai mine dix minutes, il ne s'est rien passe »
+
+Ni chambre, ni percee, ni poche, ni echo, sur deux Aurores entieres. Le
+journal de partie du joueur a donne la reponse en une passe : il minait SOUS
+LE VILLAGE.
+
+Les deux zones de paix d'`Underground` etaient des CYLINDRES sans fond --
+quarante-huit blocs autour du village, cent dix autour de chaque ancre, du
+plafond du sous-sol jusqu'au fond du monde. Or ce qu'un joueur fait pendant
+l'Aurore, c'est creuser vers le bas depuis la ou il se tient, et la ou il se
+tient c'est le village, avec l'atelier et les trois etablis.
+
+Sur treize endroits releves dans son journal, entre y = -8 et y = -37, ONZE
+tombaient dans les quarante-huit blocs du village : de treize a quarante-quatre
+blocs du centre.
+
+| endroit mine | distance au village | avant | apres |
+| --- | --- | --- | --- |
+| (-312, 232) | 13 | bloque | libre |
+| (-327, 202) | 23 | bloque | libre |
+| (-343, 193) | 38 | bloque | libre |
+| (-347, 183) | 48 | libre | libre |
+
+La zone de paix a maintenant un fond : sous y = 24, plus aucune emprise de
+surface ne protege quoi que ce soit. Le village est a y = 71 et le sous-sol
+commence a 48 : il reste quarante-sept blocs de roche entre le plus haut
+evenement possible et le plancher du village.
+
+Et la regle se lit en jeu. `/arcencium what` ajoute une ligne :
+
+    sous-sol a vos pieds (y=-20) : AUTORISE | village a 2 blocs | plafond y=48
+    sous-sol a vos pieds (y=30)  : interdit | village a 2 blocs | plafond y=48
+
+C'est exactement la question qu'on ne pouvait pas poser, et qui a coute deux
+Aurores au joueur.
+
+### B. Le Rappel etait une trappe, il devient une porte
+
+« Quand la meteo se termine, ca me fait remonter directement. » La brume se
+levait « a ses pieds » au sens propre : sur son bloc et sur celui de sa tete.
+Le joueur etait donc DEDANS des la premiere tique, et le depart partait tout
+seul. La detection de bord existait pourtant -- il faut ne pas toucher a la
+tique precedente -- mais le bloc n'existait pas a la tique precedente.
+
+La brume s'ouvre desormais A COTE, jamais sur lui, et le joueur est declare
+« touchait deja » a la pose : meme colle a elle, rien ne part tant qu'il n'y
+entre pas de lui-meme.
+
+Et elle taille s'il le faut, ce que le joueur demandait. Trois passes : les
+quatre voisins de plain-pied, puis les quatre diagonales, puis une alcove d'un
+bloc sur deux ouverte dans la premiere paroi de ROCHE NATURELLE venue. Jamais
+un bloc pose, jamais un minerai, jamais un coffre.
+
+Verifie dans une poche d'un seul bloc, quatre parois de deepslate :
+
+    BILAN RAPPEL y=-20 | a cote e1 o0 s0 n0 | SUR LUI=0
+
+L'alcove a ete taillee a l'est, la brume s'y est posee, et le joueur est reste
+a y = -20.
+
+### C. L'atelier a une rangee d'en face
+
+Le mode se joue dans un modpack, et le joueur passait son temps a chercher une
+enclume. Reparer, retirer un enchantement, tailler une gemme : ce sont les
+gestes qui ENTOURENT nos trois etablis, et les envoyer chercher ailleurs casse
+la boucle qui ramene au village.
+
+La dalle passe de 7 x 5 a 10 x 9, avec quatre lanternes au lieu de deux. En
+face de nos trois stations, a quatre blocs, sept postes empruntes :
+
+| poste | ce qu'il sert |
+| --- | --- |
+| enclume | reparer, renommer, combiner les enchantements |
+| meule | retirer un enchantement, reparer sans livre |
+| table de forge | monter au netherite |
+| etabli | tout le reste, et le sertissage des gemmes d'Apotheosis |
+| table de taille | tailler et fusionner les gemmes |
+| table de recuperation | demonter une piece pour reprendre ce qu'elle porte |
+| table de reforge simple | refaire les affixes d'une piece |
+
+Les trois d'Apotheosis sont demandes au REGISTRE et poses seulement s'ils
+existent : sans lui, la dalle a trois places vides et le mode tourne. Le
+journal le dit alors, une ligne par poste absent.
+
+Verifie en jeu : les sept postes repondent « POSTE OK » a leur position.
+
+### D. Le pack partait de la mauvaise instance
+
+`export_modpack.py` lisait « All the Mods 10 - CUSTOM ». Ce profil n'est pas le
+notre : c'est une copie d'ATM10 dans laquelle le mode avait ete glisse a
+l'epoque ou il n'etait qu'un mod, et son `minecraftinstance.json` porte
+`installedModpack: All the Mods 10 - ATM10`. Le zip heritait de cette
+filiation, avec la liste d'add-ons et les reglages d'un autre pack.
+
+Il part maintenant de « Mode Arcencium » : aucun modpack de base, 438 add-ons
+CurseForge, et la meme liste de mods a quatre fichiers pres -- trois jars
+desactives qui trainaient dans l'autre profil, et AllTheTweaks, qu'on ne
+voulait deja pas.

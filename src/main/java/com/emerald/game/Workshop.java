@@ -17,9 +17,21 @@ import net.minecraft.world.level.block.state.BlockState;
  * les a avant la deuxieme moitie de partie ; le village n'est alors qu'un
  * point de depart qu'on ne revoit jamais.
  *
- * Une dalle de briques de gangue a douze blocs de la Lame, trois stations en
- * ligne face a elle, deux lanternes. Pose a la mise en place, apres la Lame :
- * elle est donc au meme endroit dans chaque partie, et l'on sait ou aller.
+ * Une dalle de briques de gangue a douze blocs de la Lame, DEUX RANGEES face a
+ * face, deux lanternes. Pose a la mise en place, apres la Lame : elle est donc
+ * au meme endroit dans chaque partie, et l'on sait ou aller.
+ *
+ * LA SECONDE RANGEE N'EST PAS DE NOUS, ET C'EST LE BUT.
+ *
+ * Le mode se joue dans un modpack, et le joueur passait son temps a chercher
+ * une enclume. Reparer une epee, retirer un enchantement, tailler une gemme :
+ * ce sont les gestes qui ENTOURENT nos trois etablis, on les fait entre deux
+ * ameliorations, et les envoyer chercher ailleurs casse la boucle qui ramene
+ * au village. On emprunte donc au jeu et a Apotheosis ce qui manque, et on le
+ * pose en face.
+ *
+ * Les blocs d'Apotheosis sont demandes au registre et poses SEULEMENT s'ils
+ * existent : le mode doit tourner sans lui.
  */
 public final class Workshop {
 
@@ -35,11 +47,11 @@ public final class Workshop {
         int cx = centre.getX();
         int cz = centre.getZ();
 
-        // la dalle : 7 x 5, et de l'air au-dessus pour qu'on y circule
-        for (int dx = -3; dx <= 3; dx++) {
-            for (int dz = -2; dz <= 2; dz++) {
+        // la dalle : 10 x 9, et de l'air au-dessus pour qu'on y circule
+        for (int dx = -3; dx <= 6; dx++) {
+            for (int dz = -4; dz <= 4; dz++) {
                 BlockPos floor = centre.offset(dx, -1, dz);
-                boolean edge = Math.abs(dx) == 3 || Math.abs(dz) == 2;
+                boolean edge = dx == -3 || dx == 6 || Math.abs(dz) == 4;
                 level.setBlock(floor, edge ? Blocks.POLISHED_DEEPSLATE.defaultBlockState()
                         : Blocks.DEEPSLATE_BRICKS.defaultBlockState(), 3);
                 for (int dy = 0; dy <= 3; dy++) {
@@ -51,16 +63,54 @@ public final class Workshop {
         station(level, centre.offset(0, 0, -2), ModBlocks.ARCENCIUM_FORGE.get().defaultBlockState());
         station(level, centre.offset(0, 0, 0), ModBlocks.SOCKET_BENCH.get().defaultBlockState());
         station(level, centre.offset(0, 0, 2), ModBlocks.SPECIALIZATION_ALTAR.get().defaultBlockState());
+        // EN FACE, CE QU'ON EMPRUNTE. Sept postes sur la rangee d'en face, a
+        // quatre blocs : on tient au milieu et l'on atteint les deux rangees.
+        //
+        // Du jeu : l'enclume repare et combine, la meule retire et repare sans
+        // livre, la table de forge monte au netherite, l'etabli sert a tout --
+        // et c'est aussi la que se sertit une gemme d'Apotheosis.
+        station(level, centre.offset(4, 0, -3), Blocks.ANVIL.defaultBlockState());
+        station(level, centre.offset(4, 0, -2), Blocks.GRINDSTONE.defaultBlockState());
+        station(level, centre.offset(4, 0, -1), Blocks.SMITHING_TABLE.defaultBlockState());
+        station(level, centre.offset(4, 0, 0), Blocks.CRAFTING_TABLE.defaultBlockState());
+        // D'Apotheosis : tailler les gemmes, demonter une piece pour recuperer
+        // ce qu'elle porte, et reforger. Absents, on saute -- sans rien casser.
+        borrowed(level, centre.offset(4, 0, 1), "apotheosis:gem_cutting_table");
+        borrowed(level, centre.offset(4, 0, 2), "apotheosis:salvaging_table");
+        borrowed(level, centre.offset(4, 0, 3), "apotheosis:simple_reforging_table");
         // ON RETIENT L'ENDROIT. Sans cela, il faut chercher les trois blocs
         // autour de la Lame -- et dans un monde d'essai remis en place plusieurs
         // fois, la recherche tombait sur les etablis d'un atelier precedent.
         GameState.get(level).setWorkshop(centre);
         LOGGER.info("Atelier pose en {} (Lame en {})", centre, blade);
-        // deux lanternes sur des piliers, aux coins vers la Lame
-        for (int dz : new int[]{-2, 2}) {
-            level.setBlock(centre.offset(-3, 0, dz), Blocks.DEEPSLATE_BRICK_WALL.defaultBlockState(), 3);
-            level.setBlock(centre.offset(-3, 1, dz), Blocks.LANTERN.defaultBlockState(), 3);
+        // quatre lanternes sur des piliers, aux quatre coins de la dalle
+        for (int dx : new int[]{-3, 6}) {
+            for (int dz : new int[]{-3, 3}) {
+                level.setBlock(centre.offset(dx, 0, dz), Blocks.DEEPSLATE_BRICK_WALL.defaultBlockState(), 3);
+                level.setBlock(centre.offset(dx, 1, dz), Blocks.LANTERN.defaultBlockState(), 3);
+            }
         }
+    }
+
+    /**
+     * Un poste emprunte a un autre mod, pose s'il est la.
+     *
+     * On ne code jamais en dur une dependance qu'on n'a pas declaree : si
+     * Apotheosis n'est pas installe, la dalle a simplement trois places vides,
+     * et le mode tourne. Le journal le dit une fois, pour qu'on sache pourquoi.
+     */
+    private static void borrowed(ServerLevel level, BlockPos at, String id) {
+        net.minecraft.resources.ResourceLocation key =
+                net.minecraft.resources.ResourceLocation.tryParse(id);
+        if (key == null) {
+            return;
+        }
+        var block = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getOptional(key);
+        if (block.isEmpty()) {
+            LOGGER.info("Atelier : {} absent du jeu, la place reste vide", id);
+            return;
+        }
+        station(level, at, block.get().defaultBlockState());
     }
 
     /**

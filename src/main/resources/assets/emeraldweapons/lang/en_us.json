@@ -540,7 +540,7 @@
   "mine.emeraldweapons.aurore.chamber.vein": "The rock opens. An Aurora mist, and its twin against a %s vein, %s blocks away.",
   "mine.emeraldweapons.aurore.chamber.cave": "The rock opens. An Aurora mist, and its twin in a cave, %s blocks away.",
   "mine.emeraldweapons.aurore.chamber.surface": "The rock opens. An Aurora mist, and its twin in daylight, %s blocks above.",
-  "mine.emeraldweapons.aurore.recall": "A recall mist rises at your feet: step in, it takes you back to daylight.",
+  "mine.emeraldweapons.aurore.recall": "A recall mist opens right beside you: it holds for 45 seconds, step in whenever you want to return to daylight.",
   "block.emeraldweapons.golden_gate": "Golden Gate",
   "weather.emeraldweapons.vein.gate": "Gate",
   "weather.emeraldweapons.gate.opened": "A Golden Gate opens %s blocks away: it leads to the village workshop, and back.",
