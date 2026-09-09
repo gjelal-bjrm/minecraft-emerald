@@ -4750,3 +4750,84 @@ Il part maintenant de « Mode Arcencium » : aucun modpack de base, 438 add-ons
 CurseForge, et la meme liste de mods a quatre fichiers pres -- trois jars
 desactives qui trainaient dans l'autre profil, et AllTheTweaks, qu'on ne
 voulait deja pas.
+
+## 58. Le systeme s'ouvre a tout l'equipement *(9 sept. 2026)*
+
+### A. Pourquoi une epee de PIERRE passait deja
+
+Le joueur s'est etonne : « j'avais une epee en pierre avec les statistiques
+d'Apotheosis, j'ai pu la runer ET l'ameliorer ». Les deux sont vrais et ne se
+contredisent pas. Un affixe d'Apotheosis est une DONNEE posee sur l'objet, pas
+un objet neuf : l'epee reste `minecraft:stone_sword`, donc vanilla, donc
+admise par la regle d'alors -- « l'espace de noms minecraft, et rien d'autre ».
+
+Ce que cette regle fermait, c'etait le reste du modpack. Quatre cent quarante
+mods, et pas une seule de leurs armes ne pouvait entrer a l'etabli.
+
+### B. Deux familles, deux plafonds, et c'est tout
+
+`GearEligibility` ne demande plus « d'ou vient cet objet » mais « est-il des
+notres » :
+
+| | Forge | rarete | runes |
+| --- | --- | --- | --- |
+| l'equipement du mode | +10 | Prismatique | rang 7 |
+| tout le reste, vanilla comme modde | +7 | Solaire | rang 5 |
+
+Un seul plafond pour ce qui n'est pas de nous, et non un troisieme palier pour
+les mods : on ne connait ni la force ni l'equilibre de quatre cents mods, et
+pretendre les classer serait inventer. Le plafond garde intacte la seule chose
+qui compte, l'equipement du mode reste ce qu'on cherche parce qu'il est le seul
+a aller au bout.
+
+Ce qui compte comme arme se lit aux ETIQUETTES communes -- `c:tools/melee_weapon`,
+`c:tools/ranged_weapon`, `c:tools/bow`, `c:tools/crossbow`, `c:tools/spear`,
+`c:tools/mace` -- que NeoForge remplit pour le jeu, que les mods serieux
+remplissent pour eux, et que les scripts d'unification du modpack completent.
+`SwordItem` sert de filet. Une armure se lit a `Equipable` et a son
+emplacement, l'armure de cheval exclue. Une pile de plus d'un objet n'est
+jamais un equipement : c'est le garde-fou contre une etiquette trop large.
+
+Verifie en jeu, `/arcencium what` en main :
+
+    twilightforest:ironwood_sword     | WEAPON  | plafond +7,  Solaire
+    minecraft:netherite_sword         | WEAPON  | plafond +7,  Solaire
+    minecraft:diamond_chestplate      | ARMOR   | plafond +7,  Solaire
+    emeraldweapons:arcencium_glaive   | WEAPON  | plafond +10, Prismatique
+    emeraldweapons:arcencium_chestplate | ARMOR | plafond +10, Prismatique
+    minecraft:diamond_pickaxe         | refusee par les etablis
+    minecraft:stick                   | refusee par les etablis
+
+### C. Nos armes et les gemmes d'Apotheosis
+
+Apotheosis range chaque objet dans une CATEGORIE, et c'est elle qui decide
+quelles gemmes s'y sertissent. Lecture faite dans son code : `bow` teste
+`BowItem`/`CrossbowItem` ; les quatre categories d'armure testent `Equipable`
+et l'emplacement ; `melee_weapon` teste les MODIFICATEURS D'ATTRIBUT de
+l'objet, c'est-a-dire s'il donne des degats d'attaque en main principale.
+
+| notre piece | categorie | avant |
+| --- | --- | --- |
+| Epee d'emeraude, Lame du Serment | melee_weapon | deja bonne |
+| Glaive d'Arcencium | melee_weapon | deja bonne |
+| Arc d'Arcencium | bow | deja bonne |
+| les quatre armures | helmet, chestplate, leggings, boots | deja bonnes |
+| **Sceptre d'Arcencium** | **none** | **aucune gemme** |
+
+Le Sceptre est declare `new Item.Properties().durability(900)` : il ne donne
+aucun modificateur d'attaque, donc Apotheosis le rangeait dans `none` et
+aucune gemme ne s'y posait. On ne touche pas a ses statistiques pour autant --
+la Concorde n'est pas une arme de melee et n'a pas a le devenir. On passe par
+le point d'extension prevu, la carte de donnees
+`apotheosis:loot_category_overrides`, qui force sa categorie sans rien changer
+d'autre. Les deux entrees d'origine d'Apotheosis y sont recopiees, pour que
+notre fichier ne puisse pas les effacer s'il remplacait au lieu de fusionner.
+
+Le mode expose aussi enfin ses etiquettes communes -- `c:tools/melee_weapon`,
+`c:tools/ranged_weapon`, `c:tools/bow`, `c:armors` -- ce qu'il aurait du faire
+depuis le debut : elles ne servent pas qu'a nous, elles rendent notre
+equipement visible a tout mod du pack qui lit les etiquettes.
+
+Verifie en jeu : les cinq etiquettes repondent presentes sur l'epee, le glaive,
+le sceptre, l'arc et le plastron ; la carte de donnees se charge sans un
+reproche.

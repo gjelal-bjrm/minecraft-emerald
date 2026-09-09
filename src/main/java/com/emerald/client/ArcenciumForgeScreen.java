@@ -117,11 +117,11 @@ public class ArcenciumForgeScreen extends AbstractContainerScreen<ArcenciumForge
             graphics.drawString(this.font, Component.translatable("forge.emeraldweapons.empty"),
                     tx, 19, PALE, false);
         } else if (level >= com.emerald.item.GearEligibility.upgradeMax(gear)
-                && com.emerald.item.GearEligibility.isVanillaGear(gear)) {
+                && com.emerald.item.GearEligibility.isBorrowedGear(gear)) {
             // TROP FAIBLE POUR ALLER PLUS LOIN : on le dit, plutot que de
             // laisser un bouton gris sans explication
             graphics.drawString(this.font, Component.translatable("forge.emeraldweapons.weak",
-                    com.emerald.item.GearEligibility.VANILLA_UPGRADE_MAX), tx, 19, INK, false);
+                    com.emerald.item.GearEligibility.BORROWED_UPGRADE_MAX), tx, 19, INK, false);
         } else if (level >= Upgrade.MAX) {
             graphics.drawString(this.font, Component.translatable("forge.emeraldweapons.max"),
                     tx, 19, GOLD, false);

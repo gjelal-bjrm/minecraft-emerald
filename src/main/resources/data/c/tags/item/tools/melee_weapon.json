@@ -1,0 +1,9 @@
+{
+  "replace": false,
+  "values": [
+    "emeraldweapons:emerald_sword",
+    "emeraldweapons:oath_blade",
+    "emeraldweapons:arcencium_glaive",
+    "emeraldweapons:arcencium_scepter"
+  ]
+}

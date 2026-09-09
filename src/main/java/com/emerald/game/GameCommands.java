@@ -465,6 +465,46 @@ public class GameCommands {
                 return 0;
             }
             ServerLevel level = player.serverLevel();
+            // ET LA REGLE DU SOUS-SOL, A CET ENDROIT PRECIS.
+            //
+            // « J'ai mine dix minutes, il ne s'est rien passe. » La reponse
+            // etait dans une regle qu'aucune commande ne disait : il minait
+            // sous le village, dans la zone de paix. On la rend lisible : une
+            // ligne dit si la roche a le droit de vivre ici, et sinon
+            // pourquoi.
+            BlockPos feet = player.blockPosition();
+            var gs = com.emerald.game.GameState.get(level);
+            int toVillage = (int) Math.round(
+                    com.emerald.mine.Underground.flat(gs.village(), feet));
+            final String rule = String.format(
+                    "sous-sol a vos pieds (y=%d) : %s | village a %d blocs | plafond y=%d",
+                    feet.getY(),
+                    com.emerald.mine.Underground.allowed(level, feet) ? "AUTORISE" : "interdit",
+                    toVillage, com.emerald.mine.Underground.CEILING);
+            ctx.getSource().sendSuccess(() -> Component.literal(rule), false);
+            // ET CE QUE LES ETABLIS PENSENT DE CE QU'ON TIENT.
+            //
+            // « Est-ce que cette epee-la passe ? » ne se repondait qu'en
+            // traversant le village avec, et en regardant si l'etabli refusait.
+            // La commande le dit d'un coup : la famille de rune qui l'accepte,
+            // et les deux plafonds qui s'y appliquent.
+            net.minecraft.world.item.ItemStack held = player.getMainHandItem();
+            String family = "refusee par les etablis";
+            for (com.emerald.rune.RuneFamily f : com.emerald.rune.RuneFamily.values()) {
+                if (f.accepts(held)) {
+                    family = family.startsWith("refusee") ? f.name() : family + "+" + f.name();
+                }
+            }
+            final String gear = held.isEmpty() ? "en main : rien"
+                    : String.format("en main : %s | %s | plafond +%d, %s",
+                            net.minecraft.core.registries.BuiltInRegistries.ITEM
+                                    .getKey(held.getItem()),
+                            family,
+                            com.emerald.item.GearEligibility.upgradeMax(held),
+                            com.emerald.item.GearRarity.values()[
+                                    com.emerald.item.GearEligibility.rarityMax(held)]
+                                    .label().getString());
+            ctx.getSource().sendSuccess(() -> Component.literal(gear), false);
             var hit = player.pick(20.0, 0.0F, false);
             if (!(hit instanceof net.minecraft.world.phys.BlockHitResult block)) {
                 ctx.getSource().sendFailure(Component.literal("Vise un bloc."));
@@ -503,23 +543,6 @@ public class GameCommands {
             final String line = String.format("%s en %d,%d,%d -> %s",
                     id, at.getX(), at.getY(), at.getZ(), where);
             ctx.getSource().sendSuccess(() -> Component.literal(line), false);
-            // ET LA REGLE DU SOUS-SOL, A CET ENDROIT PRECIS.
-            //
-            // « J'ai mine dix minutes, il ne s'est rien passe. » La reponse
-            // etait dans une regle qu'aucune commande ne disait : il minait
-            // sous le village, dans la zone de paix. On la rend lisible : une
-            // ligne dit si la roche a le droit de vivre ici, et sinon
-            // pourquoi.
-            BlockPos feet = player.blockPosition();
-            var gs = com.emerald.game.GameState.get(level);
-            int toVillage = (int) Math.round(
-                    com.emerald.mine.Underground.flat(gs.village(), feet));
-            final String rule = String.format(
-                    "sous-sol a vos pieds (y=%d) : %s | village a %d blocs | plafond y=%d",
-                    feet.getY(),
-                    com.emerald.mine.Underground.allowed(level, feet) ? "AUTORISE" : "interdit",
-                    toVillage, com.emerald.mine.Underground.CEILING);
-            ctx.getSource().sendSuccess(() -> Component.literal(rule), false);
             return 1;
         }));
 

@@ -323,7 +323,7 @@ public class SocketBenchMenu extends AbstractContainerMenu {
         if (artifactStack.is(com.emerald.item.ModItems.FATE_SHARD.get()) && !gear.isEmpty()) {
             int max = com.emerald.item.GearEligibility.rarityMax(gear);
             if (com.emerald.item.GearRarity.of(gear).rank() >= max
-                    && com.emerald.item.GearEligibility.isVanillaGear(gear)) {
+                    && com.emerald.item.GearEligibility.isBorrowedGear(gear)) {
                 // TROP FAIBLE POUR MONTER PLUS HAUT : pas de resultat, donc rien
                 // a prendre et rien de consomme -- et l'on dit pourquoi
                 if (forge instanceof net.minecraft.server.level.ServerPlayer sp) {

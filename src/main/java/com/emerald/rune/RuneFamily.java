@@ -38,13 +38,16 @@ public enum RuneFamily implements net.minecraft.util.StringRepresentable {
      * saignement, regeneration par victoire).
      */
     WEAPON(stack -> isModWeapon(stack) || isArcenciumArmor(stack, EquipmentSlot.HEAD)
-            // et l'equipement vanilla, plafonne par sa rarete (voir GearEligibility)
-            || com.emerald.item.GearEligibility.isVanillaSword(stack)
-            || com.emerald.item.GearEligibility.isVanillaArmor(stack, EquipmentSlot.HEAD)),
+            // ET TOUTE ARME, D'OU QU'ELLE VIENNE, plafonnee par GearEligibility.
+            // On lisait « l'espace de noms minecraft, et rien d'autre » : dans
+            // un modpack de quatre cent quarante mods, cela fermait l'etabli a
+            // la moitie de ce qu'on ramasse.
+            || com.emerald.item.GearEligibility.isWeapon(stack)
+            || com.emerald.item.GearEligibility.isArmor(stack, EquipmentSlot.HEAD)),
 
-    /** Les quatre pieces d'Arcencium : le defensif. */
+    /** Le defensif : nos quatre pieces, et toute armure portee par un joueur. */
     ARMOR(stack -> isArcenciumArmor(stack, null)
-            || com.emerald.item.GearEligibility.isVanillaArmor(stack, null));
+            || com.emerald.item.GearEligibility.isArmor(stack, null));
 
     private final java.util.function.Predicate<ItemStack> accepts;
 
@@ -67,6 +70,18 @@ public enum RuneFamily implements net.minecraft.util.StringRepresentable {
      * Elle se dissout a la fin du prologue : y graver une rune la detruirait,
      * exactement comme pour les artefacts.
      */
+    /**
+     * Cette piece est-elle DU MODE ?
+     *
+     * La seule definition, et elle vit ici parce que c'est ici que sont deja
+     * les deux predicats qui la composent. `GearEligibility` s'en sert pour
+     * choisir le plafond ; deux definitions concurrentes auraient fini par
+     * dire deux choses differentes de la meme epee.
+     */
+    public static boolean isOurs(ItemStack stack) {
+        return isModWeapon(stack) || isArcenciumArmor(stack, null);
+    }
+
     private static boolean isModWeapon(ItemStack stack) {
         if (stack.is(com.emerald.item.ModItems.OATH_BLADE.get())) {
             return false;
