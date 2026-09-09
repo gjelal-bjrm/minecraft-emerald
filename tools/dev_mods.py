@@ -25,8 +25,12 @@ import zipfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 RUN_MODS = os.path.join(ROOT, "run", "mods")
+# LE PROFIL DU MODE, PAS LA COPIE D'ATM10 : le joueur ne joue plus sur
+# « All the Mods 10 - CUSTOM », et le dev ne doit pas lire ailleurs que la ou
+# il joue. Les deux dossiers ont les memes jars a quatre pres, mais le principe
+# compte : une seule source de verite.
 MODS_DIR = os.path.join(os.environ.get("USERPROFILE", ""), "curseforge", "minecraft",
-                        "Instances", "All the Mods 10 - CUSTOM", "mods")
+                        "Instances", "Mode Arcencium", "mods")
 
 PROVIDED = {"minecraft", "neoforge", "forge", "java"}
 

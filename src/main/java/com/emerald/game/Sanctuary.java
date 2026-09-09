@@ -225,7 +225,10 @@ public final class Sanctuary {
         private final int rank;
         private final int[] bounds;
         /** Une etape et SON NOM : sans le nom, « pire etape 1148 ms » ne dit pas laquelle. */
-        private record Step(String name, Runnable run) {
+        private record Step(String name, Runnable run, boolean closesTick) {
+            Step(String name, Runnable run) {
+                this(name, run, false);
+            }
         }
 
         private final java.util.ArrayDeque<Step> steps = new java.util.ArrayDeque<>();
@@ -327,7 +330,23 @@ public final class Sanctuary {
                         final int fx = ccx;
                         final int fz = ccz;
                         final net.minecraft.world.level.chunk.status.ChunkStatus at = step;
-                        add("prechargement", () -> level.getChunk(fx, fz, at, true));
+                        // LE DERNIER PALIER CLOT LA TIQUE. Le plantage du 9
+                        // septembre a 16:04 : « Cannot set property charge_pad
+                        // ... in Block{minecraft:air} », lance par une station
+                        // de charge de PneumaticCraft posee par une structure
+                        // d'un autre mod. En finissant un chunk, le jeu inscrit
+                        // ses entites de bloc fraiches pour leur `onLoad` A LA
+                        // TIQUE SUIVANTE ; si dans la MEME tique une etape de
+                        // deblaiement remplace leur bloc par de l'air, `onLoad`
+                        // s'execute quand meme sur une entite dont le bloc n'est
+                        // plus la, et la station tente de poser une propriete
+                        // sur de l'air. Une etape qui finit un chunk est donc la
+                        // derniere de sa tique : les entites se chargent, puis
+                        // seulement on deblaie. Cent quatre-vingt-seize tiques
+                        // de plus par sanctuaire, dix secondes, que personne ne
+                        // voit.
+                        boolean last = at == net.minecraft.world.level.chunk.status.ChunkStatus.FULL;
+                        steps.add(new Step("prechargement", () -> level.getChunk(fx, fz, at, true), last));
                     }
                 }
             }
@@ -477,6 +496,9 @@ public final class Sanctuary {
                 if (took > worstNanos) {
                     worstNanos = took;
                     worstName = step.name();
+                }
+                if (step.closesTick()) {
+                    return;             // les entites de bloc fraiches passent d'abord
                 }
             } while (!steps.isEmpty() && System.nanoTime() - start < budgetNanos);
         }

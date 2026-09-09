@@ -4914,3 +4914,85 @@ silencieusement rouvert au fer, et avec lui toute la mecanique des Eclats.
 Une ligne dans `build.gradle` -- `gameDirectory = project.file('run-data')` --
 donne a la generation son propre dossier, vide de mods. Elle remarche, et les
 quatre cents fichiers generes portent enfin ce que le generateur dit vraiment.
+
+## 60. Le plantage « charge_pad », et les lags qui ne venaient pas d'ou l'on croyait *(9 sept. 2026)*
+
+« Il y a toujours beaucoup trop de lags ! Ca arrive en combat, en minant, apres
+une mission. C'est injouable ! » -- et un plantage, « Exception ticking world :
+Cannot set property charge_pad ... as it does not exist in Block{minecraft:air} ».
+
+### A. Ce que le journal de la partie disait vraiment
+
+Quatorze retards en dix-neuf minutes, de 2 a 19 secondes. Correles un par un
+avec nos propres lignes de journal :
+
+| heure | retard | ce que notre mod faisait |
+| --- | --- | --- |
+| 15:47 a 16:02 | 12 retards de 2 a 6,6 s | rien : aucune ligne de notre mod dans les 25 s d'avant |
+| 16:03:17 | 18,8 s | le sanctuaire 1 se termine a 16:03:18 (27,6 s de fil serveur) |
+| 16:03:45 | 13,3 s | le sanctuaire 2 commence, sur sol vierge |
+| 16:04:09 | plantage | pendant le chantier du sanctuaire 2 |
+
+Deux choses distinctes, donc. Le chantier, qui coute encore vingt-sept
+secondes chez le joueur contre trois a huit en dev. Et un BRUIT DE FOND d'un
+retard par minute, sans rapport avec ce que le mode fait, present dans chaque
+session depuis le 4 septembre :
+
+| session | monde | minutes | retards | > 5 s | fils DH |
+| --- | --- | --- | --- | --- | --- |
+| 4 sept. 18:52 | T1 | 18 | 13 | 5 | 8 a 0,7 |
+| 6 sept. 13:58 | Test commandes | 60 | 94 | 18 | 8 a 0,7 |
+| 7 sept. 20:25 | Nouveau monde | 41 | 32 | 10 | 8 a 0,7 |
+| 9 sept. 10:57 | T4 | 46 | 36 | 7 | **4 a 0,4** |
+| 9 sept. 15:44 | T5 | 19 | 14 | 6 | 8 a 0,7 |
+
+Le nombre de fils de Distant Horizons n'est PAS la variable decisive : meme
+taux avec quatre fils qu'avec huit. C'etait pourtant le reglage qu'on avait
+touche dans les deux sens.
+
+### B. Le profil du joueur tournait sans aucun reglage JVM
+
+La ligne de commande du client, dans le rapport de plantage :
+
+    -Xmx16384m -Xms256m
+
+Rien d'autre. Pas de G1 regle, pas de tas fixe. `tools/java_args.py` existe
+exactement pour cela, et sa propre notice explique qu'un tas qui part de 256 Mo
+pour monter a 16 Go passe son temps a se redimensionner, chaque agrandissement
+etant une pause. Il n'avait ete applique qu'a « All the Mods 10 - CUSTOM » ; le
+profil « Mode Arcencium », cree le 4 septembre, n'en avait jamais herite. Le
+client de dev, lui, a les bons reglages depuis le debut -- et n'a jamais
+montre ce bruit de fond.
+
+Pose le 9 septembre : dix gigaoctets fixes et le jeu d'options G1. C'est la
+premiere chose a verifier apres la prochaine partie : si le bruit de fond
+tombe, c'etait lui.
+
+### C. Le dev ne reproduit pas le profil, et c'est pour cela qu'on ne voyait rien
+
+`run/mods` contient 43 jars. Le profil en a 446. Un chantier de sanctuaire y
+prend trois a huit secondes de fil serveur ; chez le joueur, vingt-sept. Tout
+ce qu'on a mesure « en jeu » l'a ete dans un monde dix fois plus leger que le
+sien. `tools/dev_mods.py` lit desormais le profil « Mode Arcencium » ; un vrai
+A/B des lags devra se faire avec les 446 jars.
+
+### D. Le plantage : un chunk fini et deblaye dans la meme tique
+
+La station de charge de PneumaticCraft n'est pas de nous : elle vient d'une
+structure d'un autre mod, generee dans un chunk que le chantier venait de
+FINIR. En finissant un chunk, le jeu inscrit ses entites de bloc fraiches pour
+leur `onLoad` a la tique suivante. Si, dans la MEME tique, une etape de
+deblaiement remplace leur bloc par de l'air, NeoForge appelle `onLoad` quand
+meme -- il ne verifie pas `isRemoved` -- et la station tente de poser une
+propriete sur de l'air. Avec un budget de douze millisecondes, un
+prechargement et un deblaiement tenaient souvent dans la meme tique.
+
+Les etapes de prechargement au palier FULL CLOSENT desormais leur tique
+(`Step.closesTick`) : les entites se chargent, puis seulement on deblaie.
+Cent quatre-vingt-seize tiques de plus par sanctuaire, dix secondes que
+personne ne voit. Et en garde-fou, `removeErroringBlockEntities = true` dans
+le profil : une entite de bloc qui plante est retiree au lieu d'emporter le
+monde.
+
+Le monde T5 ne portait aucune entite PneumaticCraft dans ses regions : elle
+n'a vecu que le temps d'une tique, ce qui confirme le scenario.
