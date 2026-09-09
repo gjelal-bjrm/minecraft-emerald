@@ -1101,8 +1101,24 @@ public final class Sanctuary {
             int seat = flank * (GATE_HALF + 6);
             int bx = g.x(seat, 0);
             int bz = g.z(seat, 0);
-            // les tourelles de porte gardent, elles ne paient pas
+            // LES TOURELLES DE PORTE GARDENT, ET PAIENT UNE FOIS.
+            //
+            // Elles n'avaient rien : « elles gardent, elles ne paient pas ».
+            // Le joueur en veut, et il a raison -- huit tours qu'on traverse a
+            // chaque entree et qu'on ne fouille jamais. Mais pas au regime des
+            // tours d'angle : trois coffres chacune porteraient le sanctuaire
+            // de vingt a quarante-quatre, et ce serait un autre jeu.
+            //
+            // UN coffre, au rez-de-chaussee, la ou l'on entre. On passe le
+            // porche, on pousse la porte de la tourelle, on prend son coffre et
+            // l'on ressort : vingt-huit par sanctuaire, et la fouille d'une
+            // porte vaut le detour sans valoir une tour.
             roundTower(level, bx, y, bz, 6, TOWER_TOP - 6, rank, false);
+            // Deux blocs vers le dedans du sanctuaire, sur les deux axes : la
+            // vis part du centre vers -x et occupe z et z+1, le coffre est donc
+            // hors de son chemin, hors des deux portes percees dans la coque,
+            // et au pied du gardien qui tient deja le palier.
+            lootChest(level, bx + 2, y + 1, bz + 2, sanctuaryTable(rank), Direction.NORTH);
             // La normale de la porte pointe DEHORS : on perce donc a l'oppose.
             boolean acrossX = g.nx() != 0;
             int inward = -(acrossX ? g.nx() : g.nz());
@@ -1713,13 +1729,15 @@ public final class Sanctuary {
      *
      * Trois coupes, et le monument ne perd pas un bloc :
      *
-     *   - les tourelles de porte n'ont plus de coffre du tout. Ce sont des
-     *     postes de garde : leurs gardiens restent, leur butin s'en va ;
+     *   - les tourelles de porte n'ont plus de coffre A ETAGE. Ce sont des
+     *     postes de garde ; `gatehouse` leur en pose UN au rez-de-chaussee,
+     *     et c'est tout ce qu'elles paient ;
      *   - UN coffre par etage au lieu de deux ;
      *   - un etage sur deux seulement, en commencant par le premier -- le
      *     sommet reste paye, puisque la tour a un nombre impair d'etages.
      *
-     * Vingt coffres par sanctuaire au lieu de cent cinquante-six. Le GARDIEN,
+     * Vingt coffres par sanctuaire au lieu de cent cinquante-six, plus les
+     * huit des tourelles de porte : vingt-huit. Le GARDIEN,
      * lui, reste a CHAQUE etage : on ne monte pas plus facilement, on monte
      * pour moins de coffres et chacun compte.
      */

@@ -4398,9 +4398,17 @@ elle l'ecrasait -- et le dernier tombait un bloc au-dessus du parapet, sur la
 terrasse. Quatre coffres sur vingt disparaissaient a chaque sanctuaire.
 
 Le compte rendu ne pouvait pas le dire : il comptait les POSES. Il relit
-maintenant chaque emplacement et annonce « 20 poses, 20 survivants ». Les
-quatre coffres d'une tour tournent aussi sur les quatre coins de leur salle
+maintenant chaque emplacement et annonce combien ont survecu. Les quatre
+coffres d'une tour tournent aussi sur les quatre coins de leur salle
 (`corner`) au lieu de s'empiler dans la meme colonne.
+
+Et les huit TOURELLES DE PORTE paient a leur tour, un coffre chacune, au
+rez-de-chaussee. Elles n'avaient rien : « elles gardent, elles ne paient pas ».
+Le joueur les voulait servies, et il a raison -- on traverse ces tours a chaque
+entree sans jamais les fouiller. Mais pas au regime des tours d'angle : trois
+coffres chacune auraient porte le sanctuaire de vingt a quarante-quatre, et
+c'eut ete un autre jeu. Vingt-huit, donc, et la fouille d'une porte vaut le
+detour sans valoir une tour.
 
 ### B. L'etabli : quatre defauts, tous verifies au journal
 
@@ -4485,6 +4493,20 @@ les sites qui n'ont jamais porte leur monument. Un garde-fou refuse en plus de
 batir au-dela du plafond du monde. C'est probablement la moitie des « lags qui
 reviennent souvent » : ils revenaient a chaque connexion.
 
+Verifie en deux ouvertures d'affilee, avec une fermeture PROPRE entre les deux :
+
+    [ouverture 1] Partie reprise : 3 sanctuaire(s) a rebatir
+                  Sanctuaire demande a y=324, ramene a 270 : le plafond est a 320
+                  Sanctuaire retenu comme bati : demande y=324, dresse y=312
+                  (trois fois, 28 coffres poses et 28 survivants chacun)
+    [ouverture 2] « a rebatir » : 0     sanctuaires batis : 0
+
+Le journal de bord du monde porte desormais les six positions, le sol vise et
+le faite obtenu. Il a fallu trois essais pour le mesurer : le banc TUAIT le
+client, si bien que le monde ne se sauvegardait jamais et que la deuxieme
+ouverture relisait un etat vieux d'une heure. On envoie maintenant la fermeture
+de fenetre, celle du joueur, et l'on attend que le processus rende la main.
+
 ### E. L'Aurore premiere, et cinq minutes
 
 `firstDrawn` force l'Aurore au premier tirage : c'est la seule meteo qui
@@ -4542,7 +4564,7 @@ Trois passages du banc d'essai, journal purge avant chacun.
 
 | ce qu'on mesure | avant | apres |
 | --- | --- | --- |
-| coffres survivants par sanctuaire | 16 sur 20 | 20 sur 20 |
+| coffres survivants par sanctuaire | 16 sur 20 | 28 sur 28 |
 | pire etape du chantier | 3 474 ms | 552 a 1 013 ms |
 | sanctuaires rebatis a chaque connexion | 3 | 0 |
 | horloge de l'Heure Doree sur 100 s | vers la nuit | 11 823 -> 12 176 |
@@ -4555,7 +4577,8 @@ la fin de la fenetre, puis s'est dissipee.
 
 Les trois sanctuaires du cycle suivant, sur du sol jamais visite et par le
 chemin normal du jeu (la file d'etapes, pas la commande), ont rendu « 20
-coffres poses, 20 survivants » chacun, avec 552 a 1 013 ms pour la pire etape.
+coffres poses, 20 survivants » chacun, avec 552 a 1 013 ms pour la pire etape ;
+puis « 28 poses, 28 survivants » une fois les tourelles de porte servies.
 
 Le banc des butins, enfin : cinquante zombies tues par le joueur, inventaire
 vide au depart.

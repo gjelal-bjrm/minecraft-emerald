@@ -191,8 +191,12 @@ public class GameManager {
         site = null;
         siteAt = BlockPos.ZERO;
         // ON RETIENT QU'IL EST BATI, avant meme de deplacer l'ancre : c'est la
-        // seule chose que la reprise pourra croire sur parole.
+        // seule chose que la reprise pourra croire sur parole. Et on le dit au
+        // journal : trois lignes par partie, et c'est la seule trace qui
+        // permette de verifier qu'une reprise ne rebatira rien.
         GameState.get(level).markBuilt(asked, raised);
+        org.slf4j.LoggerFactory.getLogger(EmeraldWeaponsMod.MODID).info(
+                "Sanctuaire retenu comme bati : demande {}, dresse {}", asked, raised);
         // L'ancre BOUGE : elle coiffe le faite de la pyramide, non le sol vise.
         // Sans cette mise a jour, l'interface et la boussole montreraient le
         // pied du monument et le siege ne saurait pas ou se declencher.
