@@ -3,14 +3,14 @@
   "pattern": [
     "AEA",
     "AFA",
-    " B "
+    "EBE"
   ],
   "key": {
     "A": {
       "item": "emeraldweapons:arcencium_ingot"
     },
     "E": {
-      "item": "minecraft:emerald_block"
+      "item": "minecraft:emerald"
     },
     "F": {
       "item": "emeraldweapons:prism_fiber"

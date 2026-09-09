@@ -1,21 +1,21 @@
 {
-    "type": "minecraft:crafting_shaped",
-    "category": "equipment",
-    "key": {
-        "A": {
-            "item": "emeraldweapons:arcencium_ingot"
-        },
-        "F": {
-            "item": "emeraldweapons:prism_fiber"
-        }
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": {
+    "A": {
+      "item": "emeraldweapons:arcencium_ingot"
     },
-    "pattern": [
-        "AAA",
-        "AFA",
-        "A A"
-    ],
-    "result": {
-        "count": 1,
-        "id": "emeraldweapons:arcencium_leggings"
+    "F": {
+      "item": "emeraldweapons:prism_fiber"
     }
+  },
+  "pattern": [
+    "AFA",
+    "A A",
+    "A A"
+  ],
+  "result": {
+    "count": 1,
+    "id": "emeraldweapons:arcencium_leggings"
+  }
 }

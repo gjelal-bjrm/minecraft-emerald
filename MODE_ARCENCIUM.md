@@ -4831,3 +4831,86 @@ equipement visible a tout mod du pack qui lit les etiquettes.
 Verifie en jeu : les cinq etiquettes repondent presentes sur l'epee, le glaive,
 le sceptre, l'arc et le plastron ; la carte de donnees se charge sans un
 reproche.
+
+## 59. Rendre les armes fabricables, et faire pousser le prisme *(9 sept. 2026)*
+
+« Tout notre systeme repose sur le fait d'avoir des armes de notre mode.
+Peut-etre qu'on devrait revoir les tables de craft. » Releve fait, et il y avait
+de quoi.
+
+### A. Ce que coutait l'equipement complet
+
+| arme | Arcencium | emeraudes | prisme | autre |
+| --- | --- | --- | --- | --- |
+| Epee d'emeraude | 3 | 2 | 2 branches | **2 epees en netherite** |
+| Glaive | 4 | 9 (un bloc) | 1 branche, 1 fibre | rien |
+| Sceptre | 3 | 1 | 1 branche | rien |
+| Arc | 3 | 2 | 1 branche | 1 arc |
+
+Plus l'armure : 5, 7, 7 et 4 lingots. **Trente-sept lingots** pour l'ensemble,
+quatorze emeraudes, et deux epees en netherite.
+
+Trois murs, et le premier etait enorme. DEUX EPEES EN NETHERITE, c'est huit
+debris antiques, deux modeles de forge et l'or qui va avec : hors de portee en
+quatre-vingt-dix minutes, sur l'arme qui donne son nom au mode. Le BOIS DE
+PRISME n'avait aucune generation dans le monde -- l'arbre ne poussait que d'un
+plant -- donc les branches et les fibres ne venaient que du village d'Arcencium
+ou des coffres de sanctuaire : sans passage par l'un des deux, aucune arme
+fabricable, quel que soit le minerai ramasse. Et le MINERAI rendait un brut par
+bloc, a deux filons de cinq par chunk sous y = 0.
+
+### B. Les quatre allegements
+
+1. **L'epee d'emeraude prend une epee de diamant**, plus deux de netherite.
+2. **Le glaive prend trois emeraudes**, plus un bloc entier. Le total des
+   quatre armes tombe de quatorze emeraudes a huit.
+3. **Le minerai rend deux bruts.** Tout l'equipement coute moitie moins de
+   pioche, sans qu'une seule recette bouge.
+4. **L'armure suit une regle enfin tenue** : la silhouette du jeu, un lingot
+   remplace par la fibre de prisme. Elle ne l'etait que pour le plastron ; le
+   casque, les jambieres et les bottes coutaient le plein tarif PLUS une fibre.
+   Vingt lingots au lieu de vingt-trois.
+
+En pioche, l'ensemble passe de trente-sept blocs de minerai a dix-sept.
+
+### C. L'Arbre de Prisme pousse, et il est beau
+
+Le joueur voulait « un bel arbre, de differentes tailles, avec des formes
+majestueuses ». Une seule silhouette repetee ne fait pas un bosquet, elle fait
+un decor : il y en a donc trois.
+
+| taille | charpente | ce qu'elle donne |
+| --- | --- | --- |
+| petit | tronc courbe, feuillage en nuage | le buisson qui remplit les bords |
+| moyen | celle du grand chene : tronc qui se divise, houppier rond | six a treize blocs |
+| grand | celle du cerisier : tronc court, branches horizontales, rideaux de feuilles | celui qu'on voit de loin |
+
+Un tirage les melange -- un sur dix est grand, un tiers est moyen, le reste est
+petit -- et le plant tire sa taille comme le monde : planter un prisme et voir
+sortir un grand est la moitie du plaisir.
+
+Le bosquet se pose un chunk sur six, sur le sol, la ou un plant de prisme
+survivrait, dans les douze biomes qui portent deja le village d'Arcencium :
+l'arbre appartient au meme paysage, et l'etendre a tout l'overworld en ferait
+une banalite.
+
+Et la Premiere Forge donne desormais quatre branches et deux fibres, de quoi
+monter une arme et une piece d'armure : la porte ne reste jamais fermee.
+
+Verifie en jeu : les trois tailles se posent, cinq, dix et cinq blocs de tronc
+dans la colonne centrale, et un feuillage de 169 blocs pour le moyen contre 432
+pour le grand.
+
+### D. Le generateur de donnees remarche
+
+Il plantait depuis des mois : la generation partait de `run/`, ou vivent les
+quatre cent quarante mods du modpack, et Moonlight y appelle
+`Minecraft.getInstance()` pendant `GatherDataEvent` -- il n'y a pas de client en
+generation. On ecrivait donc les fichiers generes A LA MAIN, ce qui avait laisse
+passer au moins une divergence : le minerai etait a pioche de diamant dans le
+JSON livre et a pioche de fer dans le generateur. Une regeneration l'aurait
+silencieusement rouvert au fer, et avec lui toute la mecanique des Eclats.
+
+Une ligne dans `build.gradle` -- `gameDirectory = project.file('run-data')` --
+donne a la generation son propre dossier, vide de mods. Elle remarche, et les
+quatre cents fichiers generes portent enfin ce que le generateur dit vraiment.

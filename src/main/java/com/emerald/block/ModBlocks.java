@@ -181,7 +181,9 @@ public class ModBlocks {
             () -> new PrismLeavesBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.OAK_LEAVES).lightLevel(s -> 3)));
     public static final DeferredBlock<SaplingBlock> PRISM_SAPLING = village("prism_sapling",
             () -> new SaplingBlock(
-                    new TreeGrower("prism", Optional.empty(), Optional.of(ModConfiguredFeatures.PRISM_TREE), Optional.empty()),
+                    // LE PLANT TIRE SA TAILLE, comme dans le monde : planter
+                    // un prisme et voir sortir un grand est la moitie du plaisir.
+                    new TreeGrower("prism", Optional.empty(), Optional.of(ModConfiguredFeatures.PRISM_GROVE), Optional.empty()),
                     BlockBehaviour.Properties.ofFullCopy(Blocks.OAK_SAPLING).lightLevel(s -> 3)));
 
     public static final DeferredBlock<Block> CRYSTAL_PLANKS = village("crystal_planks",

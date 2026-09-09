@@ -3,14 +3,14 @@
   "pattern": [
     "ENE",
     "AAA",
-    "BNB"
+    "B B"
   ],
   "key": {
     "E": {
       "item": "minecraft:emerald"
     },
     "N": {
-      "item": "minecraft:netherite_sword"
+      "item": "minecraft:diamond_sword"
     },
     "A": {
       "item": "emeraldweapons:arcencium_ingot"

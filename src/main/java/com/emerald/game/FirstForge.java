@@ -81,6 +81,14 @@ public final class FirstForge {
             give(player, new ItemStack(first.material(), metal));
             give(player, new ItemStack(ModItems.ARCENCIUM_FEATHER.get(), feathers));
             give(player, new ItemStack(ModItems.FATE_SHARD.get(), shards));
+            // ET LE BOIS DE PRISME. Toutes nos recettes en demandent -- une
+            // branche ou une fibre par piece -- et il ne pousse que dans les
+            // bosquets de prisme et les coffres des sanctuaires. Un joueur qui
+            // n'avait croise ni l'un ni l'autre ne pouvait fabriquer AUCUNE
+            // arme, quel que soit l'Arcencium ramasse. De quoi monter une arme
+            // et une piece d'armure, pour que la porte ne reste jamais fermee.
+            give(player, new ItemStack(ModItems.PRISM_BRANCH.get(), 4));
+            give(player, new ItemStack(ModItems.PRISM_FIBER.get(), 2));
             player.sendSystemMessage(Component.translatable("game.emeraldweapons.first_forge")
                     .withStyle(style -> style.withColor(0xFFD24A).withBold(true)));
             player.sendSystemMessage(Component.translatable("game.emeraldweapons.first_forge.forge",

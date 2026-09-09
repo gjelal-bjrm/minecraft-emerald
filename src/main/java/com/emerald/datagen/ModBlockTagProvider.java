@@ -27,7 +27,14 @@ public class ModBlockTagProvider extends BlockTagsProvider {
 
     @Override
     protected void addTags(HolderLookup.Provider provider) {
-        tag(BlockTags.NEEDS_IRON_TOOL).add(ModBlocks.ARCENCIUM_ORE.get());
+        // LE MINERAI EST UN BLOC A PIOCHE DE DIAMANT, et le generateur doit le
+        // dire comme le fichier livre. Il ecrivait NEEDS_IRON_TOOL depuis que
+        // l'Arcencium est descendu sous le diamant : la correction n'avait ete
+        // faite qu'a la main sur le JSON, si bien qu'une regeneration l'aurait
+        // silencieusement rouvert a la pioche de fer -- et avec elle toute la
+        // mecanique des Eclats, qui n'existe que pour la pioche du cran d'en
+        // dessous.
+        tag(BlockTags.NEEDS_DIAMOND_TOOL).add(ModBlocks.ARCENCIUM_ORE.get());
         tag(BlockTags.MINEABLE_WITH_PICKAXE).add(ModBlocks.ARCENCIUM_ORE.get(),
                 ModBlocks.ARCENCIUM_BLOCK.get(), ModBlocks.ARCENCIUM_CHEST.get());
 

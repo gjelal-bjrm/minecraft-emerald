@@ -88,8 +88,18 @@ neoForge {
         data {
             data()
 
-            // example of overriding the workingDirectory set in configureEach above, uncomment if you want to use it
-            // gameDirectory = project.file('run-data')
+            // SON PROPRE DOSSIER, SANS LES MODS DU MODPACK.
+            //
+            // La generation partait de `run/`, ou vivent les quatre cent
+            // quarante mods installes pour jouer. Moonlight y appelle
+            // Minecraft.getInstance() pendant GatherDataEvent -- il n'y a pas
+            // de client en generation -- et tout s'arretait sur un
+            // NullPointerException. On ecrivait donc les fichiers generes A LA
+            // MAIN depuis des mois, ce qui a laisse passer au moins une
+            // divergence : le minerai etait diamant dans le JSON et fer dans le
+            // generateur. Un dossier a part, vide de mods, et la generation
+            // remarche.
+            gameDirectory = project.file('run-data')
 
             // Specify the modid for data generation, where to output the resulting resource, and where to look for existing resources.
             programArguments.addAll '--mod', project.mod_id, '--all', '--output', file('src/generated/resources/').getAbsolutePath(), '--existing', file('src/main/resources/').getAbsolutePath()

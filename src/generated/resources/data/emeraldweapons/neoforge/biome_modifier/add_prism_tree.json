@@ -1,0 +1,6 @@
+{
+  "type": "neoforge:add_features",
+  "biomes": "#emeraldweapons:grows_prism_tree",
+  "features": "emeraldweapons:prism_grove",
+  "step": "vegetal_decoration"
+}

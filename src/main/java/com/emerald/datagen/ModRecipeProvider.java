@@ -108,11 +108,19 @@ public class ModRecipeProvider extends RecipeProvider {
                 .save(out);
 
         // ------------------------------------------------------ armure d'Arcencium
-        // Forme vanilla, avec la Fibre de Prisme en doublure au creux de la piece.
-        armor(out, ModItems.ARCENCIUM_HELMET.get(), "AAA", "AFA", null);
+        //
+        // LA SILHOUETTE DU JEU, UN LINGOT REMPLACE PAR LA FIBRE.
+        //
+        // La regle n'etait pas tenue : le casque et les bottes coutaient le
+        // plein tarif vanilla PLUS une fibre, les jambieres aussi, seul le
+        // plastron etait allege. L'ensemble revenait a vingt-trois lingots, et
+        // le joueur a demande a ce que ce soit moins lourd. La regle appliquee
+        // partout donne vingt lingots et quatre fibres, et surtout elle
+        // s'explique en une phrase.
+        armor(out, ModItems.ARCENCIUM_HELMET.get(), "AFA", "A A", null);
         armor(out, ModItems.ARCENCIUM_CHESTPLATE.get(), "A A", "AFA", "AAA");
-        armor(out, ModItems.ARCENCIUM_LEGGINGS.get(), "AAA", "AFA", "A A");
-        armor(out, ModItems.ARCENCIUM_BOOTS.get(), "A A", "AFA", null);
+        armor(out, ModItems.ARCENCIUM_LEGGINGS.get(), "AFA", "A A", "A A");
+        armor(out, ModItems.ARCENCIUM_BOOTS.get(), "A A", "F A", null);
 
         // ------------------------------------------------------------ textile
         dye(out, ModBlocks.VERDIGRIS_WOOL.get(), Items.GREEN_DYE);
