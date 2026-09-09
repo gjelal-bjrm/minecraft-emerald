@@ -574,11 +574,12 @@ public final class WeatherEffects {
     private static void tickBattue(ServerLevel level) {
         // LA MEME RETENUE QUE L'HEURE DOREE. La Battue pose 23 000 -- l'aube --
         // et le temps courait : en cinquante secondes on etait en plein jour,
-        // et l'aube de chasse avait disparu pour les quatre-vingt-dix
-        // dernieres. Un tiers de vitesse : 23 000 a 23 800 sur les deux
-        // minutes, la lune reste basse et le jour ne se leve jamais tout a fait.
+        // et l'aube de chasse avait disparu pour le reste. Depuis qu'elle dure
+        // cinq minutes, la pente est huit fois plus douce : 23 000 a 23 750 sur
+        // les six mille tiques, la lune reste basse et le jour ne se leve
+        // jamais tout a fait. Le plafond protege les essais forces.
         long elapsed = Math.max(0L, level.getGameTime() - WeatherManager.startedAt());
-        level.setDayTime(Math.min(23800L, 23000L + elapsed / 3L));
+        level.setDayTime(Math.min(23800L, 23000L + elapsed / 8L));
         // l'ambiance -- corbeaux, cor, hurlements, tambour, blanc/rouge -- vit
         // dans BattueScene ; ici ne reste que ce qui touche au jeu
         BattueScene.tick(level);
@@ -1169,6 +1170,15 @@ public final class WeatherEffects {
      * de fond.
      */
     private static void tickNuit(ServerLevel level) {
+        // LA NUIT RESTE LA NUIT. `clockFor` pose minuit une fois, au debut, et
+        // laissait courir le temps : sur deux minutes on finissait a 20 400, ce
+        // qui passait encore ; sur cinq, on finit a 24 000, c'est-a-dire AU
+        // LEVER DU SOLEIL. Une meteo nommee la Nuit qui se termine en plein
+        // jour aurait ete la meme faute que l'Heure Doree finissant de nuit.
+        // Un huitieme de vitesse : minuit a 18 750, il fait noir du debut a la
+        // fin. Le plafond protege les essais forces.
+        long night = Math.max(0L, level.getGameTime() - WeatherManager.startedAt());
+        level.setDayTime(Math.min(18800L, 18000L + night / 8L));
         tickWaves(level);
         tickScars(level);
         distantFlash(level);
@@ -1365,6 +1375,13 @@ public final class WeatherEffects {
     // --------------------------------------------------- la Pluie de Meteores
 
     private static void tickMeteores(ServerLevel level) {
+        // LE CREPUSCULE S'ENFONCE, IL NE SE LEVE PAS. Meme raison que pour la
+        // Nuit : 13 200 pose une fois, plus six mille tiques de course, et les
+        // Meteores se terminaient a 19 200, en pleine nuit noire -- alors que
+        // tout leur interet visuel est le ciel bas et rouge. Un sixieme de
+        // vitesse : de 13 200 a 14 200, le jour tombe pendant qu'elles tombent.
+        long dusk = Math.max(0L, level.getGameTime() - WeatherManager.startedAt());
+        level.setDayTime(Math.min(14200L, 13200L + dusk / 6L));
         tickQuakes(level);
         if (level.getGameTime() % 20 == 0) {
             for (ServerPlayer player : level.players()) {

@@ -4602,3 +4602,50 @@ meme bloc s'ecrasent les uns les autres (`maxEntityCramming`, vingt-quatre) :
 ils mouraient par ecrasement avant le coup du joueur, et l'evenement de butin
 ne passait que deux fois sur cinquante. Une sonde posee dans `RuneDrops` l'a
 dit en une ligne, la ou trois heures de raisonnement auraient tourne en rond.
+
+## 56. Cinq minutes pour toutes les meteos *(9 sept. 2026)*
+
+« Deux minutes c'est bien trop court. » Le joueur l'avait dit de l'Aurore ; il
+le dit maintenant des autres, et la raison est la meme pour toutes. Une meteo
+du mode n'est pas un decor qui passe, c'est une FENETRE : on la voit tomber, on
+decide ce qu'on en fait, on s'y rend, on le fait. Les trois premieres etapes
+mangeaient les deux minutes et il ne restait rien pour la quatrieme.
+
+Toutes les meteos tirees durent donc cinq minutes, et FIXES : une duree tiree
+entre deux et quatre minutes ne s'annonce pas et ne se planifie pas.
+
+| meteo | avant | apres |
+| --- | --- | --- |
+| Aurore, Heure Doree | 5 min | inchange |
+| Battue | 2 min | 5 min |
+| Nuit | 2 min 30 a 4 min | 5 min |
+| Meteores, Dechirure, Orage | 2 min a 3 min 20 | 5 min |
+| Embellie | 1 min a 1 min 30 | inchange |
+
+L'Embellie ne bouge pas : ce n'est pas une meteo qu'on tire, c'est l'accalmie
+qui suit chaque tempete agressive, et cinq minutes de rien ne sont pas un
+cadeau.
+
+**Les horloges suivent.** Quatre meteos forcent l'heure du jour, et les
+allonger sans les retenir aurait refait la faute de l'Heure Doree qui
+finissait de nuit :
+
+- la **Nuit** posait minuit et laissait courir : sur cinq minutes elle se
+  terminait a 24 000, c'est-a-dire AU LEVER DU SOLEIL. Un huitieme de vitesse,
+  minuit a 18 750, il fait noir du debut a la fin ;
+- les **Meteores** posaient le crepuscule et finissaient a 19 200, en pleine
+  nuit noire, alors que tout leur interet est le ciel bas et rouge. Un sixieme
+  de vitesse, 13 200 a 14 200 : le jour tombe pendant qu'elles tombent ;
+- la **Battue** avait deja sa retenue, calee sur deux minutes ; la pente passe
+  du tiers au huitieme pour couvrir les cinq ;
+- l'**Heure Doree** etait deja calee sur cinq minutes.
+
+**Ce que cela change au rythme, et ce que cela ne change pas.** L'ecart entre
+deux tirages n'a pas bouge : deux a quatre minutes en Exploration et en
+Montee, une minute et demie a trois en Pression, vingt a quarante secondes
+pendant l'Assaut. En Exploration, la meteo occupait donc deux minutes sur
+cinq ; elle en occupe cinq sur huit. Et comme aucune des agressives ne monte
+en puissance avec le temps -- leurs cadences sont plates -- cinq minutes
+d'Orage font deux fois et demie la foudre de deux minutes, sans courbe. Si le
+mode parait trop charge a l'essai, c'est l'ecart entre tirages qu'il faudra
+allonger, pas la duree qu'il faudra reprendre.

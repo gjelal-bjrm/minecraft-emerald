@@ -37,10 +37,14 @@ public enum Weather {
      * l'horizon -- et ce qui vit se detoure a travers les murs. C'est la
      * FENETRE DE CHASSE, comme l'Aurore est la fenetre de mine.
      *
-     * DEUX MINUTES, pas une de plus : le noir et blanc est un effet fort, il ne
-     * doit pas s'installer.
+     * CINQ MINUTES, comme toutes les autres. On avait ecrit « deux minutes, pas
+     * une de plus : le noir et blanc est un effet fort, il ne doit pas
+     * s'installer ». C'etait raisonner sur l'effet et non sur ce qu'on fait
+     * pendant : deux minutes, le temps de repérer une bete detouree et de la
+     * rejoindre, et la fenetre se refermait avant le combat. La Proie tient
+     * une poursuite a elle seule ; il lui faut la duree d'une poursuite.
      */
-    BATTUE("battue", false, GamePhase.EXPLORATION, 120 * 20, 120 * 20, 0xC8C8C8),
+    BATTUE("battue", false, GamePhase.EXPLORATION, 300 * 20, 300 * 20, 0xC8C8C8),
     /**
      * L'AURORE : la fenetre de LA MINE. CINQ MINUTES, et c'est mesure.
      *
@@ -76,10 +80,29 @@ public enum Weather {
      * lui ouvre donc une porte a cote de lui, et cinq minutes pour s'en servir.
      */
     HEURE_DOREE("heure_doree", false, GamePhase.EXPLORATION, 300 * 20, 300 * 20, 0xFFC46B),
-    NUIT("nuit", true, GamePhase.MONTEE, 150 * 20, 240 * 20, 0xB98CFF),
-    METEORES("meteores", true, GamePhase.PRESSION, 120 * 20, 200 * 20, 0xFF9C4A),
-    DECHIRURE("dechirure", true, GamePhase.PRESSION, 120 * 20, 200 * 20, 0xE478FF),
-    ORAGE("orage", true, GamePhase.PRESSION, 120 * 20, 200 * 20, 0xFF616B);
+    /**
+     * LES QUATRE AGRESSIVES : CINQ MINUTES CHACUNE, ET FIXES.
+     *
+     * Elles duraient de deux a quatre minutes, tirees au hasard. Le joueur a
+     * tranche apres essai : « deux minutes c'est bien trop court ». Il a
+     * raison, et la raison est la meme pour toutes. Une meteo du mode n'est
+     * pas un decor qui passe, c'est une FENETRE : on la voit tomber, on decide
+     * ce qu'on en fait, on s'y rend, on le fait. Les trois premieres etapes
+     * mangeaient les deux minutes, et il ne restait rien pour la quatrieme.
+     *
+     * Fixes, aussi. Une duree tiree entre deux et quatre minutes ne s'annonce
+     * pas et ne se planifie pas : on ne sait jamais s'il reste de quoi tenter
+     * quelque chose. Cinq minutes partout, c'est un contrat qu'on peut tenir.
+     *
+     * Ce que cela change au rythme : en Exploration, la meteo occupait deux
+     * minutes sur cinq, elle en occupe cinq sur huit. L'ecart entre deux
+     * tirages n'a pas bouge -- si le mode parait trop charge, c'est la qu'il
+     * faudra donner de l'air, pas sur la duree.
+     */
+    NUIT("nuit", true, GamePhase.MONTEE, 300 * 20, 300 * 20, 0xB98CFF),
+    METEORES("meteores", true, GamePhase.PRESSION, 300 * 20, 300 * 20, 0xFF9C4A),
+    DECHIRURE("dechirure", true, GamePhase.PRESSION, 300 * 20, 300 * 20, 0xE478FF),
+    ORAGE("orage", true, GamePhase.PRESSION, 300 * 20, 300 * 20, 0xFF616B);
 
     private final String id;
     public final boolean aggressive;
