@@ -299,6 +299,17 @@ public final class SanctuarySeals {
         return -1;
     }
 
+    /** Vrai si un sceau, n'importe ou, a ete eveille : c'est l'etape du carnet. */
+    public static boolean anyLit(ServerLevel level) {
+        for (Vault vault : vaults) {
+            refresh(level, vault);
+            if (!vault.lit().isEmpty()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /** Combien de sceaux restent a eveiller pour cette ancre, ou zero. */
     public static int remaining(ServerLevel level, BlockPos anchor) {
         for (Vault vault : vaults) {

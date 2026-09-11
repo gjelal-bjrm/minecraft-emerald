@@ -31,6 +31,10 @@ public class ModNetwork {
                 (payload, context) -> context.enqueueWork(
                         () -> com.emerald.client.GameHudClient.accept(payload)));
 
+        registrar.playToClient(QuestPayload.TYPE, QuestPayload.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(
+                        () -> com.emerald.client.QuestHudClient.accept(payload)));
+
         registrar.playToClient(StreakPayload.TYPE, StreakPayload.STREAM_CODEC,
                 (payload, context) -> context.enqueueWork(
                         () -> com.emerald.client.StreakHudClient.accept(payload)));

@@ -169,6 +169,9 @@ public class SocketBenchMenu extends AbstractContainerMenu {
                         com.emerald.item.Upgrade.set(stack, after);
                         boolean won = after > before;
                         boolean lost = after < before;
+                        if (!won) {
+                            com.emerald.item.Upgrade.refund(player, before);
+                        }
                         player.displayClientMessage(
                                 net.minecraft.network.chat.Component.translatable(
                                         won ? "socket.emeraldweapons.upgrade.won"

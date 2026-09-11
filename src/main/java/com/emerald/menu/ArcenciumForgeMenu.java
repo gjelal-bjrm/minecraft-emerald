@@ -165,6 +165,8 @@ public class ArcenciumForgeMenu extends AbstractContainerMenu {
         boolean won = after > before;
         if (won) {
             com.emerald.util.Celebration.upgrade(player, after);
+        } else {
+            Upgrade.refund(player, before);             // un rate ne coute que la Pierre
         }
         this.data.set(DATA_RESULT, won ? RESULT_WON : RESULT_KEPT);
         this.data.set(DATA_LEVEL, after);

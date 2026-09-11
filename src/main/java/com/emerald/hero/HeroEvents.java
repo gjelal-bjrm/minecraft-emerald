@@ -56,7 +56,12 @@ public final class HeroEvents {
         // La valeur suit ce que la creature COUTE, non ce qu'elle est : ses
         // points de vie maximaux sont la seule mesure comparable d'un mod a
         // l'autre, et elle range d'elle-meme un boss au-dessus d'un zombie.
-        int worth = 2 + (int) Math.round(victim.getMaxHealth() / 4.0);
+        // UNE FOIS ET DEMIE. A soixante-quatorze minutes de jeu, sans avoir pu
+        // toucher une ancre, le joueur etait niveau dix-huit : la courbe
+        // comptait sur les trente-quatre niveaux des ancres, que le bug des
+        // tombeaux lui interdisait. Meme corrige, le mode doit se finir en
+        // quatre-vingt-dix minutes : un zombie vaut dix, non sept.
+        int worth = 3 + (int) Math.round(victim.getMaxHealth() * 3.0 / 8.0);
         // LA BATTUE REND LA MOITIE EN PLUS : la fenetre de chasse doit se
         // sentir sur la fiche du personnage, pas seulement dans le sac.
         if (com.emerald.weather.WeatherManager.current()

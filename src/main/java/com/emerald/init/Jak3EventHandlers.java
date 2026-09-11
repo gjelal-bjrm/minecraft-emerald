@@ -64,6 +64,9 @@ public class Jak3EventHandlers {
     // -------------------------------------------------------------------------
     @SubscribeEvent
     public static void onPlayerLogin(PlayerEvent.PlayerLoggedInEvent event) {
+        if (event.getEntity() instanceof net.minecraft.server.level.ServerPlayer joined) {
+            com.emerald.quest.Quests.onJoin(joined);
+        }
         if (event.getEntity() instanceof ServerPlayer player) {
             PlayerQuestData.loadFromPlayer(player);
         }

@@ -172,6 +172,26 @@ public final class Upgrade {
         return true;
     }
 
+    /**
+     * REND LE METAL D'UNE TENTATIVE MANQUEE.
+     *
+     * « J'etais rapidement bloque parce qu'il me manquait du fer et de l'or. »
+     * Le compte le confirme : monter cinq pieces a +5 coutait en moyenne cent
+     * vingt fer et quatre-vingt-dix or, parce que chaque ECHEC emportait le
+     * metal avec la Pierre. Le diamant et l'Arcencium tombent a l'Aurore ; le
+     * fer et l'or ne tombent nulle part de special. On paie toujours d'abord --
+     * un tirage ne doit jamais precede un paiement qui pourrait echouer -- mais
+     * un rate ne coute plus que la Pierre de Forge. Le metal revient dans le
+     * sac, ou aux pieds si le sac est plein.
+     */
+    public static void refund(net.minecraft.world.entity.player.Player player, int level) {
+        Cost cost = cost(Math.min(MAX, level + 1));
+        ItemStack back = new ItemStack(cost.material(), cost.amount());
+        if (!player.getInventory().add(back)) {
+            player.drop(back, false);
+        }
+    }
+
     private Upgrade() {
     }
 

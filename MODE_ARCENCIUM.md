@@ -5074,3 +5074,140 @@ interruption pendant cinquante-deux des cinquante-trois minutes.
 La seule facon durable est de saisir les arguments dans l'application
 CurseForge elle-meme (profil, Reglages, Java). La chaine est celle de
 `tools/java_args.py`, tas fixe de dix gigaoctets et G1 regle.
+
+## 62. Accelerer la partie, et le Carnet qui l'apprend *(12 sept. 2026)*
+
+« Il me reste quarante minutes et je n'ai toujours pas fait le premier
+sanctuaire. Heros 18, specialisation +9, une epee en diamant +5, rarete 2 ou
+4. Monter tous les equipements a +5 serait impossible. » Et le joueur tranche :
+on n'allonge pas la partie, on l'accelere. Il a raison : un mode plus long
+avec les memes taux resterait un mode ou l'on manque de tout.
+
+### A. Le compte, avec ses chiffres
+
+A soixante-quatorze minutes de jeu, sans avoir pu toucher une ancre (bug des
+tombeaux, §61). Ce que coutait vraiment un +5 sur cinq pieces, avec les
+chances de reussite de la Forge :
+
+| cran | chance | tentatives en moyenne | metal par tentative |
+| --- | --- | --- | --- |
+| +1 | 90 % | 1,1 | 4 fer |
+| +2 | 82 % | 1,2 | 6 fer |
+| +3 | 74 % | 1,4 | 9 fer |
+| +4 | 62 % | 1,6 | 4 or |
+| +5 | 52 % | 1,9 | 6 or |
+
+Soit vingt-quatre fer et dix-huit or par piece, **cent vingt fer et
+quatre-vingt-dix or** pour cinq pieces -- parce que chaque echec emportait le
+metal avec la Pierre. Le diamant et l'Arcencium tombent a l'Aurore ; le fer et
+l'or ne tombaient nulle part de special. « J'etais rapidement bloque parce qu'il
+me manquait du fer et de l'or » : c'est exactement ce que dit le tableau.
+
+### B. Les quatre leviers
+
+1. **Un echec a la Forge ne coute plus que la Pierre** (`Upgrade.refund`). On
+   paie toujours d'abord -- un tirage ne doit jamais preceder un paiement qui
+   pourrait echouer -- mais le metal revient dans le sac sur un rate. Le +5
+   sur cinq pieces tombe a soixante fer et quarante or, et c'est le cout de la
+   reussite, pas celui de la malchance.
+2. **Le fer et l'or dans les recompenses.** La defense du village donne
+   vingt-quatre fer et douze or (huit fer avant) ; chaque Proie de Battue lache
+   une cache de douze a seize fer et six a huit or. Le metal tombe la ou le
+   joueur revient de toute facon.
+3. **L'experience Heros une fois et demie** : un zombie vaut dix, non sept.
+   La courbe comptait sur les trente-quatre niveaux des trois ancres ; meme
+   corrigees, elles arrivent tard, et le mode doit se finir en quatre-vingt-dix
+   minutes.
+4. **L'Eclat du Destin deux fois plus souvent** : un monstre sur six au combat
+   ordinaire, un sur deux sous la Maree ou l'orage. La rarete a 2-4 apres une
+   heure ne suivait pas le rythme des armes.
+
+### C. Le Carnet
+
+« Je ne sais pas du tout comment fabriquer les armes et je n'ai aucun moyen de
+le savoir. Un joueur ne saura jamais comment ca fonctionne, surtout pour runer
+l'arme ou monter sa rarete. » Le manuel existe (GUIDE.html), mais personne ne
+lit trente pages en pleine partie.
+
+Le Carnet (`quest/Quests`) dit UNE chose a la fois, au moment ou elle sert, et
+la coche quand c'est fait. Dix etapes dans l'ordre naturel d'une partie :
+
+| # | etape | ce qu'on verifie | ce qu'elle paie |
+| --- | --- | --- | --- |
+| 1 | Le premier Arcencium | un brut, un lingot ou quatre eclats dans le sac | 2 Eclats du Destin |
+| 2 | Trois lingots | trois lingots | 3 Pierres de Forge |
+| 3 | Le bois de Prisme | une branche ou une fibre | 4 emeraudes |
+| 4 | Votre premiere arme | une arme du mode portee ou dans le sac | 6 Pierres, 8 fer |
+| 5 | La Forge : +1 | une piece a +1 | 3 Eclats |
+| 6 | Une rune gravee | une piece qui porte une rune | 3 plumes |
+| 7 | Monter la rarete | une piece de rang 2 ou plus | 4 plumes |
+| 8 | La specialisation | +1 a l'Autel | 2 Eclats, 6 or |
+| 9 | Eveiller un sceau | un sceau eveille, n'importe ou | 8 lingots d'Arcencium |
+| 10 | Tenir une ancre | une ancre active | 12 Pierres de Forge |
+
+Chaque etape se verifie sur ce que le joueur PORTE ou A FAIT, toutes les deux
+secondes -- jamais sur un clic dans une interface, qu'on rate ou qu'on ne fait
+pas dans l'ordre. L'etape 4 dessine les quatre recettes en lettres dans le
+chat, avec la legende. La memoire vit dans les donnees persistantes du joueur :
+elle survit a la mort et a la session, et le Carnet se rouvre a la bonne page
+a la connexion. Une ligne en bas de l'ecran, au-dessus de la fiche du Heros,
+dit l'etape en cours ; `/arcencium quete` la relit avec sa recette.
+
+Les recompenses sont petites et tournees vers l'etape suivante : le Carnet ne
+remplace pas le jeu, il l'ouvre. La neuvieme paie huit lingots, soit le prix
+exact de la premiere ancre.
+
+### D. Le lag : ce qu'on sait, ce qu'on ne peut pas mesurer ici
+
+La session du 11 septembre : trente retards en cinquante-quatre minutes, de
+deux a neuf secondes, sans lien avec nos lignes de journal ; un par minute
+pendant la Battue, un toutes les deux minutes le reste du temps ; Distant
+Horizons a genere pendant cinquante-deux des cinquante-trois minutes. Et les
+reglages JVM du 9 septembre n'ont jamais tourne : CurseForge les a effaces
+(§61 B).
+
+Le dev a tente de rejouer le profil entier -- les 446 jars installes par
+`tools/dev_mods.py` -- pour comparer, sur le meme tour du monde, la generation
+lointaine allumee et eteinte. Trois lancements, trois murs : Sodium contre
+Embeddium (ecarte), un banc orphelin d'une session precedente qui a ferme le
+client suivant, puis « Mod 'architectury' is not available! » au demarrage,
+l'ordre de construction des mods en userdev appelant Architectury avant qu'il
+soit pret. Ce n'est pas un defaut du profil, c'est le banc qui ne sait pas
+porter quatre cent quarante-six mods. Le jeu leger est remis.
+
+La mesure fidele se fera donc SUR LE PROFIL, en deux parties courtes et
+comparables : d'abord avec les arguments JVM saisis dans l'application
+CurseForge, puis, si les retards restent, avec `enableDistantGeneration =
+false` dans `config/DistantHorizons.toml` -- la vue au loin ne montre alors
+que le terrain deja visite, mais plus rien ne se genere en arriere-plan.
+C'est la seule variable qu'on n'a pas encore isolee, et c'est celle que le
+journal designe : elle tourne sans relache, dans chaque session, depuis le
+4 septembre.
+
+### E. Ce que le banc a verifie *(12 sept. 2026)*
+
+Deux lancements du jeu leger (`verify_carnet.sh`), le Carnet remis a zero, ce
+qu'il attend donne etape par etape par commande, puis cinquante zombies tues
+d'un coup par le joueur.
+
+- **Le premier lancement n'a pas demarre.** Le Carnet est un abonne
+  d'evenements : sa classe se charge a la construction du mod, avant
+  l'enregistrement des objets, et sa liste d'etapes construisait les piles de
+  recompense avec `ModItems.FATE_SHARD.get()` -- « Trying to access unbound
+  value ». Les recompenses sont devenues des fournisseurs, resolus au moment
+  de payer.
+- **Neuf etapes sur dix cochees dans l'ordre**, chacune dite puis franchie
+  dans le chat, avec sa recompense. La neuvieme s'est cochee parce que le
+  monde d'essai gardait un sceau eveille du banc des tombeaux (§61) : c'est
+  bien l'etat du bloc qui fait foi, pas une memoire volatile. La dixieme
+  demande une ancre active et n'a pas ete jouee au banc ; elle lit le meme
+  compteur que la Finale.
+- **Les recompenses disaient « + 0 × Air »** : on lisait le nom et le compte
+  APRES avoir range la pile, et `add` vide ce qu'on lui tend. Lus avant,
+  desormais.
+- **Les taux.** Cinquante zombies : 6 puis 7 Eclats du Destin (un sur six
+  attendu, soit 8 ; ~4 avant) ; seize niveaux Heros annonces, Heros 18 a la
+  fin (un zombie vaut 11 points, 8 avant).
+- Une lecon de banc : SendKeys reserve `{ } [ ]`, donc un `/give` avec
+  composants ne passe pas par le chat simule. Les commandes a accolades vont
+  dans une fonction du datapack, et le chat n'appelle que `/function`.

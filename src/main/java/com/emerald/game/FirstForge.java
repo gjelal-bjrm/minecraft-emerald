@@ -67,7 +67,13 @@ public final class FirstForge {
         // LE METAL DE DEUX CRANS, lu dans le bareme et non recopie : si le cout
         // du premier cran change un jour, la recompense suit toute seule.
         Upgrade.Cost first = Upgrade.cost(1);
-        int metal = first.amount() * 2;                 // une defense, une arme
+        // VINGT-QUATRE FER ET DOUZE OR. Huit fer suffisaient a passer +1 sur
+        // deux pieces, et c'etait tout : le joueur repartait vers un +5 qui
+        // coute des dizaines de lingots que rien dans le mode ne donne. Le
+        // diamant et l'Arcencium tombent a l'Aurore ; le fer et l'or, nulle
+        // part. On les donne la ou le joueur revient de toute facon.
+        int metal = first.amount() * 6;                 // 24 fer : trois crans sur deux pieces
+        int gold = 12;                                  // de quoi ouvrir les crans +4 et +5
         int feathers = Specialization.COST[1];
         // SIX ECLATS DU DESTIN, et le compte n'est pas rond par hasard : c'est
         // PITY_PER_DRAW (GearRarity), donc six essais d'un coup, et 45 % de
@@ -79,6 +85,7 @@ public final class FirstForge {
 
         for (ServerPlayer player : level.players()) {
             give(player, new ItemStack(first.material(), metal));
+            give(player, new ItemStack(net.minecraft.world.item.Items.GOLD_INGOT, gold));
             give(player, new ItemStack(ModItems.ARCENCIUM_FEATHER.get(), feathers));
             give(player, new ItemStack(ModItems.FATE_SHARD.get(), shards));
             // ET LE BOIS DE PRISME. Toutes nos recettes en demandent -- une

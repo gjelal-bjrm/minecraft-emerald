@@ -329,6 +329,14 @@ public final class BattueHunt {
         level.addFreshEntity(new ItemEntity(level, x, y, z,
                 new ItemStack(com.emerald.item.ModItems.ARCENCIUM_FEATHER.get(),
                         3 + level.random.nextInt(3))));
+        // LA CACHE DE METAL. La Proie est la chasse la plus longue du mode, et
+        // elle payait une rune et des plumes -- rien de ce qui manque a la
+        // Forge. Le fer et l'or ne tombent nulle part de special ; ils tombent
+        // ici : de quoi tenter deux crans sur une piece, a chaque hallali.
+        level.addFreshEntity(new ItemEntity(level, x, y, z,
+                new ItemStack(net.minecraft.world.item.Items.IRON_INGOT, 12 + level.random.nextInt(5))));
+        level.addFreshEntity(new ItemEntity(level, x, y, z,
+                new ItemStack(net.minecraft.world.item.Items.GOLD_INGOT, 6 + level.random.nextInt(3))));
         com.emerald.hero.HeroEvents.award(killer, 60);
         level.sendParticles(net.minecraft.core.particles.ParticleTypes.END_ROD,
                 x, y + 0.5, z, 30, 0.8, 0.6, 0.8, 0.05);

@@ -385,6 +385,16 @@ public class GameCommands {
             return 1;
         }));
 
+        // LE CARNET, RELU A LA DEMANDE : l'etape en cours, avec sa recette.
+        root.then(Commands.literal("quete").executes(ctx -> {
+            if (!(ctx.getSource().getEntity() instanceof net.minecraft.server.level.ServerPlayer p)) {
+                ctx.getSource().sendFailure(Component.literal("A executer en jeu."));
+                return 0;
+            }
+            com.emerald.quest.Quests.tell(p, com.emerald.quest.Quests.step(p));
+            return 1;
+        }));
+
         root.then(Commands.literal("sanctuary")
                 .then(Commands.argument("palier",
                                 com.mojang.brigadier.arguments.IntegerArgumentType.integer(1, 3))

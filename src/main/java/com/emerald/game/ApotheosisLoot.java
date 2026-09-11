@@ -322,11 +322,16 @@ public final class ApotheosisLoot {
         // joueur au lieu de le faire jouer. Une fois sur douze au combat
         // ordinaire, une fois sur quatre sous la Maree ou l'orage -- ceux-la
         // frappent plus fort, ils paient davantage.
+        //
+        // DEUX FOIS PLUS SOUVENT DEPUIS LE 12 SEPTEMBRE. A soixante-quatorze
+        // minutes de jeu la rarete du joueur etait a 2 ou 4 : une fois sur
+        // douze ne suivait pas le rythme des armes. Une fois sur six au
+        // combat ordinaire, une fois sur deux sous la Maree ou l'orage.
         if (event.getSource().getEntity() instanceof net.minecraft.world.entity.player.Player
                 && entity instanceof net.minecraft.world.entity.Mob
                 && !(entity instanceof net.minecraft.world.entity.npc.AbstractVillager)
                 && !(entity instanceof net.minecraft.world.entity.animal.Animal)) {
-            int odds = storm || tide ? 4 : 12;
+            int odds = storm || tide ? 2 : 6;
             if (level.random.nextInt(odds) == 0) {
                 event.getDrops().add(new net.minecraft.world.entity.item.ItemEntity(
                         level, entity.getX(), entity.getY() + 0.5, entity.getZ(),
