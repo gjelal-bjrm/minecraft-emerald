@@ -30,7 +30,8 @@ import java.awt.Color;
 /**
  * La Maree Prismatique : la zone de jeu se referme sur la fin de partie.
  *
- * A partir de la phase Pression, le rayon vivable descend de 750 a 120 blocs.
+ * A partir de la phase Pression, le rayon vivable descend de PLAY_RADIUS
+ * (1 400 blocs) a 120.
  * Dehors, on SURVIT -- mais mal : une corrosion qui s'aggrave avec la
  * profondeur, et la Faiblesse. C'est un arbitrage, pas un mur : sortir de deux
  * blocs pour ramasser quelque chose reste anodin, s'enfoncer de deux cents en

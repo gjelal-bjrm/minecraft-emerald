@@ -34,8 +34,16 @@ public class GameState extends SavedData {
     public static final long GAME_MINUTES = 90L;
     public static final long GAME_TICKS = GAME_MINUTES * 60L * 20L;
 
-    /** Rayon de la zone de jeu, en blocs. */
-    public static final int PLAY_RADIUS = 750;
+    /**
+     * Rayon de la zone de jeu, en blocs : c'est de la que part la Maree.
+     *
+     * Suit la distance des ancres. A 750 pour des ancres a 450, le sanctuaire
+     * le plus loin (1 000 avec le jeu, plus 96 de demi-site) serait ne hors de
+     * la zone. A 1 400, il en sort onze minutes apres le debut de la Maree,
+     * comme avant a peu de chose pres : la Maree descend plus vite, pas plus
+     * tot.
+     */
+    public static final int PLAY_RADIUS = 1400;
 
     public enum Status { LOBBY, PROLOGUE, RUNNING, WON, LOST }
 
@@ -57,8 +65,23 @@ public class GameState extends SavedData {
      */
     public enum Mode { DEFI, LIBRE }
 
-    /** Distance entre le village et chaque ancre. */
-    public static final int ANCHOR_DISTANCE = 450;
+    /**
+     * Distance entre le village et chaque ancre, et le jeu autour.
+     *
+     * NEUF CENTS, ET NON QUATRE CENT CINQUANTE. « Il me suffit de regarder
+     * autour de moi et je les vois presque tous, depuis le village de
+     * depart. » Avec Distant Horizons a 256 chunks, on voit a quatre mille
+     * blocs : un sanctuaire de 193 de cote et 42 de haut, a 450, est a un
+     * dixieme de la portee de vue. A 900 ils restent visibles au loin, mais
+     * plus d'un seul regard, et les trois sont a quinze cents les uns des
+     * autres, non sept cent quatre-vingts.
+     *
+     * L'ensemble tourne au hasard et chaque ancre glisse de cent blocs au
+     * plus : le meme triangle exact a chaque partie, c'est une carte apprise
+     * par coeur des la deuxieme.
+     */
+    public static final int ANCHOR_DISTANCE = 900;
+    public static final int ANCHOR_JITTER = 100;
 
     private Status status = Status.LOBBY;
     private Mode mode = Mode.DEFI;

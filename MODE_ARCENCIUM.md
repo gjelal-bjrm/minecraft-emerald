@@ -34,7 +34,7 @@ Principes directeurs, valides au fil de la discussion :
 | **Assaut** | 48-60 | Orage permanent. Arc-en-ciel et boss. |
 
 - Monde **genere a neuf** a chaque partie.
-- Zone de jeu : **rayon 750 blocs** (bordure de monde). Ancres a ~450 du centre, a 120 deg.
+- Zone de jeu : **rayon 1 400 blocs** (depart de la Maree). Ancres a **900 (±100)** du centre, a 120 deg, l'ensemble tourne au hasard.
 - Mort d'un joueur : **reapparition + perte de l'equipement au sol**, comme en vanilla.
 - Points de reapparition : le village, puis **chaque ancre activee**.
 
@@ -5211,3 +5211,39 @@ d'un coup par le joueur.
 - Une lecon de banc : SendKeys reserve `{ } [ ]`, donc un `/give` avec
   composants ne passe pas par le chat simule. Les commandes a accolades vont
   dans une fonction du datapack, et le chat n'appelle que `/function`.
+
+## 63. Les sanctuaires a neuf cents blocs, et le triangle qui tourne *(12 sept. 2026)*
+
+« Je trouve que les sanctuaires spawn bien trop proche du joueur et bien trop
+proche les uns des autres. Il me suffit de regarder autour de moi et je les
+vois presque tous, comme ca, depuis le village de depart. »
+
+**Ce qu'on a mesure avant de toucher.** Chaque ancre etait a 450 blocs du
+village, a 90, 210 et 330 degres, le meme triangle a chaque partie ; 780
+blocs entre deux sanctuaires. Un site fait 193 de cote, des tours de 42 et une
+pyramide de 40. Et le profil regle Distant Horizons a 256 chunks, soit 4 096
+blocs de vue : a 450, un sanctuaire est a un dixieme de la portee. Il n'y a
+rien a cacher, on les voit forcement.
+
+**Le choix du joueur, parmi trois** : eloigner et casser le triangle. La
+distance passe a **900 blocs**, l'ensemble **tourne au hasard** a chaque mise
+en place, et chaque ancre **glisse de cent blocs au plus** sur chaque axe
+(`GameState.ANCHOR_DISTANCE`, `ANCHOR_JITTER`, `GameManager.ring`). Le meme
+anneau sert au cycle du mode Libre, qui garde ses +60 par cycle. La zone de
+jeu suit : la Maree part de **1 400** au lieu de 750, sans quoi le sanctuaire
+le plus loin serait ne dehors ; elle descend plus vite, pas plus tot, et le
+dernier sanctuaire en sort onze minutes apres son depart, comme avant a peu de
+chose pres.
+
+**Au banc** (`verify_distance.sh`, deux mises en place de suite dans le monde
+d'essai, les positions lues dans le journal -- `ring` les ecrit desormais) :
+
+| mise en place | tour | du village | entre ancres |
+| --- | --- | --- | --- |
+| 1 | 25° | 862 / 927 / 857 | 1 541 / 1 549 / 1 493 |
+| 2 | 129° | 909 / 857 / 822 | 1 488 / 1 485 / 1 505 |
+
+La construction elle-meme n'a pas ete rejouee : c'est le meme chantier, aux
+memes tickets, qu'au §60, seules les coordonnees changent. A pied, neuf cents
+blocs font trois minutes et demie ; les ailes et le rappel avec teleporteur
+sont faits pour ca.

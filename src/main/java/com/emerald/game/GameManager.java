@@ -391,13 +391,7 @@ public class GameManager {
         Workshop.place(level, ground);
         surroundWithVillagers(level, ground);
 
-        List<BlockPos> anchors = new ArrayList<>();
-        for (int i = 0; i < 3; i++) {
-            double angle = Math.toRadians(90 + i * 120);
-            int x = ground.getX() + (int) Math.round(Math.cos(angle) * GameState.ANCHOR_DISTANCE);
-            int z = ground.getZ() + (int) Math.round(Math.sin(angle) * GameState.ANCHOR_DISTANCE);
-            anchors.add(WorldSetup.findOpenGround(level, new BlockPos(x, 0, z), 16));
-        }
+        List<BlockPos> anchors = ring(level, ground, GameState.ANCHOR_DISTANCE);
         state.setAnchors(anchors);
         state.returnToLobby();
         WorldSetup.clearHostiles(level, ground);
@@ -423,6 +417,32 @@ public class GameManager {
         }
         org.slf4j.LoggerFactory.getLogger(EmeraldWeaponsMod.MODID).info(
                 "Lame du Serment posee en {}", ground);
+    }
+
+    /**
+     * Les trois ancres autour d'un centre : a `distance`, a 120 degres l'une
+     * de l'autre, l'ensemble tourne au hasard et chacune glisse d'au plus
+     * ANCHOR_JITTER blocs sur chaque axe. Le meme anneau sert a la mise en
+     * place et a chaque cycle du mode Libre, pour qu'aucune partie ne
+     * ressemble a la precedente. Les positions sont ecrites dans le journal :
+     * c'est ce que lit le banc, et ce qu'on cherche quand on doute.
+     */
+    private static List<BlockPos> ring(ServerLevel level, BlockPos center, int distance) {
+        net.minecraft.util.RandomSource random = level.getRandom();
+        double turn = random.nextDouble() * 360.0;
+        List<BlockPos> anchors = new ArrayList<>();
+        for (int i = 0; i < 3; i++) {
+            double angle = Math.toRadians(90 + turn + i * 120);
+            int x = center.getX() + (int) Math.round(Math.cos(angle) * distance)
+                    + random.nextIntBetweenInclusive(-GameState.ANCHOR_JITTER, GameState.ANCHOR_JITTER);
+            int z = center.getZ() + (int) Math.round(Math.sin(angle) * distance)
+                    + random.nextIntBetweenInclusive(-GameState.ANCHOR_JITTER, GameState.ANCHOR_JITTER);
+            anchors.add(WorldSetup.findOpenGround(level, new BlockPos(x, 0, z), 16));
+        }
+        org.slf4j.LoggerFactory.getLogger(EmeraldWeaponsMod.MODID).info(
+                "Ancres posees a {} du village {} (tour {}) : {}", distance, center,
+                Math.round(turn), anchors);
+        return anchors;
     }
 
     /**
@@ -783,15 +803,8 @@ public class GameManager {
         SanctuaryMist.clearAll();
         Finale.clear();
 
-        double turn = state.cycle() * 37.0;
         int distance = GameState.ANCHOR_DISTANCE + Math.min(3, state.cycle() - 1) * 60;
-        List<BlockPos> anchors = new ArrayList<>();
-        for (int i = 0; i < 3; i++) {
-            double angle = Math.toRadians(90 + turn + i * 120);
-            int x = village.getX() + (int) Math.round(Math.cos(angle) * distance);
-            int z = village.getZ() + (int) Math.round(Math.sin(angle) * distance);
-            anchors.add(WorldSetup.findOpenGround(level, new BlockPos(x, 0, z), 16));
-        }
+        List<BlockPos> anchors = ring(level, village, distance);
         state.setAnchors(anchors);
         pending.clear();
         pending.addAll(anchors);
