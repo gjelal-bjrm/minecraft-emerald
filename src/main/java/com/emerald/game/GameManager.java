@@ -855,6 +855,9 @@ public class GameManager {
         if (state.status() != GameState.Status.RUNNING) {
             return;
         }
+        // LES TOMBEAUX D'ABORD : leurs sceaux se relisent depuis le journal de
+        // bord, sans quoi un sanctuaire bati la veille n'a plus de serrure.
+        SanctuarySeals.restore(level);
         int missing = 0;
         for (BlockPos anchor : state.anchors()) {
             // ET SURTOUT PAS CE QUI EST DEJA BATI. Le bloc d'ancre absent ne
@@ -898,7 +901,7 @@ public class GameManager {
         // qu'il faut d'abord reveiller le tombeau. On partait donc chercher
         // huit lingots pour se faire refuser au retour. Une condition qu'on
         // n'annonce qu'au moment de la refuser est une perte de temps offerte.
-        int asleep = SanctuarySeals.remaining(pos);
+        int asleep = SanctuarySeals.remaining(level, pos);
         if (asleep > 0) {
             player.displayClientMessage(Component.translatable(
                             "game.emeraldweapons.anchor.sealed", asleep)
@@ -948,7 +951,7 @@ public class GameManager {
         // condition, l'escalier exterieur suffisait a tout, et le tombeau ne
         // servait a rien. Le message donne le compte, ce qui enseigne la regle
         // en une fois sans qu'on ait a l'expliquer nulle part.
-        int asleep = SanctuarySeals.remaining(pos);
+        int asleep = SanctuarySeals.remaining(level, pos);
         if (asleep > 0) {
             player.displayClientMessage(Component.translatable(
                             "game.emeraldweapons.anchor.sealed", asleep)

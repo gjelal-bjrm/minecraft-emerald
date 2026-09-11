@@ -2479,7 +2479,7 @@ public final class Sanctuary {
         }
         sealReport = report.toString();
 
-        SanctuarySeals.register(anchor, placed);
+        SanctuarySeals.register(level, anchor, placed);
     }
 
     /**

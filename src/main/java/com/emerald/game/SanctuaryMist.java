@@ -89,7 +89,25 @@ public final class SanctuaryMist {
                 fallback = site.anchor();
             }
         }
-        return best != null ? best : fallback;
+        if (best != null || fallback != null) {
+            return best != null ? best : fallback;
+        }
+        // LE REGISTRE EST VOLATIL, LE JOURNAL DE BORD NE L'EST PAS. Apres un
+        // rechargement du monde, `sites` est vide et la commande repondait
+        // « aucun sanctuaire connu de cette session » devant un sanctuaire bien
+        // reel. On se rabat sur ce que GameState a retenu : les ancres de la
+        // partie et celles des tombeaux inscrits.
+        GameState state = GameState.get(level);
+        java.util.List<BlockPos> known = new java.util.ArrayList<>(state.anchors());
+        known.addAll(state.vaultAnchors());
+        for (BlockPos anchor : known) {
+            double dist = anchor.distSqr(near);
+            if (dist < fallbackDist) {
+                fallbackDist = dist;
+                fallback = anchor;
+            }
+        }
+        return fallback;
     }
 
     public static void clearAll() {

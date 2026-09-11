@@ -436,7 +436,7 @@ public class GameCommands {
                         "command.emeraldweapons.anchor.none"));
                 return 0;
             }
-            String where = com.emerald.game.SanctuarySeals.describe(found);
+            String where = com.emerald.game.SanctuarySeals.describe(level, found);
             if (where.isEmpty()) {
                 ctx.getSource().sendFailure(Component.literal(
                         "Cette ancre n'a pas de tombeau enregistre."));

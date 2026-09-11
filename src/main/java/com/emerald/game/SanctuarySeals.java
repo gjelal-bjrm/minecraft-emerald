@@ -49,15 +49,68 @@ public final class SanctuarySeals {
     private record Vault(BlockPos anchor, List<BlockPos> seals, Set<BlockPos> lit) {
     }
 
-    /** Volatil, comme les sieges et la brume : cela se rebatit, cela ne se sauve pas. */
+    /**
+     * Le registre en memoire. Il etait VOLATIL -- « cela se rebatit, cela ne
+     * se sauve pas » -- et c'etait faux depuis que la reprise ne rebatit plus
+     * ce qui existe : apres un rechargement du monde, un tombeau bati la veille
+     * n'avait plus un seul sceau inscrit, et le clic ne trouvait rien. Les
+     * sceaux sont donc ECRITS dans GameState a la pose, et RELUS a la reprise
+     * (restore) ; l'etat eveille/endormi, lui, se lit sur le bloc, qui est la
+     * seule verite qui survive a tout.
+     */
     private static final List<Vault> vaults = new ArrayList<>();
 
     private SanctuarySeals() {
     }
 
-    public static void register(BlockPos anchor, List<BlockPos> seals) {
+    public static void register(ServerLevel level, BlockPos anchor, List<BlockPos> seals) {
+        vaults.removeIf(v -> v.anchor().equals(anchor));
         vaults.add(new Vault(anchor.immutable(),
                 seals.stream().map(BlockPos::immutable).toList(), new HashSet<>()));
+        GameState.get(level).setSeals(anchor, seals);
+    }
+
+    /**
+     * Relit les tombeaux inscrits, a la reprise d'une partie.
+     *
+     * L'etat de chaque sceau vient du BLOC : un sceau deja eveille dans une
+     * session precedente porte LIT=true dans le monde. On ne lit que les chunks
+     * deja charges -- un tombeau a quatre cent cinquante blocs n'est pas la, et
+     * le charger ici gelerait le serveur ; ses sceaux seront relus au premier
+     * clic, quand le joueur y sera.
+     */
+    public static void restore(ServerLevel level) {
+        GameState state = GameState.get(level);
+        vaults.clear();
+        for (BlockPos anchor : state.vaultAnchors()) {
+            List<BlockPos> seals = state.sealsOf(anchor);
+            Set<BlockPos> lit = new HashSet<>();
+            for (BlockPos seal : seals) {
+                if (isLitInWorld(level, seal)) {
+                    lit.add(seal);
+                }
+            }
+            vaults.add(new Vault(anchor, seals, lit));
+        }
+    }
+
+    /** Vrai si le bloc du sceau est la ET eveille ; sans charger de chunk. */
+    private static boolean isLitInWorld(ServerLevel level, BlockPos seal) {
+        if (!level.hasChunk(seal.getX() >> 4, seal.getZ() >> 4)) {
+            return false;
+        }
+        var state = level.getBlockState(seal);
+        return state.hasProperty(com.emerald.block.TombSealBlock.LIT)
+                && state.getValue(com.emerald.block.TombSealBlock.LIT);
+    }
+
+    /** Remet la memoire d'un tombeau en accord avec ses blocs, la ou ils sont charges. */
+    private static void refresh(ServerLevel level, Vault vault) {
+        for (BlockPos seal : vault.seals()) {
+            if (isLitInWorld(level, seal)) {
+                vault.lit().add(seal);
+            }
+        }
     }
 
     public static void clearAll() {
@@ -102,6 +155,7 @@ public final class SanctuarySeals {
             return;
         }
         for (Vault vault : vaults) {
+            refresh(level, vault);
             if (vault.lit().size() >= vault.seals().size()) {
                 continue;                      // ce tombeau est ouvert
             }
@@ -145,6 +199,7 @@ public final class SanctuarySeals {
             if (!vault.anchor().equals(anchor)) {
                 continue;
             }
+            refresh(level, vault);
             for (BlockPos seal : vault.seals()) {
                 if (vault.lit().contains(seal)) {
                     continue;
@@ -165,7 +220,11 @@ public final class SanctuarySeals {
      */
     public static boolean light(ServerLevel level, BlockPos pos, Player player) {
         for (Vault vault : vaults) {
-            if (!vault.seals().contains(pos) || !vault.lit().add(pos)) {
+            if (!vault.seals().contains(pos)) {
+                continue;
+            }
+            refresh(level, vault);             // les autres sceaux, tels que le monde les porte
+            if (!vault.lit().add(pos)) {
                 continue;
             }
             int lit = vault.lit().size();
@@ -189,11 +248,12 @@ public final class SanctuarySeals {
     }
 
     /** Ou en sont les sceaux de cette ancre, en clair. Vide si l'ancre est libre. */
-    public static String describe(BlockPos anchor) {
+    public static String describe(ServerLevel level, BlockPos anchor) {
         for (Vault vault : vaults) {
             if (!vault.anchor().equals(anchor)) {
                 continue;
             }
+            refresh(level, vault);
             StringBuilder out = new StringBuilder();
             for (BlockPos seal : vault.seals()) {
                 out.append(out.isEmpty() ? "" : " | ")
@@ -240,9 +300,15 @@ public final class SanctuarySeals {
     }
 
     /** Combien de sceaux restent a eveiller pour cette ancre, ou zero. */
-    public static int remaining(BlockPos anchor) {
+    public static int remaining(ServerLevel level, BlockPos anchor) {
         for (Vault vault : vaults) {
             if (vault.anchor().equals(anchor)) {
+                // LE MONDE D'ABORD. Apres un rechargement la memoire est vide,
+                // et un joueur qui avait eveille ses cinq sceaux la veille se
+                // serait vu refuser l'ancre -- sans pouvoir recliquer des
+                // sceaux deja allumes. On relit les blocs, qui sont charges
+                // puisque le joueur est a l'ancre.
+                refresh(level, vault);
                 return vault.seals().size() - vault.lit().size();
             }
         }

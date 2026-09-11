@@ -108,6 +108,16 @@ public class GameState extends SavedData {
      * On retient donc ce qu'on a bati, et non ce qu'on croit lire du terrain.
      */
     private final List<BlockPos> built = new ArrayList<>();
+    /**
+     * LES SCEAUX DE CHAQUE TOMBEAU, par ancre.
+     *
+     * Ils vivaient dans un registre VOLATIL de SanctuarySeals -- « cela se
+     * rebatit, cela ne se sauve pas ». Faux depuis que la reprise ne rebatit
+     * plus ce qui existe : un sanctuaire bati dans une session precedente
+     * n'avait plus aucun sceau inscrit, et le clic sur un tombeau ne trouvait
+     * rien. « Je n'arrive pas a activer les tombeaux, rien ne se passe. »
+     */
+    private final java.util.Map<BlockPos, List<BlockPos>> vaults = new java.util.LinkedHashMap<>();
     /** L'arene finale : ZERO tant que l'Arc-en-ciel n'est pas leve. */
     private BlockPos finale = BlockPos.ZERO;
     private String finaleBoss = "";
@@ -144,6 +154,14 @@ public class GameState extends SavedData {
         for (long packed : tag.getLongArray("Built")) {
             state.built.add(BlockPos.of(packed));
         }
+        for (var entry : tag.getList("Vaults", net.minecraft.nbt.Tag.TAG_COMPOUND)) {
+            CompoundTag vault = (CompoundTag) entry;
+            List<BlockPos> seals = new ArrayList<>();
+            for (long packed : vault.getLongArray("Seals")) {
+                seals.add(BlockPos.of(packed));
+            }
+            state.vaults.put(BlockPos.of(vault.getLong("Anchor")), seals);
+        }
         return state;
     }
 
@@ -167,6 +185,14 @@ public class GameState extends SavedData {
         tag.putLongArray("Anchors", this.anchors.stream().mapToLong(BlockPos::asLong).toArray());
         tag.putLongArray("Activated", this.activated.stream().mapToLong(BlockPos::asLong).toArray());
         tag.putLongArray("Built", this.built.stream().mapToLong(BlockPos::asLong).toArray());
+        net.minecraft.nbt.ListTag vaultsTag = new net.minecraft.nbt.ListTag();
+        for (var entry : this.vaults.entrySet()) {
+            CompoundTag vault = new CompoundTag();
+            vault.putLong("Anchor", entry.getKey().asLong());
+            vault.putLongArray("Seals", entry.getValue().stream().mapToLong(BlockPos::asLong).toArray());
+            vaultsTag.add(vault);
+        }
+        tag.put("Vaults", vaultsTag);
         return tag;
     }
 
@@ -248,6 +274,7 @@ public class GameState extends SavedData {
         this.anchorsInProgress = 0;
         this.activated.clear();
         this.built.clear();
+        this.vaults.clear();
         this.finale = BlockPos.ZERO;
         this.finaleBoss = "";
         this.finaleTick = 0L;
@@ -307,6 +334,22 @@ public class GameState extends SavedData {
 
     public boolean isActivated(BlockPos pos) {
         return this.activated.contains(pos);
+    }
+
+    /** Les sceaux inscrits pour cette ancre, ou une liste vide. */
+    public List<BlockPos> sealsOf(BlockPos anchor) {
+        return List.copyOf(this.vaults.getOrDefault(anchor, List.of()));
+    }
+
+    /** Toutes les ancres qui ont un tombeau inscrit. */
+    public List<BlockPos> vaultAnchors() {
+        return List.copyOf(this.vaults.keySet());
+    }
+
+    /** Inscrit le tombeau d'une ancre : c'est ce que la reprise relira. */
+    public void setSeals(BlockPos anchor, List<BlockPos> seals) {
+        this.vaults.put(anchor.immutable(), seals.stream().map(BlockPos::immutable).toList());
+        setDirty();
     }
 
     /** Ce site a-t-il deja porte son sanctuaire ? */
@@ -424,6 +467,7 @@ public class GameState extends SavedData {
         this.anchorsInProgress = 0;
         this.activated.clear();
         this.built.clear();
+        this.vaults.clear();
         this.finale = BlockPos.ZERO;
         this.finaleBoss = "";
         this.finaleTick = 0L;
@@ -484,6 +528,7 @@ public class GameState extends SavedData {
         this.anchors.clear();
         this.activated.clear();
         this.built.clear();
+        this.vaults.clear();
         this.finale = BlockPos.ZERO;
         this.finaleBoss = "";
         this.finaleTick = 0L;

@@ -5028,3 +5028,49 @@ Mesure en dev, trois sanctuaires sur sol vierge par le chemin normal du jeu :
 
 Le prechargement a disparu du classement des pires etapes : il ne coute plus
 rien au fil serveur. Ce qui reste est de la pose de blocs, deja en bandes.
+
+## 61. Les tombeaux muets, et les reglages JVM que CurseForge efface *(12 sept. 2026)*
+
+### A. « Je n'arrive pas a activer les tombeaux, rien ne se passe »
+
+Le registre des sceaux (`SanctuarySeals`) etait VOLATIL -- « cela se rebatit,
+cela ne se sauve pas ». C'etait vrai tant que la reprise rebatissait tout ;
+c'est faux depuis qu'elle ne rebatit plus ce qui existe (§55 D bis). Un
+sanctuaire bati la veille n'avait donc plus un seul sceau inscrit : le clic sur
+un tombeau cherchait sa position dans une liste vide, ne trouvait rien, et se
+taisait. Et un joueur qui avait eveille ses cinq sceaux la veille se serait vu
+refuser l'ancre au retour, sans pouvoir recliquer des sceaux deja allumes.
+
+Les sceaux sont maintenant ECRITS dans le journal de bord a la pose
+(`GameState.setSeals`, etiquette `Vaults`) et RELUS a la reprise
+(`SanctuarySeals.restore`). Et l'etat eveille/endormi ne vit plus en memoire :
+il se lit sur le bloc, qui porte `lit=true` et survit a tout. Chaque consultation
+-- le clic, l'ancre, la commande, le rappel periodique -- relit d'abord les blocs
+charges (`refresh`).
+
+Verifie en deux ouvertures avec fermeture propre entre les deux :
+
+    [ouverture 1]  Sceaux : ... endormi x5   puis   5 sceau(x) eveille(s)
+    [ouverture 2]  Sceaux : ... eveille x5   sans rien toucher
+
+Et l'inverse : batis sans eveiller, recharge, « endormi x5 », eveille, « eveille x5 ».
+
+Au passage, `SanctuaryMist.nearestAnchor` -- volatil lui aussi -- se rabat sur
+les ancres du journal de bord quand sa liste est vide : les commandes d'essai
+repondaient « aucun sanctuaire connu de cette session » devant un sanctuaire
+bien reel.
+
+### B. CurseForge a efface les reglages JVM
+
+Les reglages poses le 9 septembre (§60 B) n'ont jamais tourne : a la fermeture
+du jeu, CurseForge a reecrit `minecraftinstance.json` et remis `override:
+false, memoire 4096, args : aucun`. Le fichier n'est pas la source de verite de
+CurseForge, il en est une copie. La session du 11 septembre a donc joue avec
+`-Xmx16384m -Xms256m` et rien d'autre, comme avant : trente retards en
+cinquante-quatre minutes, de deux a neuf secondes, un par minute pendant la
+Battue, sans lien avec nos lignes de journal, Distant Horizons generant sans
+interruption pendant cinquante-deux des cinquante-trois minutes.
+
+La seule facon durable est de saisir les arguments dans l'application
+CurseForge elle-meme (profil, Reglages, Java). La chaine est celle de
+`tools/java_args.py`, tas fixe de dix gigaoctets et G1 regle.
