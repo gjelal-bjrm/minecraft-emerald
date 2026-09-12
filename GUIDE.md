@@ -12,6 +12,10 @@ Vous démarrez tous dans un village, avec une **épée plantée dans un socle** 
 centre. Tant que personne ne la retire, rien ne commence : vous ne pouvez ni
 sortir du village ni creuser. C'est le temps de vous organiser.
 
+> Cette retenue ne vaut **qu'en régime Défi**, où l'horloge tourne. En
+> **Monde ouvert**, rien ne vous retient : partez explorer avant de tirer la
+> Lame si vous voulez, le prologue vous attendra.
+
 **Quand un joueur retire l'épée**, le village est attaqué. Les autres joueurs
 reçoivent au hasard un arc ou un sceptre, prêtés pour l'occasion. Trois vagues.
 

@@ -40,12 +40,24 @@ public class LobbyRules {
     }
 
     /**
-     * La barriere ne vaut que TANT QUE LA LAME EST PLANTEE.
+     * La barriere ne vaut que TANT QUE LA LAME EST PLANTEE, ET EN DEFI.
      *
      * Pendant le siege, les monstres apparaissent jusqu'a 26 blocs et se
      * poursuivent : enfermer les defenseurs les empecherait de se battre.
+     *
+     * EN MONDE OUVERT, ELLE NE VAUT PAS DU TOUT. Elle n'existe que pour
+     * proteger le prologue chronometre : tant que l'horloge tourne, partir
+     * explorer avant de tirer la Lame gache la partie de tout le monde. Sans
+     * horloge, ce raisonnement tombe -- et la barriere ne faisait plus
+     * qu'interdire d'explorer un monde ouvert, ce qui est exactement le
+     * contraire de ce qu'on choisit en prenant ce regime. Le regime se tranche
+     * avant que la Lame soit tiree, donc il est toujours connu ici.
      */
     private static boolean confined(ServerLevel level) {
+        GameState state = GameState.get(level);
+        if (state.mode() == GameState.Mode.LIBRE) {
+            return false;
+        }
         return ModeSwitch.enabled() && waiting(level) && !GameManager.prologueRunning();
     }
 
