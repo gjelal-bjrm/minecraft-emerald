@@ -73,39 +73,61 @@ PALETTE = [
     "minecraft:gray_concrete",             # 2
     "minecraft:andesite",                  # 3
     "supplementaries:stone_tile",          # 4
-    "minecraft:spruce_planks",             # 5   les quais
+    "minecraft:spruce_planks",             # 5   les quais, AU BORD DE L'EAU
     "minecraft:dark_oak_planks",           # 6
     "minecraft:stripped_spruce_wood",      # 7
     "minecraft:tuff",                      # 8   le sol nu, les talus
     "minecraft:polished_andesite",         # 9
     "minecraft:packed_mud",                # 10
-    "minecraft:deepslate_bricks",          # 11  les murs de metal
-    "minecraft:cracked_deepslate_bricks",  # 12
-    "minecraft:deepslate_tiles",           # 13
-    "supplementaries:blackstone_tile",     # 14
-    "minecraft:polished_deepslate",        # 15  les bandeaux
-    "minecraft:chiseled_deepslate",        # 16
+    "minecraft:deepslate_bricks",          # 11  les murs
+    "minecraft:deepslate_tiles",           # 12
+    "minecraft:tuff_bricks",               # 13
+    "minecraft:smooth_stone",              # 14
+    "supplementaries:blackstone_tile",     # 15  les bandeaux, les plus sombres
+    "minecraft:polished_blackstone",       # 16
     "minecraft:mossy_stone_bricks",        # 17  les soubassements, la digue
     "minecraft:mossy_cobblestone",         # 18
     "minecraft:stone_bricks",              # 19
-    "minecraft:tuff_bricks",               # 20  les toits, les passerelles
+    "minecraft:polished_tuff",             # 20  les toits, le metal
     "minecraft:oxidized_cut_copper",       # 21
     "minecraft:weathered_cut_copper",      # 22
-    "minecraft:polished_tuff",             # 23
+    "minecraft:copper_block",              # 23
     "minecraft:water",                     # 24  le bassin
+    "minecraft:deepslate_brick_slab",      # 25  reserve
+    "minecraft:cracked_deepslate_bricks",  # 26
 ]
 
 AIR = 0
 PAVE = (1, 2, 3, 4)
 DOCK = (5, 6, 7)
 GROUND = (8, 9, 10)
-WALL = (11, 12, 13, 14)
+# Les murs s'etalent maintenant de 0,21 a 0,62 de luminance, contre 0,14 a 0,28
+# auparavant ou les quatre variantes etaient du deepslate a 36/255 les unes des
+# autres. Mesure : l'ecart moyen entre deux cellules voisines passe de 0,020 a
+# 0,058 -- c'est lui, et non le nombre de variantes, qui faisait « rocher uni ».
+WALL = (11, 12, 13, 14, 26)
+# Le bandeau doit TRANCHER sur le mur, pas le repeter. Les deux blocs les plus
+# sombres de la palette lui sont reserves ; aucune paire bandeau-mur ne descend
+# sous 0,07 de luminance d'ecart.
 BAND = (15, 16)
 FOOT = (17, 18, 19)
 ROOF = (20, 21, 22, 23)
 WATER = 24
 
 NEIGHBOURS = ((1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1))
+
+# Taille minimale d'une etendue d'eau, en colonnes. La rade en fait deux cent
+# mille ; la plus grande place en contrebas faussement noyee en faisait six
+# mille six cents. Le seuil les separe sans ambiguite.
+SEA_MIN = 20000
+
+# Les niveaux d'INTERIEUR, que le jeu charge en streaming par-dessus le port.
+# Leur collision ne porte presque aucun plafond -- mesure sur le bar : cent
+# quatre-vingt-quatre triangles tournes vers le bas pour cent quatre-vingt-sept
+# unites carrees, contre mille huit cent quatre-vingt-trois de sol, soit dix
+# pour cent. Le jeu n'en avait pas besoin, le joueur ne pouvant pas les
+# toucher ; nous si, sans quoi on voit le ciel depuis le comptoir.
+INTERIORS = ("HHG", "GGA")
 
 
 def find_obj(code):
@@ -133,7 +155,7 @@ def read_triangles(path):
     return verts, faces
 
 
-def load_all(codes):
+def load_all(codes, lift):
     """Plusieurs niveaux dans UN repere.
 
     Les coordonnees de la collision sont absolues dans le monde du jeu : deux
@@ -142,13 +164,24 @@ def load_all(codes):
     """
     verts = []
     faces = []
+    groups = []
+    bounds = {}
     for code in codes:
         base = len(verts)
         v, f = read_triangles(find_obj(code))
+        # le LEVER, applique avant la fusion : la porte est dans le meme
+        # fichier que la piece, elle monte donc rigidement avec elle et rien
+        # ne se decroche
+        dy = lift.get(code, 0.0)
+        if dy:
+            v = [(p[0], p[1] + dy, p[2]) for p in v]
         verts.extend(v)
+        start = len(faces)
         faces.extend((a + base, b + base, c + base) for a, b, c in f)
-        print("  %-6s %6d triangles" % (code, len(f)))
-    return verts, faces
+        groups.append((code, start, len(faces)))
+        bounds[code] = (min(q[1] for q in v), max(q[1] for q in v))
+        print("  %-6s %6d triangles%s" % (code, len(f), "  (leve de %g)" % dy if dy else ""))
+    return verts, faces, groups, bounds
 
 
 def normal_of(a, b, c):
@@ -163,7 +196,7 @@ def normal_of(a, b, c):
     return nx / length, ny / length, nz / length
 
 
-def voxelize(verts, faces, cell):
+def voxelize(verts, faces, cell, groups=()):
     """La peau du niveau, rasterisee sans trou.
 
     Pour chaque triangle on projette sur le plan perpendiculaire a l'axe
@@ -186,7 +219,13 @@ def voxelize(verts, faces, cell):
     d = int((maxz - minz) / cell) + 2
 
     voxels = {}
-    for tri in faces:
+    columns = {}
+    owner = {}
+    for code, start, end in groups:
+        for i in range(start, end):
+            owner[i] = code
+
+    for index, tri in enumerate(faces):
         a, b, c = (verts[i] for i in tri)
         nx, ny, nz = normal_of(a, b, c)
         flat = abs(ny)
@@ -237,8 +276,11 @@ def voxelize(verts, faces, cell):
                 # a chaque intersection
                 if old is None or flat > old:
                     voxels[key] = flat
+                code = owner.get(index)
+                if code is not None:
+                    columns.setdefault(code, set()).add((key[0], key[2]))
 
-    return voxels, (w, hgt, d), (minx, miny, minz)
+    return voxels, (w, hgt, d), (minx, miny, minz), columns
 
 
 def pinholes(voxels, dims):
@@ -271,7 +313,110 @@ def pinholes(voxels, dims):
     return len(added)
 
 
-def water_mask(voxels, dims, water_y):
+def column_tops(voxels):
+    """Le voxel solide le plus haut de chaque colonne."""
+    tops = {}
+    for (x, y, z) in voxels:
+        key = (x, z)
+        if tops.get(key, -1) < y:
+            tops[key] = y
+    return tops
+
+
+def water_mask(voxels, dims, water_y, tops):
+    """La nappe : les colonnes dont le SOMMET est sous la ligne d'eau.
+
+    Deux erreurs ont ete commises ici, l'une apres l'autre, et les deux valent
+    d'etre gardees par ecrit.
+
+    LA PREMIERE testait une seule cellule par colonne, a la hauteur de l'eau,
+    et propageait depuis le bord de la carte. Comme on ne garde que la PEAU des
+    surfaces, le massif sous la ville est creux : une colonne dont le sol est a
+    la cellule 65 est parfaitement vide a 63. Mesure, cela declarait « ouvertes
+    sur le large » 128 274 colonnes portant un vrai sol de ville, soit 72,5 %
+    d'entre elles ; la nappe circulait sous la ville et ressortait dans les
+    places en contrebas -- quarante et un amas, le plus grand de 6 613
+    cellules. C'est exactement ce qu'on nous a rapporte : « les intersections
+    ou l'on descend quelques marches ».
+
+    LA SECONDE, qui semblait evidente, aurait VIDE LA RADE. Tester le sommet ET
+    exiger une liaison au bord de la carte laisse le bassin a sec : le jeu ne
+    pose aucune collision sous l'eau, la baie est donc un trou de 209 738
+    colonnes sans la moindre geometrie, et la digue qui l'enferme a son sommet
+    au-dessus de la ligne d'eau. La propagation ne l'atteint jamais. Le port
+    serait devenu une fosse d'air de cent cinquante blocs de fond.
+
+    LA BONNE REGLE ne propage pas depuis le bord : une colonne est de la mer si
+    son sommet est sous la ligne d'eau, colonne vide comprise. On decoupe
+    ensuite en composantes et l'on ne garde que les GRANDES -- la rade, le
+    large, les canaux. Les petites poches fermees sont precisement les places
+    en contrebas, et elles restent seches.
+    """
+    w, h, d = dims
+
+    # Les CANDIDATS : toute colonne dont le sommet est sous la ligne d'eau,
+    # colonne vide comprise.
+    candidate = set()
+    for x in range(w):
+        for z in range(d):
+            if tops.get((x, z), -1) < water_y:
+                candidate.add((x, z))
+
+    # LES AMORCES SONT LES COLONNES VIDES, et elles seules. C'est la
+    # distinction qui manquait : la rade n'a AUCUNE geometrie -- le jeu n'en
+    # pose pas sous l'eau -- tandis qu'une place en contrebas a un sol, a la
+    # cellule 61 ou 62. Amorcer partout ou le sommet est bas noyait donc les
+    # deux ; amorcer depuis le vide ne noie que la mer, et la propagation
+    # s'arrete a la levre des places, dont le pourtour est a la ligne d'eau.
+    seeds = [c for c in candidate if (c[0], c[1]) not in tops]
+
+    reached = set()
+    queue = deque(seeds)
+    reached.update(seeds)
+    while queue:
+        x, z = queue.popleft()
+        for dx, dz in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            nxt = (x + dx, z + dz)
+            if nxt in candidate and nxt not in reached:
+                reached.add(nxt)
+                queue.append(nxt)
+
+    # LES POCHES FERMEES RESTENT SECHES.
+    #
+    # Il subsiste des places en contrebas dont le sol est sous la ligne d'eau
+    # et qui communiquent par un couloir bas : physiquement elles seraient
+    # noyees, mais le jeu n'y met pas d'eau, et le joueur nous l'a signale --
+    # « les intersections ou l'on descend quelques marches ». On ne garde donc
+    # une etendue A FOND SOLIDE que si elle touche vraiment le large, c'est-a-
+    # dire une colonne sans aucune geometrie. Une cuvette entouree de ville
+    # n'en touche aucune.
+    empty = {c for c in reached if c not in tops}
+    floored = reached - empty
+    keep = set(empty)
+    seen = set()
+    for start in floored:
+        if start in seen:
+            continue
+        blob = []
+        touches = False
+        stack = [start]
+        seen.add(start)
+        while stack:
+            x, z = stack.pop()
+            blob.append((x, z))
+            for dx, dz in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                nxt = (x + dx, z + dz)
+                if nxt in empty:
+                    touches = True
+                elif nxt in floored and nxt not in seen:
+                    seen.add(nxt)
+                    stack.append(nxt)
+        if touches:
+            keep.update(blob)
+    return keep
+
+
+def water_mask_unused(voxels, dims, water_y):
     """La nappe : tout ce qui communique avec le large, a la hauteur de l'eau.
 
     Une propagation depuis le BORD de la carte. Sans elle, l'eau apparaitrait
@@ -320,29 +465,132 @@ def mix(x, y, z, scale):
     return (a ^ (a >> 16)) & 0x7FFFFFFF
 
 
-def classify(flat, x, y, z, quay_y, top_y):
-    """Le bloc d'un voxel : sa classe d'abord, sa variante ensuite."""
+def classify(flat, x, y, z, quay_y, water_y, tops, shore):
+    """Le bloc d'un voxel : sa classe d'abord, sa variante ensuite.
+
+    LE BOIS NE VA QU'AU BORD DE L'EAU. La regle precedente disait « horizontal
+    et y <= quay_y + 2 », ce qui n'est pas un test de quai mais un test
+    d'altitude -- et quay_y EST le sol principal de la ville. Elle peignait
+    donc en planches 239 743 voxels, soit 32,8 % du niveau entier et la classe
+    la plus nombreuse : tout le pave de Haven etait un plancher. Un quai se
+    definit par ce qu'il borde, pas par sa hauteur.
+
+    LE TOIT SE JUGE PAR COLONNE. Le seuil precedent, quay_y + 45 % de la
+    hauteur totale, valait 106 parce qu'UNE fleche du port monte a 99 : les
+    toits ne couvraient que 2,6 % du niveau et jamais le bar. On demande
+    desormais si le voxel est le SOMMET de sa colonne et s'il domine le quai,
+    ce qui ne depend plus d'un point isole de la carte.
+    """
     horizontal = flat > 0.80
     vertical = flat < 0.35
 
     if y <= quay_y - 6:
         return FOOT[mix(x, y, z, 5) % len(FOOT)]
-    if horizontal and y <= quay_y + 2:
+    if horizontal and (x, z) in shore and water_y - 1 <= y <= water_y + 3:
         return DOCK[mix(x, y, z, 4) % len(DOCK)]
     if horizontal:
-        if y > quay_y + (top_y - quay_y) * 0.45:
-            return ROOF[mix(x, y, z, 6) % len(ROOF)]
-        return PAVE[mix(x, y, z, 7) % len(PAVE)]
+        if y >= tops.get((x, z), 0) and y > quay_y + 5:
+            return ROOF[mix(x, y, z, 5) % len(ROOF)]
+        return PAVE[mix(x, y, z, 3) % len(PAVE)]
     if vertical:
         # le bandeau : une assise differente toutes les cinq. C'est le detail le
         # moins cher et le plus efficace pour qu'un mur cesse d'etre une falaise
         if y % 5 == 0:
             return BAND[mix(x, y, z, 9) % len(BAND)]
-        return WALL[mix(x, y, z, 6) % len(WALL)]
-    return GROUND[mix(x, y, z, 6) % len(GROUND)]
+        # maille 3 et non 6 : a la maille 6, quatre voisins sur cinq tiraient le
+        # MEME bloc et les plaques fusionnaient en aplats
+        return WALL[mix(x, y, z, 3) % len(WALL)]
+    return GROUND[mix(x, y, z, 4) % len(GROUND)]
 
 
-def encode(voxels, dims, quay_y, top_y, water_y, mask, depth):
+def cap_interiors(voxels, dims, columns, codes, roofs):
+    """Pose un plafond sur les niveaux d'interieur, que la collision omet.
+
+    Le bar et le stand de tir sont a ciel ouvert dans les donnees : sur les
+    mille cinq cent six colonnes du plancher du bar, mille quatre-vingt-douze
+    n'ont rien du tout au-dessus du sol plus quatre. On coiffe donc chaque
+    piece a la hauteur de sa propre coque -- pas a une hauteur inventee : le
+    toit prend l'altitude du point le plus haut du niveau qui le porte, ce qui
+    donne un batiment d'un seul tenant plutot qu'un couvercle pose dessus.
+    """
+    forced = {}
+    for code in codes:
+        if code not in INTERIORS:
+            continue
+        own = columns.get(code, set())
+        if not own:
+            continue
+        # LA HAUTEUR PROPRE DU NIVEAU, pas celle de ses colonnes. Prendre le
+        # sommet de tout ce qui traverse l'emprise attrapait les tours du port
+        # qui la surplombent : le toit du bar se posait a la cellule 120, soit
+        # cinquante blocs au-dessus de sa propre coque.
+        roof_y = roofs.get(code)
+        if roof_y is None:
+            continue
+        posed = 0
+        # le sommet par colonne, calcule une seule fois
+        tops = {}
+        for (x, y, z) in voxels:
+            if (x, z) in own and tops.get((x, z), -1) < y:
+                tops[(x, z)] = y
+        for (x, z), top in tops.items():
+            if top >= roof_y - 1:
+                continue                      # deja couverte
+            for dy in (roof_y, roof_y - 1):
+                if (x, dy, z) not in voxels:
+                    forced[(x, dy, z)] = ROOF[mix(x, dy, z, 5) % len(ROOF)]
+                    posed += 1
+        print("  toit      %s : %d blocs a la hauteur %d" % (code, posed, roof_y))
+    return forced
+
+
+def skirt(voxels, dims, columns, codes, water_y):
+    """Donne un SOL aux interieurs qui flottent.
+
+    Le bar n'est pas une dalle posee sur la rue : sur les mille cinq cent sept
+    colonnes de son emprise, mille trois cent vingt-six n'ont rien du tout en
+    dessous, et toutes sont au-dessus du bassin. Il est raccorde au pave par
+    son seul coin. On lui batit donc une jupe qui descend jusqu'a la ligne
+    d'eau -- faute de quoi le lever ne ferait que l'ecarter davantage du sol.
+    """
+    forced = {}
+    for code in codes:
+        if code not in INTERIORS:
+            continue
+        own = columns.get(code, set())
+        floors = {}
+        for (x, y, z) in voxels:
+            if (x, z) in own and floors.get((x, z), 10 ** 9) > y:
+                floors[(x, z)] = y
+        posed = 0
+        for (x, z), floor in floors.items():
+            for y in range(water_y, floor):
+                if (x, y, z) not in voxels:
+                    forced[(x, y, z)] = FOOT[mix(x, y, z, 5) % len(FOOT)]
+                    posed += 1
+        print("  jupe      %s : %d blocs" % (code, posed))
+    return forced
+
+
+def shoreline(sea, dims, reach=3):
+    """Les colonnes assez pres de l'eau pour porter un quai.
+
+    C'est ce qui remplace le test d'altitude : un quai borde l'eau, il n'est
+    pas simplement bas. Trois cellules de portee suffisent -- au-dela on
+    planche des rues entieres, ce qui etait precisement le defaut.
+    """
+    w, h, d = dims
+    near = set()
+    for (x, z) in sea:
+        for dx in range(-reach, reach + 1):
+            for dz in range(-reach, reach + 1):
+                nxt = (x + dx, z + dz)
+                if 0 <= nxt[0] < w and 0 <= nxt[1] < d and nxt not in sea:
+                    near.add(nxt)
+    return near
+
+
+def encode(voxels, dims, quay_y, water_y, mask, depth, tops, shore, forced):
     """Les plages, en parcourant y puis z puis x.
 
     L'eau n'est qu'une NAPPE de quelques blocs, pas une colonne jusqu'au fond.
@@ -362,11 +610,14 @@ def encode(voxels, dims, quay_y, top_y, water_y, mask, depth):
         flooded = water_y - depth < y <= water_y
         for z in range(d):
             for x in range(w):
+                imposed = forced.get((x, y, z))
                 flat = voxels.get((x, y, z))
-                if flat is None:
+                if imposed is not None:
+                    block = imposed
+                elif flat is None:
                     block = WATER if flooded and (x, z) in mask else AIR
                 else:
-                    block = classify(flat, x, y, z, quay_y, top_y)
+                    block = classify(flat, x, y, z, quay_y, water_y, tops, shore)
                 if block == current:
                     count += 1
                 else:
@@ -409,6 +660,8 @@ def main():
     parser.add_argument("--name", required=True, help="nom de sortie")
     parser.add_argument("--with", dest="extra", nargs="*", default=[],
                         help="DGO a fusionner dans le meme repere")
+    parser.add_argument("--lift", nargs="*", default=[],
+                        help="lever un niveau, par exemple HHG:2")
     parser.add_argument("--cell", type=float, default=1.0)
     parser.add_argument("--water", type=float, default=6.0,
                         help="altitude de la surface de l'eau, en unites du jeu")
@@ -416,29 +669,46 @@ def main():
                         help="epaisseur de la nappe, en blocs")
     args = parser.parse_args()
 
+    lift = {}
+    for spec in args.lift:
+        code, _, amount = spec.partition(":")
+        lift[code] = float(amount or 0)
+
     codes = [args.code] + list(args.extra)
-    verts, faces = load_all(codes)
+    verts, faces, groups, bounds = load_all(codes, lift)
     print("  total  %d triangles" % len(faces))
 
-    voxels, dims, origin = voxelize(verts, faces, args.cell)
+    voxels, dims, origin, columns = voxelize(verts, faces, args.cell, groups)
     print("  grille    %d x %d x %d" % dims)
     print("  surfaces  %d voxels" % len(voxels))
     filled = pinholes(voxels, dims)
     print("  bouches   %d trous d'un bloc" % filled)
 
-    # les reperes d'altitude, ramenes en cellules. Le niveau des quais est
-    # MESURE : c'est l'altitude ou la surface horizontale est de loin la plus
-    # etendue du niveau (133 000 unites carrees a y=8, contre 60 000 au
-    # suivant), donc le sol sur lequel la ville est posee.
+    # Le niveau des quais est MESURE : c'est l'altitude ou la surface
+    # horizontale est de loin la plus etendue du niveau -- 133 000 unites
+    # carrees a y=8, contre 60 000 a la suivante.
     quay_y = int((8.0 - origin[1]) / args.cell)
     water_y = int((args.water - origin[1]) / args.cell)
-    top_y = dims[1] - 1
     print("  quais y=%d, eau y=%d (en cellules)" % (quay_y, water_y))
 
-    mask = water_mask(voxels, dims, water_y)
-    print("  nappe     %d cellules ouvertes sur le large" % len(mask))
+    forced = {}
+    forced.update(skirt(voxels, dims, columns, codes, water_y))
+    # la hauteur de chaque interieur, tiree de sa propre boite englobante
+    roofs = {}
+    for code, (lo, hi) in bounds.items():
+        roofs[code] = int((hi - origin[1]) / args.cell) - 1
+    forced.update(cap_interiors(voxels, dims, columns, codes, roofs))
+    # les blocs imposes comptent comme de la matiere pour la suite : sans cela
+    # la nappe passerait au travers de la jupe qu'on vient de batir
+    for key in forced:
+        voxels.setdefault(key, 1.0)
 
-    runs = encode(voxels, dims, quay_y, top_y, water_y, mask, args.depth)
+    tops = column_tops(voxels)
+    sea = water_mask(voxels, dims, water_y, tops)
+    shore = shoreline(sea, dims)
+    print("  mer       %d colonnes, rivage %d colonnes" % (len(sea), len(shore)))
+
+    runs = encode(voxels, dims, quay_y, water_y, sea, args.depth, tops, shore, forced)
     os.makedirs(OUT_DIR, exist_ok=True)
     path = os.path.join(OUT_DIR, "%s.jakv" % args.name)
     packed, _ = write_blob(path, dims, runs)

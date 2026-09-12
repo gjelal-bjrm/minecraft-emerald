@@ -47,6 +47,8 @@ public enum GearRarity {
     private static final String TAG = "ArcenciumRarity";
     /** Tout ce qu'on a deja depense sur cette piece, tentatives ratees comprises. */
     private static final String TAG_SPENT = "ArcenciumRaritySpent";
+    /** Les jets de pitie DEJA accordes sur cette piece, pour ne pas les redonner. */
+    private static final String TAG_GRANTED = "ArcenciumRarityGranted";
     /** Combien d'eclats depenses valent un jet supplementaire. */
     private static final int PITY_PER_DRAW = 6;
 
@@ -152,14 +154,36 @@ public enum GearRarity {
         // un donnait mille quatre cent soixante-quatorze jets la ou une seule
         // prise de cent trente en donnait cent trente : onze fois plus, pour la
         // meme depense. On retire donc ce que la pitie vient de payer.
-        int bonus = spent / PITY_PER_DRAW;
-        int draws = Math.max(1, shards) + bonus;
+        // LA PITIE S'ACCUMULE POUR DE BON.
+        //
+        // Elle ne le faisait pas. L'ancienne version retranchait de `spent` ce
+        // que la pitie venait de payer, si bien que `spent` retombait a son
+        // reste modulo six a chaque tentative : mesure, il plafonnait entre
+        // huit et douze, soit UN OU DEUX jets de bonus, pour toujours. Le
+        // commentaire promettait qu'« un joueur obstine finit par y arriver »
+        // et l'arithmetique disait le contraire -- d'ou l'impression d'un mur
+        // au Feerique, qui est exactement ce qu'on nous a rapporte.
+        //
+        // On garde donc le total verse, et l'on compte a part les jets DEJA
+        // accordes. Le bonus d'une tentative est la difference des deux. Cela
+        // ferme du meme coup la faille que l'ancienne version cherchait a
+        // eviter : deposer cent trente eclats un par un ou d'un seul coup
+        // donne desormais le meme nombre de jets, puisque le total ne depend
+        // que de la somme versee.
+        int paid = Math.max(1, shards);
+        spent += paid;
+        int granted = tag.getInt(TAG_GRANTED);
+        int earned = spent / PITY_PER_DRAW;
+        int bonus = Math.max(0, earned - granted);
+
+        int draws = paid + bonus;
         int best = of(stack).rank();
         for (int i = 0; i < draws; i++) {
             best = Math.max(best, draw(random));
         }
 
-        tag.putInt(TAG_SPENT, spent - bonus * PITY_PER_DRAW + Math.max(1, shards));
+        tag.putInt(TAG_SPENT, spent);
+        tag.putInt(TAG_GRANTED, earned);
         stack.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
         // l'equipement vanilla s'arrete a l'Ancestral (voir GearEligibility)
         return values()[Math.min(GearEligibility.rarityMax(stack), best)];
