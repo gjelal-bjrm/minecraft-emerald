@@ -5247,3 +5247,83 @@ La construction elle-meme n'a pas ete rejouee : c'est le meme chantier, aux
 memes tickets, qu'au §60, seules les coordonnees changent. A pied, neuf cents
 blocs font trois minutes et demie ; les ailes et le rappel avec teleporteur
 sont faits pour ca.
+
+## 64. Le Carnet dans le livre de FTB Quests *(12 sept. 2026)*
+
+« Quand je parlais de systeme de quete, c'etait ici » -- une capture du livre
+d'ATM10, avec ses chapitres Bienvenue, Ligne principale, Stockage, Logistique.
+« D'ailleurs on s'en fiche de tous les autres, presque, sauf ceux des
+artefacts et de l'amelioration des armes avec les gemmes. » Le carnet du §62
+etait le bon contenu au mauvais endroit : le chat.
+
+### A. Une seule detection, deux visages
+
+Le code qui sait si une etape est faite (`quest/Quests`, les dix predicats)
+ne bouge pas. Ce qui change, c'est ce qu'il en fait :
+
+- **Avec FTB Quests** (le profil), le carnet se tait. Il ACCORDE un succes
+  cache par etape -- `emeraldweapons:carnet/<cle>`, dix fichiers sans
+  affichage, au critere impossible -- des que l'etape est vraie, dans
+  n'importe quel ordre. Le livre porte une tache « succes » par quete, et
+  c'est lui qui affiche, ordonne, coche et paie. `/arcencium quete` ouvre le
+  livre.
+- **Sans FTB Quests** (le dev leger), le chat et la ligne d'ecran du §62
+  restent, et les succes s'accordent aussi.
+
+Pas de tache KubeJS, pas de tache « objet » : une tache « succes » tient
+dans un champ, et l'on garde le OU de l'etape 1 (un brut, ou un lingot, ou
+quatre eclats) que le livre ne sait pas dire.
+
+### B. Le chapitre, et le livre taille
+
+`tools/quests_book.py` ecrit le chapitre « Mode Arcencium » (dix quetes en
+chaine, icones du mode, memes recompenses qu'au §62, recettes en lettres dans
+la description de la quatrieme ; plus une quete a part, « Les gemmes
+d'Apotheose », a cocher a la lecture) dans `modpack/config/ftbquests/quests/`
+puis l'installe : `--dev` dans `run/config` pour le banc, sans option dans le
+profil. Le texte est en ligne ET dans les tables `lang/fr_fr.snbt` et
+`en_us.snbt`, aux identifiants derives de la clef (le meme a chaque
+generation, pour que la progression sauvegardee s'y rattache).
+
+Dans le profil, l'outil ne garde que quatre chapitres : le notre,
+**Artefacts**, **Reliques** et **Enchantement d'Apotheose** ; les
+cinquante-cinq autres partent, les groupes vides avec, et l'icone du livre
+devient le lingot. Le chapitre des gemmes d'Apotheose que le joueur croyait
+la n'existe pas dans ce livre : les tables de langue en gardent les titres,
+aucun fichier de chapitre ne les porte. D'ou la quete a part, qui dit ou sont
+les trois tables dans l'atelier.
+
+Avant de tailler, le livre entier va dans `dist/ftbquests_atm10_<date>.zip`,
+et le profil « All the Mods 10 - CUSTOM » le garde intact. L'outil refuse
+d'ecrire quand un java tourne sur l'instance, comme `deploy_jar.py`. (Les
+quetes d'ATM10 sont « tous droits reserves » : rien n'en est redistribue, le
+profil est prive.)
+
+### C. Au banc, et deux pieges de FTB Quests
+
+`verify_book.sh` : le jeu leger avec les trois jars FTB (Library, Teams,
+Quests) et Architectury, la meme sequence de dons que le banc du §62, puis
+`/ftbquests open_book`, une capture, et une fermeture propre pour que la
+progression d'equipe s'ecrive (`saves/test/ftbquests/<uuid>.snbt`).
+
+Trois lancements :
+
+1. **Quatre quetes sur dix changeaient d'identifiant au chargement.** Les
+   identifiants FTB sont des `long` SIGNES ecrits en hexa : un identifiant
+   qui commence par 8 a F ne se lit pas, et le livre lui en attribue un autre
+   -- la quete perd ses dependances et sa progression, et la table de langue
+   ne la retrouve plus. Le banc l'a vu net : chaque identifiant a bit haut a
+   ete reattribue, aucun autre. `ident()` masque desormais le bit haut.
+2. **La table de langue ne se lisait plus** (« Expected ':', got '"' »). FTB
+   reecrit les tables a sa facon, les listes sur plusieurs lignes ; en
+   retirant nos anciennes entrees ligne par ligne, on laissait des lignes
+   orphelines. Le retrait suit maintenant les crochets.
+3. **Neuf quetes sur neuf atteignables cochees** dans le livre, dans l'ordre
+   des dons, zero ligne de Carnet dans le chat, tables de langue chargees
+   sans erreur. La dixieme demande une ancre tenue ; la quete des gemmes se
+   coche a la main.
+
+Dans le profil : 55 chapitres retires, 4 gardes (le notre compris), sauvegarde
+`dist/ftbquests_atm10_20260912.zip`. Le manuel dit ou trouver le livre
+(le bouton dans l'inventaire : la touche « Open Quests » n'est pas liee dans
+les options du joueur).

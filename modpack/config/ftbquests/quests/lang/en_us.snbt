@@ -1,0 +1,26 @@
+{
+	chapter.5BA8D1052A10A044.title: "Mode Arcencium"
+	chapter.5BA8D1052A10A044.chapter_subtitle: ["Le carnet du mode : dix étapes, dans l'ordre d'une partie. Chacune se coche toute seule."]
+	quest.1FB3B169020C8803.title: "Le premier Arcencium"
+	quest.1FB3B169020C8803.quest_desc: ["Descendez sous le niveau zéro, plus profond que le diamant. Une pioche en diamant en tire le brut ; une pioche en fer n'en tire que des éclats, et quatre éclats font un brut.", "", "Attendez l'&bAurore&r : elle montre les filons à travers la roche.", "", "&7Se coche avec un brut, un lingot ou quatre éclats dans le sac."]
+	quest.44168CEBF6E694D4.title: "Trois lingots"
+	quest.44168CEBF6E694D4.quest_desc: ["Fondez le brut dans un four ordinaire, un pour un (le minerai donne deux bruts). Tout l'équipement du mode se fabrique en lingots d'Arcencium.", "", "&7Se coche avec trois lingots dans le sac."]
+	quest.29155787FCD807EF.title: "Le bois de Prisme"
+	quest.29155787FCD807EF.quest_desc: ["Chaque arme demande une &dbranche&r, chaque armure une &dfibre&r. L'Arbre de Prisme pousse en bosquets dans les plaines et les forêts ; la défense du village vous en a donné, et les coffres des sanctuaires en portent.", "", "Bûche → 4 planches de cristal · 2 planches → 4 branches · 3 feuilles → 1 fibre", "", "&7Se coche avec une branche ou une fibre dans le sac."]
+	quest.4C3ED8370E7841A2.title: "Votre première arme"
+	quest.4C3ED8370E7841A2.quest_desc: ["Sur un établi ordinaire, avec les lingots, des émeraudes et du prisme. Quatre armes, chacune avec sa mécanique. Grilles lues ligne par ligne :", "", "&bÉpée d'émeraude&r   E N E / A A A / B . B", "&bGlaive&r   A E A / A F A / E B E", "&bSceptre&r   A E A / . A . / . B .", "&bArc&r   E A . / A R B / E A .", "", "&7A lingot d'Arcencium · E émeraude · B branche de Prisme · F fibre de Prisme · N épée en diamant · R arc ordinaire · . vide", "", "&7Se coche avec une arme du mode portée ou dans le sac."]
+	quest.2CCEA2A1169ACE41.title: "La Forge : +1"
+	quest.2CCEA2A1169ACE41.quest_desc: ["À la &6Forge d'Arcencium&r du village : posez la pièce, ayez une Pierre de Forge et le métal du cran (4 fer pour +1).", "", "Un échec ne fait jamais redescendre et vous rend le métal : il ne coûte que la Pierre.", "", "&7Se coche avec une pièce à +1 ou plus."]
+	quest.717AAC6265C6564B.title: "Une rune gravée"
+	quest.717AAC6265C6564B.quest_desc: ["À l'&6Établi à sertir&r : posez la pièce, posez une rune à côté, reprenez la pièce.", "", "Une rune d'arme va sur l'arme ou le casque ; une rune d'armure sur une armure. Son rang ne peut pas dépasser la rareté de la pièce.", "", "&7Se coche avec une pièce qui porte une rune."]
+	quest.124BA9DF0434E46E.title: "Monter la rareté"
+	quest.124BA9DF0434E46E.quest_desc: ["À l'&6Établi à sertir&r : posez la pièce, posez des Éclats du Destin à côté, reprenez la pièce. Le dé est lancé à la reprise.", "", "Plus d'Éclats, plus de chances ; et ce que vous avez déjà dépensé sur cette pièce vous reste acquis.", "", "&7Se coche avec une pièce de rang 2 ou plus."]
+	quest.413970FF5D5A160B.title: "La spécialisation"
+	quest.413970FF5D5A160B.quest_desc: ["À l'&6Autel de spécialisation&r du village, avec des plumes d'Arcencium : +1 coûte trois plumes et réussit toujours.", "", "Vos ailes apparaissent, et la progression survit à la partie.", "", "&7Se coche au premier palier."]
+	quest.610C30B23A89F1C2.title: "Éveiller un sceau"
+	quest.610C30B23A89F1C2.quest_desc: ["Dans un sanctuaire, cinq sceaux dorment dans la pyramide et les ailes. Cliquez-en un pour l'éveiller.", "", "Tous éveillés, l'ancre du sommet accepte l'Arcencium.", "", "&7Se coche au premier sceau éveillé, n'importe où."]
+	quest.05970D6664249579.title: "Tenir une ancre"
+	quest.05970D6664249579.quest_desc: ["Au sommet du sanctuaire, alimentez l'ancre en lingots d'Arcencium (8 pour la première) et tenez le siège.", "", "Trois ancres tenues lèvent l'&dArc-en-ciel&r et son boss.", "", "&7Se coche à la première ancre tenue."]
+	quest.6021D93700B93DB2.title: "Les gemmes d'Apothéose"
+	quest.6021D93700B93DB2.quest_desc: ["Nos armes et armures acceptent les &dgemmes&r et les affixes d'Apothéose comme n'importe quelle pièce.", "", "Dans l'atelier du village, à côté de la Forge : la &6Table de taille&r pour sertir une gemme, la &6Table de récupération&r pour la reprendre, la &6Table de reforge&r pour retirer les affixes.", "", "Les chapitres &eArtefacts&r, &eReliques&r et &eEnchantement d'Apothéose&r du livre d'ATM10 sont gardés plus bas.", "", "&7Cochez quand c'est lu."]
+}

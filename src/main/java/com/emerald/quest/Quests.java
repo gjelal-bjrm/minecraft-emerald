@@ -10,9 +10,12 @@ import com.emerald.rune.RuneFamily;
 import com.emerald.rune.Runes;
 import com.emerald.specialization.Specialization;
 import net.minecraft.ChatFormatting;
+import net.minecraft.advancements.AdvancementHolder;
+import net.minecraft.advancements.AdvancementProgress;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
@@ -21,6 +24,7 @@ import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.ModList;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
@@ -43,6 +47,14 @@ import java.util.function.BiPredicate;
  * persistantes du joueur, qui survivent a la mort (PlayerPersistence) et a la
  * session. Chaque etape franchie paie une petite chose utile a la suivante :
  * le carnet ne remplace pas le jeu, il l'ouvre.
+ *
+ * DEUX VISAGES, UNE SEULE DETECTION. « Quand je parlais de systeme de quete,
+ * c'etait ici » -- le livre de FTB Quests, celui d'ATM10. Quand ce mod est
+ * present (le profil), le carnet se tait : il se contente d'ACCORDER un
+ * succes cache par etape (`emeraldweapons:carnet/<cle>`), et c'est le livre
+ * qui affiche, ordonne et paie, avec une tache « succes » par quete. Sans
+ * FTB Quests (le dev leger), le chat et la ligne d'ecran font le travail.
+ * Le code qui sait si une etape est faite ne vit qu'a un endroit.
  */
 @EventBusSubscriber(modid = EmeraldWeaponsMod.MODID)
 public final class Quests {
@@ -52,6 +64,11 @@ public final class Quests {
     private static final int EVERY = 40;
 
     private Quests() {
+    }
+
+    /** Vrai quand le livre de FTB Quests porte le carnet a notre place. */
+    public static boolean book() {
+        return ModList.get().isLoaded("ftbquests");
     }
 
     /**
@@ -152,6 +169,16 @@ public final class Quests {
         if (state.status() != GameState.Status.RUNNING) {
             return;                                 // le carnet s'ouvre avec la partie
         }
+        if (book()) {
+            // le livre ordonne lui-meme : on accorde chaque succes des qu'il
+            // est merite, sans attendre le precedent
+            for (Step step : STEPS) {
+                if (!awarded(player, step.key()) && step.done().test(player, level)) {
+                    award(player, step.key());
+                }
+            }
+            return;
+        }
         int at = step(player);
         if (at >= STEPS.size()) {
             return;
@@ -170,6 +197,7 @@ public final class Quests {
         // un carnet qui se tait apres une coche laisse le joueur sans cap.
         tag.putInt(TAG_STEP, at + 1);
         tag.putBoolean(TAG_TOLD, false);
+        award(player, step.key());
         player.sendSystemMessage(Component.translatable("quest.emeraldweapons.done",
                         Component.translatable("quest.emeraldweapons." + step.key() + ".title"))
                 .withStyle(ChatFormatting.GREEN));
@@ -194,10 +222,41 @@ public final class Quests {
         sync(player);
     }
 
+    // ------------------------------------------------------------ les succes
+
+    private static AdvancementHolder advancement(ServerPlayer player, String key) {
+        return player.server.getAdvancements().get(
+                ResourceLocation.fromNamespaceAndPath(EmeraldWeaponsMod.MODID, "carnet/" + key));
+    }
+
+    private static boolean awarded(ServerPlayer player, String key) {
+        AdvancementHolder holder = advancement(player, key);
+        return holder != null && player.getAdvancements().getOrStartProgress(holder).isDone();
+    }
+
+    /** Accorde le succes cache de l'etape : c'est ce que lit le livre. */
+    private static void award(ServerPlayer player, String key) {
+        AdvancementHolder holder = advancement(player, key);
+        if (holder == null) {
+            return;
+        }
+        AdvancementProgress progress = player.getAdvancements().getOrStartProgress(holder);
+        List<String> left = new java.util.ArrayList<>();
+        progress.getRemainingCriteria().forEach(left::add);   // copie : accorder modifie la liste
+        for (String criterion : left) {
+            player.getAdvancements().award(holder, criterion);
+        }
+    }
+
     // ------------------------------------------------------------- le texte
 
     /** Dit l'etape en cours : son titre, quoi faire, et la recette s'il y en a une. */
     public static void tell(ServerPlayer player, int at) {
+        if (book()) {
+            player.server.getCommands().performPrefixedCommand(
+                    player.createCommandSourceStack(), "ftbquests open_book");
+            return;
+        }
         if (at >= STEPS.size()) {
             player.sendSystemMessage(Component.translatable("quest.emeraldweapons.finished")
                     .withStyle(style -> style.withColor(0xFFD24A).withBold(true)));
@@ -251,6 +310,9 @@ public final class Quests {
     // ------------------------------------------------------------- le client
 
     private static void sync(ServerPlayer player) {
+        if (book()) {
+            return;                                 // la ligne d'ecran est celle du livre
+        }
         int at = step(player);
         String key = at < STEPS.size() ? STEPS.get(at).key() : "";
         PacketDistributor.sendToPlayer(player, new com.emerald.network.QuestPayload(at, STEPS.size(), key));
