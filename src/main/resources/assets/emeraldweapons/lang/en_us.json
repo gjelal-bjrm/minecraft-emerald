@@ -582,5 +582,10 @@
   "quest.emeraldweapons.tombeau.title": "Wake a seal",
   "quest.emeraldweapons.tombeau.how": "In a sanctuary, five seals sleep in the pyramid and its wings. Click one to wake it. All awake, the summit anchor accepts Arcencium.",
   "quest.emeraldweapons.ancre.title": "Hold an anchor",
-  "quest.emeraldweapons.ancre.how": "At the sanctuary's summit, feed the anchor Arcencium ingots (8 for the first) and hold the siege. Three anchors held raise the Rainbow and its boss."
+  "quest.emeraldweapons.ancre.how": "At the sanctuary's summit, feed the anchor Arcencium ingots (8 for the first) and hold the siege. Three anchors held raise the Rainbow and its boss.",
+  "command.emeraldweapons.jak.started": "Building district %s (%s x %s x %s) -- this takes a few seconds",
+  "command.emeraldweapons.jak.done": "District built: %s blocks in %s s",
+  "command.emeraldweapons.jak.busy": "A district is already being built",
+  "command.emeraldweapons.jak.stopped": "Build cancelled",
+  "command.emeraldweapons.jak.missing": "Unknown district: %s"
 }

@@ -3,6 +3,7 @@ package com.emerald.game;
 import com.emerald.main.EmeraldWeaponsMod;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import net.minecraft.commands.CommandSourceStack;
+import com.mojang.brigadier.arguments.StringArgumentType;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 import net.minecraft.core.BlockPos;
@@ -394,6 +395,26 @@ public class GameCommands {
             com.emerald.quest.Quests.tell(p, com.emerald.quest.Quests.step(p));
             return 1;
         }));
+
+        // Les quartiers de Jak 3, convertis en blocs par tools/jak_voxelize.py.
+        // C'est un outil d'essai : on les pose ou l'on se trouve, en monde plat.
+        root.then(Commands.literal("jak")
+                .then(Commands.literal("stop").executes(ctx -> {
+                    com.emerald.jak.JakBuilder.cancel();
+                    ctx.getSource().sendSuccess(() -> Component.translatable(
+                            "command.emeraldweapons.jak.stopped"), true);
+                    return 1;
+                }))
+                .then(Commands.argument("quartier", StringArgumentType.word())
+                        .suggests((ctx, builder) -> {
+                            for (String name : com.emerald.jak.JakVolume.available(
+                                    ctx.getSource().getServer())) {
+                                builder.suggest(name);
+                            }
+                            return builder.buildFuture();
+                        })
+                        .executes(ctx -> placeJak(ctx.getSource(),
+                                StringArgumentType.getString(ctx, "quartier")))));
 
         root.then(Commands.literal("sanctuary")
                 .then(Commands.argument("palier",
@@ -839,6 +860,36 @@ public class GameCommands {
         }));
 
         event.getDispatcher().register(root);
+    }
+
+    /**
+     * Pose un quartier de Jak 3 au pied du joueur.
+     *
+     * On refuse d'en lancer deux a la fois : la pose s'etale sur plusieurs
+     * secondes, et deux chantiers concurrents se marcheraient dessus sans
+     * qu'on puisse dire lequel a ecrit quoi.
+     */
+    private static int placeJak(CommandSourceStack source, String name) {
+        if (com.emerald.jak.JakBuilder.busy()) {
+            source.sendFailure(Component.translatable("command.emeraldweapons.jak.busy"));
+            return 0;
+        }
+        ServerLevel level = source.getServer().overworld();
+        com.emerald.jak.JakVolume volume =
+                com.emerald.jak.JakVolume.load(source.getServer(), name);
+        if (volume == null) {
+            source.sendFailure(Component.translatable(
+                    "command.emeraldweapons.jak.missing", name));
+            return 0;
+        }
+        net.minecraft.core.BlockPos origin =
+                net.minecraft.core.BlockPos.containing(source.getPosition());
+        com.emerald.jak.JakBuilder.start(level, volume, origin,
+                source.getEntity() instanceof net.minecraft.server.level.ServerPlayer p ? p : null);
+        source.sendSuccess(() -> Component.translatable(
+                "command.emeraldweapons.jak.started", name,
+                volume.width(), volume.height(), volume.depth()), true);
+        return 1;
     }
 
     private static int buildSanctuary(CommandSourceStack source, int tier) {

@@ -582,5 +582,10 @@
   "quest.emeraldweapons.tombeau.title": "Éveiller un sceau",
   "quest.emeraldweapons.tombeau.how": "Dans un sanctuaire, cinq sceaux dorment dans la pyramide et les ailes. Cliquez-en un pour l'éveiller. Tous éveillés, l'ancre du sommet accepte l'Arcencium.",
   "quest.emeraldweapons.ancre.title": "Tenir une ancre",
-  "quest.emeraldweapons.ancre.how": "Au sommet du sanctuaire, alimentez l'ancre en lingots d'Arcencium (8 pour la première) et tenez le siège. Trois ancres tenues lèvent l'Arc-en-ciel et son boss."
+  "quest.emeraldweapons.ancre.how": "Au sommet du sanctuaire, alimentez l'ancre en lingots d'Arcencium (8 pour la première) et tenez le siège. Trois ancres tenues lèvent l'Arc-en-ciel et son boss.",
+  "command.emeraldweapons.jak.started": "Pose du quartier %s (%s x %s x %s) -- cela prend quelques secondes",
+  "command.emeraldweapons.jak.done": "Quartier pose : %s blocs en %s s",
+  "command.emeraldweapons.jak.busy": "Un quartier est deja en cours de pose",
+  "command.emeraldweapons.jak.stopped": "Pose interrompue",
+  "command.emeraldweapons.jak.missing": "Quartier introuvable : %s"
 }
