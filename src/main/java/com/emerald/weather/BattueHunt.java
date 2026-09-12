@@ -337,6 +337,12 @@ public final class BattueHunt {
                 new ItemStack(net.minecraft.world.item.Items.IRON_INGOT, 12 + level.random.nextInt(5))));
         level.addFreshEntity(new ItemEntity(level, x, y, z,
                 new ItemStack(net.minecraft.world.item.Items.GOLD_INGOT, 6 + level.random.nextInt(3))));
+        // ET HUIT ECLATS DU DESTIN. « C'est tres difficile de monter le niveau
+        // de rarete » : monter cinq pieces au rang 4 demande deux cents Eclats,
+        // une partie en donnait cent. On double l'approvisionnement sans
+        // toucher aux des (voir §65) : la Proie en laisse huit.
+        level.addFreshEntity(new ItemEntity(level, x, y, z,
+                new ItemStack(com.emerald.item.ModItems.FATE_SHARD.get(), 8)));
         com.emerald.hero.HeroEvents.award(killer, 60);
         level.sendParticles(net.minecraft.core.particles.ParticleTypes.END_ROD,
                 x, y + 0.5, z, 30, 0.8, 0.6, 0.8, 0.05);

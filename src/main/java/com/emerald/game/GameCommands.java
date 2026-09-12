@@ -468,6 +468,64 @@ public class GameCommands {
         // sa position RELATIVE au sanctuaire -- c'est-a-dire dans le repere ou
         // le code est ecrit, le seul qui permette de retrouver la ligne
         // fautive. Une capture montre un symptome ; ceci donne une adresse.
+        // LE SAC D'ARCENCIUM : le redonner, compter ce qu'on porte (poches
+        // comprises), et payer un cran de Forge sur la piece en main par le
+        // meme chemin que la Forge. Les deux derniers sont ce que le banc lit.
+        var sac = Commands.literal("sac").executes(ctx -> {
+            if (!(ctx.getSource().getEntity()
+                    instanceof net.minecraft.server.level.ServerPlayer player)) {
+                ctx.getSource().sendFailure(Component.literal("A executer en jeu."));
+                return 0;
+            }
+            if (!net.neoforged.fml.ModList.get().isLoaded("sophisticatedbackpacks")) {
+                ctx.getSource().sendFailure(Component.literal(
+                        "Sophisticated Backpacks n'est pas charge : pas de sac."));
+                return 0;
+            }
+            ArcenciumBackpack.give(player);
+            return 1;
+        });
+        sac.then(Commands.literal("compte").executes(ctx -> {
+            if (!(ctx.getSource().getEntity()
+                    instanceof net.minecraft.server.level.ServerPlayer player)) {
+                ctx.getSource().sendFailure(Component.literal("A executer en jeu."));
+                return 0;
+            }
+            StringBuilder line = new StringBuilder("POCHES");
+            for (net.minecraft.world.item.Item item : new net.minecraft.world.item.Item[]{
+                    com.emerald.item.ModItems.FATE_SHARD.get(),
+                    com.emerald.item.ModItems.FORGE_STONE.get(),
+                    com.emerald.item.ModItems.ARCENCIUM_INGOT.get(),
+                    com.emerald.item.ModItems.RAW_ARCENCIUM.get(),
+                    com.emerald.item.ModItems.ARCENCIUM_FEATHER.get(),
+                    net.minecraft.world.item.Items.IRON_INGOT,
+                    net.minecraft.world.item.Items.COAL,
+                    net.minecraft.world.item.Items.ROTTEN_FLESH}) {
+                line.append(' ').append(net.minecraft.core.registries.BuiltInRegistries.ITEM
+                                .getKey(item).getPath())
+                        .append('=').append(com.emerald.item.Stash.count(player, item));
+            }
+            line.append(" sacs=").append(com.emerald.item.Stash.bags(player).size());
+            final String text = line.toString();
+            ctx.getSource().sendSuccess(() -> Component.literal(text), false);
+            return 1;
+        }));
+        sac.then(Commands.literal("payer").executes(ctx -> {
+            if (!(ctx.getSource().getEntity()
+                    instanceof net.minecraft.server.level.ServerPlayer player)) {
+                ctx.getSource().sendFailure(Component.literal("A executer en jeu."));
+                return 0;
+            }
+            net.minecraft.world.item.ItemStack gear = player.getMainHandItem();
+            boolean can = com.emerald.menu.ArcenciumForgeMenu.canPay(player, gear);
+            boolean paid = can && com.emerald.menu.ArcenciumForgeMenu.pay(player, gear);
+            final String text = "PAYER " + (can ? "possible" : "impossible") + " "
+                    + (paid ? "paye" : "non_paye");
+            ctx.getSource().sendSuccess(() -> Component.literal(text), false);
+            return paid ? 1 : 0;
+        }));
+        root.then(sac);
+
         root.then(Commands.literal("what").executes(ctx -> {
             if (!(ctx.getSource().getEntity()
                     instanceof net.minecraft.server.level.ServerPlayer player)) {

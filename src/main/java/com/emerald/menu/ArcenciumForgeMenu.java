@@ -121,6 +121,21 @@ public class ArcenciumForgeMenu extends AbstractContainerMenu {
         return this.data.get(DATA_LEVEL);
     }
 
+    /** Vrai si le joueur a la Pierre et le metal du cran suivant, poches comprises. */
+    public static boolean canPay(Player player, ItemStack gear) {
+        return stones(player) >= 1 && Upgrade.affordable(player, gear);
+    }
+
+    /**
+     * Preleve la Pierre puis le metal. C'est le seul chemin qui paie une
+     * tentative : la Forge et la commande d'essai passent tous deux ici, et
+     * c'est ce chemin que le banc verifie contre le Sac d'Arcencium.
+     */
+    public static boolean pay(Player player, ItemStack gear) {
+        takeStone(player);
+        return Upgrade.charge(player, gear);
+    }
+
     /** Combien de pierres de forge le joueur porte. */
     public static int stones(Player player) {
         return Upgrade.carried(player, new Upgrade.Cost(ModItems.FORGE_STONE.get(), 1));
@@ -146,7 +161,7 @@ public class ArcenciumForgeMenu extends AbstractContainerMenu {
         // ON PAIE D'ABORD, ON TIRE ENSUITE : pierre puis metal. Un tirage qui
         // se solderait par un echec de paiement laisserait la piece amelioree
         // sans que rien n'ait ete depense.
-        if (stones(player) < 1 || !Upgrade.affordable(player, gear)) {
+        if (!canPay(player, gear)) {
             this.data.set(DATA_RESULT, RESULT_MISSING);
             this.data.set(DATA_LEVEL, before);
             player.level().playSound(null, player.blockPosition(),
@@ -155,8 +170,7 @@ public class ArcenciumForgeMenu extends AbstractContainerMenu {
             this.broadcastChanges();
             return true;
         }
-        takeStone(player);
-        if (!Upgrade.charge(player, gear)) {
+        if (!pay(player, gear)) {
             return false;
         }
         int after = Upgrade.attempt(before, player.level().random);
@@ -185,14 +199,7 @@ public class ArcenciumForgeMenu extends AbstractContainerMenu {
     }
 
     private static void takeStone(Player player) {
-        var inventory = player.getInventory();
-        for (int slot = 0; slot < inventory.getContainerSize(); slot++) {
-            ItemStack held = inventory.getItem(slot);
-            if (held.is(ModItems.FORGE_STONE.get())) {
-                held.shrink(1);
-                return;
-            }
-        }
+        com.emerald.item.Stash.take(player, ModItems.FORGE_STONE.get(), 1);
     }
 
     @Override

@@ -158,7 +158,9 @@ public final class RuneDrops {
         for (int k = 0; k < runes; k++) {
             RuneFamily family = families[random.nextInt(families.length)];
             ItemStack drop = RuneItem.stack(
-                    RuneMark.roll(family, rank(health, phaseCeiling(event.getEntity().level()), random), random),
+                    RuneMark.roll(family, lucky(random)
+                            ? 1 + random.nextInt(8)
+                            : rank(health, phaseCeiling(event.getEntity().level()), random), random),
                     com.emerald.item.ModItems.RUNE.get());
             event.getDrops().add(new net.minecraft.world.entity.item.ItemEntity(
                     victim.level(), victim.getX(), victim.getY(), victim.getZ(), drop));
@@ -208,7 +210,26 @@ public final class RuneDrops {
         }
         RuneFamily[] families = RuneFamily.values();
         return RuneMark.roll(families[random.nextInt(families.length)],
-                rank(health, 8, random), random);
+                lucky(random) ? 1 + random.nextInt(8) : rank(health, 8, random), random);
+    }
+
+    /** Une rune sur quarante est un coup de chance. */
+    private static final int LUCKY_ONE_IN = 40;
+
+    /**
+     * LE COUP DE CHANCE. « J'ai l'impression que c'est impossible d'avoir des
+     * runes de rarete max en debut de jeu. Ca ne serait pas tres utile, mais
+     * qu'il y ait une probabilite quand meme, ce serait sympa. » Les deux
+     * plafonds -- la phase et la bete -- restent la loi ; une rune sur
+     * quarante y echappe et tire son rang A EGALITE de 1 a 8, comme le joueur
+     * l'a demande. Un zombie du premier quart d'heure peut donc laisser un
+     * rang 8 : une rune sur trois cent vingt, environ, et le joueur s'en
+     * souviendra. Cote chiffres, sur les cent seize runes d'une partie, cela
+     * fait trois coups de chance, dont un rang 7 ou plus dans deux parties
+     * sur trois.
+     */
+    static boolean lucky(RandomSource random) {
+        return random.nextInt(LUCKY_ONE_IN) == 0;
     }
 
     /**

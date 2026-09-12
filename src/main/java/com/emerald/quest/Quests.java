@@ -131,25 +131,13 @@ public final class Quests {
     }
 
     private static int count(ServerPlayer player, Item item) {
-        int n = 0;
-        for (ItemStack stack : player.getInventory().items) {
-            if (stack.is(item)) {
-                n += stack.getCount();
-            }
-        }
-        return n;
+        return com.emerald.item.Stash.count(player, item);      // poches comprises
     }
 
     /** Vrai si une piece portee ou dans le sac satisfait le test. */
     private static boolean anyGear(ServerPlayer player, java.util.function.Predicate<ItemStack> test) {
-        for (ItemStack stack : player.getInventory().items) {
-            if (!stack.isEmpty() && test.test(stack)) {
-                return true;
-            }
-        }
-        for (EquipmentSlot slot : EquipmentSlot.values()) {
-            ItemStack worn = player.getItemBySlot(slot);
-            if (!worn.isEmpty() && test.test(worn)) {
+        for (ItemStack stack : com.emerald.item.Stash.everything(player)) {
+            if (test.test(stack)) {
                 return true;
             }
         }

@@ -153,7 +153,9 @@ configurations {
 // tools/dev_mods.py les depose -- on ne duplique pas trois megaoctets de jars
 // tiers dans le depot pour une dependance qui n'existe qu'a la compilation.
 def modpackJars = fileTree(dir: "$projectDir/run/mods",
-                           include: ['Apotheosis-*.jar', 'Placebo-*.jar'])
+                           include: ['Apotheosis-*.jar', 'Placebo-*.jar',
+                                     'sophisticatedcore-*.jar', 'sophisticatedbackpacks-*.jar',
+                                     'curios-*.jar'])
 
 dependencies {
     implementation "net.neoforged:neoforge:${neo_version}"

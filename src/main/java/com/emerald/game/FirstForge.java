@@ -81,7 +81,7 @@ public final class FirstForge {
         // ressortait du village sans rien pour la RARETE -- « je peux passer
         // l'arme +1 et monter la specialisation, mais pas la rarete » -- et
         // les Eclats ne tombent qu'une fois sur douze au combat.
-        int shards = GearRarity.pityPerDraw();
+        int shards = GearRarity.pityPerDraw() * 2;     // douze : les Eclats sont doubles partout (§65)
 
         for (ServerPlayer player : level.players()) {
             give(player, new ItemStack(first.material(), metal));
@@ -113,9 +113,7 @@ public final class FirstForge {
 
     /** Dans le sac, ou aux pieds si le sac est plein : rien ne se perd. */
     private static void give(ServerPlayer player, ItemStack stack) {
-        if (!player.getInventory().add(stack)) {
-            player.drop(stack, false);
-        }
+        com.emerald.item.Stash.give(player, stack);
     }
 
     /**

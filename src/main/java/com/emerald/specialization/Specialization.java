@@ -192,36 +192,11 @@ public final class Specialization {
     }
 
     private static int count(Player player) {
-        int n = 0;
-        for (ItemStack stack : player.getInventory().items) {
-            if (stack.is(ModItems.ARCENCIUM_FEATHER.get())) {
-                n += stack.getCount();
-            }
-        }
-        for (ItemStack stack : player.getInventory().offhand) {
-            if (stack.is(ModItems.ARCENCIUM_FEATHER.get())) {
-                n += stack.getCount();
-            }
-        }
-        return n;
+        return com.emerald.item.Stash.count(player, ModItems.ARCENCIUM_FEATHER.get());
     }
 
     private static void consume(Player player, int count) {
-        int left = count;
-        for (ItemStack stack : player.getInventory().items) {
-            if (left > 0 && stack.is(ModItems.ARCENCIUM_FEATHER.get())) {
-                int take = Math.min(left, stack.getCount());
-                stack.shrink(take);
-                left -= take;
-            }
-        }
-        for (ItemStack stack : player.getInventory().offhand) {
-            if (left > 0 && stack.is(ModItems.ARCENCIUM_FEATHER.get())) {
-                int take = Math.min(left, stack.getCount());
-                stack.shrink(take);
-                left -= take;
-            }
-        }
+        com.emerald.item.Stash.take(player, ModItems.ARCENCIUM_FEATHER.get(), count);
     }
 
     // ------------------------------------------------------------------ bonus

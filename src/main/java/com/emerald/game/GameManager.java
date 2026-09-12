@@ -617,6 +617,11 @@ public class GameManager {
                 net.minecraft.world.item.enchantment.Enchantments.EFFICIENCY, 1));
         player.getInventory().add(new ItemStack(net.minecraft.world.item.Items.TORCH, 32));
         giveComfort(player);
+        // LE SAC D'ARCENCIUM, si Sophisticated Backpacks est la. On ne touche
+        // a sa classe qu'apres avoir demande : elle importe l'API du sac.
+        if (net.neoforged.fml.ModList.get().isLoaded("sophisticatedbackpacks")) {
+            ArcenciumBackpack.give(player);
+        }
     }
 
     /** Protection I et Tranchant I, comme prevu au cahier. */

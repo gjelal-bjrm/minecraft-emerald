@@ -5327,3 +5327,84 @@ Dans le profil : 55 chapitres retires, 4 gardes (le notre compris), sauvegarde
 `dist/ftbquests_atm10_20260912.zip`. Le manuel dit ou trouver le livre
 (le bouton dans l'inventaire : la touche « Open Quests » n'est pas liee dans
 les options du joueur).
+
+## 65. La mort, les runes chanceuses, les Eclats doubles, et le Sac d'Arcencium *(12 sept. 2026)*
+
+Apres la partie du 12 septembre (deuxieme sanctuaire presque pris, puis une
+mort a trente minutes de la fin) : « c'est vraiment tres punitif de mourir ;
+impossible d'avoir des runes de rarete max en debut de jeu ; tres difficile
+de monter la rarete ; je passe une grande partie de mon temps a faire le tri
+dans mon inventaire ; je n'ai pas de four en deplacement ». Quatre decisions
+du joueur, apres proposition chiffree.
+
+### A. La mort : rien ne change
+
+« Les joueurs devront s'adapter en craftant des waystones. » Corail Tombstone
+garde deja les objets dans une tombe ; le cout est le trajet, et Waystones
+est dans le pack. On n'y touche pas.
+
+### B. Le coup de chance des runes
+
+Les deux plafonds -- la phase (3, 5, puis 8) et la bete -- restent la loi.
+Une rune tombee sur quarante y echappe et tire son rang A EGALITE de 1 a 8,
+comme demande (`RuneDrops.lucky`). Un zombie du premier quart d'heure peut
+laisser un rang 8 : une rune sur trois cent vingt. Sur les cent seize runes
+d'une partie : trois coups de chance, un rang 7 ou plus dans deux parties
+sur trois, un rang 8 dans une sur trois.
+
+### C. Les Eclats du Destin doubles
+
+Le compte : chaque Eclat est un tirage ; rang 2 ou plus a 20 %, rang 4 a
+4 %, rang 7 a 0,25 %. Monter cinq pieces au rang 4 demande deux cents Eclats,
+une partie en donnait cent au taux du §62. Les des ne bougent pas, la
+matiere double :
+
+| source | avant | apres |
+| --- | --- | --- |
+| chaque coffre de sanctuaire | 1 a 3, une fois sur deux | + 6 garantis |
+| chaque Proie de Battue | rien | 8 |
+| la premiere defense du village | 6 | 12 |
+| les monstres | 1 sur 6 | 1 sur 6 |
+
+Soit environ deux cent cinquante par partie tenue jusqu'au bout.
+
+### D. Le Sac d'Arcencium, et les poches que les stations lisent
+
+« Notre propre inventaire, qui contiendrait uniquement nos objets, et que
+notre forge reconnaitrait sans que j'aie besoin de transvaser. » Le pack a
+Sophisticated Backpacks, qui sait tout cela. Plutot qu'une interface a
+ecrire, un sac PREREMPLI (`game/ArcenciumBackpack`), donne avec le kit de
+depart et porte dans le dos (case Curios) :
+
+| case | amelioration | reglage |
+| --- | --- | --- |
+| 0 | ramassage avance | par mod : le notre, Apotheosis, Artefacts, Reliques |
+| 1 | ramassage avance | par objet : fer, or, diamant, emeraude, charbon, minerais bruts, fleches, et les dechets |
+| 2 | aimant avance | meme filtre par mod, et l'experience |
+| 3 | destruction avancee | chair putrefiee, oeil d'araignee, os, ficelle, pomme de terre empoisonnee |
+| 4 | cuisson automatique | brut d'Arcencium, fer, or, cuivre bruts -- le four portable |
+| 5 | alimentation | le sac nourrit |
+| 6 | piles agrandies | |
+
+Et `item/Stash`, les poches du joueur : l'inventaire, puis tout objet porte
+qui expose un conteneur (capacite ItemHandler -- le sac la fournit), dans
+l'inventaire ou dans une case Curios. La Forge (Pierre et metal, et le
+metal rendu), l'Autel (plumes), le Carnet (ce qu'on possede, ce qu'on porte)
+et les cadeaux passent tous par la. L'Etabli a sertir garde ses cases : on y
+POSE les Eclats et la rune, c'est la mise. Les trophees sont coupes a la
+source (`trophymanager-server.toml`, dropFromMobs = false).
+
+Deux pieges de l'API du sac, lus au banc puis dans le bytecode :
+
+1. **Un sac neuf n'a pas d'identite.** Tant que la pile ne porte pas d'UUID
+   de contenu, `getUpgradeHandler()` rend un conteneur factice a zero case
+   (« Slot 0 not in valid range - [0,0) »). `setContentsUuid` d'abord.
+2. Le nombre de cases s'ecrit sur la pile a la premiere ouverture ;
+   `setSlotNumbers` le fait a la main.
+
+`verify_sac.sh` : sac donne par `/arcencium sac`, « dans le dos » ; six
+piles jetees aux pieds ; dix secondes plus tard, Eclats 5, Pierres 2, fer 8
+dans les poches, chair putrefiee 0 (ramassee puis detruite), brut 0 (deja
+en cuisson) ; `/arcencium sac payer` sur l'epee en main : Pierre 2 -> 1,
+fer 8 -> 4, pris DANS le sac -- la barre d'objets ne portait que le charbon
+et l'epee ; quarante secondes plus tard, quatre lingots d'Arcencium cuits.

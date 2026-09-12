@@ -119,15 +119,7 @@ public final class Upgrade {
 
     /** Combien de ce materiau le joueur possede. */
     public static int carried(net.minecraft.world.entity.player.Player player, Cost cost) {
-        int total = 0;
-        var inventory = player.getInventory();
-        for (int slot = 0; slot < inventory.getContainerSize(); slot++) {
-            ItemStack held = inventory.getItem(slot);
-            if (held.is(cost.material())) {
-                total += held.getCount();
-            }
-        }
-        return total;
+        return Stash.count(player, cost.material());     // inventaire ET sacs portes
     }
 
     /** Vrai si le joueur peut payer le passage au cran suivant. */
@@ -159,16 +151,7 @@ public final class Upgrade {
         if (carried(player, cost) < owed) {
             return false;
         }
-        var inventory = player.getInventory();
-        for (int slot = 0; slot < inventory.getContainerSize() && owed > 0; slot++) {
-            ItemStack held = inventory.getItem(slot);
-            if (!held.is(cost.material())) {
-                continue;
-            }
-            int taken = Math.min(owed, held.getCount());
-            held.shrink(taken);
-            owed -= taken;
-        }
+        Stash.take(player, cost.material(), owed);        // l'inventaire d'abord, puis le sac
         return true;
     }
 
@@ -187,9 +170,7 @@ public final class Upgrade {
     public static void refund(net.minecraft.world.entity.player.Player player, int level) {
         Cost cost = cost(Math.min(MAX, level + 1));
         ItemStack back = new ItemStack(cost.material(), cost.amount());
-        if (!player.getInventory().add(back)) {
-            player.drop(back, false);
-        }
+        Stash.give(player, back);                    // inventaire, sac, ou aux pieds
     }
 
     private Upgrade() {
