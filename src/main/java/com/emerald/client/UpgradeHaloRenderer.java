@@ -614,13 +614,28 @@ public final class UpgradeHaloRenderer {
     // --------------------------------------------- le tampon de lumiere
 
     /**
-     * Un tampon qui rend tout ce qu'on lui donne en lumiere additive teintee.
+     * Un tampon qui rend tout ce qu'on lui donne en lumiere teintee.
      *
-     * Quel que soit le type de rendu que l'objet demande -- opaque, translucide,
-     * surbrillance -- on repond par le meme : l'atlas des blocs vu a travers le
-     * shader des yeux, additif et pleine lumiere. Les coordonnees de texture de
-     * l'objet restent valables puisqu'elles pointent dans ce meme atlas ; seule
-     * la couleur est remplacee, au moment ou les faces sont ecrites.
+     * IL A LONGTEMPS UTILISE {@code RenderType.eyes}, ET C'ETAIT DEUX FOIS FAUX.
+     *
+     * D'abord, {@code eyes} melange en ADDITIF PUR -- blendFunc(ONE, ONE) --
+     * et son shader ne multiplie jamais la couleur par l'alpha. L'intensite du
+     * halo ne voyage QUE dans l'alpha des sommets : les trois valeurs qui la
+     * dosent, 0,45, 0,22 et 0,18, n'avaient donc aucun effet, et les trois
+     * couches s'ajoutaient a pleine force par-dessus l'arme.
+     *
+     * Ensuite, et c'est ce qui faisait le plan geant : ce shader ne rejette
+     * aucun fragment transparent. Or le modele d'un objet tenu n'est pas la
+     * silhouette de l'arme -- c'est une BOITE dont les faces avant et arriere
+     * sont des carres pleins de seize sur seize, que seule la transparence de
+     * la texture decoupe. Sans rejet, le carre entier etait peint dans la
+     * couleur du cran ; a la premiere personne, agrandi d'une fois et demie, il
+     * couvre la hauteur de l'ecran. C'est le rectangle colore signale.
+     *
+     * On passe donc au type qu'utilisent deja la vague et les encoches, qui
+     * n'ont jamais pose de probleme : il respecte l'alpha, et il rejette les
+     * fragments sous un dixieme d'opacite, ce qui redonne au halo la forme de
+     * l'arme. Le halo y perd un peu de son eclat additif ; il y gagne d'exister.
      */
     private record GlowSource(MultiBufferSource inner, float[] tint, float alpha)
             implements MultiBufferSource {
@@ -628,7 +643,8 @@ public final class UpgradeHaloRenderer {
         @Override
         public VertexConsumer getBuffer(RenderType ignored) {
             return new Tinted(this.inner.getBuffer(
-                    RenderType.eyes(TextureAtlas.LOCATION_BLOCKS)), this.tint, this.alpha);
+                    RenderType.entityTranslucentEmissive(TextureAtlas.LOCATION_BLOCKS)),
+                    this.tint, this.alpha);
         }
     }
 
