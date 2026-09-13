@@ -54,11 +54,17 @@ public class WorldSetup {
     public static void onServerStarted(ServerStartedEvent event) {
         ServerLevel level = event.getServer().overworld();
         GameState state = GameState.get(level);
+        // LU AVANT TOUTE MISE EN PLACE, et seul juge du « monde neuf » pour la
+        // ville de Haven. Surtout pas la validite du village : « /arcencium
+        // stop » laisse un village sans Lame, la branche ci-dessous refait alors
+        // la mise en place -- sur un monde qui a deja sa ville.
+        boolean fresh = !state.isPrepared();
         if (state.isPrepared() && isVillageValid(level, state)) {
             // Le monde est deja pret : il reste a rendre a la partie ce que la
             // memoire vive avait emporte -- le siege en cours, les chantiers
             // inacheves. Voir GameManager.resume.
             GameManager.resume(level);
+            com.emerald.haven.HavenSite.onServerStarted(event.getServer(), false);
             return;
         }
         if (state.isPrepared()) {
@@ -76,6 +82,9 @@ public class WorldSetup {
         }
         GameManager.setup(level, village);
         state.markPrepared();
+        // la ville apres le village : dans un monde neuf, elle se pose ici, d'un
+        // seul tenant, avant que quiconque puisse entrer
+        com.emerald.haven.HavenSite.onServerStarted(event.getServer(), fresh);
     }
 
     /**

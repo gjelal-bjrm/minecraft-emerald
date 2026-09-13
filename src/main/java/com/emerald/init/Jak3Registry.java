@@ -61,6 +61,20 @@ public class Jak3Registry {
                             .updateInterval(Integer.MAX_VALUE)
                             .build("arcencium_bolt"));
 
+    /**
+     * Voiture civile de Haven City (cara, carb, carc). Statique pour l'instant :
+     * ni gravite ni pilotage. La boite est bien plus petite que le modele (7,6 a
+     * 8,4 blocs de long) ; c'est l'entite qui elargit sa boite de rendu.
+     */
+    public static final DeferredHolder<EntityType<?>, EntityType<com.emerald.jak.vehicle.JakVehicleEntity>> JAK_VEHICLE =
+            ENTITIES.register("jak_vehicle", () ->
+                    EntityType.Builder.<com.emerald.jak.vehicle.JakVehicleEntity>of(
+                                    com.emerald.jak.vehicle.JakVehicleEntity::new, MobCategory.MISC)
+                            .sized(3.0f, 2.0f)
+                            .fireImmune()
+                            .clientTrackingRange(10)
+                            .build("jak_vehicle"));
+
     // -------------------------------------------------------------------------
     // Structure types
     // -------------------------------------------------------------------------

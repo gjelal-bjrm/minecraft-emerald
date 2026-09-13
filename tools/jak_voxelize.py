@@ -1,133 +1,245 @@
 """Transforme la collision d'un niveau de Jak 3 en volume de blocs.
 
 Il lit la geometrie de COLLISION -- la forme solide du niveau, celle sur
-laquelle on marche -- et la rasterise en voxels. Il ne copie AUCUNE texture :
-la forme est reprise, l'habillage est choisi.
+laquelle on marche -- et la rasterise en voxels. Sous la ville, la ou la
+collision s'arrete, il complete avec la forme du decor visuel. Il ne copie
+aucune texture.
 
-TROIS LECONS D'UN PREMIER ESSAI, dans l'ordre ou elles se sont vues en jeu.
+CE QUE LES ESSAIS EN JEU ONT APPRIS, dans l'ordre.
 
-1. LA SURFACE DOIT ETRE ETANCHE. La premiere version echantillonnait chaque
-   triangle sur un treillis barycentrique. Un treillis ne s'aligne pas sur la
-   grille : des cellules traversees par la surface n'etaient jamais touchees,
-   et sols comme murs se sont retrouves cribles de trous par lesquels on voyait
-   le ciel. On rasterise maintenant par PROJECTION SUR L'AXE DOMINANT de la
-   normale -- la methode habituelle -- qui garantit au moins un voxel par
-   cellule traversee.
+1. LA SURFACE DOIT ETRE ETANCHE. Un echantillonnage sur treillis laissait des
+   cellules traversees par la surface sans voxel : sols et murs etaient
+   cribles de trous. On rasterise par projection sur l'axe dominant de la
+   normale, qui garantit au moins un voxel par cellule traversee.
 
 2. UN QUARTIER N'EST PAS UN SEUL FICHIER. Le bar du Hip Hog et le stand de tir
-   sont des niveaux SEPARES, charges en streaming par le jeu, mais poses aux
-   memes coordonnees du monde : l'interieur du bar occupe x -113..-62, soit en
-   plein dans l'emprise du port. Ne convertir que le port laissait donc leurs
-   portes ouvertes sur le vide. On fusionne plusieurs DGO dans un meme repere.
+   sont des niveaux separes, charges en streaming, mais poses aux memes
+   coordonnees du monde. On fusionne donc plusieurs DGO dans un meme repere,
+   sans quoi leurs portes donnent sur le vide.
 
-3. UNE VILLE N'EST PAS MONOCHROME. Classer par la seule normale donnait de
-   vastes aplats d'un seul bloc -- « on dirait un rocher uni au lieu d'une
-   ville ». La collision ne porte aucune matiere (ni `usemtl` ni groupes : que
-   des `v` et des `f`), donc la variete ne peut venir que de regles. On tire
-   par PLAQUES de quelques blocs plutot qu'au pixel, ce qui imite des panneaux
-   et des reprises de maconnerie, et on pose des bandeaux a intervalle regulier
-   sur les murs -- ce que l'oeil lit comme de l'architecture.
+3. L'EAU EST A L'ALTITUDE 0. Le port ne declare aucune hauteur d'ocean dans sa
+   definition de niveau (level-info.gc), et le moteur prend alors la valeur
+   par defaut, 0 ; la barge du port flotte exactement a y=0, et les digues du
+   decor plongent jusqu'a y=-3. Une version precedente posait l'eau a 6,
+   deduite de la geometrie : les places en contrebas etaient noyees, et aucune
+   regle de remplissage ne pouvait rattraper une hauteur fausse.
 
-Les blocs sont choisis d'apres les couleurs MOYENNES des textures du niveau --
-une mesure, pas une copie. Le port de Haven est gris et gris-olive, entre 0,20
-et 0,45 de luminance : il sort donc en ardoise et en tuf.
+4. PAS DE LEVER, PAS DE JUPE. La porte du Hip Hog est a y=9,1, au niveau de la
+   rue. Lever le bar de deux blocs a decolle sa porte de la rue ; la jupe pleine
+   batie sous lui a mure l'entree et coupe l'eau autour. Le bar reste ou le jeu
+   le pose. Seuls les plafonds sont ajoutes, parce que la collision les omet.
+
+5. UN BLOC PAR SURFACE. Le sol, les murs et les toits doivent se distinguer
+   entre eux, et c'est tout. Les melanges de variantes par plaques se lisaient
+   comme du bruit, pas comme une ville.
+
+6. LA COLLISION S'ARRETE AU-DESSUS DE L'EAU. Elle ne porte que ce que le joueur
+   peut toucher : le quai s'arrete a la rue. Avec l'eau a sa vraie hauteur, la
+   ville flottait de six a neuf blocs au-dessus du bassin sur sept dixiemes de
+   son bord. Le jeu, lui, DESSINE des digues qui plongent sous l'eau
+   (city-port-seawall-*). On reprend donc la forme du decor visuel, mais
+   seulement SOUS la collision : sous la plus basse surface de chaque colonne,
+   et jamais plus haut que la rue. Rien de ce qui est ajoute ne peut boucher
+   une porte ni encombrer une rue.
+
+7. L'EAU PASSE SOUS CE QUI LA SURPLOMBE. Une colonne n'est plus exclue de la
+   mer parce qu'un plancher la couvre plus haut : seule compte la cellule de la
+   surface. Sans cela le dessous du bar restait sec, et c'etait le trou dans
+   l'eau qu'on voyait depuis le quai.
+
+8. LE BORD EXTERIEUR N'A PAS DE DIGUE. Cote rade, le decor fournit la digue
+   (city-port-seawalll, de y=0,3 a 8,2). Mais le bord exterieur du port -- le
+   bar, le stand de tir, les bras -- n'a rien sous sa rue, ni collision ni
+   decor : dans le jeu il touche les autres quartiers. Une fois la mer posee
+   tout autour, la ville y flottait. On y descend donc un rideau de mur d'une
+   colonne, du fond de la nappe jusque sous le bord, pour les seules
+   structures au niveau de la rue ; pas les cables ni les ponts hauts. La
+   muraille de Haven, dans ctywide, part elle aussi de l'eau (y=0).
+
+9. LA COLLISION DETACHE DES PIECES. Elle ne garde que ce que Jak peut toucher,
+   si bien que des morceaux perdent ce qui les portait : 305 pieces flottaient
+   au-dessus du port -- anneaux des tours du bras central, sommets des tours
+   du large, rails de glisse en pointille sous les arcades, catenaires, lampes
+   pendues du stand de tir. Aucune regle ajoutee ne les fabriquait. On rend
+   d'abord leur corps aux tours, depuis le decor visuel et dans leur seule
+   emprise ; puis on retire tout ce qui ne touche ni la ville ni l'eau, en
+   26-connexite. Ce qui plonge dans l'eau reste, meme petit : le joueur l'a
+   voulu pour une colonne isolee de 11 blocs du bassin. Les sommets de colonne
+   se calculent APRES cet elagage : un anneau retire laissait sinon le toit de
+   sa tour classe en sol.
+
+10. LA GRILLE EST FIGEE. Elle se deduisait de la collision : une retouche qui
+   la debordait deplacait l'origine, et toutes les cellules relevees -- la
+   porte du bar, les salles -- glissaient d'autant sans erreur. L'origine et la
+   taille sont maintenant des constantes ; ce qui deborde arrete tout, et
+   --pad-top grandit la grille vers le haut sans toucher l'origine. Le fichier
+   (version 2) porte l'origine et le sha1 de ses donnees.
+
+11. LA MER DU GENERATEUR EST DEJA LA. Dans la dimension haven, le generateur
+   plat pose de l'eau de la cellule 52 a 57 sur tout le monde, et la pose saute
+   l'air. L'air enferme sous les quais serait donc noye : on l'ecrit en
+   cave_air. Et l'on sortait de la ville a la nage, sous un rideau qui partait
+   au-dessus de l'eau : le rideau de barrieres du pourtour descend jusqu'a la
+   cellule 52, sur la pierre du generateur, et monte jusqu'en haut de la grille.
+   DANS LA MER, CE RIDEAU EST NOYE : une barriere se pose seche par defaut, et
+   n'occulte rien. Posee au milieu de l'eau du generateur, elle laissait sur
+   tout le pourtour une fente d'un bloc de large et six de profond, dont l'eau
+   voisine dessinait les parois. Les cellules 52 a 57 du rideau sont donc
+   ecrites en barrier[waterlogged=true], qui bloque autant et reste de l'eau
+   a l'oeil.
+   Les bouts des bras sont mures au bloc de mur.
 
 Usage :
-    python tools/jak_voxelize.py CPO --name ctyport --with HHG GGA
+    python tools/jak_voxelize.py CPO --name ctyport --with HHG GGA --rooms haven_rooms.json
 """
 
 import argparse
 import glob
+import hashlib
+import json
 import math
 import os
+import re
 import struct
 import sys
 import zlib
 from collections import deque
 
+from jak_assets import mesh_triangles
+
 DECOMP = os.path.join(os.environ.get("USERPROFILE", ""), "Documents", "OpenGoal",
                       "active", "jak3", "data", "decompiler_out", "jak3")
 COLLISION = os.path.join(DECOMP, "collision")
+LEVELS = os.path.join(DECOMP, "levels")
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT_DIR = os.path.join(ROOT, "src", "main", "resources", "data",
                        "emeraldweapons", "jak")
 
-# ---------------------------------------------------------------- la palette
-#
-# Mesuree sur les quatre-vingt-cinq textures de terrain du port :
-#
-#   city-port-pavmnt-01      #515151  ->  ardoise
-#   city-port-wall-metal-01  #555653  ->  briques d'ardoise
-#   city-port-seawalll       #464D48  ->  tuiles d'ardoise
-#   city-port-roofmetal      #545A4F  ->  cuivre oxyde, tuf (l'olive du metal)
-#   city-port-ground-01      #737160  ->  tuf
-#   hip-twood01              #5A4929  ->  planches d'epicea (le bois du bar)
-#
-# Chaque classe a PLUSIEURS blocs : c'est ce qui empeche le quartier de
-# ressembler a un rocher uni. L'index 0 est toujours l'air, dont le decodeur se
-# sert pour sauter les plages vides d'un coup.
+# Le decor visuel de chaque niveau, par code de DGO (voir dgo.txt).
+VISUALS = {"CPO": "ctyport", "HHG": "hiphog", "GGA": "gungame"}
+
+# Un bloc par surface. Le pave du port est gris moyen, ses murs de metal plus
+# sombres, ses toits sombres et lisses : trois gris distincts, rien d'autre.
+# L'index 0 est toujours l'air, dont le decodeur se sert pour sauter les plages
+# vides d'un coup.
 PALETTE = [
-    "minecraft:air",                       # 0
-    "minecraft:cobbled_deepslate",         # 1   le pavement
-    "minecraft:gray_concrete",             # 2
-    "minecraft:andesite",                  # 3
-    "supplementaries:stone_tile",          # 4
-    "minecraft:spruce_planks",             # 5   les quais, AU BORD DE L'EAU
-    "minecraft:dark_oak_planks",           # 6
-    "minecraft:stripped_spruce_wood",      # 7
-    "minecraft:tuff",                      # 8   le sol nu, les talus
-    "minecraft:polished_andesite",         # 9
-    "minecraft:packed_mud",                # 10
-    "minecraft:deepslate_bricks",          # 11  les murs
-    "minecraft:deepslate_tiles",           # 12
-    "minecraft:tuff_bricks",               # 13
-    "minecraft:smooth_stone",              # 14
-    "supplementaries:blackstone_tile",     # 15  les bandeaux, les plus sombres
-    "minecraft:polished_blackstone",       # 16
-    "minecraft:mossy_stone_bricks",        # 17  les soubassements, la digue
-    "minecraft:mossy_cobblestone",         # 18
-    "minecraft:stone_bricks",              # 19
-    "minecraft:polished_tuff",             # 20  les toits, le metal
-    "minecraft:oxidized_cut_copper",       # 21
-    "minecraft:weathered_cut_copper",      # 22
-    "minecraft:copper_block",              # 23
-    "minecraft:water",                     # 24  le bassin
-    "minecraft:deepslate_brick_slab",      # 25  reserve
-    "minecraft:cracked_deepslate_bricks",  # 26
+    "minecraft:air",                  # 0
+    "minecraft:polished_andesite",    # 1  le sol : rues, places, quais, rampes
+    "minecraft:deepslate_bricks",     # 2  les murs, les digues sous la ville
+    "minecraft:deepslate_tiles",      # 3  les toits
+    "minecraft:water",                # 4  le bassin
+    "minecraft:cave_air",             # 5  l'air enferme sous la mer (lecon 11)
+    "minecraft:barrier",              # 6  le rideau invisible du bord (lecon 11)
+    "minecraft:barrier[waterlogged=true]",  # 7  le meme rideau, dans la mer (lecon 11)
+]
+AIR, FLOOR, WALL, ROOF, WATER, CAVE_AIR, BARRIER, WET_BARRIER = range(8)
+
+# L'altitude de l'eau, celle du jeu (voir la lecon 3).
+WATER_HEIGHT = 0.0
+
+# La grille du port (CPO + HHG + GGA), FIGEE (voir la lecon 9) : le coin
+# (minx, miny, minz) de la collision fusionnee et le nombre de cellules. Toute
+# cellule citee ailleurs -- la porte du bar en (361, 66, 197), les salles de
+# haven_rooms.json -- se compte depuis ce coin. Le y est a pleine precision :
+# arrondi a -57,5016, il passerait trois cent-milliemes au-dessus du plus bas
+# sommet de la collision (-57,50163), et la grille deborderait.
+GRID_ORIGIN = (-434.7777, -57.50163, 1126.3511)
+GRID_DIMS = (1227, 158, 695)
+
+# Les tours a completer (voir la lecon 9), en cellules de la grille figee :
+# emprise en x, tranche en y, emprise en z. Mesurees sur le volume : l'emprise
+# couvre la collision de la tour sous le trou et le decor de son corps ; la
+# tranche part d'un peu sous le trou et monte jusqu'au sommet du decor.
+TOWERS = [
+    # jeu x 137..175, z 1308..1356 ; anneaux en y 116..127, corps coupe a 101
+    ("tour ouest du bras central", (572, 609), (96, 157), (182, 229)),
+    # jeu x 215..251, z 1308..1356
+    ("tour est du bras central", (650, 685), (96, 157), (182, 229)),
+    # jeu x -97..-55, z 1481..1523 ; sommet en y 92..120, plancher a 79
+    ("tour du large ouest", (338, 380), (76, 157), (355, 397)),
+    # jeu x 434..477, z 1478..1519 ; sommet en y 93..120
+    ("tour du large est", (869, 911), (76, 157), (352, 393)),
+]
+# Les tuyaux 5x5 des tours du large : emprise en x, sommet de la collision,
+# emprise en z. On suit leur coude dans le decor a partir de ce sommet.
+TOWER_PIPES = [
+    ("tuyau ouest 1", (346, 350), 87, (304, 309)),
+    ("tuyau ouest 2", (411, 415), 79, (297, 301)),
+    ("tuyau ouest 3", (390, 394), 79, (317, 321)),
+    ("tuyau ouest 4", (333, 337), 79, (369, 373)),
+    ("tuyau ouest 5", (354, 358), 79, (349, 353)),
+    ("tuyau est 1", (828, 834), 82, (288, 294)),
+    ("tuyau est 2", (853, 857), 79, (309, 314)),
+    ("tuyau est 3", (913, 917), 79, (365, 369)),
+    ("tuyau est 4", (890, 895), 79, (344, 348)),
+]
+PIPE_REACH = 30       # colonnes autour du sommet d'un tuyau ou chercher son coude
+PIPE_RISE = 40        # cellules au-dessus du sommet
+# Ce qui, dans l'emprise d'une tour, n'est pas la tour : les cables (ceux du
+# palais tombe, les catenaires), les debris du palais, les decalcomanies et les
+# lumieres, qui ne sont que des aplats ou des points.
+TOWER_SKIP = ("cable", "fallen-palace", "decal", "stain", "blotch", "lamp", "light", "bulb")
+
+# Les bouts des bras, a murer (voir la lecon 11), en cellules : x, y, z. Le
+# mur monte du sol du quai (cellule 61) jusqu'a la hauteur donnee.
+ARM_ENDS = [
+    # le quai du bras ouest touche le bord x=0 ; ses immeubles montent a 91
+    ("bout du bras ouest", (0, 0), (62, 91), (77, 132)),
+    # le quai du bras est touche x=1226, sans rien autour : 24 blocs, comme
+    # le plafond des garages
+    ("bout du bras est", (1226, 1226), (62, 85), (74, 91)),
+    # le ponton du bras central devant les portes city-port-door01 (z 48-49,
+    # sommet a la cellule 94), au bord nord du ponton
+    ("bout nord du bras central", (579, 674), (62, 94), (47, 47)),
 ]
 
-AIR = 0
-PAVE = (1, 2, 3, 4)
-DOCK = (5, 6, 7)
-GROUND = (8, 9, 10)
-# Les murs s'etalent maintenant de 0,21 a 0,62 de luminance, contre 0,14 a 0,28
-# auparavant ou les quatre variantes etaient du deepslate a 36/255 les unes des
-# autres. Mesure : l'ecart moyen entre deux cellules voisines passe de 0,020 a
-# 0,058 -- c'est lui, et non le nombre de variantes, qui faisait « rocher uni ».
-WALL = (11, 12, 13, 14, 26)
-# Le bandeau doit TRANCHER sur le mur, pas le repeter. Les deux blocs les plus
-# sombres de la palette lui sont reserves ; aucune paire bandeau-mur ne descend
-# sous 0,07 de luminance d'ecart.
-BAND = (15, 16)
-FOOT = (17, 18, 19)
-ROOF = (20, 21, 22, 23)
-WATER = 24
+# Les appartements : les trois garages du bout du bras ouest les plus proches
+# du bar, du plus proche au plus loin. Chacun va d'un mur de separation a
+# l'autre en z ; son interieur va de x=95 au mur du cote de l'eau (x=104),
+# du sol (61) au toit (85). Sa face ouest, en x=94, est ouverte sur la rue.
+APARTMENTS = [
+    ("appartement_1", (181, 195)),
+    ("appartement_2", (157, 171)),
+    ("appartement_3", (134, 147)),
+]
+APT_FACE_X = 94
+APT_INNER_X = (95, 104)
+APT_FLOOR_Y = 61
+APT_CEILING_Y = 85
+DOOR_WIDTH = 3
+DOOR_HEIGHT = 4
+
+# La place de voiture devant chaque porte. Ses cotes viennent des bornes des
+# trois voitures, lues dans l'en-tete des .bin de jak_vehicles a chaque
+# execution (vehicle_extents) : 5,59 m de large au plus (carb), 3,52 de haut
+# (cara), 8,43 de long (cara). La boite libre fait 7 x 4 x 9. Les cotes
+# restent IMPAIRES : la voiture se centre en floor + 0,5, et une largeur paire
+# decalerait la boite d'une demi-case sous elle -- carb en deborderait. Elle recule de
+# CAR_GAP cellules devant la porte, pour qu'on sorte sans buter sur la voiture.
+CAR_WIDTH = 7
+CAR_HEIGHT = 4
+CAR_LENGTH = 9
+CAR_GAP = 2
+# Le lacet Minecraft de la voiture garee, en degres : 0 regarde +Z, 90 regarde
+# -X. Les portes s'ouvrent a l'ouest sur la rue du bras : le nez vers la rue,
+# l'arriere vers la porte. Le modele a son avant en +z (tools/jak_vehicle.py).
+CAR_YAW = 90.0
+VEHICLES = os.path.join(ROOT, "src", "main", "resources", "assets", "emeraldweapons", "jak_vehicles")
+
+# Le sol principal de la ville : l'altitude ou la surface horizontale est de
+# loin la plus etendue du port, 133 000 unites carrees a y=8.
+QUAY_HEIGHT = 8.0
+
+# Les niveaux d'interieur, dont la collision omet les plafonds.
+INTERIORS = ("HHG", "GGA")
+
+# La portee, en colonnes, du decor ajoute hors de l'emprise de la collision :
+# assez pour le renflement du pied des digues, trop peu pour aller chercher un
+# debris au milieu de la rade.
+REACH = 4
 
 NEIGHBOURS = ((1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1))
-
-# Taille minimale d'une etendue d'eau, en colonnes. La rade en fait deux cent
-# mille ; la plus grande place en contrebas faussement noyee en faisait six
-# mille six cents. Le seuil les separe sans ambiguite.
-SEA_MIN = 20000
-
-# Les niveaux d'INTERIEUR, que le jeu charge en streaming par-dessus le port.
-# Leur collision ne porte presque aucun plafond -- mesure sur le bar : cent
-# quatre-vingt-quatre triangles tournes vers le bas pour cent quatre-vingt-sept
-# unites carrees, contre mille huit cent quatre-vingt-trois de sol, soit dix
-# pour cent. Le jeu n'en avait pas besoin, le joueur ne pouvant pas les
-# toucher ; nous si, sans quoi on voit le ciel depuis le comptoir.
-INTERIORS = ("HHG", "GGA")
 
 
 def find_obj(code):
@@ -155,13 +267,8 @@ def read_triangles(path):
     return verts, faces
 
 
-def load_all(codes, lift):
-    """Plusieurs niveaux dans UN repere.
-
-    Les coordonnees de la collision sont absolues dans le monde du jeu : deux
-    niveaux voisins se placent l'un par rapport a l'autre tout seuls, et
-    l'interieur du bar retombe exactement derriere sa porte.
-    """
+def load_all(codes):
+    """Plusieurs niveaux dans UN repere, a leurs coordonnees du monde."""
     verts = []
     faces = []
     groups = []
@@ -169,19 +276,45 @@ def load_all(codes, lift):
     for code in codes:
         base = len(verts)
         v, f = read_triangles(find_obj(code))
-        # le LEVER, applique avant la fusion : la porte est dans le meme
-        # fichier que la piece, elle monte donc rigidement avec elle et rien
-        # ne se decroche
-        dy = lift.get(code, 0.0)
-        if dy:
-            v = [(p[0], p[1] + dy, p[2]) for p in v]
         verts.extend(v)
         start = len(faces)
         faces.extend((a + base, b + base, c + base) for a, b, c in f)
         groups.append((code, start, len(faces)))
         bounds[code] = (min(q[1] for q in v), max(q[1] for q in v))
-        print("  %-6s %6d triangles%s" % (code, len(f), "  (leve de %g)" % dy if dy else ""))
+        print("  %-6s %6d triangles" % (code, len(f)))
     return verts, faces, groups, bounds
+
+
+def load_visuals(codes, below, origin, dims, cell):
+    """Les triangles du decor visuel qui passent sous `below`, dans la grille."""
+    verts = []
+    faces = []
+    x_hi = origin[0] + dims[0] * cell
+    z_hi = origin[2] + dims[2] * cell
+    for code in codes:
+        name = VISUALS.get(code)
+        path = os.path.join(LEVELS, name or "", "%s-background.glb" % name)
+        if not name or not os.path.isfile(path):
+            print("  visuel %-6s absent" % code)
+            continue
+        v, f = mesh_triangles(path)
+        base = len(verts)
+        verts.extend(v)
+        kept = 0
+        for a, b, c in f:
+            pa, pb, pc = v[a], v[b], v[c]
+            if min(pa[1], pb[1], pc[1]) >= below:
+                continue
+            # le decor deborde largement la collision (jusqu'a z=-36 pour le
+            # port) : on ecarte ce qui tombe hors de la grille
+            if max(pa[0], pb[0], pc[0]) < origin[0] or min(pa[0], pb[0], pc[0]) > x_hi:
+                continue
+            if max(pa[2], pb[2], pc[2]) < origin[2] or min(pa[2], pb[2], pc[2]) > z_hi:
+                continue
+            faces.append((a + base, b + base, c + base))
+            kept += 1
+        print("  visuel %-6s %6d triangles sous y=%.0f" % (code, kept, below))
+    return verts, faces
 
 
 def normal_of(a, b, c):
@@ -196,30 +329,42 @@ def normal_of(a, b, c):
     return nx / length, ny / length, nz / length
 
 
-def voxelize(verts, faces, cell, groups=()):
-    """La peau du niveau, rasterisee sans trou.
+def grid(verts, cell):
+    """Les dimensions et l'origine de la grille qui contient la collision."""
+    lo = [min(v[i] for v in verts) for i in range(3)]
+    hi = [max(v[i] for v in verts) for i in range(3)]
+    dims = tuple(int((hi[i] - lo[i]) / cell) + 2 for i in range(3))
+    return dims, tuple(lo)
 
-    Pour chaque triangle on projette sur le plan perpendiculaire a l'axe
-    DOMINANT de sa normale, puis on parcourt les cellules de ce plan en
-    calculant la troisieme coordonnee. Projeter selon l'axe dominant garantit
-    que le triangle couvre au moins une cellule par pas de grille : c'est ce
-    qui rend la surface etanche, la ou un treillis laissait passer le jour.
+
+def fixed_grid(verts, origin, dims, cell):
+    """Verifie que la collision tient dans la grille figee (voir la lecon 9).
+
+    La grille ne se deduit plus de la geometrie : une retouche qui la
+    deborderait deplacerait l'origine, et toutes les cellules relevees -- les
+    salles, la porte du bar -- ne voudraient plus rien dire. On s'arrete donc
+    en erreur plutot que de grandir en silence.
+    """
+    hi = [origin[i] + dims[i] * cell for i in range(3)]
+    lo_seen = [min(v[i] for v in verts) for i in range(3)]
+    hi_seen = [max(v[i] for v in verts) for i in range(3)]
+    faults = []
+    for i, axis in enumerate("xyz"):
+        if lo_seen[i] < origin[i]:
+            faults.append("%s min %.4f < origine %.4f" % (axis, lo_seen[i], origin[i]))
+        if hi_seen[i] >= hi[i]:
+            faults.append("%s max %.4f >= bord %.4f" % (axis, hi_seen[i], hi[i]))
+    if faults:
+        sys.exit("la collision deborde de la grille figee : " + " ; ".join(faults))
+
+
+def rasterize(voxels, verts, faces, cell, dims, origin, groups=(), columns=None):
+    """La peau des triangles, rasterisee sans trou (voir la lecon 1).
 
     On garde la peau seulement : les batiments restent creux, donc visitables.
+    La valeur de chaque voxel est la planeite de sa face, |ny|.
     """
-    minx = min(v[0] for v in verts)
-    miny = min(v[1] for v in verts)
-    minz = min(v[2] for v in verts)
-    maxx = max(v[0] for v in verts)
-    maxy = max(v[1] for v in verts)
-    maxz = max(v[2] for v in verts)
-
-    w = int((maxx - minx) / cell) + 2
-    hgt = int((maxy - miny) / cell) + 2
-    d = int((maxz - minz) / cell) + 2
-
-    voxels = {}
-    columns = {}
+    minx, miny, minz = origin
     owner = {}
     for code, start, end in groups:
         for i in range(start, end):
@@ -249,15 +394,18 @@ def voxelize(verts, faces, cell, groups=()):
         if abs(area) < 1e-9:
             continue
 
-        lo_u, hi_u = int(min(au, bu, cu)), int(max(au, bu, cu)) + 1
-        lo_v, hi_v = int(min(av, bv, cv)), int(max(av, bv, cv)) + 1
+        # borne a la grille : un triangle du decor peut etre immense
+        lo_u = max(0, int(min(au, bu, cu)))
+        hi_u = min(dims[u1] - 1, int(max(au, bu, cu)) + 1)
+        lo_v = max(0, int(min(av, bv, cv)))
+        hi_v = min(dims[u2] - 1, int(max(av, bv, cv)) + 1)
         for iu in range(lo_u, hi_u + 1):
             for iv in range(lo_v, hi_v + 1):
                 su, sv = iu + 0.5, iv + 0.5
                 s = ((su - au) * (cv - av) - (cu - au) * (sv - av)) / area
                 t = ((bu - au) * (sv - av) - (su - au) * (bv - av)) / area
-                # la marge elargit d'un vingtieme : deux triangles voisins se
-                # recouvrent alors legerement au lieu de laisser une couture
+                # un vingtieme de marge : deux triangles voisins se recouvrent
+                # legerement au lieu de laisser une couture
                 if s < -0.05 or t < -0.05 or s + t > 1.05:
                     continue
                 sw = aw + s * (bw - aw) + t * (cw - aw)
@@ -268,28 +416,21 @@ def voxelize(verts, faces, cell, groups=()):
                     key = (iw, iu, iv)
                 else:
                     key = (iu, iv, iw)
-                if not (0 <= key[0] < w and 0 <= key[1] < hgt and 0 <= key[2] < d):
+                if not (0 <= key[0] < dims[0] and 0 <= key[1] < dims[1] and 0 <= key[2] < dims[2]):
                     continue
                 old = voxels.get(key)
-                # la face la plus PLATE gagne : un sol traverse par un mur doit
-                # rester un sol, faute de quoi les dalles se piquent de briques
-                # a chaque intersection
+                # la face la plus plate gagne : un sol traverse par un mur doit
+                # rester un sol
                 if old is None or flat > old:
                     voxels[key] = flat
-                code = owner.get(index)
-                if code is not None:
-                    columns.setdefault(code, set()).add((key[0], key[2]))
-
-    return voxels, (w, hgt, d), (minx, miny, minz), columns
+                if columns is not None:
+                    code = owner.get(index)
+                    if code is not None:
+                        columns.setdefault(code, set()).add((key[0], key[2]))
 
 
 def pinholes(voxels, dims):
-    """Bouche les trous d'un seul bloc que la rasterisation laisse aux aretes.
-
-    La ou deux faces se rencontrent de biais, chacune peut manquer la meme
-    cellule de son cote. Une cellule vide entouree sur quatre de ses six faces
-    etait forcement de la matiere : on la rend.
-    """
+    """Bouche les trous d'un bloc que la rasterisation laisse aux aretes."""
     w, h, d = dims
     added = {}
     for (x, y, z) in list(voxels):
@@ -313,294 +454,409 @@ def pinholes(voxels, dims):
     return len(added)
 
 
-def column_tops(voxels):
-    """Le voxel solide le plus haut de chaque colonne."""
-    tops = {}
-    for (x, y, z) in voxels:
+def column_extremes(cells):
+    """Le voxel le plus bas et le plus haut de chaque colonne."""
+    low = {}
+    top = {}
+    for (x, y, z) in cells:
         key = (x, z)
-        if tops.get(key, -1) < y:
-            tops[key] = y
-    return tops
+        if low.get(key, 1 << 30) > y:
+            low[key] = y
+        if top.get(key, -1) < y:
+            top[key] = y
+    return low, top
 
 
-def water_mask(voxels, dims, water_y, tops):
-    """La nappe : les colonnes dont le SOMMET est sous la ligne d'eau.
+def underside(visual, voxels, quay_y, floor_y):
+    """Ce que la collision omet sous la ville : digues, piles, soubassements.
 
-    Deux erreurs ont ete commises ici, l'une apres l'autre, et les deux valent
-    d'etre gardees par ecrit.
+    Un voxel du decor n'est garde que s'il est SOUS la plus basse surface de
+    collision de sa colonne, et jamais au-dessus du niveau de la rue plus un --
+    la hauteur du plancher du bar, pour que le pied de son mur rejoigne la
+    digue sans fente. Hors de l'emprise de la collision, il doit rester sous la
+    rue et a moins de REACH colonnes d'elle. Il ne descend pas sous le fond de
+    la nappe : ce qui plonge plus bas ne se verrait pas.
+    """
+    low, _ = column_extremes(voxels)
+    kept = {}
+    near = {}
+    for (x, y, z) in visual:
+        if y < floor_y or y > quay_y + 1 or (x, y, z) in voxels:
+            continue
+        limit = low.get((x, z))
+        if limit is not None:
+            if y >= limit:
+                continue
+        else:
+            if y >= quay_y:
+                continue
+            ok = near.get((x, z))
+            if ok is None:
+                ok = any((x + dx, z + dz) in low
+                         for dx in range(-REACH, REACH + 1)
+                         for dz in range(-REACH, REACH + 1))
+                near[(x, z)] = ok
+            if not ok:
+                continue
+        kept[(x, y, z)] = WALL
+    return kept
 
-    LA PREMIERE testait une seule cellule par colonne, a la hauteur de l'eau,
-    et propageait depuis le bord de la carte. Comme on ne garde que la PEAU des
-    surfaces, le massif sous la ville est creux : une colonne dont le sol est a
-    la cellule 65 est parfaitement vide a 63. Mesure, cela declarait « ouvertes
-    sur le large » 128 274 colonnes portant un vrai sol de ville, soit 72,5 %
-    d'entre elles ; la nappe circulait sous la ville et ressortait dans les
-    places en contrebas -- quarante et un amas, le plus grand de 6 613
-    cellules. C'est exactement ce qu'on nous a rapporte : « les intersections
-    ou l'on descend quelques marches ».
 
-    LA SECONDE, qui semblait evidente, aurait VIDE LA RADE. Tester le sommet ET
-    exiger une liaison au bord de la carte laisse le bassin a sec : le jeu ne
-    pose aucune collision sous l'eau, la baie est donc un trou de 209 738
-    colonnes sans la moindre geometrie, et la digue qui l'enferme a son sommet
-    au-dessus de la ligne d'eau. La propagation ne l'atteint jamais. Le port
-    serait devenu une fosse d'air de cent cinquante blocs de fond.
+def water_mask(dims, water_y, occupied, surface):
+    """Les colonnes de mer.
 
-    LA BONNE REGLE ne propage pas depuis le bord : une colonne est de la mer si
-    son sommet est sous la ligne d'eau, colonne vide comprise. On decoupe
-    ensuite en composantes et l'on ne garde que les GRANDES -- la rade, le
-    large, les canaux. Les petites poches fermees sont precisement les places
-    en contrebas, et elles restent seches.
+    La mer part des colonnes NUES, sans le moindre bloc -- le jeu ne pose rien
+    sous l'eau, la rade est un grand vide -- et gagne toute colonne voisine
+    dont la cellule de SURFACE est libre, meme si un plancher la couvre plus
+    haut (voir la lecon 7). Une digue qui traverse la surface l'arrete.
     """
     w, h, d = dims
-
-    # Les CANDIDATS : toute colonne dont le sommet est sous la ligne d'eau,
-    # colonne vide comprise.
-    candidate = set()
+    reached = set()
+    queue = deque()
     for x in range(w):
         for z in range(d):
-            if tops.get((x, z), -1) < water_y:
-                candidate.add((x, z))
-
-    # LES AMORCES SONT LES COLONNES VIDES, et elles seules. C'est la
-    # distinction qui manquait : la rade n'a AUCUNE geometrie -- le jeu n'en
-    # pose pas sous l'eau -- tandis qu'une place en contrebas a un sol, a la
-    # cellule 61 ou 62. Amorcer partout ou le sommet est bas noyait donc les
-    # deux ; amorcer depuis le vide ne noie que la mer, et la propagation
-    # s'arrete a la levre des places, dont le pourtour est a la ligne d'eau.
-    seeds = [c for c in candidate if (c[0], c[1]) not in tops]
-
-    reached = set()
-    queue = deque(seeds)
-    reached.update(seeds)
+            if (x, z) not in occupied:
+                reached.add((x, z))
+                queue.append((x, z))
     while queue:
         x, z = queue.popleft()
         for dx, dz in ((1, 0), (-1, 0), (0, 1), (0, -1)):
             nxt = (x + dx, z + dz)
-            if nxt in candidate and nxt not in reached:
+            if nxt in reached or nxt in surface:
+                continue
+            if 0 <= nxt[0] < w and 0 <= nxt[1] < d:
                 reached.add(nxt)
                 queue.append(nxt)
-
-    # LES POCHES FERMEES RESTENT SECHES.
-    #
-    # Il subsiste des places en contrebas dont le sol est sous la ligne d'eau
-    # et qui communiquent par un couloir bas : physiquement elles seraient
-    # noyees, mais le jeu n'y met pas d'eau, et le joueur nous l'a signale --
-    # « les intersections ou l'on descend quelques marches ». On ne garde donc
-    # une etendue A FOND SOLIDE que si elle touche vraiment le large, c'est-a-
-    # dire une colonne sans aucune geometrie. Une cuvette entouree de ville
-    # n'en touche aucune.
-    empty = {c for c in reached if c not in tops}
-    floored = reached - empty
-    keep = set(empty)
-    seen = set()
-    for start in floored:
-        if start in seen:
-            continue
-        blob = []
-        touches = False
-        stack = [start]
-        seen.add(start)
-        while stack:
-            x, z = stack.pop()
-            blob.append((x, z))
-            for dx, dz in ((1, 0), (-1, 0), (0, 1), (0, -1)):
-                nxt = (x + dx, z + dz)
-                if nxt in empty:
-                    touches = True
-                elif nxt in floored and nxt not in seen:
-                    seen.add(nxt)
-                    stack.append(nxt)
-        if touches:
-            keep.update(blob)
-    return keep
+    return reached
 
 
-def water_mask_unused(voxels, dims, water_y):
-    """La nappe : tout ce qui communique avec le large, a la hauteur de l'eau.
+def water_edges(sea, dims):
+    """Les colonnes solides qui bordent la mer sur au moins deux cotes.
 
-    Une propagation depuis le BORD de la carte. Sans elle, l'eau apparaitrait
-    aussi dans les caves, les cours fermees et les batiments -- partout ou il
-    se trouve du vide sous ce niveau, c'est-a-dire a peu pres partout.
+    Un pieu, une pile de pont : sa colonne traverse la surface, donc n'est pas
+    de la mer, et l'eau s'arretait net autour en laissant un puits sec sous son
+    pied. On remplit leurs cellules VIDES sous la ligne d'eau ; l'eau ne
+    remplace jamais un bloc.
     """
     w, h, d = dims
-    if not 0 <= water_y < h:
-        return set()
-    seen = set()
-    queue = deque()
-
-    def offer(x, z):
-        if 0 <= x < w and 0 <= z < d and (x, z) not in seen \
-                and (x, water_y, z) not in voxels:
-            seen.add((x, z))
-            queue.append((x, z))
-
-    for x in range(w):
-        offer(x, 0)
-        offer(x, d - 1)
-    for z in range(d):
-        offer(0, z)
-        offer(w - 1, z)
-    while queue:
-        x, z = queue.popleft()
-        offer(x + 1, z)
-        offer(x - 1, z)
-        offer(x, z + 1)
-        offer(x, z - 1)
-    return seen
+    edges = set()
+    for (x, z) in sea:
+        for dx, dz in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            nxt = (x + dx, z + dz)
+            if nxt in sea or nxt in edges:
+                continue
+            if not (0 <= nxt[0] < w and 0 <= nxt[1] < d):
+                continue
+            around = sum(1 for ex, ez in ((1, 0), (-1, 0), (0, 1), (0, -1))
+                         if (nxt[0] + ex, nxt[1] + ez) in sea)
+            if around >= 2:
+                edges.add(nxt)
+    return edges
 
 
-def mix(x, y, z, scale):
-    """Un entier stable tire de la position, par plaques.
+def curtains(voxels, forced, sea, quay_y, water_y, floor_y):
+    """Le rideau de mur sous le bord qui donne sur l'eau libre (voir la lecon 8).
 
-    Par PLAQUES et non par bloc : un tirage au pixel donne du poivre et sel,
-    qu'aucun batiment n'a jamais eu. Des plaques de quelques blocs se lisent
-    comme des panneaux et des reprises de maconnerie.
+    Une colonne le recoit si elle borde de l'eau A CIEL OUVERT, si son plus bas
+    bloc est a plus d'un bloc au-dessus de la surface, et si sa collision la
+    plus basse est au niveau de la rue -- trois blocs de marge pour le plancher
+    du bar. Le rideau monte du fond de la nappe jusque sous ce plus bas bloc :
+    il ne touche jamais une case ou l'on marche.
     """
-    a = ((x // scale) * 73856093) ^ ((y // max(2, scale // 2)) * 19349663) \
-        ^ ((z // scale) * 83492791)
-    a &= 0xFFFFFFFF
-    a ^= a >> 13
-    a = (a * 1274126177) & 0xFFFFFFFF
-    return (a ^ (a >> 16)) & 0x7FFFFFFF
+    low_all, _ = column_extremes(list(voxels) + list(forced))
+    low_collision, _ = column_extremes(voxels)
+    open_sea = {c for c in sea if c not in low_all}
+    added = {}
+    for (x, z), low in low_all.items():
+        if low <= water_y + 1:
+            continue
+        lowest = low_collision.get((x, z))
+        if lowest is None or lowest > quay_y + 3:
+            continue
+        if not any((x + dx, z + dz) in open_sea for dx, dz in ((1, 0), (-1, 0), (0, 1), (0, -1))):
+            continue
+        for y in range(floor_y, low):
+            added[(x, y, z)] = WALL
+    return added
 
 
-def classify(flat, x, y, z, quay_y, water_y, tops, shore):
-    """Le bloc d'un voxel : sa classe d'abord, sa variante ensuite.
+def classify(flat, x, y, z, quay_y, tops):
+    """Le bloc d'un voxel de collision : sol, mur ou toit, et rien d'autre.
 
-    LE BOIS NE VA QU'AU BORD DE L'EAU. La regle precedente disait « horizontal
-    et y <= quay_y + 2 », ce qui n'est pas un test de quai mais un test
-    d'altitude -- et quay_y EST le sol principal de la ville. Elle peignait
-    donc en planches 239 743 voxels, soit 32,8 % du niveau entier et la classe
-    la plus nombreuse : tout le pave de Haven etait un plancher. Un quai se
-    definit par ce qu'il borde, pas par sa hauteur.
-
-    LE TOIT SE JUGE PAR COLONNE. Le seuil precedent, quay_y + 45 % de la
-    hauteur totale, valait 106 parce qu'UNE fleche du port monte a 99 : les
-    toits ne couvraient que 2,6 % du niveau et jamais le bar. On demande
-    desormais si le voxel est le SOMMET de sa colonne et s'il domine le quai,
-    ce qui ne depend plus d'un point isole de la carte.
+    Une face assez plate pour qu'on y marche -- sol ou rampe -- est du sol,
+    sauf si elle coiffe sa colonne bien au-dessus des quais : c'est alors un
+    toit. Tout le reste est du mur.
     """
-    horizontal = flat > 0.80
-    vertical = flat < 0.35
-
-    if y <= quay_y - 6:
-        return FOOT[mix(x, y, z, 5) % len(FOOT)]
-    if horizontal and (x, z) in shore and water_y - 1 <= y <= water_y + 3:
-        return DOCK[mix(x, y, z, 4) % len(DOCK)]
-    if horizontal:
+    if flat >= 0.5:
         if y >= tops.get((x, z), 0) and y > quay_y + 5:
-            return ROOF[mix(x, y, z, 5) % len(ROOF)]
-        return PAVE[mix(x, y, z, 3) % len(PAVE)]
-    if vertical:
-        # le bandeau : une assise differente toutes les cinq. C'est le detail le
-        # moins cher et le plus efficace pour qu'un mur cesse d'etre une falaise
-        if y % 5 == 0:
-            return BAND[mix(x, y, z, 9) % len(BAND)]
-        # maille 3 et non 6 : a la maille 6, quatre voisins sur cinq tiraient le
-        # MEME bloc et les plaques fusionnaient en aplats
-        return WALL[mix(x, y, z, 3) % len(WALL)]
-    return GROUND[mix(x, y, z, 4) % len(GROUND)]
+            return ROOF
+        return FLOOR
+    return WALL
 
 
-def cap_interiors(voxels, dims, columns, codes, roofs):
-    """Pose un plafond sur les niveaux d'interieur, que la collision omet.
+def cap_interiors(voxels, columns, codes, roofs):
+    """Pose un plafond sur les interieurs, a la hauteur de leur propre coque.
 
-    Le bar et le stand de tir sont a ciel ouvert dans les donnees : sur les
-    mille cinq cent six colonnes du plancher du bar, mille quatre-vingt-douze
-    n'ont rien du tout au-dessus du sol plus quatre. On coiffe donc chaque
-    piece a la hauteur de sa propre coque -- pas a une hauteur inventee : le
-    toit prend l'altitude du point le plus haut du niveau qui le porte, ce qui
-    donne un batiment d'un seul tenant plutot qu'un couvercle pose dessus.
+    La collision du bar ne porte presque aucun plafond : 184 triangles tournes
+    vers le bas contre 1 883 unites carrees de sol. Le toit prend la hauteur la
+    plus haute du niveau qui le porte, pas celle des tours du port qui le
+    surplombent.
     """
     forced = {}
     for code in codes:
         if code not in INTERIORS:
             continue
         own = columns.get(code, set())
-        if not own:
-            continue
-        # LA HAUTEUR PROPRE DU NIVEAU, pas celle de ses colonnes. Prendre le
-        # sommet de tout ce qui traverse l'emprise attrapait les tours du port
-        # qui la surplombent : le toit du bar se posait a la cellule 120, soit
-        # cinquante blocs au-dessus de sa propre coque.
         roof_y = roofs.get(code)
-        if roof_y is None:
+        if not own or roof_y is None:
             continue
-        posed = 0
-        # le sommet par colonne, calcule une seule fois
         tops = {}
         for (x, y, z) in voxels:
             if (x, z) in own and tops.get((x, z), -1) < y:
                 tops[(x, z)] = y
+        posed = 0
         for (x, z), top in tops.items():
             if top >= roof_y - 1:
-                continue                      # deja couverte
+                continue
             for dy in (roof_y, roof_y - 1):
                 if (x, dy, z) not in voxels:
-                    forced[(x, dy, z)] = ROOF[mix(x, dy, z, 5) % len(ROOF)]
+                    forced[(x, dy, z)] = ROOF
                     posed += 1
         print("  toit      %s : %d blocs a la hauteur %d" % (code, posed, roof_y))
     return forced
 
 
-def skirt(voxels, dims, columns, codes, water_y):
-    """Donne un SOL aux interieurs qui flottent.
+def complete_towers(voxels, forced, dims, origin, cell, floor_y):
+    """Rend leur corps aux tours dont la collision ne garde que le sommet.
 
-    Le bar n'est pas une dalle posee sur la rue : sur les mille cinq cent sept
-    colonnes de son emprise, mille trois cent vingt-six n'ont rien du tout en
-    dessous, et toutes sont au-dessus du bassin. Il est raccorde au pave par
-    son seul coin. On lui batit donc une jupe qui descend jusqu'a la ligne
-    d'eau -- faute de quoi le lever ne ferait que l'ecarter davantage du sol.
+    Les anneaux des deux tours du bras central et les sommets des deux tours du
+    large flottaient : la collision de la tour s'arrete sous eux (voir la
+    lecon 9). On reprend la peau du decor visuel, mais seulement dans
+    l'emprise de chaque tour, en ecartant ce qui n'est pas la tour -- les
+    cables du palais tombe qui la traversent, les decalcomanies, les lampes.
+    Les voxels ajoutes se classent comme la collision, sol, mur ou toit selon
+    leur normale. Ils ne remplacent jamais un bloc, et ne descendent pas sous
+    le fond de la nappe.
+
+    Les tuyaux des tours du large, eux, tiennent dans l'eau : on suit leur
+    coude dans le decor, depuis leur sommet, tant qu'il reste un tuyau.
     """
-    forced = {}
-    for code in codes:
-        if code not in INTERIORS:
+    path = os.path.join(LEVELS, "ctyport", "ctyport-background.glb")
+    if not os.path.isfile(path):
+        sys.exit("decor des tours absent : %s" % path)
+    verts, faces, names = mesh_triangles(path, with_names=True)
+    kept = [i for i, n in enumerate(names) if not any(s in n for s in TOWER_SKIP)]
+
+    def skin(box, only=None):
+        (x0, x1), (y0, y1), (z0, z1) = box
+        gx0, gx1 = origin[0] + x0 * cell, origin[0] + (x1 + 1) * cell
+        gy0, gy1 = origin[1] + y0 * cell, origin[1] + (y1 + 1) * cell
+        gz0, gz1 = origin[2] + z0 * cell, origin[2] + (z1 + 1) * cell
+        chosen = []
+        for i in kept:
+            if only and only not in names[i]:
+                continue
+            a, b, c = (verts[k] for k in faces[i])
+            if max(a[0], b[0], c[0]) < gx0 or min(a[0], b[0], c[0]) > gx1:
+                continue
+            if max(a[1], b[1], c[1]) < gy0 or min(a[1], b[1], c[1]) > gy1:
+                continue
+            if max(a[2], b[2], c[2]) < gz0 or min(a[2], b[2], c[2]) > gz1:
+                continue
+            chosen.append(faces[i])
+        cells = {}
+        rasterize(cells, verts, chosen, cell, dims, origin)
+        pinholes(cells, dims)
+        return {k: v for k, v in cells.items()
+                if x0 <= k[0] <= x1 and max(y0, floor_y) <= k[1] <= y1 and z0 <= k[2] <= z1
+                and k not in voxels and k not in forced}
+
+    report = []
+    for label, xs, ys, zs in TOWERS:
+        added = skin((xs, ys, zs))
+        voxels.update(added)
+        report.append((label, len(added)))
+        print("  tour      %-34s %6d blocs repris du decor" % (label, len(added)))
+    for label, xs, top, zs in TOWER_PIPES:
+        # la boite de recherche : le sommet du tuyau, elargi de PIPE_REACH
+        box = ((xs[0] - PIPE_REACH, xs[1] + PIPE_REACH), (top - 3, top + PIPE_RISE),
+               (zs[0] - PIPE_REACH, zs[1] + PIPE_REACH))
+        pool = skin(box, only="pipe")
+        seeds = [(x, y, z) for x in range(xs[0], xs[1] + 1) for y in range(top - 3, top + 1)
+                 for z in range(zs[0], zs[1] + 1) if (x, y, z) in voxels or (x, y, z) in forced]
+        grown = {}
+        stack = []
+        for (x, y, z) in seeds:
+            for dx in (-1, 0, 1):
+                for dy in (-1, 0, 1):
+                    for dz in (-1, 0, 1):
+                        key = (x + dx, y + dy, z + dz)
+                        if key in pool and key not in grown:
+                            grown[key] = pool[key]
+                            stack.append(key)
+        while stack:
+            x, y, z = stack.pop()
+            for dx in (-1, 0, 1):
+                for dy in (-1, 0, 1):
+                    for dz in (-1, 0, 1):
+                        key = (x + dx, y + dy, z + dz)
+                        if key in pool and key not in grown:
+                            grown[key] = pool[key]
+                            stack.append(key)
+        voxels.update(grown)
+        report.append((label, len(grown)))
+        print("  tuyau     %-34s %6d blocs repris du decor" % (label, len(grown)))
+    return report
+
+
+def prune_detached(voxels, forced, dims, water_y, keep_min):
+    """Retire ce qui ne touche ni la ville ni l'eau, en 26-connexite (lecon 9).
+
+    Garde la plus grande composante -- la ville -- et toute composante dont le
+    plus bas bloc plonge sous la surface, QUELLE QUE SOIT SA TAILLE : elle
+    tient dans la rade, comme les cables geants tombes du palais ou la colonne
+    isolee de 11 blocs du bassin (x 127, z 560). Le joueur l'a decide : ce qui
+    plonge dans l'eau et tient seul reste.
+
+    Le seuil keep_min ne vaut que pour les pieces qui ne touchent pas l'eau :
+    elles ne restent qu'a partir de keep_min blocs. Dans le port, la plus
+    grosse en fait 198 (x 528 a 725, cellules 106 a 120) : toutes partent. Ce sont
+    des pieces que la collision a detachees de ce qui les portait : rails de
+    glisse, catenaires, lampes pendues du stand de tir, eclats.
+
+    Rend la liste des pieces retirees : (taille, boite, plus bas bloc).
+    """
+    solids = set(voxels) | set(forced)
+    label = {}
+    comps = []
+    for seed in solids:
+        if seed in label:
             continue
-        own = columns.get(code, set())
-        floors = {}
-        for (x, y, z) in voxels:
-            if (x, z) in own and floors.get((x, z), 10 ** 9) > y:
-                floors[(x, z)] = y
-        posed = 0
-        for (x, z), floor in floors.items():
-            for y in range(water_y, floor):
-                if (x, y, z) not in voxels:
-                    forced[(x, y, z)] = FOOT[mix(x, y, z, 5) % len(FOOT)]
-                    posed += 1
-        print("  jupe      %s : %d blocs" % (code, posed))
-    return forced
+        cid = len(comps)
+        label[seed] = cid
+        stack = [seed]
+        members = []
+        while stack:
+            p = stack.pop()
+            members.append(p)
+            x, y, z = p
+            for dx in (-1, 0, 1):
+                for dy in (-1, 0, 1):
+                    for dz in (-1, 0, 1):
+                        q = (x + dx, y + dy, z + dz)
+                        if q in solids and q not in label:
+                            label[q] = cid
+                            stack.append(q)
+        comps.append(members)
+    main = max(range(len(comps)), key=lambda c: len(comps[c]))
+    removed = []
+    kept = []
+    for cid, members in enumerate(comps):
+        if cid == main:
+            continue
+        low = min(p[1] for p in members)
+        # dans l'eau, on garde tout ; hors de l'eau, seulement les grosses pieces
+        if low <= water_y or len(members) >= keep_min:
+            kept.append(len(members))
+            continue
+        for p in members:
+            voxels.pop(p, None)
+            forced.pop(p, None)
+        box = (min(p[0] for p in members), max(p[0] for p in members),
+               low, max(p[1] for p in members),
+               min(p[2] for p in members), max(p[2] for p in members))
+        removed.append((len(members), box, low))
+    print("  elagage   %d composantes : ville %d blocs, %d gardees (dans l'eau ou grosses) %s, %d retirees (%d blocs)" % (
+        len(comps), len(comps[main]), len(kept), sorted(kept, reverse=True), len(removed),
+        sum(r[0] for r in removed)))
+    return removed, len(comps), 1 + len(kept)
 
 
-def shoreline(sea, dims, reach=3):
-    """Les colonnes assez pres de l'eau pour porter un quai.
+def sealed_pockets(dims, water_y, depth, voxels, forced, sea, edges, barrier_y):
+    """L'air de la nappe qui ne touche pas la mer (voir la lecon 11).
 
-    C'est ce qui remplace le test d'altitude : un quai borde l'eau, il n'est
-    pas simplement bas. Trois cellules de portee suffisent -- au-dela on
-    planche des rues entieres, ce qui etait precisement le defaut.
+    Dans la dimension haven, le generateur a deja mis de l'eau de la cellule
+    52 a 57 partout, et la pose saute l'air. Une cellule d'air de la nappe
+    serait donc noyee ; on l'ecrit en cave_air, qui se pose, si elle n'est pas
+    reliee a l'eau du volume par l'air, en 6-connexite dans la nappe. Le
+    rideau du bord compte comme un mur : la mer du dehors ne passe pas.
     """
     w, h, d = dims
-    near = set()
+    y0 = water_y - depth + 1
+    layers = depth
+    area = w * d
+    band = bytearray(area * layers)            # 0 air, 1 eau, 2 plein
     for (x, z) in sea:
-        for dx in range(-reach, reach + 1):
-            for dz in range(-reach, reach + 1):
-                nxt = (x + dx, z + dz)
-                if 0 <= nxt[0] < w and 0 <= nxt[1] < d and nxt not in sea:
-                    near.add(nxt)
-    return near
+        base = z * w + x
+        for k in range(layers):
+            band[k * area + base] = 1
+    for (x, z) in edges:
+        base = z * w + x
+        for k in range(layers):
+            band[k * area + base] = 1
+    for source in (voxels, forced):
+        for (x, y, z) in source:
+            if y0 <= y <= water_y:
+                band[(y - y0) * area + z * w + x] = 2
+    if barrier_y is not None:
+        for k in range(layers):
+            if y0 + k < barrier_y:
+                continue
+            for x in range(w):
+                band[k * area + x] = 2
+                band[k * area + (d - 1) * w + x] = 2
+            for z in range(d):
+                band[k * area + z * w] = 2
+                band[k * area + z * w + w - 1] = 2
+    air = []
+    at = band.find(0)
+    while at >= 0:
+        air.append(at)
+        at = band.find(0, at + 1)
+    reached = set()
+    queue = deque()
+    for i in air:
+        k, r = divmod(i, area)
+        z, x = divmod(r, w)
+        for j, ok in ((i - 1, x > 0), (i + 1, x < w - 1), (i - w, z > 0), (i + w, z < d - 1),
+                      (i - area, k > 0), (i + area, k < layers - 1)):
+            if ok and band[j] == 1:
+                reached.add(i)
+                queue.append(i)
+                break
+    while queue:
+        i = queue.popleft()
+        k, r = divmod(i, area)
+        z, x = divmod(r, w)
+        for j, ok in ((i - 1, x > 0), (i + 1, x < w - 1), (i - w, z > 0), (i + w, z < d - 1),
+                      (i - area, k > 0), (i + area, k < layers - 1)):
+            if ok and band[j] == 0 and j not in reached:
+                reached.add(j)
+                queue.append(j)
+    pockets = set()
+    for i in air:
+        if i not in reached:
+            k, r = divmod(i, area)
+            z, x = divmod(r, w)
+            pockets.add((x, y0 + k, z))
+    print("  poches    %d cellules d'air dans la nappe : %d fermees (cave_air), %d reliees a la mer" % (
+        len(air), len(pockets), len(reached)))
+    return pockets
 
 
-def encode(voxels, dims, quay_y, water_y, mask, depth, tops, shore, forced):
+def encode(voxels, dims, quay_y, water_y, depth, tops, sea, edges, forced,
+           pockets=frozenset(), barrier_y=None):
     """Les plages, en parcourant y puis z puis x.
 
-    L'eau n'est qu'une NAPPE de quelques blocs, pas une colonne jusqu'au fond.
-    Le niveau fait mille deux cents blocs sur sept cents, et quatre-vingt-quatorze
-    pour cent de sa surface est ouverte sur le large a la hauteur de l'eau :
-    remplir jusqu'en bas demanderait cinquante millions de blocs, deux minutes
-    de pose et autant de donnees de monde. Une nappe donne la meme image depuis
-    la surface pour un vingtieme du prix ; on ne decouvre le vide qu'en
-    plongeant, ce qui est un defaut que j'assume plutot qu'un quartier
-    impraticable.
+    L'eau est une nappe de quelques blocs sous la surface, pas une colonne
+    jusqu'au fond : remplir la rade jusqu'en bas coute des dizaines de millions
+    de blocs pour une image identique depuis la surface.
+
+    Avec `barrier_y`, l'air et l'eau du pourtour de la grille deviennent un
+    rideau de barrieres, de cette cellule jusqu'en haut (lecon 11) ; l'air des
+    poches fermees de la nappe devient du cave_air. Dans la nappe, le rideau
+    est noye : le generateur y a mis de l'eau partout, et une barriere seche y
+    creuserait une fente visible.
     """
     w, h, d = dims
     runs = []
@@ -608,16 +864,25 @@ def encode(voxels, dims, quay_y, water_y, mask, depth, tops, shore, forced):
     count = 0
     for y in range(h):
         flooded = water_y - depth < y <= water_y
+        curtain = barrier_y is not None and y >= barrier_y
         for z in range(d):
+            rim = curtain and (z == 0 or z == d - 1)
             for x in range(w):
-                imposed = forced.get((x, y, z))
-                flat = voxels.get((x, y, z))
+                key = (x, y, z)
+                imposed = forced.get(key)
+                flat = voxels.get(key)
                 if imposed is not None:
                     block = imposed
-                elif flat is None:
-                    block = WATER if flooded and (x, z) in mask else AIR
+                elif flat is not None:
+                    block = classify(flat, x, y, z, quay_y, tops)
+                elif curtain and (rim or x == 0 or x == w - 1):
+                    block = WET_BARRIER if flooded else BARRIER
+                elif flooded and ((x, z) in sea or (x, z) in edges):
+                    block = WATER
+                elif flooded and key in pockets:
+                    block = CAVE_AIR
                 else:
-                    block = classify(flat, x, y, z, quay_y, water_y, tops, shore)
+                    block = AIR
                 if block == current:
                     count += 1
                 else:
@@ -630,28 +895,309 @@ def encode(voxels, dims, quay_y, water_y, mask, depth, tops, shore, forced):
     return runs
 
 
-def write_blob(path, dims, runs):
-    out = bytearray()
-    out += b"JAKV"
-    out += struct.pack(">B", 1)
-    out += struct.pack(">III", *dims)
-    out += struct.pack(">H", len(PALETTE))
+def write_blob(path, dims, runs, origin=None, cell=1.0):
+    """Ecrit le volume, compresse d'un bloc par zlib.
+
+    Le format, gros-boutiste :
+      "JAKV", version (1 octet), largeur, hauteur, profondeur (3 entiers) ;
+      en version 2 seulement : origine x, y, z et taille de cellule (4 doubles,
+      en unites du jeu), puis le sha1 (20 octets) de tout ce qui suit ;
+      la palette (compte, puis chaque nom precede de sa longueur) ;
+      les plages (compte, puis index de palette sur un octet et longueur en
+      varint), parcourues en y, puis z, puis x.
+
+    La version 2 porte l'origine avec les donnees : une salle relevee sur une
+    ancienne version du port peut ainsi etre refusee au lieu d'etre posee a
+    cote. Sans origine, on ecrit encore la version 1.
+
+    Rend la taille compressee et le sha1 (None en version 1).
+    """
+    body = bytearray()
+    body += struct.pack(">H", len(PALETTE))
     for name in PALETTE:
         raw = name.encode("utf-8")
-        out += struct.pack(">H", len(raw)) + raw
-    out += struct.pack(">I", len(runs))
+        body += struct.pack(">H", len(raw)) + raw
+    body += struct.pack(">I", len(runs))
     for block, count in runs:
-        out += struct.pack(">B", block)
+        body += struct.pack(">B", block)
         while True:
             part = count & 0x7F
             count >>= 7
-            out += struct.pack(">B", part | (0x80 if count else 0))
+            body += struct.pack(">B", part | (0x80 if count else 0))
             if not count:
                 break
-    body = zlib.compress(bytes(out), 9)
+    out = bytearray(b"JAKV")
+    digest = None
+    if origin is None:
+        out += struct.pack(">B", 1)
+        out += struct.pack(">III", *dims)
+    else:
+        digest = hashlib.sha1(bytes(body)).digest()
+        out += struct.pack(">B", 2)
+        out += struct.pack(">III", *dims)
+        out += struct.pack(">dddd", origin[0], origin[1], origin[2], cell)
+        out += digest
+    out += body
+    packed = zlib.compress(bytes(out), 9)
     with open(path, "wb") as handle:
-        handle.write(body)
-    return len(body), len(out)
+        handle.write(packed)
+    return len(packed), (digest.hex() if digest else None)
+
+
+def close_ends(voxels, forced):
+    """Mure les bouts des bras au bloc de mur (voir la lecon 11).
+
+    Dans le jeu, les bras continuent vers d'autres quartiers ; ici ils
+    s'arretaient net au bord de la grille, sur un quai nu. On ne remplace
+    jamais un bloc : seul l'air du plan de fermeture devient du mur.
+    """
+    total = 0
+    for label, (x0, x1), (y0, y1), (z0, z1) in ARM_ENDS:
+        posed = 0
+        for x in range(x0, x1 + 1):
+            for y in range(y0, y1 + 1):
+                for z in range(z0, z1 + 1):
+                    key = (x, y, z)
+                    if key not in voxels and key not in forced:
+                        forced[key] = WALL
+                        posed += 1
+        total += posed
+        print("  bout      %-34s %6d blocs de mur" % (label, posed))
+    return total
+
+
+def solid_at(voxels, forced, key):
+    return key in voxels or key in forced
+
+
+def vehicle_extents():
+    """Les cotes des voitures, lues dans l'en-tete de leurs .bin.
+
+    L'en-tete (voir tools/jak_vehicle.py), petit-boutiste : magie "JKVH",
+    version, triangles, os, largeur et hauteur de l'atlas, puis les coins
+    minimum et maximum de la boite du modele, en metres. Le modele a sa
+    largeur en x, sa hauteur en y, sa longueur en z.
+
+    Rend (largeur, hauteur, longueur) de la plus grande, cote par cote, et le
+    detail par modele.
+    """
+    header = struct.Struct("<4sIIIII3f3f")
+    models = {}
+    for path in sorted(glob.glob(os.path.join(VEHICLES, "*.bin"))):
+        with open(path, "rb") as handle:
+            fields = header.unpack(handle.read(header.size))
+        if fields[0] != b"JKVH":
+            sys.exit("%s : ce n'est pas un modele de voiture" % path)
+        lo, hi = fields[6:9], fields[9:12]
+        models[os.path.splitext(os.path.basename(path))[0]] = tuple(hi[i] - lo[i] for i in range(3))
+    if not models:
+        sys.exit("aucun modele de voiture dans %s" % VEHICLES)
+    return tuple(max(m[i] for m in models.values()) for i in range(3)), models
+
+
+def build_apartments(voxels, forced, dims):
+    """Ferme trois garages du bras ouest en appartements, et les decrit.
+
+    Le garage est ouvert sur toute sa face ouest. On y pose un mur au bloc de
+    mur, en laissant une ouverture de porte centree au ras du sol. Puis on le
+    VERIFIE : l'air de l'interieur, porte bouchee, ne doit rejoindre aucune
+    cellule hors du garage en 6-connexite. Un appartement qui fuit arrete tout,
+    plutot que d'etre livre ouvert.
+    """
+    w, h, d = dims
+    # la place doit contenir chaque voiture, centree ; et le lacet doit bien
+    # tourner le nez vers la rue, a l'ouest des portes
+    need, models = vehicle_extents()
+    if need[0] > CAR_WIDTH or need[1] > CAR_HEIGHT or need[2] > CAR_LENGTH:
+        sys.exit("place de voiture %d x %d x %d trop petite pour %.2f x %.2f x %.2f m (%s)" % (
+            CAR_WIDTH, CAR_HEIGHT, CAR_LENGTH, need[0], need[1], need[2], models))
+    ahead = (round(-math.sin(math.radians(CAR_YAW))), round(math.cos(math.radians(CAR_YAW))))
+    if ahead != (-1, 0):
+        sys.exit("lacet %.0f : la voiture garee doit regarder -X, vers la rue des portes" % CAR_YAW)
+    print("  voitures  %s ; place %d x %d x %d, lacet %.0f" % (
+        ", ".join("%s %.2f x %.2f x %.2f" % (m, e[0], e[1], e[2]) for m, e in sorted(models.items())),
+        CAR_WIDTH, CAR_HEIGHT, CAR_LENGTH, CAR_YAW))
+    rooms = []
+    for name, (za, zb) in APARTMENTS:
+        mid = (za + zb) // 2
+        top = APT_FLOOR_Y + DOOR_HEIGHT
+        door = [(APT_FACE_X, y, z) for y in range(APT_FLOOR_Y + 1, top + 1)
+                for z in range(mid - DOOR_WIDTH // 2, mid - DOOR_WIDTH // 2 + DOOR_WIDTH)]
+        doorset = set(door)
+        posed = 0
+        for z in range(za, zb + 1):
+            for y in range(APT_FLOOR_Y + 1, APT_CEILING_Y):
+                key = (APT_FACE_X, y, z)
+                if key not in doorset and not solid_at(voxels, forced, key):
+                    forced[key] = WALL
+                    posed += 1
+        for key in door:
+            if solid_at(voxels, forced, key):
+                sys.exit("%s : l'ouverture de porte %s est bouchee" % (name, key))
+
+        seed = ((APT_INNER_X[0] + APT_INNER_X[1]) // 2, APT_FLOOR_Y + 5, mid)
+        inside = {seed}
+        queue = deque([seed])
+        while queue:
+            x, y, z = queue.popleft()
+            if not (APT_FACE_X < x <= APT_INNER_X[1] + 2 and za - 1 <= z <= zb + 1
+                    and APT_FLOOR_Y < y < APT_CEILING_Y + 1):
+                sys.exit("%s fuit : l'air de l'interieur sort en %s" % (name, (x, y, z)))
+            for dx, dy, dz in NEIGHBOURS:
+                key = (x + dx, y + dy, z + dz)
+                if key in inside or key in doorset or solid_at(voxels, forced, key):
+                    continue
+                inside.add(key)
+                queue.append(key)
+        lo = [min(p[i] for p in inside) for i in range(3)]
+        hi = [max(p[i] for p in inside) for i in range(3)]
+
+        def standable(x, z):
+            return (solid_at(voxels, forced, (x, APT_FLOOR_Y, z))
+                    and (x, APT_FLOOR_Y + 1, z) in inside and (x, APT_FLOOR_Y + 2, z) in inside)
+
+        spawns = []
+        cx = (APT_INNER_X[0] + APT_INNER_X[1]) // 2 + 2
+        for want in (mid - 4, mid, mid + 4):
+            best = min(((abs(x - cx) + abs(z - want), x, z) for x in range(lo[0], hi[0] + 1)
+                        for z in range(za, zb + 1) if standable(x, z)), default=None)
+            if best is None:
+                sys.exit("%s : aucun sol libre pour un point d'apparition" % name)
+            spawns.append((best[1], APT_FLOOR_Y, best[2]))
+
+        # LA PLACE DE VOITURE : une boite d'air libre sur un sol plein, centree
+        # sur la porte, la longueur dans le sens du lacet. On sort d'abord par
+        # CAR_GAP cellules de passage, puis on recule vers la rue jusqu'a
+        # trouver la place.
+        zs = range(mid - CAR_WIDTH // 2, mid - CAR_WIDTH // 2 + CAR_WIDTH)
+        ys = range(APT_FLOOR_Y + 1, APT_FLOOR_Y + 1 + CAR_HEIGHT)
+        passage = [(x, z) for x in range(APT_FACE_X - CAR_GAP, APT_FACE_X)
+                   for z in sorted({c[2] for c in door})]
+        if any(solid_at(voxels, forced, (x, y, z)) for (x, z) in passage for y in range(APT_FLOOR_Y + 1, top + 1)) \
+                or not all(solid_at(voxels, forced, (x, APT_FLOOR_Y, z)) for (x, z) in passage):
+            sys.exit("%s : le passage devant la porte n'est pas libre" % name)
+        car = None
+        for rear in range(APT_FACE_X - 1 - CAR_GAP, APT_FACE_X - 1 - CAR_GAP - 30, -1):
+            xs = range(rear - CAR_LENGTH + 1, rear + 1)
+            if any(solid_at(voxels, forced, (x, y, z)) for x in xs for y in ys for z in zs):
+                continue
+            if not all(solid_at(voxels, forced, (x, APT_FLOOR_Y, z)) for x in xs for z in zs):
+                continue
+            car = {"min": [xs[0], ys[0], zs[0]], "max": [xs[-1], ys[-1], zs[-1]],
+                   "floor": [(xs[0] + xs[-1]) // 2, APT_FLOOR_Y, mid], "yaw": CAR_YAW}
+            break
+        if car is None:
+            sys.exit("%s : pas de place de voiture libre devant la porte" % name)
+        print("  logement  %-14s mur %d blocs, porte z %d..%d, air interieur %d cellules sans fuite ;"
+              " voiture x %d..%d z %d..%d, lacet %.0f" % (
+                  name, posed, door[0][2], door[-1][2], len(inside),
+                  car["min"][0], car["max"][0], car["min"][2], car["max"][2], CAR_YAW))
+        rooms.append({
+            "id": name,
+            "box": {"min": lo, "max": hi},
+            "capacity": 3,
+            "spawns": [list(s) for s in spawns],
+            "door": {"min": [APT_FACE_X, APT_FLOOR_Y + 1, door[0][2]],
+                     "max": [APT_FACE_X, top, door[-1][2]]},
+            "car": car,
+        })
+    return rooms
+
+
+def hq_zone(voxels, forced, columns, bounds, roofs, origin, cell):
+    """La zone du QG : l'interieur du Hip Hog, et une place pour l'element de vote.
+
+    La boite est l'emprise de la collision du bar (HHG), du sol a son toit. La
+    place du vote est la case de sol libre la plus proche du comptoir
+    (hip-tcounter* dans hiphog-background.glb), hors de son emprise.
+    """
+    own = columns.get("HHG")
+    if not own:
+        return None
+    x0 = min(c[0] for c in own); x1 = max(c[0] for c in own)
+    z0 = min(c[1] for c in own); z1 = max(c[1] for c in own)
+    y0 = int((bounds["HHG"][0] - origin[1]) / cell)
+    y1 = roofs["HHG"]
+    path = os.path.join(LEVELS, "hiphog", "hiphog-background.glb")
+    verts, faces, names = mesh_triangles(path, with_names=True)
+    pts = [verts[k] for i, n in enumerate(names) if "tcounter" in n for k in faces[i]]
+    if not pts:
+        sys.exit("comptoir du Hip Hog introuvable dans %s" % path)
+    cx0 = int((min(p[0] for p in pts) - origin[0]) / cell)
+    cx1 = int((max(p[0] for p in pts) - origin[0]) / cell)
+    cz0 = int((min(p[2] for p in pts) - origin[2]) / cell)
+    cz1 = int((max(p[2] for p in pts) - origin[2]) / cell)
+    top = int((max(p[1] for p in pts) - origin[1]) / cell)
+    centre = ((cx0 + cx1) / 2.0, (cz0 + cz1) / 2.0)
+    best = None
+    for x in range(cx0 - 4, cx1 + 5):
+        for z in range(cz0 - 4, cz1 + 5):
+            if cx0 <= x <= cx1 and cz0 <= z <= cz1:
+                continue
+            for y in range(y0, top + 1):
+                if (solid_at(voxels, forced, (x, y, z)) and not solid_at(voxels, forced, (x, y + 1, z))
+                        and not solid_at(voxels, forced, (x, y + 2, z))):
+                    # la distance au bord du comptoir d'abord, puis a son centre
+                    edge = max(cx0 - x, x - cx1, 0) + max(cz0 - z, z - cz1, 0)
+                    score = (edge, abs(x - centre[0]) + abs(z - centre[1]), y)
+                    if best is None or score < best[0]:
+                        best = (score, (x, y, z))
+                    break
+    if best is None:
+        sys.exit("aucune case libre pres du comptoir du Hip Hog")
+    vote = best[1]
+    print("  QG        Hip Hog x %d..%d y %d..%d z %d..%d ; comptoir x %d..%d z %d..%d ; vote sur le sol %s" % (
+        x0, x1, y0, y1, z0, z1, cx0, cx1, cz0, cz1, vote))
+    return {"box": {"min": [x0, y0, z0], "max": [x1, y1, z1]},
+            "counter": {"min": [cx0, top, cz0], "max": [cx1, top, cz1]},
+            "vote": {"floor": list(vote)}}
+
+
+def write_rooms(path, rooms, hq, name, origin, cell, dims, digest):
+    """Ecrit haven_rooms.json : les appartements et le QG, en cellules du volume.
+
+    Le format est decrit dans le fichier lui-meme (champ "_format"), pour qui
+    l'ouvre sans avoir lu ce code.
+    """
+    doc = {
+        "_format": [
+            "Salles du port de Haven, ecrites par tools/jak_voxelize.py avec le volume.",
+            "Toutes les coordonnees sont des cellules du volume : (x, y, z) depuis le coin",
+            "(minx, miny, minz) du .jakv, le meme que JakBuilder pose a son origine.",
+            "Un bloc du monde = origine de pose + cellule.",
+            "volume, sha1, origin, cell, dims : le .jakv dont ces cellules sont tirees ;",
+            "si le sha1 du volume pose differe, les cellules ne sont plus garanties.",
+            "rooms[].box : l'air interieur de l'appartement, bornes incluses.",
+            "rooms[].capacity : nombre de joueurs.",
+            "rooms[].spawns : cellules de SOL ; le joueur se tient en y+1, et y+1, y+2 sont de l'air.",
+            "rooms[].door : l'ouverture de porte laissee dans le mur (air), bornes incluses.",
+            "rooms[].car : place de voiture devant la porte. min..max est de l'air libre, bornes incluses :",
+            "  %d de large, %d de haut, %d de long dans le sens du lacet, sur un sol plein en y = min.y - 1,"
+            % (CAR_WIDTH, CAR_HEIGHT, CAR_LENGTH),
+            "  a au moins %d cellules de la porte, laissees libres pour sortir." % CAR_GAP,
+            "  yaw : lacet Minecraft de la voiture garee, en degres (0 regarde +Z, 90 regarde -X) ;",
+            "  le nez vers la rue du bras, l'arriere vers la porte.",
+            "  floor : la cellule de sol sous le centre de la place. On pose le centre horizontal de la",
+            "  boite du modele (bornes de l'en-tete du .bin) en (x + 0,5, z + 0,5), et son point le plus",
+            "  bas sur le sol, en y + 1 : la place contient alors chacune des trois voitures.",
+            "hq.box : l'emprise du Hip Hog, du sol a son toit, bornes incluses.",
+            "hq.counter : l'emprise du comptoir, a la hauteur de son plateau.",
+            "hq.vote.floor : cellule de sol libre proposee pour l'element de vote, pres du comptoir.",
+        ],
+        "volume": name,
+        "sha1": digest,
+        "origin": list(origin),
+        "cell": cell,
+        "dims": list(dims),
+        "rooms": rooms,
+        "hq": hq,
+    }
+    text = json.dumps(doc, indent=2, ensure_ascii=False)
+    # les triplets de coordonnees sur une ligne : le fichier se lit d'un coup d'oeil
+    text = re.sub(r"\[\s+(-?[\d.]+),\s+(-?[\d.]+),\s+(-?[\d.]+)\s+\]", r"[\1, \2, \3]", text)
+    with open(path, "w", encoding="utf-8") as handle:
+        handle.write(text + "\n")
+    print("  salles    %s" % path)
 
 
 def main():
@@ -660,60 +1206,121 @@ def main():
     parser.add_argument("--name", required=True, help="nom de sortie")
     parser.add_argument("--with", dest="extra", nargs="*", default=[],
                         help="DGO a fusionner dans le meme repere")
-    parser.add_argument("--lift", nargs="*", default=[],
-                        help="lever un niveau, par exemple HHG:2")
     parser.add_argument("--cell", type=float, default=1.0)
-    parser.add_argument("--water", type=float, default=6.0,
+    parser.add_argument("--water", type=float, default=WATER_HEIGHT,
                         help="altitude de la surface de l'eau, en unites du jeu")
     parser.add_argument("--water-depth", dest="depth", type=int, default=6,
                         help="epaisseur de la nappe, en blocs")
+    parser.add_argument("--origin", nargs=3, type=float, default=GRID_ORIGIN,
+                        metavar=("X", "Y", "Z"),
+                        help="coin de la grille figee, en unites du jeu (defaut : le port)")
+    parser.add_argument("--dims", nargs=3, type=int, default=GRID_DIMS,
+                        metavar=("W", "H", "D"),
+                        help="taille de la grille figee, en cellules (defaut : le port)")
+    parser.add_argument("--auto-grid", action="store_true",
+                        help="deduire la grille de la collision, pour un autre quartier")
+    parser.add_argument("--pad-top", type=int, default=0,
+                        help="cellules ajoutees en haut de la grille, sans toucher l'origine")
+    parser.add_argument("--keep-detached", type=int, default=500,
+                        help="taille minimale d'une piece detachee gardee si elle ne touche pas l'eau "
+                             "(celles qui plongent dans l'eau restent toutes) ; -1 n'elague rien")
+    parser.add_argument("--dump-pruned", help="fichier JSON ou lister les pieces retirees")
+    parser.add_argument("--no-haven", action="store_true",
+                        help="sans les retouches du port pour la dimension haven : tours, bouts "
+                             "des bras, appartements, poches, rideau de barrieres")
+    parser.add_argument("--rooms", help="ecrire les salles et le QG dans ce JSON (a cote du volume)")
     args = parser.parse_args()
 
-    lift = {}
-    for spec in args.lift:
-        code, _, amount = spec.partition(":")
-        lift[code] = float(amount or 0)
-
     codes = [args.code] + list(args.extra)
-    verts, faces, groups, bounds = load_all(codes, lift)
+    verts, faces, groups, bounds = load_all(codes)
     print("  total  %d triangles" % len(faces))
 
-    voxels, dims, origin, columns = voxelize(verts, faces, args.cell, groups)
+    if args.auto_grid:
+        dims, origin = grid(verts, args.cell)
+    else:
+        origin = tuple(args.origin)
+        dims = tuple(args.dims)
+        fixed_grid(verts, origin, dims, args.cell)
+    dims = (dims[0], dims[1] + args.pad_top, dims[2])
+    voxels = {}
+    columns = {}
+    rasterize(voxels, verts, faces, args.cell, dims, origin, groups, columns)
     print("  grille    %d x %d x %d" % dims)
+    print("  origine   %.4f %.4f %.4f" % origin)
     print("  surfaces  %d voxels" % len(voxels))
-    filled = pinholes(voxels, dims)
-    print("  bouches   %d trous d'un bloc" % filled)
+    print("  bouches   %d trous d'un bloc" % pinholes(voxels, dims))
 
-    # Le niveau des quais est MESURE : c'est l'altitude ou la surface
-    # horizontale est de loin la plus etendue du niveau -- 133 000 unites
-    # carrees a y=8, contre 60 000 a la suivante.
-    quay_y = int((8.0 - origin[1]) / args.cell)
+    quay_y = int((QUAY_HEIGHT - origin[1]) / args.cell)
     water_y = int((args.water - origin[1]) / args.cell)
-    print("  quais y=%d, eau y=%d (en cellules)" % (quay_y, water_y))
+    floor_y = water_y - args.depth + 1
+    print("  quais y=%d, eau y=%d, fond de nappe y=%d (en cellules)" % (quay_y, water_y, floor_y))
 
-    forced = {}
-    forced.update(skirt(voxels, dims, columns, codes, water_y))
-    # la hauteur de chaque interieur, tiree de sa propre boite englobante
-    roofs = {}
-    for code, (lo, hi) in bounds.items():
-        roofs[code] = int((hi - origin[1]) / args.cell) - 1
-    forced.update(cap_interiors(voxels, dims, columns, codes, roofs))
-    # les blocs imposes comptent comme de la matiere pour la suite : sans cela
-    # la nappe passerait au travers de la jupe qu'on vient de batir
-    for key in forced:
-        voxels.setdefault(key, 1.0)
+    # sous la ville : le decor visuel, la ou la collision s'arrete (lecon 6)
+    below = origin[1] + (quay_y + 2) * args.cell
+    vverts, vfaces = load_visuals(codes, below, origin, dims, args.cell)
+    visual = {}
+    rasterize(visual, vverts, vfaces, args.cell, dims, origin)
+    pinholes(visual, dims)
+    forced = underside(visual, voxels, quay_y, floor_y)
+    print("  dessous   %d blocs repris du decor" % len(forced))
 
-    tops = column_tops(voxels)
-    sea = water_mask(voxels, dims, water_y, tops)
-    shore = shoreline(sea, dims)
-    print("  mer       %d colonnes, rivage %d colonnes" % (len(sea), len(shore)))
+    roofs = {code: int((hi - origin[1]) / args.cell) - 1 for code, (lo, hi) in bounds.items()}
+    forced.update(cap_interiors(voxels, columns, codes, roofs))
 
-    runs = encode(voxels, dims, quay_y, water_y, sea, args.depth, tops, shore, forced)
+    def flood():
+        solids = list(voxels) + list(forced)
+        occupied = {(x, z) for (x, y, z) in solids}
+        surface = {(x, z) for (x, y, z) in solids if y == water_y}
+        sea = water_mask(dims, water_y, occupied, surface)
+        covered = sum(1 for c in sea if c in occupied)
+        return sea, covered
+
+    # la mer une premiere fois, pour savoir quels bords donnent sur l'eau
+    # libre ; puis le rideau ; puis la mer a nouveau, arretee par le rideau
+    sea, covered = flood()
+    curtain = curtains(voxels, forced, sea, quay_y, water_y, floor_y)
+    forced.update(curtain)
+    print("  rideau    %d blocs sous le bord exterieur" % len(curtain))
+
+    # les retouches du port pour la dimension haven (lecons 9 et 11)
+    haven = args.code == "CPO" and not args.auto_grid and not args.no_haven
+    if haven:
+        complete_towers(voxels, forced, dims, origin, args.cell, floor_y)
+    if args.keep_detached >= 0:
+        removed, before, after = prune_detached(voxels, forced, dims, water_y, args.keep_detached)
+        if args.dump_pruned:
+            with open(args.dump_pruned, "w", encoding="utf-8") as handle:
+                json.dump({"components_before": before, "components_after": after,
+                           "removed": [{"size": n, "box": list(box), "low": low}
+                                       for n, box, low in removed]}, handle, indent=1)
+    rooms = hq = None
+    if haven:
+        close_ends(voxels, forced)
+        rooms = build_apartments(voxels, forced, dims)
+        hq = hq_zone(voxels, forced, columns, bounds, roofs, origin, args.cell)
+
+    # les sommets APRES l'elagage et les ajouts : un anneau retire laissait
+    # sinon le toit de sa tour classe en sol (lecon 9)
+    _, tops = column_extremes(voxels)
+
+    sea, covered = flood()
+    edges = water_edges(sea, dims)
+    print("  mer       %d colonnes, dont %d sous un plancher ; bords %d" % (len(sea), covered, len(edges)))
+
+    barrier_y = floor_y if haven else None
+    pockets = (sealed_pockets(dims, water_y, args.depth, voxels, forced, sea, edges, barrier_y)
+               if haven else frozenset())
+    runs = encode(voxels, dims, quay_y, water_y, args.depth, tops, sea, edges, forced,
+                  pockets, barrier_y)
     os.makedirs(OUT_DIR, exist_ok=True)
     path = os.path.join(OUT_DIR, "%s.jakv" % args.name)
-    packed, _ = write_blob(path, dims, runs)
+    packed, digest = write_blob(path, dims, runs, origin, args.cell)
     print("  plages    %d" % len(runs))
+    print("  sha1      %s" % digest)
     print("  fichier   %s  (%.1f Mo compresses)" % (path, packed / 1048576.0))
+    if haven and args.rooms:
+        write_rooms(os.path.join(OUT_DIR, args.rooms), rooms, hq,
+                    os.path.splitext(os.path.basename(path))[0], origin, args.cell, dims, digest)
 
 
 if __name__ == "__main__":

@@ -308,6 +308,21 @@ Toutes commencent par `/arcencium` et demandent le niveau opérateur.
 | `anchor` | Vous téléporte à l'ancre du sanctuaire le plus proche et dit si le bloc y est |
 | `mode off` | **Éteint le mode** : plus de confinement, ni météo, ni Marée, ni chronomètre. Le monde redevient un Minecraft ordinaire, nos blocs compris — pour explorer et bâtir tranquillement. Les **rituels d'ancre restent jouables** : c'est le bac à sable où l'on essaie un sanctuaire |
 | `mode on` | Le rallume |
+| `jak ctyport` | Bâtit le **port de Haven** (Jak 3) à partir de vos pieds, vers l'est, le sud et le haut (1227 × 158 × 695 blocs). La zone est **d'abord vidée**, puis le quartier pousse couche par couche : on peut le reposer au même endroit sans restes de l'ancien. L'eau est 57 blocs au-dessus du point de pose. À faire en monde plat |
+| `jak stop` | Interrompt la pose en cours |
+| `haven build` | Pose la **ville de Haven** (le port de Jak 3) dans sa propre dimension, au niveau de la mer. Dans un monde neuf, c'est fait tout seul à la création ; la commande sert pour un monde existant |
+| `haven rebuild` | Remet la zone de la ville à neuf, mer et fond compris, puis la repose : pour essayer une nouvelle version de la ville dans le même monde |
+| `haven tp` | Vous emmène dans la rue devant le bar du Hip Hog |
+| `haven back` | Vous ramène au village |
+| `haven chantier on` / `off` | Mode chantier, pour vous seul : créatif, et la ville redevient modifiable pour aménager les appartements. Les autres joueurs restent en mode aventure |
+| `vehicule cara` (ou `carb`, `carc`) | Pose une voiture volante de Haven City devant vous. Pas encore de conduite |
+
+Dans Haven : mode aventure, rien ne se casse ni ne se pose, pas de dégâts ni de faim,
+et l'on ne peut pas sortir de la ville. Votre mode de jeu vous est rendu en la quittant.
+La pose d'essai `jak ctyport` contient elle aussi le mur invisible qui fait le tour du port.
+
+Pour arriver devant le bar du Hip Hog juste après la pose, sans bouger avant :
+`/tp @s ~375 ~66 ~211` — la porte est à quelques pas.
 
 Les noms de météo : `brume`, `aurore`, `nuit`, `meteores`, `dechirure`, `orage`,
 `embellie`. L'autocomplétion les propose toutes.

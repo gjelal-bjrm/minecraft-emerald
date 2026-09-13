@@ -54,6 +54,12 @@ public class LobbyRules {
      * avant que la Lame soit tiree, donc il est toujours connu ici.
      */
     private static boolean confined(ServerLevel level) {
+        // HORS DE L'OVERWORLD, RIEN. La barriere compare les coordonnees du
+        // joueur a celles du village : dans la ville de Haven, elle ramenait les
+        // joueurs vers des coordonnees de l'overworld, a l'interieur de la ville.
+        if (!level.dimension().equals(net.minecraft.world.level.Level.OVERWORLD)) {
+            return false;
+        }
         GameState state = GameState.get(level);
         if (state.mode() == GameState.Mode.LIBRE) {
             return false;
@@ -130,7 +136,10 @@ public class LobbyRules {
     @SubscribeEvent
     public static void onRespawn(PlayerEvent.PlayerRespawnEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer player)
-                || !(player.level() instanceof ServerLevel level)) {
+                || !(player.level() instanceof ServerLevel level)
+                || !level.dimension().equals(net.minecraft.world.level.Level.OVERWORLD)) {
+            // les ancres sont des coordonnees de l'overworld : un joueur mort dans
+            // la ville ne doit pas etre envoye a leur place, dans la ville
             return;
         }
         GameState state = GameState.get(level);

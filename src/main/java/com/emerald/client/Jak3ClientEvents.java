@@ -22,6 +22,13 @@ public class Jak3ClientEvents {
         event.register(com.emerald.menu.ModMenus.SPECIALIZATION_ALTAR.get(), SpecializationAltarScreen::new);
     }
 
+    /** Les modeles des voitures de Haven, relus a chaque rechargement des ressources. */
+    @SubscribeEvent
+    public static void registerReloadListeners(
+            net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent event) {
+        event.registerReloadListener(com.emerald.jak.vehicle.JakVehicleModels.INSTANCE);
+    }
+
     @SubscribeEvent
     public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
         // Le trait du sceptre n'a pas de modele : sa trainee de particules EST
@@ -40,6 +47,10 @@ public class Jak3ClientEvents {
 
         event.registerEntityRenderer(Jak3Registry.ARCENCIUM_BOLT.get(),
                 ArcenciumBoltRenderer::new);
+
+        // voitures de Haven : triangles cuits par tools/jak_vehicle.py
+        event.registerEntityRenderer(Jak3Registry.JAK_VEHICLE.get(),
+                com.emerald.jak.vehicle.JakVehicleRenderer::new);
 
         event.registerEntityRenderer(Jak3Registry.WASTELANDER.get(),
                 ctx -> new MobRenderer<WastelanderEntity, HumanoidModel<WastelanderEntity>>(ctx,

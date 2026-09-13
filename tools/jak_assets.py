@@ -63,6 +63,68 @@ def slice_view(js, blob, index):
     return blob[start:start + view["byteLength"]]
 
 
+def _accessor(js, index):
+    acc = js["accessors"][index]
+    view = js["bufferViews"][acc["bufferView"]]
+    return acc, view, view.get("byteOffset", 0) + acc.get("byteOffset", 0)
+
+
+def _positions(js, blob, index):
+    acc, view, start = _accessor(js, index)
+    if acc["componentType"] != 5126 or acc["type"] != "VEC3":
+        sys.exit("positions en %s %s, non gerees" % (acc["componentType"], acc["type"]))
+    stride = view.get("byteStride", 12)
+    count = acc["count"]
+    if stride == 12:
+        flat = struct.unpack_from("<%df" % (count * 3), blob, start)
+        return [flat[i * 3:i * 3 + 3] for i in range(count)]
+    return [struct.unpack_from("<3f", blob, start + i * stride) for i in range(count)]
+
+
+def _indices(js, blob, index):
+    acc, view, start = _accessor(js, index)
+    fmt = {5121: "B", 5123: "H", 5125: "I"}[acc["componentType"]]
+    return struct.unpack_from("<%d%s" % (acc["count"], fmt), blob, start)
+
+
+def mesh_triangles(path, with_names=False):
+    """Tous les triangles d'un decor de niveau, en coordonnees du monde.
+
+    Les decors exportes par OpenGOAL (`<niveau>-background.glb`) n'ont aucune
+    transformation de noeud : leurs sommets sont deja places dans le monde, en
+    metres, et tombent pile sur la collision (le bar : -113,2 a -61,7 en x pour
+    le visuel, -112,9 a -61,9 pour la collision). On le VERIFIE a chaque
+    lecture plutot que de le supposer : un noeud transforme ailleurs poserait
+    ses triangles au mauvais endroit sans la moindre erreur.
+
+    Avec `with_names`, rend aussi le nom du noeud de chaque triangle : c'est
+    ce qui permet de trier un decor, les murs d'une tour d'un cable qui passe
+    devant.
+    """
+    js, blob = read_glb(path)
+    verts = []
+    faces = []
+    names = []
+    for node in js.get("nodes", []):
+        if "mesh" not in node:
+            continue
+        if any(key in node for key in ("matrix", "translation", "rotation", "scale")):
+            sys.exit("%s : le noeud %s est transforme, non gere" % (path, node.get("name")))
+        for prim in js["meshes"][node["mesh"]]["primitives"]:
+            if prim.get("mode", 4) != 4:
+                sys.exit("%s : primitive en mode %s, non geree" % (path, prim.get("mode")))
+            pos = _positions(js, blob, prim["attributes"]["POSITION"])
+            base = len(verts)
+            verts.extend(pos)
+            idx = _indices(js, blob, prim["indices"]) if "indices" in prim else range(len(pos))
+            for t in range(0, len(idx) - 2, 3):
+                faces.append((base + idx[t], base + idx[t + 1], base + idx[t + 2]))
+                names.append(node.get("name", ""))
+    if with_names:
+        return verts, faces, names
+    return verts, faces
+
+
 def sniff(data):
     """L'extension d'une image, devinee sur ses premiers octets."""
     if data[:8] == b"\x89PNG\r\n\x1a\n":

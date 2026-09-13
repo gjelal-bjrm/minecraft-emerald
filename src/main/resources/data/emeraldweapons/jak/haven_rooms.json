@@ -1,0 +1,114 @@
+{
+  "_format": [
+    "Salles du port de Haven, ecrites par tools/jak_voxelize.py avec le volume.",
+    "Toutes les coordonnees sont des cellules du volume : (x, y, z) depuis le coin",
+    "(minx, miny, minz) du .jakv, le meme que JakBuilder pose a son origine.",
+    "Un bloc du monde = origine de pose + cellule.",
+    "volume, sha1, origin, cell, dims : le .jakv dont ces cellules sont tirees ;",
+    "si le sha1 du volume pose differe, les cellules ne sont plus garanties.",
+    "rooms[].box : l'air interieur de l'appartement, bornes incluses.",
+    "rooms[].capacity : nombre de joueurs.",
+    "rooms[].spawns : cellules de SOL ; le joueur se tient en y+1, et y+1, y+2 sont de l'air.",
+    "rooms[].door : l'ouverture de porte laissee dans le mur (air), bornes incluses.",
+    "rooms[].car : place de voiture devant la porte. min..max est de l'air libre, bornes incluses :",
+    "  7 de large, 4 de haut, 9 de long dans le sens du lacet, sur un sol plein en y = min.y - 1,",
+    "  a au moins 2 cellules de la porte, laissees libres pour sortir.",
+    "  yaw : lacet Minecraft de la voiture garee, en degres (0 regarde +Z, 90 regarde -X) ;",
+    "  le nez vers la rue du bras, l'arriere vers la porte.",
+    "  floor : la cellule de sol sous le centre de la place. On pose le centre horizontal de la",
+    "  boite du modele (bornes de l'en-tete du .bin) en (x + 0,5, z + 0,5), et son point le plus",
+    "  bas sur le sol, en y + 1 : la place contient alors chacune des trois voitures.",
+    "hq.box : l'emprise du Hip Hog, du sol a son toit, bornes incluses.",
+    "hq.counter : l'emprise du comptoir, a la hauteur de son plateau.",
+    "hq.vote.floor : cellule de sol libre proposee pour l'element de vote, pres du comptoir."
+  ],
+  "volume": "ctyport",
+  "sha1": "27b452a6e3d5770cfb3b1efd580f31e385d37410",
+  "origin": [-434.7777, -57.50163, 1126.3511],
+  "cell": 1.0,
+  "dims": [1227, 158, 695],
+  "rooms": [
+    {
+      "id": "appartement_1",
+      "box": {
+        "min": [95, 62, 181],
+        "max": [104, 84, 195]
+      },
+      "capacity": 3,
+      "spawns": [
+        [101, 61, 184],
+        [101, 61, 188],
+        [101, 61, 192]
+      ],
+      "door": {
+        "min": [94, 62, 187],
+        "max": [94, 65, 189]
+      },
+      "car": {
+        "min": [83, 62, 185],
+        "max": [91, 65, 191],
+        "floor": [87, 61, 188],
+        "yaw": 90.0
+      }
+    },
+    {
+      "id": "appartement_2",
+      "box": {
+        "min": [95, 62, 157],
+        "max": [103, 84, 171]
+      },
+      "capacity": 3,
+      "spawns": [
+        [101, 61, 160],
+        [101, 61, 164],
+        [101, 61, 168]
+      ],
+      "door": {
+        "min": [94, 62, 163],
+        "max": [94, 65, 165]
+      },
+      "car": {
+        "min": [83, 62, 161],
+        "max": [91, 65, 167],
+        "floor": [87, 61, 164],
+        "yaw": 90.0
+      }
+    },
+    {
+      "id": "appartement_3",
+      "box": {
+        "min": [95, 62, 134],
+        "max": [103, 84, 147]
+      },
+      "capacity": 3,
+      "spawns": [
+        [101, 61, 136],
+        [101, 61, 140],
+        [101, 61, 144]
+      ],
+      "door": {
+        "min": [94, 62, 139],
+        "max": [94, 65, 141]
+      },
+      "car": {
+        "min": [83, 62, 137],
+        "max": [91, 65, 143],
+        "floor": [87, 61, 140],
+        "yaw": 90.0
+      }
+    }
+  ],
+  "hq": {
+    "box": {
+      "min": [322, 65, 153],
+      "max": [372, 75, 207]
+    },
+    "counter": {
+      "min": [329, 69, 159],
+      "max": [341, 69, 167]
+    },
+    "vote": {
+      "floor": [335, 67, 168]
+    }
+  }
+}

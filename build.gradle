@@ -73,6 +73,17 @@ neoForge {
 
         server {
             server()
+
+            // SON PROPRE DOSSIER, SANS LES MODS DU MODPACK -- comme `data`.
+            //
+            // run/ porte les mods du joueur, dont des mods de pur client
+            // (Sodium, Iris, JourneyMap...) : un serveur dedie lance de la
+            // risquait de s'arreter au chargement, avant le moindre autotest,
+            // et aurait mesure la ville avec quarante-sept jars au lieu du seul
+            // mod. Le mod se charge sans eux (dependances optionnelles). Le
+            // eula.txt de ce dossier est au joueur de l'accepter.
+            gameDirectory = project.file('run-server')
+
             programArgument '--nogui'
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
         }

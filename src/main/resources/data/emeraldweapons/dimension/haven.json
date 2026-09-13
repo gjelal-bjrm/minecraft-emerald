@@ -1,0 +1,26 @@
+{
+  "type": "emeraldweapons:haven",
+  "generator": {
+    "type": "minecraft:flat",
+    "settings": {
+      "biome": "emeraldweapons:haven",
+      "features": false,
+      "lakes": false,
+      "layers": [
+        {
+          "block": "minecraft:bedrock",
+          "height": 1
+        },
+        {
+          "block": "minecraft:stone",
+          "height": 56
+        },
+        {
+          "block": "minecraft:water",
+          "height": 6
+        }
+      ],
+      "structure_overrides": []
+    }
+  }
+}
