@@ -25,6 +25,11 @@ public class ModMenus {
             MENUS.register("specialization_altar", () -> new MenuType<>(
                     SpecializationAltarMenu::new, FeatureFlags.DEFAULT_FLAGS));
 
+    /** L'urne du QG : les noms des electeurs viennent avec l'ouverture, d'ou la fabrique de NeoForge. */
+    public static final DeferredHolder<MenuType<?>, MenuType<HavenVoteMenu>> HAVEN_VOTE =
+            MENUS.register("haven_vote", () -> net.neoforged.neoforge.common.extensions.IMenuTypeExtension
+                    .create(HavenVoteMenu::new));
+
     public static void register(IEventBus eventBus) {
         MENUS.register(eventBus);
     }

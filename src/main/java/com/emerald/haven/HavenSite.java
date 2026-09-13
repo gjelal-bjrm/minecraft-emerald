@@ -195,6 +195,8 @@ public final class HavenSite {
         if (state.phase() == HavenState.Phase.CHANTIER) {
             state.setPhase(HavenState.Phase.ACCUEIL);
         }
+        // une partie commencee pendant la pose n'ouvre pas de lobby : PARTI
+        HavenArrival.closeIfStarted(server);
         last = report;
         LOGGER.info("ville de Haven posee en {} ({} ms reels), sha1 {}, phase {}",
                 report.mode(), report.totalNanos() / 1_000_000L, sha1, state.phase());
@@ -205,6 +207,15 @@ public final class HavenSite {
                             report.reset())
                     .withStyle(ChatFormatting.AQUA));
         }
+        // les salles relevees se rejouent sur la ville fraiche, troncons encore
+        // tenus, et avant que le banc d'essai de la ville ne regarde l'eau
+        ServerLevel level = Haven.level(server);
+        if (level != null) {
+            JakOverlay.replayAll(server, level, volume, origin, sha1, player);
+        }
+        // l'urne du QG, que la pose vient de recouvrir : sans cela, elle
+        // n'etait reposee qu'au passage d'un joueur pres du bar
+        HavenVote.placeVoteBlockAfterPose(server);
         HavenAutotest.onPoseDone(server, volume, report);
     }
 

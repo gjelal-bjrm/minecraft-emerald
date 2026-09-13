@@ -85,6 +85,12 @@ public class SanctuaryProbeItem extends Item {
             }
             return InteractionResultHolder.success(stack);
         }
+        // Dans la ville, la reference n'est pas le registre des sanctuaires mais
+        // le volume du port : on releve la salle ou l'on se tient.
+        if (com.emerald.haven.Haven.is(level)) {
+            com.emerald.haven.HavenRoomCommands.probe(player);
+            return InteractionResultHolder.success(stack);
+        }
         if (SanctuaryLedger.empty()) {
             say(player, "Registre vide : rebatis avec /arcencium sanctuary, "
                     + "corrige a la main, puis reviens.", ChatFormatting.RED);

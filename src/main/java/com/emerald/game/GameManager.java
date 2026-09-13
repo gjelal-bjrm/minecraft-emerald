@@ -365,6 +365,15 @@ public class GameManager {
     }
 
     public static void setup(ServerLevel level, BlockPos center) {
+        setup(level, center, true);
+    }
+
+    /**
+     * @param welcome placer les joueurs de l'overworld au village, kit compris, et leur annoncer le
+     *                village. FAUX quand le lobby de la ville se rouvre : ils partent dans leurs
+     *                appartements, et le kit, qui vide l'inventaire, n'est donne qu'au depart du QG.
+     */
+    public static void setup(ServerLevel level, BlockPos center, boolean welcome) {
         GameState state = GameState.get(level);
         removePreviousBlade(level, state);
         state.reset();
@@ -399,21 +408,23 @@ public class GameManager {
 
         BlockPos stand = playerSpot(level, ground);
         level.setDefaultSpawnPos(stand, 0.0F);
-        for (ServerPlayer player : level.players()) {
-            player.teleportTo(stand.getX() + 0.5, stand.getY(), stand.getZ() + 0.5);
-            player.setRespawnPosition(level.dimension(), stand, 0.0F, true, false);
-            equipStarter(player);
-        }
-        announce(level, "game.emeraldweapons.village_intro",
-                "game.emeraldweapons.village_intro.sub", 0x9CE8FF);
-        // les coordonnees en clair : c'est la seule facon d'etre certain de
-        // regarder la bonne lame quand une mise en place en a suivi une autre
-        net.minecraft.network.chat.Component where = net.minecraft.network.chat.Component
-                .translatable("game.emeraldweapons.locked.where", ground.getX(), ground.getY(),
-                        ground.getZ(), 0)
-                .withStyle(net.minecraft.ChatFormatting.AQUA);
-        for (ServerPlayer player : level.players()) {
-            player.sendSystemMessage(where);
+        if (welcome) {
+            for (ServerPlayer player : level.players()) {
+                player.teleportTo(stand.getX() + 0.5, stand.getY(), stand.getZ() + 0.5);
+                player.setRespawnPosition(level.dimension(), stand, 0.0F, true, false);
+                equipStarter(player);
+            }
+            announce(level, "game.emeraldweapons.village_intro",
+                    "game.emeraldweapons.village_intro.sub", 0x9CE8FF);
+            // les coordonnees en clair : c'est la seule facon d'etre certain de
+            // regarder la bonne lame quand une mise en place en a suivi une autre
+            net.minecraft.network.chat.Component where = net.minecraft.network.chat.Component
+                    .translatable("game.emeraldweapons.locked.where", ground.getX(), ground.getY(),
+                            ground.getZ(), 0)
+                    .withStyle(net.minecraft.ChatFormatting.AQUA);
+            for (ServerPlayer player : level.players()) {
+                player.sendSystemMessage(where);
+            }
         }
         org.slf4j.LoggerFactory.getLogger(EmeraldWeaponsMod.MODID).info(
                 "Lame du Serment posee en {}", ground);

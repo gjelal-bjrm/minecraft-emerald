@@ -78,18 +78,22 @@ public final class ModeChoice {
     /**
      * Applique le choix. Refuse une fois la partie ouverte, et le dit.
      *
+     * L'annonce va a TOUS LES JOUEURS DU SERVEUR, et non a ceux du niveau :
+     * le vote du QG applique le regime pendant que les joueurs sont encore dans
+     * la ville de Haven, une autre dimension, ou level.players() ne voit personne.
+     *
      * @return vrai si le regime a change
      */
     public static boolean choose(ServerLevel level, GameState.Mode mode) {
         GameState state = GameState.get(level);
         if (!state.chooseMode(mode)) {
-            for (ServerPlayer player : level.players()) {
+            for (ServerPlayer player : level.getServer().getPlayerList().getPlayers()) {
                 player.sendSystemMessage(Component.translatable("game.emeraldweapons.mode.locked")
                         .withStyle(ChatFormatting.RED));
             }
             return false;
         }
-        for (ServerPlayer player : level.players()) {
+        for (ServerPlayer player : level.getServer().getPlayerList().getPlayers()) {
             player.sendSystemMessage(Component.translatable(
                             mode == GameState.Mode.DEFI
                                     ? "game.emeraldweapons.mode.defi.chosen"
@@ -104,8 +108,21 @@ public final class ModeChoice {
     /**
      * Le regime est-il tranche ? Sinon, on repose la question a celui qui vient
      * de toucher la lame -- et la lame ne bouge pas.
+     *
+     * PENDANT LE LOBBY DE LA VILLE, LA LAME ATTEND LE VOTE, meme si le regime
+     * est deja note : un monde du premier jalon l'avait choisi dans le chat, et
+     * « /arcencium partie » le fixe encore a la commande. Tiree avant le vote,
+     * elle ouvrirait la partie pendant que les joueurs attendent au QG.
      */
     public static boolean ready(ServerLevel level, Player puller) {
+        if (com.emerald.haven.HavenArrival.lobbyOpen(level.getServer())) {
+            // pendant le lobby de la ville, le regime se vote au QG : pas de carte ici
+            if (puller instanceof ServerPlayer player) {
+                player.sendSystemMessage(Component.translatable("game.emeraldweapons.haven.vote_first")
+                        .withStyle(ChatFormatting.YELLOW));
+            }
+            return false;
+        }
         if (GameState.get(level).modeChosen()) {
             return true;
         }
@@ -123,6 +140,10 @@ public final class ModeChoice {
      * Seulement en lobby : dans une partie deja ouverte, la question n'aurait
      * plus d'objet, et un joueur qui rejoint en cours de route n'a pas a
      * choisir a la place de ceux qui jouent depuis une heure.
+     *
+     * Ni pendant le lobby de la ville : le regime s'y choisit par le vote du QG,
+     * a l'unanimite, et une carte dans le chat laisserait un seul joueur
+     * trancher pour tous.
      */
     @SubscribeEvent
     public static void onLogin(PlayerEvent.PlayerLoggedInEvent event) {
@@ -131,7 +152,8 @@ public final class ModeChoice {
             return;
         }
         GameState state = GameState.get(level);
-        if (state.modeChosen() || state.status() != GameState.Status.LOBBY) {
+        if (state.modeChosen() || state.status() != GameState.Status.LOBBY
+                || com.emerald.haven.HavenArrival.lobbyOpen(player.server)) {
             return;
         }
         ask(player);

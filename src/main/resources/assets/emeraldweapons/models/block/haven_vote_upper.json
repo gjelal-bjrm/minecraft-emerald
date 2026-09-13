@@ -1,0 +1,231 @@
+{
+  "parent": "minecraft:block/block",
+  "render_type": "minecraft:solid",
+  "textures": {
+    "particle": "emeraldweapons:block/haven_vote/ecran_tete",
+    "pied": "emeraldweapons:block/haven_vote/ecran_pied",
+    "pied_avant": "emeraldweapons:block/haven_vote/ecran_pied_avant",
+    "tete": "emeraldweapons:block/haven_vote/ecran_tete",
+    "logo": "emeraldweapons:block/haven_vote/ecran_logo",
+    "libre": "emeraldweapons:block/haven_vote/ecran_libre",
+    "defi": "emeraldweapons:block/haven_vote/ecran_defi"
+  },
+  "elements": [
+    {
+      "name": "pied_haut",
+      "from": [
+        4,
+        0,
+        4
+      ],
+      "to": [
+        12,
+        2,
+        12
+      ],
+      "faces": {
+        "north": {
+          "texture": "#pied",
+          "uv": [
+            4,
+            0,
+            12,
+            2
+          ]
+        },
+        "west": {
+          "texture": "#pied",
+          "uv": [
+            4,
+            0,
+            12,
+            2
+          ]
+        },
+        "east": {
+          "texture": "#pied",
+          "uv": [
+            4,
+            0,
+            12,
+            2
+          ]
+        },
+        "south": {
+          "texture": "#pied_avant",
+          "uv": [
+            4,
+            0,
+            12,
+            2
+          ]
+        },
+        "up": {
+          "texture": "#tete",
+          "uv": [
+            4,
+            4,
+            12,
+            12
+          ]
+        }
+      }
+    },
+    {
+      "name": "tete",
+      "from": [
+        1,
+        2,
+        2
+      ],
+      "to": [
+        15,
+        14,
+        10
+      ],
+      "rotation": {
+        "origin": [
+          8,
+          8,
+          6
+        ],
+        "axis": "x",
+        "angle": -22.5
+      },
+      "faces": {
+        "south": {
+          "texture": "#tete",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "north": {
+          "texture": "#logo",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "west": {
+          "texture": "#tete",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "east": {
+          "texture": "#tete",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "up": {
+          "texture": "#tete",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "down": {
+          "texture": "#tete",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        }
+      }
+    },
+    {
+      "name": "vitre_libre",
+      "from": [
+        2.5,
+        4,
+        10
+      ],
+      "to": [
+        7.5,
+        12,
+        10.25
+      ],
+      "rotation": {
+        "origin": [
+          8,
+          8,
+          6
+        ],
+        "axis": "x",
+        "angle": -22.5
+      },
+      "shade": false,
+      "neoforge_data": {
+        "block_light": 15,
+        "sky_light": 15,
+        "ambient_occlusion": false
+      },
+      "faces": {
+        "south": {
+          "texture": "#libre",
+          "uv": [
+            3,
+            0,
+            13,
+            16
+          ]
+        }
+      }
+    },
+    {
+      "name": "vitre_defi",
+      "from": [
+        8.5,
+        4,
+        10
+      ],
+      "to": [
+        13.5,
+        12,
+        10.25
+      ],
+      "rotation": {
+        "origin": [
+          8,
+          8,
+          6
+        ],
+        "axis": "x",
+        "angle": -22.5
+      },
+      "shade": false,
+      "neoforge_data": {
+        "block_light": 15,
+        "sky_light": 15,
+        "ambient_occlusion": false
+      },
+      "faces": {
+        "south": {
+          "texture": "#defi",
+          "uv": [
+            3,
+            0,
+            13,
+            16
+          ]
+        }
+      }
+    }
+  ]
+}

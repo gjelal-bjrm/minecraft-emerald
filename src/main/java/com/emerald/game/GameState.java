@@ -283,6 +283,20 @@ public class GameState extends SavedData {
     }
 
     /**
+     * Le regime redevient a choisir : la reouverture du lobby de la ville.
+     *
+     * reset() le laisse survivre, a dessein. Mais une nouvelle partie qui passe
+     * par le vote du QG doit le reposer : sinon la Lame, qui ne lit que ce
+     * drapeau, se tirerait avant le vote, sur le regime de la partie d'avant.
+     */
+    public void forgetModeChoice() {
+        if (this.modeChosen) {
+            this.modeChosen = false;
+            setDirty();
+        }
+    }
+
+    /**
      * LE CYCLE SUIVANT, en monde ouvert.
      *
      * Le boss est tombe : on efface les objectifs, PAS le monde. Les

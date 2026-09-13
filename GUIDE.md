@@ -6,10 +6,100 @@ choix est dans `MODE_ARCENCIUM.md`, qui est le cahier de conception.
 
 ---
 
-## 1. Le déroulé
+## 1. Début de partie à Haven
 
-Vous démarrez tous dans un village, avec une **épée plantée dans un socle** au
-centre. Tant que personne ne la retire, rien ne commence : vous ne pouvez ni
+Une nouvelle partie commence dans la **ville de Haven**, le port de Jak 3, dans
+sa propre dimension. C'est le cas dans un monde neuf, ou après
+`/arcencium setup` dans un monde qui a déjà sa ville. Un ancien monde sans ville
+commence au village, comme avant.
+
+Dans la ville : mode aventure, rien ne se casse ni ne se pose, pas de dégâts,
+pas de faim, pas de combat, et l'on ne sort pas de la ville. Votre inventaire
+n'est pas touché. Votre mode de jeu habituel vous est rendu au village.
+
+### Les appartements
+
+Vous apparaissez dans un des **trois appartements**, les garages du bras ouest
+du port. Un message vous dit dans quelle direction et à quelle distance est le
+QG.
+
+- Un appartement reçoit 3 joueurs, puis on passe au suivant. À partir du
+  10ᵉ joueur, chacun va dans l'appartement le moins rempli.
+- Votre place est gardée tant que le lobby est ouvert. Si vous vous reconnectez
+  dans la ville, vous restez là où vous étiez.
+- Si vous mourez dans la ville, vous réapparaissez dans votre appartement.
+- Si la ville est encore en train de se poser (serveur dédié), vous attendez
+  quelques instants près de la Lame, puis vous partez dans votre appartement.
+
+### Le vote au QG
+
+Le QG est le **bar du Hip Hog**, à l'est des appartements. La **borne de
+vote** se tient au bout du comptoir, vitres tournées vers l'entrée du bar : un
+pied rouille marqué de l'emblème du Hip Hog, et une tête inclinée à deux vitres
+lumineuses. Tout le monde peut voter, même sans être opérateur.
+
+- Clic droit sur la **vitre bleue** : tu votes **Monde ouvert**. Sur la
+  **vitre rouge** : tu votes **Défi**. Ton choix s'affiche au-dessus de la barre
+  d'objets, avec un son de confirmation.
+- Clic droit ailleurs sur la borne (le cadre, le pied) : l'écran de vote.
+- L'écran montre les votes, qui est dans le bar, chaque joueur avec son vote
+  (ou « hors du bar »), et le compte à rebours.
+- Pour partir, **tous les joueurs connectés dans la ville** doivent avoir voté
+  la même chose **et être dans le bar**. Les joueurs inactifs comptent aussi.
+  Un opérateur en chantier ne vote pas.
+- On peut changer d'avis. Quand tout le monde est d'accord, un compte à rebours
+  de **5 secondes** démarre. Il s'arrête si quelqu'un change d'avis, arrive,
+  part ou sort du bar, et repart de 5 secondes si le groupe est encore d'accord.
+- Au départ, le mode voté s'applique. Tout le monde arrive au village avec le
+  **kit de départ** (il remplace l'inventaire) et son mode de jeu habituel.
+  Ensuite, la partie se joue comme avant.
+- Tant que le lobby est ouvert, la Lame du Serment refuse de venir : le mode
+  se vote au QG. Après le départ, elle se tire sans redemander le mode.
+- Un joueur qui se connecte après le départ arrive directement au village.
+
+La borne est posée toute seule quand la ville accueille les joueurs (et
+reposée après chaque `haven rebuild` ou réouverture du lobby), puis retirée au
+départ. Elle est incassable et on ne peut pas la déplacer.
+
+### Les voitures
+
+Une voiture attend devant chaque appartement : la **A** (cara) devant le 1,
+la **B** (carb) devant le 2, la **C** (carc) devant le 3. Elle plane à environ
+trois blocs du sol. Les voitures disparaissent au départ vers le village.
+
+- **Monter :** clic droit sur la voiture. On prend la première place libre ; la
+  première est celle du conducteur. Trois places par voiture.
+- **Descendre :** s'accroupir (Maj). On est posé au sol à côté de la voiture,
+  même depuis la voie haute. Pour changer de conducteur, le passager descend
+  puis remonte.
+- **Conduire :** Z (ou W) pour les gaz, S pour freiner (S tenu à l'arrêt fait
+  reculer), Q et D (ou A et D) pour tourner. Vitesse maximale : 40 m/s
+  (144 km/h), soit deux blocs par tick, comme dans Jak 3. À pleine vitesse, la
+  voiture tourne large (une quarantaine de blocs de rayon) : freinez avant les
+  rues étroites.
+- **Touche R : changer de zone de survol.** Elle se change dans Options >
+  Commandes > Emerald Weapons.
+  - **Rase-sol :** la voiture plane juste au-dessus du sol ou de l'eau.
+  - **Voie haute :** elle monte à l'altitude de la circulation de Jak 3, celle
+    de la carte de trafic du port : neuf blocs au-dessus de la rue (hors de la
+    ville, neuf blocs au-dessus du sol). Si quelque chose bloque la montée plus
+    de deux secondes, elle redescend.
+  - Un nouvel appui sur R la fait redescendre jusqu'au sol.
+- Un rappel s'affiche à l'écran pendant qu'on conduit. En vue à la troisième
+  personne, la caméra recule pour montrer toute la voiture.
+- Les voitures sont **indestructibles et solides** : on s'y cogne, et elles
+  écartent ceux qu'elles recouvrent.
+- Une voiture **tombée à l'eau** ou **sortie de la ville** revient toute seule
+  sur sa place. Garée ailleurs, elle reste là où vous l'avez laissée.
+- Si vous vous déconnectez dans une voiture, vous êtes d'abord posé à côté :
+  la voiture reste là.
+
+---
+
+## 2. Le déroulé
+
+Après le départ de Haven (ou dans un ancien monde sans ville), vous êtes tous
+dans un village, avec une **épée plantée dans un socle** au centre. Tant que personne ne la retire, rien ne commence : vous ne pouvez ni
 sortir du village ni creuser. C'est le temps de vous organiser.
 
 > Cette retenue ne vaut **qu'en régime Défi**, où l'horloge tourne. En
@@ -38,7 +128,7 @@ tuer le boss à son sommet avant la fin du temps.
 
 ---
 
-## 2. La Marée Prismatique
+## 3. La Marée Prismatique
 
 À partir de la **36ᵉ minute**, la zone vivable se referme : de 750 blocs autour
 du village jusqu'à 120 à la 60ᵉ. Une barre violette en haut de l'écran donne le
@@ -57,7 +147,7 @@ Les **Jambières de Marée** annulent la corrosion entièrement.
 
 ---
 
-## 3. Les six météos
+## 4. Les six météos
 
 La météo est **globale** — elle touche toute la zone en même temps — et suit la
 phase. Toute météo agressive s'annonce **15 secondes à l'avance** et se termine
@@ -114,7 +204,7 @@ Surcharge.
 
 ---
 
-## 4. L'équipement
+## 5. L'équipement
 
 ### Les matériaux
 
@@ -197,7 +287,7 @@ Un artefact ne donne pas des points — il change une façon de jouer.
 
 ---
 
-## 5. Les ancres
+## 6. Les ancres
 
 Trois ancres, à 450 blocs du village. Les activer coûte de l'arcencium, de plus
 en plus cher, et déclenche un siège qu'il faut tenir.
@@ -274,7 +364,7 @@ distance, et un losange plein quand elle est tenue.
 
 ---
 
-## 6. Apotheosis
+## 7. Apotheosis
 
 Le système d'équipement d'Apotheosis se joue normalement sur des dizaines
 d'heures. En une heure, rien n'aurait le temps d'arriver — tout est donc
@@ -294,12 +384,13 @@ suivent, plus rarement. De quoi reforger et sertir sans avoir à farmer.
 
 ---
 
-## 7. Les commandes
+## 8. Les commandes
 
 Toutes commencent par `/arcencium` et demandent le niveau opérateur.
 
 | Commande | Ce qu'elle fait |
 |---|---|
+| `setup` | Nouvelle partie. Si le monde a une ville : la Lame est replantée, le mode est à revoter, et les joueurs sont ramenés dans leurs appartements. Sans ville, la partie repart au village |
 | `weather <nom> [secondes]` | Déclenche une météo tout de suite, sans préavis |
 | `weather stop` | Arrête la météo en cours |
 | `skip <minutes>` | Avance le chronomètre — pour voir la Marée sans jouer 36 minutes |
@@ -314,12 +405,56 @@ Toutes commencent par `/arcencium` et demandent le niveau opérateur.
 | `haven rebuild` | Remet la zone de la ville à neuf, mer et fond compris, puis la repose : pour essayer une nouvelle version de la ville dans le même monde |
 | `haven tp` | Vous emmène dans la rue devant le bar du Hip Hog |
 | `haven back` | Vous ramène au village |
-| `haven chantier on` / `off` | Mode chantier, pour vous seul : créatif, et la ville redevient modifiable pour aménager les appartements. Les autres joueurs restent en mode aventure |
-| `vehicule cara` (ou `carb`, `carc`) | Pose une voiture volante de Haven City devant vous. Pas encore de conduite |
+| `haven chantier on` / `off` | Mode chantier, pour vous seul : créatif, et la ville redevient modifiable pour aménager les appartements. En chantier, vous ne votez pas et vous ne prenez pas de place dans un appartement. Les autres joueurs restent en mode aventure |
+| `haven ouvrir` | Rouvre le lobby de la ville, comme `setup` : Lame replantée, mode à revoter, joueurs ramenés dans leurs appartements |
+| `haven skip` | Pour les essais : départ vers le village tout de suite, avec le mode actuel, sans vote. Seulement pendant le lobby |
+| `haven salle <n>` (ou `salle <n> tp`) | Vous téléporte dans l'appartement n (1, 2 ou 3), tourné vers la porte |
+| `haven salle <n> capture` | Relève votre aménagement de l'appartement n (voir plus bas) |
+| `haven salle <n> show` | Résume le relevé (cellules, décors, date, auteur) et dit si un aménagement de cette salle est déjà dans le mod |
+| `haven salle <n> reset` | Remet l'appartement tel que la ville le pose, retire ses décors et efface le relevé. L'aménagement déjà dans le mod revient à la prochaine pose |
+| `vehicule cara` (ou `carb`, `carc`) | Pose une voiture volante de Haven devant vous. Elle se monte et se conduit comme celles des appartements (voir la partie 1) |
 
 Dans Haven : mode aventure, rien ne se casse ni ne se pose, pas de dégâts ni de faim,
 et l'on ne peut pas sortir de la ville. Votre mode de jeu vous est rendu en la quittant.
 La pose d'essai `jak ctyport` contient elle aussi le mur invisible qui fait le tour du port.
+
+### Aménager un appartement
+
+La ville rejoue votre aménagement à chaque pose, comme pour les sanctuaires.
+
+1. `/arcencium haven chantier on` : créatif, et les protections sont levées pour vous seul.
+2. Meublez la salle : blocs, escaliers, portes, lits, coffres remplis, panneaux écrits,
+   cadres, tableaux, porte-armures. Vous pouvez aussi changer le mur intérieur, le sol ou
+   le plafond.
+3. Relevez : la Sonde en main, debout dans la salle, clic droit dans le vide. Ou
+   `/arcencium haven salle <n> capture`. Le relevé ne garde que ce que vous avez changé.
+   Il est écrit dans `run/arcencium_jak/appartement_<n>.nbt`, avec une version lisible
+   `appartement_<n>.txt`. Chaque relevé remplace le précédent.
+4. Mettez-le dans le mod : `python tools/jak_zone_apply.py <n>` (`--dry-run` pour
+   seulement vérifier). Le script refuse un relevé pris sur une autre version du port,
+   écarte l'eau qui coule et les entités qui ne sont pas des décors, et signale les blocs
+   d'autres mods absents.
+5. Relancez le jeu (ou `/reload`), puis `/arcencium haven rebuild`.
+
+À savoir :
+- Ce qui bouge tout seul n'est pas relevé : les portes reviennent fermées, la redstone
+  éteinte, les lits libres. Les leviers, les trappes ouvertes, les bougies et feux de
+  camp allumés sont gardés.
+- Seuls les cadres, cadres lumineux, tableaux et porte-armures sont gardés comme décors.
+  Le contenu des coffres est rejoué à chaque pose.
+- Si la ville est reposée à partir d'une autre version du port, les salles relevées avant
+  sont refusées, avec un message aux opérateurs : il faut les relever à nouveau.
+- Il faut être près de la salle pour la relever ou la remettre à zéro.
+
+### Essais automatiques
+
+Sur un serveur d'essai (`run-server`), chacun écrit son rapport puis arrête le serveur :
+
+- `EMERALDWEAPONS_AUTOTEST=vote ./gradlew runServer` : appartements et vote, rapport `run-server/vote_autotest.txt` ;
+- `EMERALDWEAPONS_AUTOTEST=salles ./gradlew runServer` : relevé et rejeu des salles, rapport `run-server/salles_autotest.txt` ;
+- `EMERALDWEAPONS_AUTOTEST=vehicules ./gradlew runServer` : voitures, rapport `run-server/vehicules_autotest.txt`.
+
+La vitesse des voitures se règle dans `VehicleSpec.MAX_SPEED_MS`.
 
 Pour arriver devant le bar du Hip Hog juste après la pose, sans bouger avant :
 `/tp @s ~375 ~66 ~211` — la porte est à quelques pas.

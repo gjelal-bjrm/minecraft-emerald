@@ -38,6 +38,45 @@ Principes directeurs, valides au fil de la discussion :
 - Mort d'un joueur : **reapparition + perte de l'equipement au sol**, comme en vanilla.
 - Points de reapparition : le village, puis **chaque ancre activee**.
 
+### Debut de partie : la ville de Haven *(implemente, a verifier en jeu)*
+
+Avant le prologue, une nouvelle partie passe par la **ville de Haven** (le port
+de Jak 3, dimension `emeraldweapons:haven`) : dans un monde neuf, ou apres
+`/arcencium setup` dans un monde qui a deja sa ville. Un monde ancien sans
+ville commence au village, comme avant.
+
+- **Dans la ville** : mode aventure, ni degats, ni faim, ni combat, pas de
+  sortie. L'inventaire n'est pas touche ; le mode de jeu d'origine est rendu
+  au village.
+- **Appartements** : les 3 garages du bras ouest (`haven_rooms.json`). On
+  remplit un appartement jusqu'a 3 joueurs, puis le suivant ; au-dela de 9, le
+  moins rempli. Aucune place n'est liberee tant que le lobby est ouvert. Le
+  joueur apparait sur le point de sa place, tourne vers la porte, et y
+  reapparait apres une mort. L'operateur en chantier n'a pas d'appartement.
+- **Vote au QG** (boite du Hip Hog, borne-ecran pres du comptoir : vitre bleue
+  Monde ouvert, vitre rouge Defi, emblème du bar sur le pied) : Defi ou Monde
+  ouvert. Il faut l'unanimite des joueurs en ligne dans la ville (hors
+  operateur en chantier, inactifs compris), tous dans le bar. Changement
+  d'avis permis ; un compte a rebours de 5 s est annule par tout changement.
+- **Depart** : le regime vote s'applique, tout le monde passe au village avec
+  le kit de depart et son mode de jeu d'origine, puis vient l'annonce du
+  village. Un retardataire arrive directement au village.
+- **Garde-fous** : le lobby n'existe que si la partie est en attente (LOBBY).
+  Pendant le lobby, la Lame refuse de venir. Si la partie commence par un
+  autre chemin (`/arcencium start`, `open`, un ancien monde), la ville passe a
+  PARTI et ses joueurs partent au village.
+- **Voitures** : cara, carb et carc devant les appartements 1, 2 et 3, solides,
+  indestructibles, trois places, conduite a 40 m/s au plus comme dans Jak 3
+  (`VehicleSpec.MAX_SPEED_MS`, choix du joueur). Touche R : rase-sol ou voie
+  haute, a la hauteur ou le jeu tient ses voitures : carte de trafic en
+  cellule 75 (Y 80), neuf blocs au-dessus de la rue, plancher virtuel 1,5 bloc
+  plus haut (loi de hvehicle-physics.gc reprise telle quelle). Une voiture
+  tombee a l'eau ou sortie de la ville revient sur sa place ; toutes
+  disparaissent au depart.
+- **Amenagement des appartements** : releve en jeu (`/arcencium haven salle
+  <n> capture` ou la Sonde), copie dans le mod par
+  `tools/jak_zone_apply.py`, rejoue a chaque pose de la ville.
+
 ### Conditions de fin
 
 - **Victoire** : le boss du sommet de l'Arc-en-ciel est tue.
@@ -47,7 +86,9 @@ Principes directeurs, valides au fil de la discussion :
 
 ## 3. Prologue — « La Nuit des Corrompus »
 
-Tous les joueurs apparaissent **au meme endroit**, sur la place du village.
+Apres le depart de la ville de Haven (voir 2, « Debut de partie »), tous les
+joueurs arrivent **au meme endroit**, sur la place du village. Dans un monde
+ancien sans ville, ils y apparaissent directement.
 
 - Equipement de depart : **armure de fer complete + epee de fer + bouclier**,
   avec Protection I et Tranchant I. Rien de plus.
@@ -86,6 +127,10 @@ la place avant que quoi que ce soit ne commence.
   le joueur est repousse avec un message),
 - ils **ne peuvent pas casser de bloc** (`BlockEvent.BreakEvent` annule),
 - aucun chronometre, aucune ancre, aucun monstre.
+
+**Pendant le lobby de la ville, la lame refuse de venir**, meme si le regime a
+deja ete fixe a la commande : il se vote au QG, et la tirer avant ouvrirait la
+partie pendant que les joueurs attendent au bar.
 
 **Retirer la lame declenche tout.** C'est une action volontaire, donc personne
 ne peut rater l'annonce : un joueur qui rejoint en retard trouve la partie

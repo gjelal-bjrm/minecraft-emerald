@@ -56,7 +56,20 @@ public class GameCommands {
         root.then(Commands.literal("setup").executes(ctx -> {
             ServerLevel level = ctx.getSource().getServer().overworld();
             GameManager.clear();
-            GameManager.setup(level, level.getSharedSpawnPos());
+            // UNE NOUVELLE PARTIE REPASSE PAR LA VILLE, si ce monde en a une :
+            // Lame replantee d'abord, puis lobby rouvert -- regime a revoter,
+            // joueurs ramenes dans leurs appartements. Un monde sans ville
+            // (phase ABSENTE) garde la mise en place d'avant.
+            net.minecraft.server.MinecraftServer server = ctx.getSource().getServer();
+            boolean lobby = com.emerald.haven.HavenState.get(server).phase()
+                    != com.emerald.haven.HavenState.Phase.ABSENTE
+                    && com.emerald.haven.HavenArrival.canOpen(server);
+            GameManager.setup(level, level.getSharedSpawnPos(), !lobby);
+            if (lobby) {
+                int moved = com.emerald.haven.HavenArrival.reopen(server);
+                ctx.getSource().sendSuccess(() -> Component.translatable(
+                        "command.emeraldweapons.haven.open", moved), true);
+            }
             ctx.getSource().sendSuccess(() ->
                     Component.translatable("command.emeraldweapons.setup"), true);
             return 1;

@@ -44,6 +44,10 @@ public class JakVehicleRenderer extends EntityRenderer<JakVehicleEntity> {
             // il faut donc a = -y. Le vanilla fait 180 - y pour le bateau, dont le
             // modele regarde -z ; le notre regarde +z.
             poseStack.mulPose(Axis.YP.rotationDegrees(-entity.getViewYRot(partialTick)));
+            // Roulis leger dans les virages, autour de l'axe avant du modele (+z),
+            // APRES le lacet : la voiture penche sur son propre axe. Un roulis
+            // negatif (virage a gauche) abaisse la gauche du modele, +x.
+            poseStack.mulPose(Axis.ZP.rotationDegrees(entity.roll(partialTick)));
             PoseStack.Pose pose = poseStack.last();
             emit(model, pose, buffers.getBuffer(RenderType.entityCutoutNoCull(ATLAS)), packedLight, false);
             if (model.hasBlend) {

@@ -20,6 +20,7 @@ public class Jak3ClientEvents {
         event.register(com.emerald.menu.ModMenus.SOCKET_BENCH.get(), SocketBenchScreen::new);
         event.register(com.emerald.menu.ModMenus.ARCENCIUM_FORGE.get(), ArcenciumForgeScreen::new);
         event.register(com.emerald.menu.ModMenus.SPECIALIZATION_ALTAR.get(), SpecializationAltarScreen::new);
+        event.register(com.emerald.menu.ModMenus.HAVEN_VOTE.get(), HavenVoteScreen::new);
     }
 
     /** Les modeles des voitures de Haven, relus a chaque rechargement des ressources. */

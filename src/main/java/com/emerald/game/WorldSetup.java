@@ -223,8 +223,26 @@ public class WorldSetup {
      */
     @SubscribeEvent
     public static void onJoin(PlayerEvent.PlayerLoggedInEvent event) {
-        if (!(event.getEntity() instanceof ServerPlayer player)
-                || !(player.level() instanceof ServerLevel level)
+        if (!(event.getEntity() instanceof ServerPlayer player)) {
+            return;
+        }
+        // LA VILLE D'ABORD. Pendant le lobby, le joueur part dans son
+        // appartement -- ou attend la fin de la pose ; apres le depart, celui
+        // qui etait reste dans la ville est renvoye au village. Dans ces cas le
+        // village ne lui fait rien ici : surtout pas le kit, qui viderait son
+        // inventaire a chaque reconnexion dans la ville.
+        if (com.emerald.haven.HavenArrival.claimLogin(player)) {
+            return;
+        }
+        placeAtVillage(player);
+    }
+
+    /**
+     * Le placement au village d'avant la ville : a cote de la Lame, point de
+     * reapparition, kit de depart -- en LOBBY ou PROLOGUE, dans l'overworld.
+     */
+    public static void placeAtVillage(ServerPlayer player) {
+        if (!(player.level() instanceof ServerLevel level)
                 || !level.dimension().equals(Level.OVERWORLD)) {
             return;
         }

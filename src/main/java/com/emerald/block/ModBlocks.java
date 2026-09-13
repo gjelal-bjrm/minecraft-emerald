@@ -247,6 +247,19 @@ public class ModBlocks {
                     .pushReaction(net.minecraft.world.level.material.PushReaction.DESTROY)
                     .sound(net.minecraft.world.level.block.SoundType.AMETHYST)));
 
+    /**
+     * La borne de vote du QG de Haven (voir HavenVoteBlock). Sans objet :
+     * HavenVote la pose et la retire. Incassable, sans butin, et un piston ne
+     * la deplace pas. Sa lumiere (10 en haut, 0 au pied) est reglee dans le
+     * constructeur du bloc, qui connait ses deux moities.
+     */
+    public static final DeferredBlock<HavenVoteBlock> HAVEN_VOTE = registerBlockOnly("haven_vote",
+            () -> new HavenVoteBlock(BlockBehaviour.Properties.of()
+                    .strength(-1.0F, 3600000.0F).noLootTable()
+                    .pushReaction(net.minecraft.world.level.material.PushReaction.BLOCK)
+                    .mapColor(MapColor.COLOR_RED)
+                    .sound(SoundType.METAL)));
+
     private static <T extends Block> DeferredBlock<T> registerBlockOnly(String name, Supplier<T> block) {
         return BLOCKS.register(name, block);
     }

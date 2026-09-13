@@ -1,5 +1,6 @@
 package com.emerald.haven;
 
+import com.emerald.game.GameState;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
@@ -11,6 +12,7 @@ import net.minecraft.world.level.saveddata.SavedData;
 
 import javax.annotation.Nullable;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 
@@ -60,6 +62,20 @@ public final class HavenState extends SavedData {
      * laisser en aventure au village, ou il ne pourrait ni miner ni poser.
      */
     private final Map<UUID, GameType> originalModes = new HashMap<>();
+    /**
+     * L'APPARTEMENT DE CHAQUE JOUEUR : {salle, place}, salle a partir de 0.
+     *
+     * Sauvegarde, et jamais libere tant que le lobby est ouvert : un joueur qui
+     * se deconnecte retrouve sa place, et celui qui arrive apres lui ne la
+     * prend pas. Oublie a la reouverture du lobby (HavenArrival.reopen).
+     * Rangee dans l'ordre d'inscription, qui est l'ordre des places.
+     */
+    private final Map<UUID, int[]> apartments = new LinkedHashMap<>();
+    /**
+     * LES VOTES DU QG, par joueur, sauvegardes : un serveur qui redemarre ne
+     * fait pas revoter. Effaces au depart et a la reouverture.
+     */
+    private final Map<UUID, GameState.Mode> votes = new HashMap<>();
 
     public static HavenState get(MinecraftServer server) {
         return server.overworld().getDataStorage().computeIfAbsent(
@@ -92,6 +108,23 @@ public final class HavenState extends SavedData {
                         GameType.byName(mode.getString("Mode"), GameType.SURVIVAL));
             }
         }
+        for (Tag entry : tag.getList("Apartments", Tag.TAG_COMPOUND)) {
+            CompoundTag apartment = (CompoundTag) entry;
+            if (apartment.hasUUID("Player")) {
+                state.apartments.put(apartment.getUUID("Player"),
+                        new int[]{apartment.getInt("Room"), apartment.getInt("Slot")});
+            }
+        }
+        for (Tag entry : tag.getList("Votes", Tag.TAG_COMPOUND)) {
+            CompoundTag vote = (CompoundTag) entry;
+            if (vote.hasUUID("Player")) {
+                try {
+                    state.votes.put(vote.getUUID("Player"), GameState.Mode.valueOf(vote.getString("Mode")));
+                } catch (IllegalArgumentException ignored) {
+                    // un vote illisible est un vote absent : on revote
+                }
+            }
+        }
         return state;
     }
 
@@ -114,6 +147,23 @@ public final class HavenState extends SavedData {
             modes.add(mode);
         }
         tag.put("Modes", modes);
+        ListTag apartmentList = new ListTag();
+        for (Map.Entry<UUID, int[]> entry : this.apartments.entrySet()) {
+            CompoundTag apartment = new CompoundTag();
+            apartment.putUUID("Player", entry.getKey());
+            apartment.putInt("Room", entry.getValue()[0]);
+            apartment.putInt("Slot", entry.getValue()[1]);
+            apartmentList.add(apartment);
+        }
+        tag.put("Apartments", apartmentList);
+        ListTag voteList = new ListTag();
+        for (Map.Entry<UUID, GameState.Mode> entry : this.votes.entrySet()) {
+            CompoundTag vote = new CompoundTag();
+            vote.putUUID("Player", entry.getKey());
+            vote.putString("Mode", entry.getValue().name());
+            voteList.add(vote);
+        }
+        tag.put("Votes", voteList);
         return tag;
     }
 
@@ -202,5 +252,71 @@ public final class HavenState extends SavedData {
             setDirty();
         }
         return mode;
+    }
+
+    // ------------------------------------------------------------- appartements
+
+    /** {salle, place} du joueur (une copie), ou null s'il n'en a pas encore. */
+    @Nullable
+    public int[] apartment(UUID player) {
+        int[] apartment = this.apartments.get(player);
+        return apartment == null ? null : apartment.clone();
+    }
+
+    /** Le nombre d'inscrits de chaque salle. */
+    public int[] roomCounts(int rooms) {
+        int[] counts = new int[rooms];
+        for (int[] apartment : this.apartments.values()) {
+            if (apartment[0] >= 0 && apartment[0] < rooms) {
+                counts[apartment[0]]++;
+            }
+        }
+        return counts;
+    }
+
+    public int apartmentCount() {
+        return this.apartments.size();
+    }
+
+    public void assignApartment(UUID player, int room, int slot) {
+        this.apartments.put(player, new int[]{room, slot});
+        setDirty();
+    }
+
+    /** Retire une inscription : le banc d'essai, apres son joueur simule, et rien d'autre. */
+    public void removeApartment(UUID player) {
+        if (this.apartments.remove(player) != null) {
+            setDirty();
+        }
+    }
+
+    public void clearApartments() {
+        if (!this.apartments.isEmpty()) {
+            this.apartments.clear();
+            setDirty();
+        }
+    }
+
+    // ------------------------------------------------------------- votes
+
+    @Nullable
+    public GameState.Mode vote(UUID player) {
+        return this.votes.get(player);
+    }
+
+    /** @return vrai si le vote a change */
+    public boolean setVote(UUID player, GameState.Mode mode) {
+        if (this.votes.put(player, mode) == mode) {
+            return false;
+        }
+        setDirty();
+        return true;
+    }
+
+    public void clearVotes() {
+        if (!this.votes.isEmpty()) {
+            this.votes.clear();
+            setDirty();
+        }
     }
 }

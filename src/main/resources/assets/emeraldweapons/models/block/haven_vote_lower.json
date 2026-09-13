@@ -1,0 +1,134 @@
+{
+  "parent": "minecraft:block/block",
+  "render_type": "minecraft:solid",
+  "textures": {
+    "particle": "emeraldweapons:block/haven_vote/ecran_pied",
+    "socle_dessus": "emeraldweapons:block/haven_vote/ecran_socle_dessus",
+    "socle_cote": "emeraldweapons:block/haven_vote/ecran_socle_cote",
+    "pied": "emeraldweapons:block/haven_vote/ecran_pied",
+    "pied_avant": "emeraldweapons:block/haven_vote/ecran_pied_avant"
+  },
+  "elements": [
+    {
+      "name": "socle",
+      "from": [
+        2,
+        0,
+        2
+      ],
+      "to": [
+        14,
+        2,
+        14
+      ],
+      "faces": {
+        "up": {
+          "texture": "#socle_dessus",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "down": {
+          "texture": "#socle_dessus",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "cullface": "down"
+        },
+        "north": {
+          "texture": "#socle_cote",
+          "uv": [
+            0,
+            0,
+            16,
+            2
+          ]
+        },
+        "south": {
+          "texture": "#socle_cote",
+          "uv": [
+            0,
+            0,
+            16,
+            2
+          ]
+        },
+        "west": {
+          "texture": "#socle_cote",
+          "uv": [
+            0,
+            0,
+            16,
+            2
+          ]
+        },
+        "east": {
+          "texture": "#socle_cote",
+          "uv": [
+            0,
+            0,
+            16,
+            2
+          ]
+        }
+      }
+    },
+    {
+      "name": "pied_bas",
+      "from": [
+        4,
+        2,
+        4
+      ],
+      "to": [
+        12,
+        16,
+        12
+      ],
+      "faces": {
+        "north": {
+          "texture": "#pied",
+          "uv": [
+            4,
+            2,
+            12,
+            16
+          ]
+        },
+        "west": {
+          "texture": "#pied",
+          "uv": [
+            4,
+            2,
+            12,
+            16
+          ]
+        },
+        "east": {
+          "texture": "#pied",
+          "uv": [
+            4,
+            2,
+            12,
+            16
+          ]
+        },
+        "south": {
+          "texture": "#pied_avant",
+          "uv": [
+            4,
+            2,
+            12,
+            16
+          ]
+        }
+      }
+    }
+  ]
+}
