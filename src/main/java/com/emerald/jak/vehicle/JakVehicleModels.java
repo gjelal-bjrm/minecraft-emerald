@@ -16,7 +16,7 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * Charge les voitures cuites (assets/emeraldweapons/jak_vehicles/<modele>.bin).
+ * Charge les voitures et les motos cuites (assets/emeraldweapons/jak_vehicles/<modele>.bin).
  *
  * Cote client seulement. Les fichiers sont relus a chaque rechargement des
  * ressources (F3+T) : on peut donc relancer tools/jak_vehicle.py, recopier les

@@ -18,6 +18,11 @@
     "  floor : la cellule de sol sous le centre de la place. On pose le centre horizontal de la",
     "  boite du modele (bornes de l'en-tete du .bin) en (x + 0,5, z + 0,5), et son point le plus",
     "  bas sur le sol, en y + 1 : la place contient alors chacune des trois voitures.",
+    "rooms[].bike : place de la moto monoplace, a cote de la voiture. min..max est de l'air libre :",
+    "  3 de large, 3 de haut, 7 de long dans le sens du lacet, sur un sol plein en y = min.y - 1,",
+    "  du cote +z de la place de voiture (-z si +z est pris), a 1 cellule(s) d'air sur sol plein",
+    "  de la voiture, hors du passage devant la porte. yaw et floor comme pour la voiture, avec les",
+    "  bornes des .bin des motos : la place contient chacune des trois motos.",
     "hq.box : l'emprise du Hip Hog, du sol a son toit, bornes incluses.",
     "hq.counter : l'emprise du comptoir, a la hauteur de son plateau.",
     "hq.vote.floor : cellule de sol libre proposee pour l'element de vote, pres du comptoir."
@@ -49,6 +54,12 @@
         "max": [91, 65, 191],
         "floor": [87, 61, 188],
         "yaw": 90.0
+      },
+      "bike": {
+        "min": [85, 62, 193],
+        "max": [91, 64, 195],
+        "floor": [88, 61, 194],
+        "yaw": 90.0
       }
     },
     {
@@ -72,6 +83,12 @@
         "max": [91, 65, 167],
         "floor": [87, 61, 164],
         "yaw": 90.0
+      },
+      "bike": {
+        "min": [85, 62, 169],
+        "max": [91, 64, 171],
+        "floor": [88, 61, 170],
+        "yaw": 90.0
       }
     },
     {
@@ -94,6 +111,12 @@
         "min": [83, 62, 137],
         "max": [91, 65, 143],
         "floor": [87, 61, 140],
+        "yaw": 90.0
+      },
+      "bike": {
+        "min": [85, 62, 145],
+        "max": [91, 64, 147],
+        "floor": [88, 61, 146],
         "yaw": 90.0
       }
     }

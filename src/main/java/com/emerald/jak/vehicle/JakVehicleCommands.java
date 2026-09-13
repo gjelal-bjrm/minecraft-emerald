@@ -17,7 +17,8 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import java.util.Locale;
 
 /**
- * /arcencium vehicule <cara|carb|carc> : pose une voiture devant soi, pour la regarder.
+ * /arcencium vehicule <cara|carb|carc|bikea|bikeb|bikec> : pose une voiture ou
+ * une moto devant soi, pour la regarder.
  *
  * La commande vit a part de GameCommands. Brigadier FUSIONNE deux noeuds
  * « arcencium » enregistres separement (CommandNode.addChild) : le sous-noeud

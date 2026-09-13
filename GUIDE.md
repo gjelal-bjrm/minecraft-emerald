@@ -94,6 +94,25 @@ trois blocs du sol. Les voitures disparaissent au départ vers le village.
 - Si vous vous déconnectez dans une voiture, vous êtes d'abord posé à côté :
   la voiture reste là.
 
+#### Les motos monoplaces
+
+À côté de chaque voiture, sur sa gauche quand on sort de l'appartement, attend
+une moto volante de Jak 3 : la **moto A** (bikea) à l'appartement 1, la **B**
+(bikeb) au 2, la **C** (bikec) au 3. Elle se monte, se conduit et change de
+zone de survol exactement comme une voiture (mêmes touches, R compris), à
+40 m/s au plus.
+
+- **Une seule place**, celle du pilote. Si quelqu'un est déjà dessus, le clic
+  droit ne fait rien.
+- Plus légère, la moto atteint sa pleine vitesse en une seconde environ (une
+  voiture en près de deux), freine plus fort et tourne un peu plus serré.
+- Elle plane à environ trois blocs du sol, et s'abaisse à deux blocs et demi
+  quand on la pilote, comme dans Jak 3. Elle prend la même voie haute que les
+  voitures. Pas de saut : celui des motos de Jak 3 n'est pas repris.
+- Comme les voitures, les motos sont indestructibles et solides, reviennent sur
+  leur place si elles tombent à l'eau ou sortent de la ville, et disparaissent
+  au départ vers le village.
+
 ---
 
 ## 2. Le déroulé
@@ -412,7 +431,7 @@ Toutes commencent par `/arcencium` et demandent le niveau opérateur.
 | `haven salle <n> capture` | Relève votre aménagement de l'appartement n (voir plus bas) |
 | `haven salle <n> show` | Résume le relevé (cellules, décors, date, auteur) et dit si un aménagement de cette salle est déjà dans le mod |
 | `haven salle <n> reset` | Remet l'appartement tel que la ville le pose, retire ses décors et efface le relevé. L'aménagement déjà dans le mod revient à la prochaine pose |
-| `vehicule cara` (ou `carb`, `carc`) | Pose une voiture volante de Haven devant vous. Elle se monte et se conduit comme celles des appartements (voir la partie 1) |
+| `vehicule cara` (ou `carb`, `carc`, et les motos `bikea`, `bikeb`, `bikec`) | Pose une voiture ou une moto volante de Haven devant vous. Elle se monte et se conduit comme celles des appartements (voir la partie 1) |
 
 Dans Haven : mode aventure, rien ne se casse ni ne se pose, pas de dégâts ni de faim,
 et l'on ne peut pas sortir de la ville. Votre mode de jeu vous est rendu en la quittant.
@@ -452,9 +471,9 @@ Sur un serveur d'essai (`run-server`), chacun écrit son rapport puis arrête le
 
 - `EMERALDWEAPONS_AUTOTEST=vote ./gradlew runServer` : appartements et vote, rapport `run-server/vote_autotest.txt` ;
 - `EMERALDWEAPONS_AUTOTEST=salles ./gradlew runServer` : relevé et rejeu des salles, rapport `run-server/salles_autotest.txt` ;
-- `EMERALDWEAPONS_AUTOTEST=vehicules ./gradlew runServer` : voitures, rapport `run-server/vehicules_autotest.txt`.
+- `EMERALDWEAPONS_AUTOTEST=vehicules ./gradlew runServer` : voitures et motos, rapport `run-server/vehicules_autotest.txt`.
 
-La vitesse des voitures se règle dans `VehicleSpec.MAX_SPEED_MS`.
+La vitesse des voitures et des motos se règle dans `VehicleSpec.MAX_SPEED_MS`.
 
 Pour arriver devant le bar du Hip Hog juste après la pose, sans bouger avant :
 `/tp @s ~375 ~66 ~211` — la porte est à quelques pas.

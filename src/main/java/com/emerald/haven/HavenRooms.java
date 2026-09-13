@@ -70,7 +70,7 @@ public final class HavenRooms {
         }
     }
 
-    /** La place de voiture devant la porte d'une salle. */
+    /** Une place de vehicule devant une salle : celle de la voiture, ou celle de la moto a cote. */
     public record Car(Box place, BlockPos floor, float yaw) {
     }
 
@@ -81,9 +81,11 @@ public final class HavenRooms {
      * @param box     l'air interieur
      * @param spawns  des cellules de SOL : le joueur se tient une cellule au-dessus
      * @param door    l'ouverture laissee dans le mur
+     * @param car     la place de la voiture devant la porte
+     * @param bike    la place de la moto monoplace, a cote de la voiture
      */
     public record Room(int number, String id, Box box, int capacity, List<BlockPos> spawns,
-                       @Nullable Box door, @Nullable Car car) {
+                       @Nullable Box door, @Nullable Car car, @Nullable Car bike) {
 
         /**
          * L'interieur et sa coque : murs, sol et plafond.
@@ -173,15 +175,10 @@ public final class HavenRooms {
                         spawns.add(pos(spawn.getAsJsonArray()));
                     }
                 }
-                Car car = null;
-                if (room.has("car")) {
-                    JsonObject place = room.getAsJsonObject("car");
-                    car = new Car(box(place), pos(place.getAsJsonArray("floor")),
-                            place.get("yaw").getAsFloat());
-                }
                 rooms.add(new Room(i + 1, room.get("id").getAsString(), box(room.getAsJsonObject("box")),
                         room.has("capacity") ? room.get("capacity").getAsInt() : 3, List.copyOf(spawns),
-                        room.has("door") ? box(room.getAsJsonObject("door")) : null, car));
+                        room.has("door") ? box(room.getAsJsonObject("door")) : null,
+                        vehiclePlace(room, "car"), vehiclePlace(room, "bike")));
             }
             Hq hq = null;
             if (root.has("hq")) {
@@ -197,6 +194,16 @@ public final class HavenRooms {
             LOGGER.error("salles de la ville : {} illisible", FILE, e);
             return null;
         }
+    }
+
+    /** La place de vehicule {@code key} ("car" ou "bike") d'une salle, ou null si le fichier n'en a pas. */
+    @Nullable
+    private static Car vehiclePlace(JsonObject room, String key) {
+        if (!room.has(key)) {
+            return null;
+        }
+        JsonObject place = room.getAsJsonObject(key);
+        return new Car(box(place), pos(place.getAsJsonArray("floor")), place.get("yaw").getAsFloat());
     }
 
     private static Box box(JsonObject object) {

@@ -20,9 +20,10 @@ import net.minecraft.resources.ResourceLocation;
  * quad dont le quatrieme sommet repete le troisieme : le second triangle,
  * (2, 2, 0), n'a aucune surface et ne dessine rien.
  *
- * Tous les materiaux des voitures sont en decoupe et double face dans le glb
- * (alphaMode MASK, doubleSided) : entityCutoutNoCull. Un triangle marque BLEND
- * passerait en entityTranslucent ; aucune des trois voitures n'en a (mesure).
+ * Tous les materiaux des voitures et des motos sont en decoupe et double face
+ * dans le glb (alphaMode MASK, doubleSided) : entityCutoutNoCull. Un triangle
+ * marque BLEND passerait en entityTranslucent ; aucun des six vehicules n'en a
+ * (mesure, tools/jak_vehicle.py).
  */
 public class JakVehicleRenderer extends EntityRenderer<JakVehicleEntity> {
 

@@ -100,8 +100,9 @@ public final class VehicleDynamics {
      *
      * Sous le plancher, la poussee vaut 3 g clamp(-f28 / 4) ; elle equilibre le
      * poids g (m + pilote) / m quand -f28 = 4 (m + pilote) / (3 m). car-a pilotee :
-     * 1,5 bloc, soit les propulseurs pile sur la carte de trafic ; sans pilote,
-     * 4/3 pour toutes les voitures. Calcul, que l'autotest compare a la mesure.
+     * 1,5 bloc, soit les propulseurs pile sur la carte de trafic ; une moto
+     * pilotee, plus legere, 2 blocs ; sans pilote, 4/3 pour tous les vehicules.
+     * Calcul, que l'autotest compare a la mesure.
      */
     public static double highHang(VehicleSpec spec, boolean driver) {
         double load = (spec.mass + (driver ? VehicleSpec.DRIVER_WEIGHT : 0.0)) / spec.mass;
@@ -137,15 +138,16 @@ public final class VehicleDynamics {
      * La force du ressort d'un propulseur, de 0 a 1.
      *
      * f = 1 - (clamp(d, 1, P) - 1) / (P - 1) (hvehicle-physics.gc:182-184) : pleine
-     * a un bloc du sol ou moins, nulle a la portee de la sonde. Pas de sol trouve
-     * (NaN) : nulle, comme le sol pose vingt metres plus bas par le jeu.
+     * a un bloc du sol ou moins, nulle a la portee P de la sonde (4,5 blocs pour
+     * les voitures, 5 pour les motos). Pas de sol trouve (NaN) : nulle, comme le
+     * sol pose vingt metres plus bas par le jeu.
      */
-    public static double springFactor(double distance) {
+    public static double springFactor(VehicleSpec spec, double distance) {
         if (Double.isNaN(distance)) {
             return 0.0;
         }
-        double d = Math.max(1.0, Math.min(distance, VehicleSpec.PROBE_DISTANCE));
-        return 1.0 - (d - 1.0) / (VehicleSpec.PROBE_DISTANCE - 1.0);
+        double d = Math.max(1.0, Math.min(distance, spec.probeDistance));
+        return 1.0 - (d - 1.0) / (spec.probeDistance - 1.0);
     }
 
     public static boolean grounded(double front, double rear) {
@@ -166,12 +168,12 @@ public final class VehicleDynamics {
                                           double probeY, double floorY, boolean driver) {
         double g = spec.gravity;
         double load = (spec.mass + (driver ? VehicleSpec.DRIVER_WEIGHT : 0.0)) / spec.mass;
-        double fFront = springFactor(front);
-        double fRear = springFactor(rear);
+        double fFront = springFactor(spec, front);
+        double fRear = springFactor(spec, rear);
 
         double ay = -g * load;
         // le ressort : 8 m g 0,5 spring f par propulseur, divise par la masse
-        ay += 8.0 * g * VehicleSpec.SPRING_LIFT * 0.5 * (fFront + fRear);
+        ay += 8.0 * g * spec.springLift * 0.5 * (fFront + fRear);
 
         double f28 = probeY - floorY;
         boolean climbing = mode == MODE_MONTEE;
@@ -187,21 +189,34 @@ public final class VehicleDynamics {
             ay -= DESCENT_PUSH_G * g;
         }
 
-        vy += ay;
-
-        // Le ressort annule la vitesse qui va vers le sol, d'autant plus fort
-        // qu'il est comprime (hvehicle-physics.gc:198-212) : f par propulseur
-        // et par pas du jeu.
-        double squeeze = fFront + fRear;
-        if (vy < 0.0 && squeeze > 0.0) {
-            vy *= Math.pow(1.0 - Math.min(0.95, squeeze), STEPS_PER_TICK);
+        // LES AMORTISSEMENTS PARTENT DE LA VITESSE DU DEBUT DU PAS, comme dans le
+        // jeu : chaque propulseur lit sa vitesse avant toute force
+        // (hvehicle-physics.gc:76), apply-impact! ne fait qu'additionner les
+        // forces (rigid-body.gc:613-622), et la gravite s'y ajoute avant
+        // l'integration (hvehicle-physics.gc:500-510). Le poids du tick n'est
+        // donc jamais amorti.
+        //
+        // Le portage amortissait APRES la gravite, avec un plafond de 0,95 : la
+        // moto pilotee, dont les deux ressorts retirent plus que toute la vitesse
+        // pres de sa hauteur, perdait a chaque tick presque tout ce que son poids
+        // venait de lui donner et restait figee vers 3,1 blocs au lieu de 2,5
+        // (banc hors jeu : encore 2,96 au bout de 30 s). Dans l'ordre du jeu, elle
+        // tient 2,500 des 2 s, et les voitures tombent pile sur leur calcul.
+        //
+        // Le ressort retire f de la vitesse vers le sol par propulseur
+        // (2 f / dt x 1/2 x m x -vy, hvehicle-physics.gc:198-212) ; la voie haute
+        // en retire un quart, a la montee a moins d'un bloc sous le plancher
+        // pendant la montee, a la chute a plus d'un bloc dessous (164-179). Les
+        // impulsions d'un pas s'additionnent ; au-dela de toute la vitesse, le jeu
+        // la renverserait, on s'arrete a zero. Puissance 1,5 : les pas dans un tick.
+        double share = 0.0;
+        if (vy < 0.0) {
+            share += fFront + fRear;
         }
-        // Un quart de la vitesse par pas (hvehicle-physics.gc:164-179) : la
-        // montee a moins d'un bloc sous le plancher, pendant la montee seulement,
-        // et la chute a plus d'un bloc dessous, toujours en voie haute.
         if ((climbing && f28 > -1.0 && vy > 0.0) || (isHigh(mode) && f28 < -1.0 && vy < 0.0)) {
-            vy *= Math.pow(0.75, STEPS_PER_TICK);
+            share += 0.25;
         }
+        vy = vy * Math.pow(Math.max(0.0, 1.0 - share), STEPS_PER_TICK) + ay;
         return Math.max(vy, -MAX_FALL);
     }
 
@@ -229,7 +244,7 @@ public final class VehicleDynamics {
         }
 
         // le moteur suit les gaz, bride aux basses vitesses : 0,8333 (0,5 + v/vmax)
-        double intake = 0.8333 * (0.5 + Math.max(0.0, vf) * VehicleSpec.ENGINE_INTAKE / vmax);
+        double intake = 0.8333 * (0.5 + Math.max(0.0, vf) * spec.engineIntake / vmax);
         double target = in.throttle() ? Math.min(c.throttle, intake) : 0.0;
         c.engine = smooth(c.engine, target, spec.engineResponse);
         vf += c.engine * spec.thrust;

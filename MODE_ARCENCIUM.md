@@ -73,6 +73,28 @@ ville commence au village, comme avant.
   plus haut (loi de hvehicle-physics.gc reprise telle quelle). Une voiture
   tombee a l'eau ou sortie de la ville revient sur sa place ; toutes
   disparaissent au depart.
+- **Motos monoplaces** (decision du joueur, 13 sept.) : bikea, bikeb et bikec a
+  cote des voitures des appartements 1, 2 et 3, sur la place `bike` de
+  `haven_rooms.json` (air 3 x 3 x 7 sur sol plein, du cote +z de la voiture, une
+  cellule libre entre les deux, hors du passage de la porte ; le volume
+  ctyport.jakv n'en change pas). Une seule place, le siege du pilote GOAL ; pas
+  de passager. Constantes de bike.gc (sections des trois motos completes et de
+  conduite identique) : masse 2, poussee 50, reponse 60, admission 1,5, frein
+  3,5, gain 4, sonde 5 m, ressort 0,3, 40 m/s ; seuls la hauteur des propulseurs
+  et le siege different. Memes lois de rase-sol et de voie haute que les
+  voitures, meme touche R, sans le saut de Jak 3. Boites : trois carres au tiers
+  de la longueur (1,77 a 1,94 bloc), sans vide entre eux. Registre et marque
+  par place : `appartement_n` pour la voiture, `appartement_n_moto` pour la moto.
+  Hauteur pilotee corrigee (13 sept.) : la moto pilotee restait vers 3,1 blocs
+  au lieu des 2,5 calcules, parce que le portage amortissait la chute APRES la
+  gravite, plafonne a 0,95. Le jeu amortit la vitesse du debut du pas (chaque
+  propulseur retire f, la voie haute un quart, impulsions additionnees,
+  hvehicle-physics.gc:164-212) et ajoute la gravite ensuite
+  (`VehicleDynamics.verticalVelocity`). Banc hors jeu : motos 2,500 pilotees et
+  3,333 a vide, voitures pilotees 3,270 / 3,224 / 3,285 comme avant, depassement
+  de la voie haute de 1,43 a 1,26 bloc. L'autotest vehicules juge desormais la
+  hauteur pilotee de cara et des trois motos, poids du pilote impose
+  (`JakVehicleEntity.setAutotestDriver`).
 - **Amenagement des appartements** : releve en jeu (`/arcencium haven salle
   <n> capture` ou la Sonde), copie dans le mod par
   `tools/jak_zone_apply.py`, rejoue a chaque pose de la ville.

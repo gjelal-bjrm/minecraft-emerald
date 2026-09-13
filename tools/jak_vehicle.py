@@ -1,6 +1,7 @@
-"""Cuit les voitures civiles de Haven City (Jak 3) en triangles pour Minecraft.
+"""Cuit les voitures et les motos civiles de Haven City (Jak 3) en triangles pour Minecraft.
 
-Les trois voitures du port -- cara, carb, carc -- sont des modeles « merc »
+Les trois voitures du port -- cara, carb, carc (niveau ctycara) -- et les trois
+motos -- bikea, bikeb, bikec (niveau ctycarb) -- sont des modeles « merc »
 extraits par OpenGOAL en `.glb`. Minecraft ne lit pas le glTF : on en tire ici
 une liste de triangles prets a dessiner par modele, et UNE image, l'atlas, qui
 regroupe toutes leurs textures. Le rendu du mod n'a plus rien a calculer.
@@ -62,8 +63,11 @@ FORMAT DE <modele>.bin (petit-boutiste)
                                  (v vers le bas, comme Minecraft), 3f normale,
                                  4B couleur RGBA deja multipliee par 2
 
-L'atlas est commun aux trois voitures : l'outil les traite donc toujours
-ensemble, sans quoi une voiture regeneree seule decalerait les autres.
+L'atlas est commun aux six vehicules : l'outil les traite donc toujours
+ensemble, sans quoi un vehicule regenere seul decalerait les autres. Les motos
+y ajoutent leurs tuiles ; si elles ne tiennent plus dans la taille d'avant,
+l'atlas grandit (plus petit carre ou presque qui contient tout, 4096 au plus),
+et les UV des voitures sont recuites avec.
 
 Usage :
     python tools/jak_vehicle.py
@@ -88,8 +92,10 @@ try:
 except ImportError:
     sys.exit("Pillow est necessaire : pip install pillow")
 
-MODELS = ("cara", "carb", "carc")
-LEVEL = "ctycara"
+# le niveau du decompilateur ou vit chaque modele
+LEVELS = {"cara": "ctycara", "carb": "ctycara", "carc": "ctycara",
+          "bikea": "ctycarb", "bikeb": "ctycarb", "bikec": "ctycarb"}
+MODELS = tuple(LEVELS)
 
 ASSETS = os.path.join(ja.ROOT, "src", "main", "resources", "assets", "emeraldweapons")
 BIN_DIR = os.path.join(ASSETS, "jak_vehicles")
@@ -204,8 +210,8 @@ def load_images(js, blob, model):
 
 
 def read_model(model):
-    """Les triangles d'une voiture, dans son repere, avec leurs UV brutes."""
-    path = os.path.join(ja.LEVELS, LEVEL, "%s-lod0.glb" % model)
+    """Les triangles d'un vehicule, dans son repere, avec leurs UV brutes."""
+    path = os.path.join(ja.LEVELS, LEVELS[model], "%s-lod0.glb" % model)
     if not os.path.isfile(path):
         sys.exit("modele introuvable : %s" % path)
     js, blob = ja.read_glb(path)
@@ -257,7 +263,7 @@ def read_model(model):
             pbr = material.get("pbrMetallicRoughness", {})
             texture = pbr.get("baseColorTexture")
             if texture is None:
-                # aucune ne l'est dans les trois voitures (mesure) : plutot que
+                # aucune ne l'est dans les six vehicules (mesure) : plutot que
                 # d'inventer une couleur, on s'arrete
                 sys.exit("%s : triangle sans texture, non gere" % model)
             if texture.get("texCoord", 0) != 0:

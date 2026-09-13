@@ -211,7 +211,7 @@ DOOR_WIDTH = 3
 DOOR_HEIGHT = 4
 
 # La place de voiture devant chaque porte. Ses cotes viennent des bornes des
-# trois voitures, lues dans l'en-tete des .bin de jak_vehicles a chaque
+# trois voitures, lues dans l'en-tete des .bin car*.bin de jak_vehicles a chaque
 # execution (vehicle_extents) : 5,59 m de large au plus (carb), 3,52 de haut
 # (cara), 8,43 de long (cara). La boite libre fait 7 x 4 x 9. Les cotes
 # restent IMPAIRES : la voiture se centre en floor + 0,5, et une largeur paire
@@ -226,6 +226,20 @@ CAR_GAP = 2
 # l'arriere vers la porte. Le modele a son avant en +z (tools/jak_vehicle.py).
 CAR_YAW = 90.0
 VEHICLES = os.path.join(ROOT, "src", "main", "resources", "assets", "emeraldweapons", "jak_vehicles")
+
+# La place de la moto monoplace, a cote de la voiture (une par appartement,
+# decision du joueur). Ses cotes viennent des bike*.bin comme celles des
+# voitures : 2,40 m de large au plus (bikec), 2,76 de haut (bikeb), 5,81 de long
+# (bikec). La boite libre fait 3 x 3 x 7, cotes impaires pour la meme raison.
+# Elle se tient du cote +z de la place de voiture -- la gauche de la voiture
+# garee au lacet 90 -- et, si ce cote est pris, du cote -z. BIKE_GAP cellules
+# d'air sur sol plein la separent de la voiture, pour passer a pied entre les
+# deux ; son arriere part de celui de la voiture et recule vers la rue. Elle ne
+# touche jamais le passage devant la porte. Lacet et centrage : ceux des voitures.
+BIKE_WIDTH = 3
+BIKE_HEIGHT = 3
+BIKE_LENGTH = 7
+BIKE_GAP = 1
 
 # Le sol principal de la ville : l'altitude ou la surface horizontale est de
 # loin la plus etendue du port, 133 000 unites carrees a y=8.
@@ -970,20 +984,22 @@ def solid_at(voxels, forced, key):
     return key in voxels or key in forced
 
 
-def vehicle_extents():
-    """Les cotes des voitures, lues dans l'en-tete de leurs .bin.
+def vehicle_extents(prefix):
+    """Les cotes des vehicules d'une famille, lues dans l'en-tete de leurs .bin.
 
     L'en-tete (voir tools/jak_vehicle.py), petit-boutiste : magie "JKVH",
     version, triangles, os, largeur et hauteur de l'atlas, puis les coins
     minimum et maximum de la boite du modele, en metres. Le modele a sa
     largeur en x, sa hauteur en y, sa longueur en z.
 
+    prefix : "car" pour les voitures, "bike" pour les motos.
+
     Rend (largeur, hauteur, longueur) de la plus grande, cote par cote, et le
     detail par modele.
     """
     header = struct.Struct("<4sIIIII3f3f")
     models = {}
-    for path in sorted(glob.glob(os.path.join(VEHICLES, "*.bin"))):
+    for path in sorted(glob.glob(os.path.join(VEHICLES, prefix + "*.bin"))):
         with open(path, "rb") as handle:
             fields = header.unpack(handle.read(header.size))
         if fields[0] != b"JKVH":
@@ -991,7 +1007,7 @@ def vehicle_extents():
         lo, hi = fields[6:9], fields[9:12]
         models[os.path.splitext(os.path.basename(path))[0]] = tuple(hi[i] - lo[i] for i in range(3))
     if not models:
-        sys.exit("aucun modele de voiture dans %s" % VEHICLES)
+        sys.exit("aucun modele %s*.bin dans %s" % (prefix, VEHICLES))
     return tuple(max(m[i] for m in models.values()) for i in range(3)), models
 
 
@@ -1007,16 +1023,23 @@ def build_apartments(voxels, forced, dims):
     w, h, d = dims
     # la place doit contenir chaque voiture, centree ; et le lacet doit bien
     # tourner le nez vers la rue, a l'ouest des portes
-    need, models = vehicle_extents()
+    need, models = vehicle_extents("car")
     if need[0] > CAR_WIDTH or need[1] > CAR_HEIGHT or need[2] > CAR_LENGTH:
         sys.exit("place de voiture %d x %d x %d trop petite pour %.2f x %.2f x %.2f m (%s)" % (
             CAR_WIDTH, CAR_HEIGHT, CAR_LENGTH, need[0], need[1], need[2], models))
+    bike_need, bike_models = vehicle_extents("bike")
+    if bike_need[0] > BIKE_WIDTH or bike_need[1] > BIKE_HEIGHT or bike_need[2] > BIKE_LENGTH:
+        sys.exit("place de moto %d x %d x %d trop petite pour %.2f x %.2f x %.2f m (%s)" % (
+            BIKE_WIDTH, BIKE_HEIGHT, BIKE_LENGTH, bike_need[0], bike_need[1], bike_need[2], bike_models))
     ahead = (round(-math.sin(math.radians(CAR_YAW))), round(math.cos(math.radians(CAR_YAW))))
     if ahead != (-1, 0):
         sys.exit("lacet %.0f : la voiture garee doit regarder -X, vers la rue des portes" % CAR_YAW)
     print("  voitures  %s ; place %d x %d x %d, lacet %.0f" % (
         ", ".join("%s %.2f x %.2f x %.2f" % (m, e[0], e[1], e[2]) for m, e in sorted(models.items())),
         CAR_WIDTH, CAR_HEIGHT, CAR_LENGTH, CAR_YAW))
+    print("  motos     %s ; place %d x %d x %d, a %d cellule(s) de la voiture" % (
+        ", ".join("%s %.2f x %.2f x %.2f" % (m, e[0], e[1], e[2]) for m, e in sorted(bike_models.items())),
+        BIKE_WIDTH, BIKE_HEIGHT, BIKE_LENGTH, BIKE_GAP))
     rooms = []
     for name, (za, zb) in APARTMENTS:
         mid = (za + zb) // 2
@@ -1088,10 +1111,43 @@ def build_apartments(voxels, forced, dims):
             break
         if car is None:
             sys.exit("%s : pas de place de voiture libre devant la porte" % name)
+
+        # LA PLACE DE MOTO : une boite d'air libre sur sol plein a cote de la
+        # voiture, +z d'abord. Les cellules entre les deux places sont de l'air
+        # sur sol plein elles aussi ; le passage devant la porte reste hors de
+        # la boite. Rien n'est pose ni retire : le volume ne change pas.
+        passage_cells = {(x, y, z) for (x, z) in passage for y in range(APT_FLOOR_Y + 1, top + 1)}
+        bys = range(APT_FLOOR_Y + 1, APT_FLOOR_Y + 1 + BIKE_HEIGHT)
+        bike = None
+        for side in (1, -1):
+            if side > 0:
+                bz0 = car["max"][2] + 1 + BIKE_GAP
+                between = range(car["max"][2] + 1, bz0)
+            else:
+                bz0 = car["min"][2] - BIKE_GAP - BIKE_WIDTH
+                between = range(bz0 + BIKE_WIDTH, car["min"][2])
+            bzs = range(bz0, bz0 + BIKE_WIDTH)
+            columns_z = list(bzs) + list(between)
+            for rear in range(car["max"][0], car["max"][0] - 30, -1):
+                bxs = range(rear - BIKE_LENGTH + 1, rear + 1)
+                cells = [(x, y, z) for x in bxs for y in bys for z in columns_z]
+                if any(solid_at(voxels, forced, c) or c in passage_cells for c in cells):
+                    continue
+                if not all(solid_at(voxels, forced, (x, APT_FLOOR_Y, z)) for x in bxs for z in columns_z):
+                    continue
+                bike = {"min": [bxs[0], bys[0], bzs[0]], "max": [bxs[-1], bys[-1], bzs[-1]],
+                        "floor": [(bxs[0] + bxs[-1]) // 2, APT_FLOOR_Y, bzs[0] + BIKE_WIDTH // 2],
+                        "yaw": CAR_YAW}
+                break
+            if bike is not None:
+                break
+        if bike is None:
+            sys.exit("%s : pas de place de moto libre a cote de la voiture" % name)
         print("  logement  %-14s mur %d blocs, porte z %d..%d, air interieur %d cellules sans fuite ;"
-              " voiture x %d..%d z %d..%d, lacet %.0f" % (
+              " voiture x %d..%d z %d..%d ; moto x %d..%d z %d..%d ; lacet %.0f" % (
                   name, posed, door[0][2], door[-1][2], len(inside),
-                  car["min"][0], car["max"][0], car["min"][2], car["max"][2], CAR_YAW))
+                  car["min"][0], car["max"][0], car["min"][2], car["max"][2],
+                  bike["min"][0], bike["max"][0], bike["min"][2], bike["max"][2], CAR_YAW))
         rooms.append({
             "id": name,
             "box": {"min": lo, "max": hi},
@@ -1100,6 +1156,7 @@ def build_apartments(voxels, forced, dims):
             "door": {"min": [APT_FACE_X, APT_FLOOR_Y + 1, door[0][2]],
                      "max": [APT_FACE_X, top, door[-1][2]]},
             "car": car,
+            "bike": bike,
         })
     return rooms
 
@@ -1180,6 +1237,12 @@ def write_rooms(path, rooms, hq, name, origin, cell, dims, digest):
             "  floor : la cellule de sol sous le centre de la place. On pose le centre horizontal de la",
             "  boite du modele (bornes de l'en-tete du .bin) en (x + 0,5, z + 0,5), et son point le plus",
             "  bas sur le sol, en y + 1 : la place contient alors chacune des trois voitures.",
+            "rooms[].bike : place de la moto monoplace, a cote de la voiture. min..max est de l'air libre :",
+            "  %d de large, %d de haut, %d de long dans le sens du lacet, sur un sol plein en y = min.y - 1,"
+            % (BIKE_WIDTH, BIKE_HEIGHT, BIKE_LENGTH),
+            "  du cote +z de la place de voiture (-z si +z est pris), a %d cellule(s) d'air sur sol plein" % BIKE_GAP,
+            "  de la voiture, hors du passage devant la porte. yaw et floor comme pour la voiture, avec les",
+            "  bornes des .bin des motos : la place contient chacune des trois motos.",
             "hq.box : l'emprise du Hip Hog, du sol a son toit, bornes incluses.",
             "hq.counter : l'emprise du comptoir, a la hauteur de son plateau.",
             "hq.vote.floor : cellule de sol libre proposee pour l'element de vote, pres du comptoir.",

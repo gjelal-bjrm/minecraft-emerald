@@ -29,8 +29,12 @@ import javax.annotation.Nullable;
 import java.util.List;
 
 /**
- * Une voiture civile de Haven : solide, montable, pilotable, en rase-sol ou en
- * voie haute.
+ * Un vehicule civil de Haven -- voiture a trois places ou moto monoplace --,
+ * solide, montable, pilotable, en rase-sol ou en voie haute.
+ *
+ * Voitures et motos sont la meme entite : seule la fiche du modele change
+ * (VehicleSpec), avec ses constantes GOAL, ses boites et ses sieges. On dit
+ * « la voiture » dans ce qui suit pour les deux.
  *
  * LE MODELE DU BATEAU. Le client du conducteur simule la voiture et envoie sa
  * position au serveur (LocalPlayer.tick, ServerboundMoveVehiclePacket) ; le
@@ -44,23 +48,28 @@ import java.util.List;
  *
  * LES PLACES SONT STABLES. Trois donnees d'entite portent l'identifiant de
  * l'occupant de chaque siege : on monte a la premiere place libre, la place 0
- * est celle du conducteur, et un depart ne fait pas glisser les autres.
+ * est celle du conducteur, et un depart ne fait pas glisser les autres. Une moto
+ * n'a qu'un siege (VehicleSpec.seatCount) : un second passager est refuse.
  *
  * L'origine de l'entite est celle du modele du jeu : sieges et propulseurs du
  * code GOAL s'y lisent tels quels.
  */
 public class JakVehicleEntity extends Entity {
 
-    /** Les trois voitures civiles retenues par le joueur. */
-    public static final List<String> MODELS = List.of("cara", "carb", "carc");
+    /** Les trois voitures civiles retenues par le joueur, dans l'ordre des appartements. */
+    public static final List<String> CARS = List.of("cara", "carb", "carc");
+    /** Les trois motos civiles, monoplaces, dans l'ordre des appartements. */
+    public static final List<String> BIKES = List.of("bikea", "bikeb", "bikec");
+    public static final List<String> MODELS = List.of("cara", "carb", "carc", "bikea", "bikeb", "bikec");
 
     /** Trois parties de collision le long de la voiture (voir VehiclePart). */
-    public static final int PART_COUNT = 3;
+    public static final int PART_COUNT = VehicleSpec.PARTS;
 
     /**
      * Demi-cote horizontal de la boite de rendu. Les voitures font 7,6 a 8,4
      * blocs : sans cette boite elargie, elles disparaitraient des qu'on ne
-     * regarde plus leur centre. carc va jusqu'a 5,6 blocs de l'origine.
+     * regarde plus leur centre. carc va jusqu'a 5,6 blocs de l'origine, bikec
+     * jusqu'a 3,6.
      */
     private static final double CULL_RADIUS = 6.0;
     private static final double CULL_BELOW = 2.5;
@@ -111,12 +120,23 @@ public class JakVehicleEntity extends Entity {
     /** Le siege que vient de quitter le passager en train de descendre. */
     private int leavingSeat = EMPTY;
 
-    /** L'appartement dont c'est la voiture, ou null (voiture d'essai). */
+    /**
+     * La cle de la place d'appartement dont c'est le vehicule (HavenCars.Place.key :
+     * l'identifiant de la salle pour sa voiture, suivi de « _moto » pour sa moto),
+     * ou null (vehicule d'essai).
+     */
     @Nullable
     private String room;
     /** Commandes imposees par l'autotest quand personne ne conduit. */
     @Nullable
     private VehicleDynamics.Input autotestInput;
+    /**
+     * Le poids d'un pilote, impose par l'autotest. Le serveur de test n'a pas de
+     * joueur a asseoir, et un porte-armure a la place 0 ne conduit pas
+     * (getControllingPassenger) : sans ce drapeau, la hauteur pilotee ne se
+     * mesurerait jamais en jeu.
+     */
+    private boolean autotestDriver;
 
     public JakVehicleEntity(EntityType<? extends JakVehicleEntity> type, Level level) {
         super(type, level);
@@ -195,6 +215,15 @@ public class JakVehicleEntity extends Entity {
 
     public void setAutotestInput(@Nullable VehicleDynamics.Input input) {
         this.autotestInput = input;
+    }
+
+    public void setAutotestDriver(boolean driver) {
+        this.autotestDriver = driver;
+    }
+
+    /** Un pilote pese sur le vehicule : un joueur a la place 0, ou le poids impose par l'autotest. */
+    public boolean hasDriverWeight() {
+        return this.autotestDriver || this.getControllingPassenger() != null;
     }
 
     public float roll(float partialTick) {
@@ -308,13 +337,28 @@ public class JakVehicleEntity extends Entity {
 
     /** La boite de la partie {@code index} pour une position et un lacet donnes. */
     public AABB partBox(int index, double x, double y, double z, float yawDegrees) {
-        VehicleSpec spec = this.spec();
+        return partBox(this.spec(), index, x, y, z, yawDegrees);
+    }
+
+    /** La boite de la partie {@code index} d'un vehicule de fiche {@code spec}, sans entite. */
+    public static AABB partBox(VehicleSpec spec, int index, double x, double y, double z, float yawDegrees) {
         double yaw = Math.toRadians(yawDegrees);
         double along = spec.partZ(index);
         double cx = x - Math.sin(yaw) * along;
         double cz = z + Math.cos(yaw) * along;
         double half = spec.boxSide / 2.0;
         return new AABB(cx - half, y + spec.boxBottom, cz - half, cx + half, y + spec.boxTop, cz + half);
+    }
+
+    /**
+     * La boite de l'entite puis celles des parties d'un vehicule de fiche
+     * {@code spec}, sans entite : ce que {@link #collisionBoxes()} rendrait a
+     * cette position et a ce lacet. L'autotest s'en sert pour une place vide.
+     */
+    public static List<AABB> boxesAt(VehicleSpec spec, double x, double y, double z, float yaw) {
+        double half = spec.boxSide / 2.0;
+        return List.of(new AABB(x - half, y + spec.boxBottom, z - half, x + half, y + spec.boxTop, z + half),
+                partBox(spec, 0, x, y, z, yaw), partBox(spec, 1, x, y, z, yaw), partBox(spec, 2, x, y, z, yaw));
     }
 
     /** La boite de l'entite puis celles des parties, a la position courante. */

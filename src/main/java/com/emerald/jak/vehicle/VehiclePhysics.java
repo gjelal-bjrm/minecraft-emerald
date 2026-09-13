@@ -101,7 +101,7 @@ public final class VehiclePhysics {
         }
         // sous son plancher, la voiture « touche » la voie (on-flight-level, hvehicle-physics.gc:121-123)
         boolean onFlightLevel = VehicleDynamics.isHigh(mode) && probeY <= floorY;
-        boolean driver = car.getControllingPassenger() != null;
+        boolean driver = car.hasDriverWeight();
 
         Vec3 v = car.getDeltaMovement();
         double yaw = Math.toRadians(car.getYRot());
@@ -204,7 +204,7 @@ public final class VehiclePhysics {
         double x = car.getX() - Math.sin(yaw) * localZ;
         double z = car.getZ() + Math.cos(yaw) * localZ;
         double y = car.getY() + spec.thrusterY;
-        return down(car, x, y, z, VehicleSpec.PROBE_DISTANCE);
+        return down(car, x, y, z, spec.probeDistance);
     }
 
     private static double down(Entity car, double x, double y, double z, double reach) {
