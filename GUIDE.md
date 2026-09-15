@@ -13,9 +13,11 @@ sa propre dimension. C'est le cas dans un monde neuf, ou après
 `/arcencium setup` dans un monde qui a déjà sa ville. Un ancien monde sans ville
 commence au village, comme avant.
 
-Dans la ville : mode aventure, rien ne se casse ni ne se pose, pas de dégâts,
-pas de faim, pas de combat, et l'on ne sort pas de la ville. Votre inventaire
-n'est pas touché. Votre mode de jeu habituel vous est rendu au village.
+Dans la ville : mode aventure (à la main, rien ne se casse ni ne se pose), pas
+de faim, pas de combat entre joueurs, et l'on ne sort pas de la ville. La ville
+est **envahie de monstres** qui peuvent vous blesser, et chacun y reçoit le
+**Morph Gun** de Jak 3 pour s'en défendre (voir plus bas). Votre inventaire n'est
+pas touché. Votre mode de jeu habituel vous est rendu au village.
 
 ### Les appartements
 
@@ -77,14 +79,15 @@ trois blocs du sol. Les voitures disparaissent au départ vers le village.
   (144 km/h), soit deux blocs par tick, comme dans Jak 3. À pleine vitesse, la
   voiture tourne large (une quarantaine de blocs de rayon) : freinez avant les
   rues étroites.
-- **Touche R : changer de zone de survol.** Elle se change dans Options >
+- **Espace : changer de zone de survol.** La touche n'agit qu'au volant (à
+  pied, Espace saute comme d'habitude) ; elle se change dans Options >
   Commandes > Emerald Weapons.
   - **Rase-sol :** la voiture plane juste au-dessus du sol ou de l'eau.
   - **Voie haute :** elle monte à l'altitude de la circulation de Jak 3, celle
     de la carte de trafic du port : neuf blocs au-dessus de la rue (hors de la
     ville, neuf blocs au-dessus du sol). Si quelque chose bloque la montée plus
     de deux secondes, elle redescend.
-  - Un nouvel appui sur R la fait redescendre jusqu'au sol.
+  - Un nouvel appui sur Espace la fait redescendre jusqu'au sol.
 - Un rappel s'affiche à l'écran pendant qu'on conduit. En vue à la troisième
   personne, la caméra recule pour montrer toute la voiture.
 - Les voitures sont **indestructibles et solides** : on s'y cogne, et elles
@@ -99,7 +102,7 @@ trois blocs du sol. Les voitures disparaissent au départ vers le village.
 À côté de chaque voiture, sur sa gauche quand on sort de l'appartement, attend
 une moto volante de Jak 3 : la **moto A** (bikea) à l'appartement 1, la **B**
 (bikeb) au 2, la **C** (bikec) au 3. Elle se monte, se conduit et change de
-zone de survol exactement comme une voiture (mêmes touches, R compris), à
+zone de survol exactement comme une voiture (mêmes touches, Espace compris), à
 40 m/s au plus.
 
 - **Une seule place**, celle du pilote. Si quelqu'un est déjà dessus, le clic
@@ -112,6 +115,69 @@ zone de survol exactement comme une voiture (mêmes touches, R compris), à
 - Comme les voitures, les motos sont indestructibles et solides, reviennent sur
   leur place si elles tombent à l'eau ou sortent de la ville, et disparaissent
   au départ vers le village.
+
+### L'invasion
+
+- On arrive en **invasion** : zombies, villageois zombies et squelettes casqués
+  qui rôdent dans les rues, phantoms dans le ciel. Ils apparaissent à distance,
+  jamais sous vos yeux quand ils sont proches, et à plus de 24 blocs des portes
+  des appartements et de l'entrée du bar.
+  **Les appartements et le bar du
+  Hip Hog sont des abris** : aucun monstre n'y entre, aucun ne vous y blesse.
+- Les monstres blessent, et l'on peut mourir. On réapparaît dans son
+  appartement avec tout son inventaire, son expérience, le Morph Gun et des
+  réserves d'éco pleines. Ni chute, ni faim, ni coup entre joueurs.
+- **Le bouton du QG**, au bout du comptoir du Hip Hog, près de la borne : voyant
+  rouge en invasion, bleu en paisible. N'importe quel joueur passe toute la ville
+  en **mode paisible** : les monstres partent, des villageois des sept régions
+  se promènent dans les rues (invulnérables, sans commerce). Un nouvel appui
+  relance l'invasion (deux secondes entre deux appuis). Chaque réouverture du
+  lobby remet l'invasion.
+
+### Le Morph Gun
+
+- **Donné à l'arrivée** dans la ville, dans la première case libre (ou la main
+  gauche si l'inventaire est plein). Il ne se jette pas et ne se range dans aucun
+  coffre ni sac : pendant qu'un coffre est ouvert, il quitte la barre et revient à
+  la fermeture. Il **disparaît au départ** vers le village, quel que soit le mode
+  voté ; il n'existe nulle part ailleurs que dans la ville.
+- **Changer d'arme : les flèches**, comme la croix de Jak 3. ↑ rouge (Scatter Gun,
+  « Pulvérisator »), ↓ jaune (Blaster), ← bleue (Vulcan Fury,
+  « Vulcanoshooteur »), → sombre (Peace Maker, « Pacificateur »). Touches
+  réassignables dans Options > Commandes > Morph Gun (Haven). Pendant la
+  transformation (un tiers de seconde, presque une seconde vers le bleu), l'arme
+  ne tire pas. Pendant qu'une boule du Peace Maker charge, on ne change pas d'arme.
+- **Tirer : clic gauche**, arme en main, hors voiture et moto. Le clic ne frappe
+  plus au corps à corps.
+
+| Arme | Gâchette | Cadence | Coût | Ce qu'elle fait | Décor cassé |
+|---|---|---|---|---|---|
+| Scatter Gun | un clic par tir | 1,1 s | 1 éco rouge | 19 plombs dans un cône de ±45° sur 15 blocs, les premiers sur les monstres devant ; un monstre n'est touché qu'une fois par tir : 12 PV à moins de 6 blocs, 8 au-delà | le bloc touché par chaque plomb, 6 au plus |
+| Blaster | un clic par tir (un clic un peu en avance est gardé) | 0,32 s | 1 éco jaune | un trait à 10 blocs par tique, 3 s de vol : 8 PV | 1 à 4 blocs autour de l'impact |
+| Vulcan Fury | tenir | le canon s'emballe en 1,5 s : de 0,4 à 0,1 s entre deux balles | 1 éco bleue par balle | balle instantanée sur 80 blocs : 8 PV | le bloc touché |
+| Peace Maker | tenir pour charger (0,3 s au moins), relâcher pour tirer | 0,85 s | 1 éco sombre à la charge (rendue si la charge est interrompue) | boule en spirale qui poursuit le monstre visé ; à l'impact, 64 PV au monstre le plus proche dans 10 blocs, puis la foudre saute de monstre en monstre toutes les 0,1 s (16 au plus) | 40 blocs au plus dans un rayon de 3 |
+
+- Un zombie meurt en 3 tirs de Blaster, 2 ou 3 de Scatter Gun, 3 balles de
+  Vulcan Fury ou une boule du Peace Maker. Les armes ne blessent **que les
+  monstres** : jamais un joueur (ni dégât, ni recul), ni les villageois du mode
+  paisible.
+- **Les réserves** : rouge 100, jaune 200, bleue 200, sombre 15, pleines à
+  l'arrivée et à chaque réapparition. Une réserve vide : l'arme passe d'elle-même
+  à la première famille qui a de l'éco (jaune, puis rouge, bleue, sombre) et tire ;
+  sinon, un clic. Le chargeur de la famille vide disparaît du modèle.
+- **Recharger** : des munitions d'éco attendent aux **12 points** de la carte
+  (10 jaunes ou 10 bleues, 5 rouges, 1 sombre) et reviennent 30 s après avoir été
+  prises. **Chaque monstre tué en lâche une**, de la couleur qui vous manque le
+  plus (au hasard si tout est plein), qui disparaît au bout de 20 s ou quand la
+  ville passe en paisible. On les ramasse en passant dessus ; une réserve pleine
+  ne ramasse pas, la munition reste pour les autres.
+- **Le HUD**, au-dessus des cœurs : les quatre réserves (la famille tenue est
+  encadrée) et le nom de l'arme, avec « à sec » qui clignote quand sa réserve est
+  vide. Masqué en voiture.
+- **Le décor se casse sous les armes**, puis revient à l'identique 10 à 15 s après.
+  Ne cassent jamais : les appartements, le bar du Hip Hog et son parvis, la borne,
+  le bouton, les places des voitures et des motos, le bord de la ville, et tout ce
+  qui est sous la surface de l'eau. À la main, rien ne se casse.
 
 ---
 
@@ -432,9 +498,13 @@ Toutes commencent par `/arcencium` et demandent le niveau opérateur.
 | `haven salle <n> show` | Résume le relevé (cellules, décors, date, auteur) et dit si un aménagement de cette salle est déjà dans le mod |
 | `haven salle <n> reset` | Remet l'appartement tel que la ville le pose, retire ses décors et efface le relevé. L'aménagement déjà dans le mod revient à la prochaine pose |
 | `vehicule cara` (ou `carb`, `carc`, et les motos `bikea`, `bikeb`, `bikec`) | Pose une voiture ou une moto volante de Haven devant vous. Elle se monte et se conduit comme celles des appartements (voir la partie 1) |
+| `haven invasion etat` | Dit le mode de la ville, le nombre de monstres et d'habitants, et les blocs cassés qui attendent leur retour |
+| `haven invasion invasion` (ou `paisible`) | Passe toute la ville en invasion ou en paisible, comme le bouton du QG |
+| `haven invasion reconstruire` | Repose tout de suite le décor cassé par les armes |
 
-Dans Haven : mode aventure, rien ne se casse ni ne se pose, pas de dégâts ni de faim,
-et l'on ne peut pas sortir de la ville. Votre mode de jeu vous est rendu en la quittant.
+Dans Haven : mode aventure, rien ne se casse ni ne se pose à la main, pas de faim ni de
+combat entre joueurs, seuls les monstres de l'invasion blessent, et l'on ne peut pas sortir
+de la ville. Votre mode de jeu vous est rendu en la quittant.
 La pose d'essai `jak ctyport` contient elle aussi le mur invisible qui fait le tour du port.
 
 ### Aménager un appartement
@@ -471,7 +541,12 @@ Sur un serveur d'essai (`run-server`), chacun écrit son rapport puis arrête le
 
 - `EMERALDWEAPONS_AUTOTEST=vote ./gradlew runServer` : appartements et vote, rapport `run-server/vote_autotest.txt` ;
 - `EMERALDWEAPONS_AUTOTEST=salles ./gradlew runServer` : relevé et rejeu des salles, rapport `run-server/salles_autotest.txt` ;
-- `EMERALDWEAPONS_AUTOTEST=vehicules ./gradlew runServer` : voitures et motos, rapport `run-server/vehicules_autotest.txt`.
+- `EMERALDWEAPONS_AUTOTEST=vehicules ./gradlew runServer` : voitures et motos, rapport `run-server/vehicules_autotest.txt` ;
+- `EMERALDWEAPONS_AUTOTEST=invasion ./gradlew runServer` : invasion, décor destructible, bouton du QG et MSPT, rapport `run-server/invasion_autotest.txt` ;
+- `EMERALDWEAPONS_AUTOTEST=armes ./gradlew runServer` : Morph Gun (poses, confinement, tir des quatre armes, munitions, décor, MSPT avec quatre tireurs), rapport `run-server/armes_autotest.txt`.
+
+Les chiffres de tir des armes sont dans `jak/gun/GunSpec.java` ; les textures des particules
+et la planche de contrôle (`build/jak/gun/planche-tir.png`) sortent de `python tools/gun_particles.py`.
 
 La vitesse des voitures et des motos se règle dans `VehicleSpec.MAX_SPEED_MS`.
 

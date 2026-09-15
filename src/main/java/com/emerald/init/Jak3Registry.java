@@ -76,6 +76,57 @@ public class Jak3Registry {
                             .clientTrackingRange(10)
                             .build("jak_vehicle"));
 
+    // --- le Morph Gun (Haven) : tirs, foudre et munitions d'eco, jamais sauvegardes
+
+    /**
+     * Tir du Blaster : 10 blocs par tique, sans modele (sa trainee le dessine). Le
+     * client calcule sa trajectoire depuis le lancer synchronise a l'apparition :
+     * aucun paquet de position ni de vitesse ensuite (la vitesse envoyee serait
+     * plafonnee a 3,9 blocs par tique), seulement le retrait.
+     */
+    public static final DeferredHolder<EntityType<?>, EntityType<com.emerald.jak.gun.GunBlasterShotEntity>> GUN_BLASTER_SHOT =
+            ENTITIES.register("gun_blaster_shot", () ->
+                    EntityType.Builder.<com.emerald.jak.gun.GunBlasterShotEntity>of(
+                                    com.emerald.jak.gun.GunBlasterShotEntity::new, MobCategory.MISC)
+                            .noSave()
+                            .sized(0.25f, 0.25f)
+                            .clientTrackingRange(8)
+                            .updateInterval(Integer.MAX_VALUE)
+                            .build("gun_blaster_shot"));
+
+    /** Boule du Peace Maker : charge au canon, puis vol chercheur ; suivie a chaque tique. */
+    public static final DeferredHolder<EntityType<?>, EntityType<com.emerald.jak.gun.GunPeaceBallEntity>> GUN_PEACE_BALL =
+            ENTITIES.register("gun_peace_ball", () ->
+                    EntityType.Builder.<com.emerald.jak.gun.GunPeaceBallEntity>of(
+                                    com.emerald.jak.gun.GunPeaceBallEntity::new, MobCategory.MISC)
+                            .noSave()
+                            .sized(0.5f, 0.5f)
+                            .clientTrackingRange(8)
+                            .updateInterval(1)
+                            .build("gun_peace_ball"));
+
+    /** Segment de foudre du Peace Maker, purement visuel, six tiques. */
+    public static final DeferredHolder<EntityType<?>, EntityType<com.emerald.jak.gun.GunArcEntity>> GUN_ARC =
+            ENTITIES.register("gun_arc", () ->
+                    EntityType.Builder.<com.emerald.jak.gun.GunArcEntity>of(
+                                    com.emerald.jak.gun.GunArcEntity::new, MobCategory.MISC)
+                            .noSave()
+                            .sized(0.1f, 0.1f)
+                            .clientTrackingRange(8)
+                            .updateInterval(Integer.MAX_VALUE)
+                            .build("gun_arc"));
+
+    /** Munition d'eco a ramasser (points de la carte, lachers des monstres). */
+    public static final DeferredHolder<EntityType<?>, EntityType<com.emerald.jak.gun.GunEcoEntity>> GUN_ECO =
+            ENTITIES.register("gun_eco", () ->
+                    EntityType.Builder.<com.emerald.jak.gun.GunEcoEntity>of(
+                                    com.emerald.jak.gun.GunEcoEntity::new, MobCategory.MISC)
+                            .noSave()
+                            .sized(0.5f, 0.5f)
+                            .clientTrackingRange(8)
+                            .updateInterval(5)
+                            .build("gun_eco"));
+
     // -------------------------------------------------------------------------
     // Structure types
     // -------------------------------------------------------------------------

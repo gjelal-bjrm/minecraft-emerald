@@ -96,6 +96,30 @@ public class ModNetwork {
                     }
                 }));
 
+        // une fleche de la croix du Morph Gun : le serveur revalide tout et choisit la forme
+        registrar.playToServer(com.emerald.jak.gun.GunSelectPayload.TYPE,
+                com.emerald.jak.gun.GunSelectPayload.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(() -> {
+                    if (context.player() instanceof ServerPlayer player) {
+                        com.emerald.jak.gun.MorphGunKeeper.onSelectRequest(player, payload);
+                    }
+                }));
+
+        // la gachette du Morph Gun (clic gauche tenu ou relache) : le serveur revalide tout (GunFire)
+        registrar.playToServer(com.emerald.jak.gun.GunTriggerPayload.TYPE,
+                com.emerald.jak.gun.GunTriggerPayload.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(() -> {
+                    if (context.player() instanceof ServerPlayer player) {
+                        com.emerald.jak.gun.GunFire.onTrigger(player, payload.down());
+                    }
+                }));
+
+        // les traces des tirs instantanes du Morph Gun (Scatter Gun, Vulcan Fury)
+        registrar.playToClient(com.emerald.jak.gun.GunTracePayload.TYPE,
+                com.emerald.jak.gun.GunTracePayload.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(
+                        () -> com.emerald.jak.gun.GunClient.accept(payload)));
+
         // « changer de zone de survol » : seul le conducteur bascule sa voiture,
         // et c'est le serveur qui decide (la donnee d'entite du mode suit)
         registrar.playToServer(VehicleModePayload.TYPE, VehicleModePayload.STREAM_CODEC,

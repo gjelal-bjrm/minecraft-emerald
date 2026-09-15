@@ -81,4 +81,38 @@ public class ModParticles {
 
     public static final DeferredHolder<ParticleType<?>, SimpleParticleType> WIND_RAIN =
             PARTICLES.register("wind_rain", () -> new SimpleParticleType(true));
+
+    // ------------------------------------------------- les particules du Morph Gun (Haven)
+    //
+    // Neuf types, un par usage, qu'aucun autre systeme n'emploie : ni le sceptre,
+    // ni l'arc, ni les meteos, ni les plantes. Textures : tools/gun_particles.py ;
+    // comportements : jak/gun/GunParticles. Toutes forcees (portee des traces de
+    // la Vulcan Fury : 80 blocs).
+
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> GUN_SCATTER_PELLET =
+            PARTICLES.register("gun_scatter_pellet", () -> new SimpleParticleType(true));
+
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> GUN_SCATTER_FLASH =
+            PARTICLES.register("gun_scatter_flash", () -> new SimpleParticleType(true));
+
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> GUN_BLASTER_BOLT =
+            PARTICLES.register("gun_blaster_bolt", () -> new SimpleParticleType(true));
+
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> GUN_BLASTER_SPARK =
+            PARTICLES.register("gun_blaster_spark", () -> new SimpleParticleType(true));
+
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> GUN_VULCAN_TRACER =
+            PARTICLES.register("gun_vulcan_tracer", () -> new SimpleParticleType(true));
+
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> GUN_VULCAN_SPARK =
+            PARTICLES.register("gun_vulcan_spark", () -> new SimpleParticleType(true));
+
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> GUN_PEACE_MOTE =
+            PARTICLES.register("gun_peace_mote", () -> new SimpleParticleType(true));
+
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> GUN_PEACE_BLAST =
+            PARTICLES.register("gun_peace_blast", () -> new SimpleParticleType(true));
+
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> GUN_ECO_GLINT =
+            PARTICLES.register("gun_eco_glint", () -> new SimpleParticleType(true));
 }

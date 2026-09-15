@@ -1,0 +1,233 @@
+package com.emerald.jak.gun;
+
+import com.emerald.main.EmeraldWeaponsMod;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.mojang.math.Axis;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.entity.EntityRenderer;
+import net.minecraft.client.renderer.entity.EntityRendererProvider;
+import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.client.renderer.texture.TextureAtlas;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.Mth;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.phys.Vec3;
+import org.joml.Matrix4f;
+import org.joml.Vector3f;
+
+/**
+ * Les rendus des entites du Morph Gun (client).
+ *
+ *  - Eco : la munition gun-ammo-* de Jak 3 (tools/jak_gun.py), a l'echelle du jeu,
+ *    qui tourne a 60 degres/s et flotte, en PLEINE LUMIERE (sa lueur propre), avec
+ *    un halo de sa couleur (textures/entity/gun/eco_halo.png) ;
+ *  - Ball : la boule du Peace Maker, deux disques face camera (violet, coeur
+ *    blanc), qui grandit pendant la charge, collee a la bouche du canon du tireur,
+ *    puis suit la spirale du vol ;
+ *  - Arc : la foudre du Peace Maker, un zigzag de deux rubans croises (violet,
+ *    coeur lavande) en melange additif, retire toutes les deux tiques.
+ */
+public final class GunRenderers {
+
+    public static final ResourceLocation HALO = ResourceLocation.fromNamespaceAndPath(EmeraldWeaponsMod.MODID,
+            "textures/entity/gun/eco_halo.png");
+    public static final ResourceLocation ORB = ResourceLocation.fromNamespaceAndPath(EmeraldWeaponsMod.MODID,
+            "textures/entity/gun/peace_orb.png");
+
+    private static final int FULL_BRIGHT = 0xF000F0;
+
+    private GunRenderers() {
+    }
+
+    /** Un carre de cote 1 centre, face camera (la pose doit deja porter l'orientation de la camera). */
+    private static void billboard(PoseStack.Pose pose, VertexConsumer out, int r, int g, int b, int a) {
+        vertex(pose, out, -0.5F, -0.5F, 0.0F, 1.0F, r, g, b, a);
+        vertex(pose, out, 0.5F, -0.5F, 1.0F, 1.0F, r, g, b, a);
+        vertex(pose, out, 0.5F, 0.5F, 1.0F, 0.0F, r, g, b, a);
+        vertex(pose, out, -0.5F, 0.5F, 0.0F, 0.0F, r, g, b, a);
+    }
+
+    private static void vertex(PoseStack.Pose pose, VertexConsumer out, float x, float y, float u, float v,
+                               int r, int g, int b, int a) {
+        out.addVertex(pose, x, y, 0.0F).setColor(r, g, b, a).setUv(u, v).setOverlay(OverlayTexture.NO_OVERLAY)
+                .setLight(FULL_BRIGHT).setNormal(pose, 0.0F, 1.0F, 0.0F);
+    }
+
+    // ================================================================ munition d'eco
+
+    public static final class Eco extends EntityRenderer<GunEcoEntity> {
+
+        public Eco(EntityRendererProvider.Context context) {
+            super(context);
+            this.shadowRadius = 0.15F;
+        }
+
+        @Override
+        public void render(GunEcoEntity eco, float yaw, float partial, PoseStack poseStack, MultiBufferSource buffers,
+                           int light) {
+            if (eco.hidden(partial)) {
+                return;
+            }
+            GunForm.Family family = eco.family();
+            JakGunModel model = JakGunModel.ammo(family);
+            double t = eco.tickCount + partial;
+            float bob = (float) (0.06 * Math.sin(t * 0.1));
+            poseStack.pushPose();
+            poseStack.translate(0.0F, bob, 0.0F);
+            poseStack.mulPose(Axis.YP.rotationDegrees((float) (t * 3.0) + eco.getYRot()));
+            if (model != null) {
+                PoseStack.Pose last = poseStack.last();
+                VertexConsumer out = buffers.getBuffer(RenderType.entityCutoutNoCull(MorphGunItemRenderer.ATLAS));
+                for (int tri = 0; tri < model.triangles; tri++) {
+                    for (int corner = 0; corner < 4; corner++) {
+                        int s = tri * 3 + Math.min(corner, 2);
+                        out.addVertex(last, model.positions[s * 3], model.positions[s * 3 + 1], model.positions[s * 3 + 2])
+                                .setColor(model.colors[s])
+                                .setUv(model.uvs[s * 2], model.uvs[s * 2 + 1])
+                                .setOverlay(OverlayTexture.NO_OVERLAY)
+                                .setLight(FULL_BRIGHT)
+                                .setNormal(last, model.normals[s * 3], model.normals[s * 3 + 1], model.normals[s * 3 + 2]);
+                    }
+                }
+            }
+            poseStack.popPose();
+
+            float mid = (model == null ? 0.2F : model.maxY * 0.5F) + bob;
+            float pulse = 0.75F + 0.25F * (float) Math.sin(t * 0.2);
+            poseStack.pushPose();
+            poseStack.translate(0.0F, mid, 0.0F);
+            poseStack.mulPose(this.entityRenderDispatcher.cameraOrientation());
+            poseStack.mulPose(Axis.YP.rotationDegrees(180.0F));
+            float size = 0.75F + 0.1F * pulse;
+            poseStack.scale(size, size, size);
+            int rgb = MorphGunItem.textColor(family);
+            billboard(poseStack.last(), buffers.getBuffer(RenderType.entityTranslucentEmissive(HALO)),
+                    (rgb >> 16) & 0xFF, (rgb >> 8) & 0xFF, rgb & 0xFF, (int) (140 * pulse));
+            poseStack.popPose();
+            super.render(eco, yaw, partial, poseStack, buffers, light);
+        }
+
+        @Override
+        public ResourceLocation getTextureLocation(GunEcoEntity entity) {
+            return HALO;
+        }
+    }
+
+    // ================================================================ boule du Peace Maker
+
+    public static final class Ball extends EntityRenderer<GunPeaceBallEntity> {
+
+        public Ball(EntityRendererProvider.Context context) {
+            super(context);
+        }
+
+        @Override
+        public void render(GunPeaceBallEntity ball, float yaw, float partial, PoseStack poseStack,
+                           MultiBufferSource buffers, int light) {
+            float grow = Math.min(1.0F, (ball.tickCount + partial) / GunSpec.PEACE_GROW);
+            float size = 0.25F + 0.45F * grow;
+            poseStack.pushPose();
+            LivingEntity shooter = ball.shooter();
+            if (!ball.launched() && shooter instanceof Player player) {
+                Vec3 muzzle = GunClient.muzzle(player, partial);
+                double x = Mth.lerp(partial, ball.xo, ball.getX());
+                double y = Mth.lerp(partial, ball.yo, ball.getY());
+                double z = Mth.lerp(partial, ball.zo, ball.getZ());
+                poseStack.translate(muzzle.x - x, muzzle.y - y, muzzle.z - z);
+            } else {
+                Vec3 offset = GunPeaceBallEntity.spiral(ball, partial);
+                poseStack.translate(offset.x, offset.y, offset.z);
+            }
+            poseStack.mulPose(this.entityRenderDispatcher.cameraOrientation());
+            poseStack.mulPose(Axis.YP.rotationDegrees(180.0F));
+            poseStack.mulPose(Axis.ZP.rotationDegrees((ball.tickCount + partial) * 25.0F));
+            VertexConsumer out = buffers.getBuffer(RenderType.entityTranslucentEmissive(ORB));
+            poseStack.pushPose();
+            poseStack.scale(size, size, size);
+            billboard(poseStack.last(), out, 150, 80, 255, 230);
+            poseStack.popPose();
+            poseStack.pushPose();
+            poseStack.scale(size * 0.45F, size * 0.45F, size * 0.45F);
+            billboard(poseStack.last(), out, 245, 230, 255, 255);
+            poseStack.popPose();
+            poseStack.popPose();
+            super.render(ball, yaw, partial, poseStack, buffers, light);
+        }
+
+        @Override
+        public ResourceLocation getTextureLocation(GunPeaceBallEntity entity) {
+            return ORB;
+        }
+    }
+
+    // ================================================================ foudre du Peace Maker
+
+    public static final class Arc extends EntityRenderer<GunArcEntity> {
+
+        public Arc(EntityRendererProvider.Context context) {
+            super(context);
+        }
+
+        @Override
+        public void render(GunArcEntity arc, float yaw, float partial, PoseStack poseStack, MultiBufferSource buffers,
+                           int light) {
+            Vector3f end = arc.end();
+            double length = Math.sqrt(end.x * end.x + end.y * end.y + end.z * end.z);
+            if (length < 1.0e-3) {
+                return;
+            }
+            float life = 1.0F - Math.min(1.0F, (arc.tickCount + partial) / GunArcEntity.LIFE);
+            RandomSource random = RandomSource.create(arc.seed() * 31L + arc.tickCount / 2);
+            int n = Math.max(3, (int) Math.ceil(length / 0.9));
+            Vec3 direction = new Vec3(end.x, end.y, end.z).normalize();
+            Vec3 u = direction.cross(new Vec3(0.0, 1.0, 0.0));
+            u = u.lengthSqr() < 1.0e-6 ? new Vec3(1.0, 0.0, 0.0) : u.normalize();
+            Vec3 v = u.cross(direction).normalize();
+            Vec3[] points = new Vec3[n + 1];
+            for (int i = 0; i <= n; i++) {
+                Vec3 base = new Vec3(end.x, end.y, end.z).scale(i / (double) n);
+                if (i > 0 && i < n) {
+                    base = base.add(u.scale((random.nextDouble() - 0.5) * 0.6)).add(v.scale((random.nextDouble() - 0.5) * 0.6));
+                }
+                points[i] = base;
+            }
+            VertexConsumer out = buffers.getBuffer(RenderType.lightning());
+            Matrix4f matrix = poseStack.last().pose();
+            ribbon(matrix, out, points, u, 0.16F, 0.55F, 0.25F, 1.0F, 0.5F * life);
+            ribbon(matrix, out, points, v, 0.16F, 0.55F, 0.25F, 1.0F, 0.5F * life);
+            ribbon(matrix, out, points, u, 0.05F, 0.95F, 0.88F, 1.0F, 0.9F * life);
+            ribbon(matrix, out, points, v, 0.05F, 0.95F, 0.88F, 1.0F, 0.9F * life);
+            super.render(arc, yaw, partial, poseStack, buffers, light);
+        }
+
+        /** Un ruban le long des points, large de 2 w dans la direction `side`, dessine des deux faces. */
+        private static void ribbon(Matrix4f m, VertexConsumer out, Vec3[] p, Vec3 side, float w,
+                                   float r, float g, float b, float a) {
+            for (int i = 0; i + 1 < p.length; i++) {
+                Vec3 a0 = p[i].subtract(side.scale(w));
+                Vec3 a1 = p[i].add(side.scale(w));
+                Vec3 b1 = p[i + 1].add(side.scale(w));
+                Vec3 b0 = p[i + 1].subtract(side.scale(w));
+                quad(m, out, a0, a1, b1, b0, r, g, b, a);
+                quad(m, out, b0, b1, a1, a0, r, g, b, a);
+            }
+        }
+
+        private static void quad(Matrix4f m, VertexConsumer out, Vec3 p0, Vec3 p1, Vec3 p2, Vec3 p3,
+                                 float r, float g, float b, float a) {
+            out.addVertex(m, (float) p0.x, (float) p0.y, (float) p0.z).setColor(r, g, b, a);
+            out.addVertex(m, (float) p1.x, (float) p1.y, (float) p1.z).setColor(r, g, b, a);
+            out.addVertex(m, (float) p2.x, (float) p2.y, (float) p2.z).setColor(r, g, b, a);
+            out.addVertex(m, (float) p3.x, (float) p3.y, (float) p3.z).setColor(r, g, b, a);
+        }
+
+        @Override
+        public ResourceLocation getTextureLocation(GunArcEntity entity) {
+            return TextureAtlas.LOCATION_BLOCKS;
+        }
+    }
+}

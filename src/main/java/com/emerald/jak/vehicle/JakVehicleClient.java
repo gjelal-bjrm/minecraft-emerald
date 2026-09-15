@@ -19,6 +19,7 @@ import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.neoforge.client.gui.VanillaGuiLayers;
+import net.neoforged.neoforge.client.settings.IKeyConflictContext;
 import net.neoforged.neoforge.client.settings.KeyConflictContext;
 import net.neoforged.neoforge.network.PacketDistributor;
 import org.lwjgl.glfw.GLFW;
@@ -29,7 +30,16 @@ import org.lwjgl.glfw.GLFW;
  *
  * LA TOUCHE NE BASCULE RIEN. Elle demande au serveur, qui verifie que le
  * joueur conduit, bascule, et renvoie le mode a tous par la donnee d'entite.
- * R par defaut, comme choisi par le joueur ; reglable dans les touches.
+ *
+ * ESPACE PAR DEFAUT, ACTIVE AU VOLANT SEULEMENT. Le jeu change de zone sur R2.
+ * R, retenu d'abord, est aussi la touche d'Iris qui recharge les shaders -- le
+ * jeu figeait a chaque montee et chaque descente --, et celle de JEI, d'Iron's
+ * Spellbooks et du retour d'artefact. Espace ne sert a rien d'autre dans une
+ * voiture (on en descend avec Maj). Le contexte AT_THE_WHEEL n'est actif qu'au
+ * volant : a pied, Espace ne fait que sauter (KeyMappingLookup ne clique que
+ * les touches actives), et le menu des touches ne signale pas de conflit avec
+ * le saut. L'identifiant a change (hover_zone, puis vehicle_zone) : options.txt
+ * garde la touche par identifiant, et R y serait restee. Reglable dans les touches.
  *
  * L'INDICE reprend le texte du jeu (#x0147, « changer de zone de survol ») et
  * dit dans quelle zone on vole : on ne voit pas toujours de la voiture si l'on
@@ -40,11 +50,24 @@ import org.lwjgl.glfw.GLFW;
  */
 public final class JakVehicleClient {
 
+    /** Au volant d'une voiture ou d'une moto, sans ecran ouvert. */
+    private static final IKeyConflictContext AT_THE_WHEEL = new IKeyConflictContext() {
+        @Override
+        public boolean isActive() {
+            return KeyConflictContext.IN_GAME.isActive() && driving(Minecraft.getInstance());
+        }
+
+        @Override
+        public boolean conflicts(IKeyConflictContext other) {
+            return this == other;
+        }
+    };
+
     public static final KeyMapping HOVER_KEY = new KeyMapping(
-            "key.emeraldweapons.hover_zone",
-            KeyConflictContext.IN_GAME,
+            "key.emeraldweapons.vehicle_zone",
+            AT_THE_WHEEL,
             InputConstants.Type.KEYSYM,
-            GLFW.GLFW_KEY_R,
+            GLFW.GLFW_KEY_SPACE,
             "key.categories.emeraldweapons");
 
     public static final float CAMERA_DISTANCE = 9.0F;
@@ -99,11 +122,12 @@ public final class JakVehicleClient {
     }
 
     /**
-     * Sans « bus = MOD » : FML 4 ignore cette valeur, marquee pour suppression,
-     * et range chaque ecouteur d'apres son evenement -- ces deux-ci sont des
-     * IModBusEvent, donc sur le bus du mod (AutomaticEventSubscriber).
+     * BUS = MOD EXPLICITE. NeoForge 21.1.193 (dev) range seul un ecouteur d'apres son
+     * evenement et marque cette valeur pour suppression ; 21.1.174, celui du profil
+     * CurseForge du joueur, refuse au demarrage un IModBusEvent ecoute sur le bus du
+     * jeu (ArcenciumBowClient, cahier §33). Ces deux-ci en sont.
      */
-    @EventBusSubscriber(modid = EmeraldWeaponsMod.MODID, value = Dist.CLIENT)
+    @EventBusSubscriber(modid = EmeraldWeaponsMod.MODID, value = Dist.CLIENT, bus = EventBusSubscriber.Bus.MOD)
     public static final class Setup {
         private Setup() {
         }

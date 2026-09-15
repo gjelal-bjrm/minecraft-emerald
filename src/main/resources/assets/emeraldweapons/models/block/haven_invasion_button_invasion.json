@@ -1,0 +1,270 @@
+{
+  "parent": "minecraft:block/block",
+  "render_type": "minecraft:solid",
+  "textures": {
+    "particle": "emeraldweapons:block/haven_vote/ecran_pied",
+    "pied": "emeraldweapons:block/haven_vote/ecran_pied",
+    "pied_avant": "emeraldweapons:block/haven_vote/ecran_pied_avant",
+    "plaque": "emeraldweapons:block/haven_vote/ecran_socle_dessus",
+    "plaque_cote": "emeraldweapons:block/haven_vote/ecran_socle_cote",
+    "collier": "emeraldweapons:block/haven_invasion_button/collier",
+    "voyant": "emeraldweapons:block/haven_vote/ecran_defi"
+  },
+  "elements": [
+    {
+      "name": "socle",
+      "from": [
+        3,
+        0,
+        3
+      ],
+      "to": [
+        13,
+        8,
+        13
+      ],
+      "faces": {
+        "north": {
+          "texture": "#pied",
+          "uv": [
+            3,
+            8,
+            13,
+            16
+          ]
+        },
+        "east": {
+          "texture": "#pied",
+          "uv": [
+            3,
+            8,
+            13,
+            16
+          ]
+        },
+        "west": {
+          "texture": "#pied",
+          "uv": [
+            3,
+            8,
+            13,
+            16
+          ]
+        },
+        "south": {
+          "texture": "#pied_avant",
+          "uv": [
+            3,
+            0,
+            13,
+            8
+          ]
+        },
+        "down": {
+          "texture": "#plaque",
+          "uv": [
+            3,
+            3,
+            13,
+            13
+          ],
+          "cullface": "down"
+        }
+      }
+    },
+    {
+      "name": "plaque",
+      "from": [
+        2,
+        8,
+        2
+      ],
+      "to": [
+        14,
+        9,
+        14
+      ],
+      "faces": {
+        "north": {
+          "texture": "#plaque_cote",
+          "uv": [
+            2,
+            0,
+            14,
+            1
+          ]
+        },
+        "east": {
+          "texture": "#plaque_cote",
+          "uv": [
+            2,
+            0,
+            14,
+            1
+          ]
+        },
+        "west": {
+          "texture": "#plaque_cote",
+          "uv": [
+            2,
+            0,
+            14,
+            1
+          ]
+        },
+        "south": {
+          "texture": "#plaque_cote",
+          "uv": [
+            2,
+            0,
+            14,
+            1
+          ]
+        },
+        "up": {
+          "texture": "#plaque",
+          "uv": [
+            2,
+            2,
+            14,
+            14
+          ]
+        },
+        "down": {
+          "texture": "#plaque",
+          "uv": [
+            2,
+            2,
+            14,
+            14
+          ]
+        }
+      }
+    },
+    {
+      "name": "collier",
+      "from": [
+        5,
+        9,
+        5
+      ],
+      "to": [
+        11,
+        10,
+        11
+      ],
+      "faces": {
+        "north": {
+          "texture": "#collier",
+          "uv": [
+            5,
+            0,
+            11,
+            1
+          ]
+        },
+        "east": {
+          "texture": "#collier",
+          "uv": [
+            5,
+            0,
+            11,
+            1
+          ]
+        },
+        "west": {
+          "texture": "#collier",
+          "uv": [
+            5,
+            0,
+            11,
+            1
+          ]
+        },
+        "south": {
+          "texture": "#collier",
+          "uv": [
+            5,
+            0,
+            11,
+            1
+          ]
+        },
+        "up": {
+          "texture": "#collier",
+          "uv": [
+            5,
+            5,
+            11,
+            11
+          ]
+        }
+      }
+    },
+    {
+      "name": "voyant",
+      "from": [
+        6,
+        10,
+        6
+      ],
+      "to": [
+        10,
+        12,
+        10
+      ],
+      "neoforge_data": {
+        "block_light": 15,
+        "sky_light": 15,
+        "ambient_occlusion": false
+      },
+      "faces": {
+        "north": {
+          "texture": "#voyant",
+          "uv": [
+            6,
+            6,
+            10,
+            8
+          ]
+        },
+        "east": {
+          "texture": "#voyant",
+          "uv": [
+            6,
+            6,
+            10,
+            8
+          ]
+        },
+        "west": {
+          "texture": "#voyant",
+          "uv": [
+            6,
+            6,
+            10,
+            8
+          ]
+        },
+        "south": {
+          "texture": "#voyant",
+          "uv": [
+            6,
+            6,
+            10,
+            8
+          ]
+        },
+        "up": {
+          "texture": "#voyant",
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ]
+        }
+      }
+    }
+  ]
+}

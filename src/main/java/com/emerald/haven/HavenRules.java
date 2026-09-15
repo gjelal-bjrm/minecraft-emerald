@@ -1,13 +1,20 @@
 package com.emerald.haven;
 
+import com.emerald.haven.invasion.HavenInvasion;
+import com.emerald.haven.invasion.HavenKeep;
+import com.emerald.haven.invasion.HavenProtection;
 import com.emerald.main.EmeraldWeaponsMod;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.DamageTypeTags;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.entity.decoration.HangingEntity;
 import net.minecraft.world.entity.player.Player;
@@ -25,11 +32,14 @@ import net.minecraft.world.level.block.FlowerPotBlock;
 import net.minecraft.world.level.block.LecternBlock;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.EntityMobGriefingEvent;
 import net.neoforged.neoforge.event.entity.EntityTeleportEvent;
 import net.neoforged.neoforge.event.entity.ProjectileImpactEvent;
+import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
+import net.neoforged.neoforge.event.entity.living.LivingExperienceDropEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
 import net.neoforged.neoforge.event.entity.player.CanPlayerSleepEvent;
@@ -49,7 +59,14 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * Les regles de la ville : on n'en sort pas, et rien ne s'y casse.
+ * Les regles de la ville : on n'en sort pas, rien ne s'y casse a la main, et seuls les monstres y blessent.
+ *
+ * L'INVASION (paquet haven.invasion) change deux choses, et deux seulement :
+ * les monstres blessent les joueurs (pas dans une zone sure), et l'on peut
+ * mourir -- sans rien perdre : poches et experience gardees, reapparition dans
+ * l'appartement. Toujours ni faim, ni combat entre joueurs, ni degat d'un
+ * joueur a un autre par un projectile ou une explosion. Les armes cassent le
+ * decor par HavenDestruction ; a la main, rien ne se casse.
  *
  * FILTREES SUR LA DIMENSION, ET INDEPENDANTES DE L'INTERRUPTEUR DU MODE.
  * « /arcencium mode off » eteint la partie ; il ne rend pas la ville cassable.
@@ -353,10 +370,19 @@ public final class HavenRules {
     }
 
     /**
-     * Pas de degats dans la ville.
+     * Les degats dans la ville : SEULS LES MONSTRES BLESSENT LES JOUEURS.
      *
-     * Sauf ceux qui passent outre l'invulnerabilite -- le vide, /kill -- : un
-     * operateur doit pouvoir tuer un joueur coince.
+     * Passent : les degats dont l'auteur est un monstre (Mob qui est un Enemy :
+     * coup de zombie, fleche de squelette, pique de phantom), sauf sur un joueur
+     * dans une zone sure (appartements, Hip Hog). Et ceux qui passent outre
+     * l'invulnerabilite -- le vide, /kill -- : un operateur doit pouvoir tuer un
+     * joueur coince.
+     *
+     * Refuses : tout ce qu'un joueur cause -- coup, projectile dont il est
+     * l'auteur, explosion qu'il a declenchee -- (ni combat entre joueurs, ni tir
+     * ami), et tout le reste (chute, noyade, feu, suffocation dans un bloc
+     * reconstruit) comme avant. Les habitants de la ville paisible ne prennent
+     * rien.
      */
     @SubscribeEvent
     public static void onIncomingDamage(LivingIncomingDamageEvent event) {
@@ -365,9 +391,66 @@ public final class HavenRules {
                 || event.getSource().is(DamageTypeTags.BYPASSES_INVULNERABILITY)) {
             return;
         }
-        if (target instanceof Player
+        if (target instanceof Player player) {
+            if (!playerMayBeHurt(player, event.getSource())) {
+                event.setCanceled(true);
+            }
+            return;
+        }
+        if (HavenInvasion.isHavenVillager(target)
                 || (target instanceof ArmorStand && guarded(event.getSource().getEntity()))) {
             event.setCanceled(true);
+        }
+    }
+
+    /**
+     * La regle des degats sur un joueur de Haven, sans evenement : le banc la lit aussi.
+     *
+     * @return vrai si le coup doit porter
+     */
+    public static boolean playerMayBeHurt(Player target, DamageSource source) {
+        Entity cause = source.getEntity();
+        Entity direct = source.getDirectEntity();
+        if (cause instanceof Player || direct instanceof Player) {
+            return false;
+        }
+        if (!(cause instanceof Mob) || !(cause instanceof Enemy)) {
+            return false;
+        }
+        return !(target.level() instanceof ServerLevel level)
+                || !HavenProtection.inSafeZone(level.getServer(), target.getX(), target.getY(), target.getZ());
+    }
+
+    // ------------------------------------------------------------- mort
+
+    /**
+     * La mort dans la ville : rien ne tombe, rien ne se perd.
+     *
+     * En LOWEST, apres tout abonne qui aurait annule la mort (ou retire l'arme du
+     * Morph Gun) : l'inventaire et l'experience sont gardes (HavenKeep) et les
+     * poches videes AVANT que le jeu ne les jette au sol. La reapparition se fait
+     * dans l'appartement (point force par HavenArrival.setRespawn), ou Clone rend tout.
+     */
+    @SubscribeEvent(priority = EventPriority.LOWEST)
+    public static void onPlayerDeath(LivingDeathEvent event) {
+        if (event.getEntity() instanceof ServerPlayer player && !player.isSpectator() && Haven.is(player.level())) {
+            HavenKeep.stash(player);
+        }
+    }
+
+    /** L'experience d'un joueur mort dans la ville ne tombe pas : elle est gardee. */
+    @SubscribeEvent(priority = EventPriority.LOWEST)
+    public static void onPlayerExperienceDrop(LivingExperienceDropEvent event) {
+        if (event.getEntity() instanceof Player player && Haven.is(player.level())) {
+            event.setCanceled(true);
+        }
+    }
+
+    /** Le joueur reapparu retrouve ce qui a ete garde a sa mort. */
+    @SubscribeEvent
+    public static void onClone(PlayerEvent.Clone event) {
+        if (event.isWasDeath() && event.getEntity() instanceof ServerPlayer player) {
+            HavenKeep.restore(player);
         }
     }
 

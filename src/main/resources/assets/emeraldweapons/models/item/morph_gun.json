@@ -1,0 +1,15 @@
+{
+  "parent": "minecraft:builtin/entity",
+  "_comment": "Rendu par com.emerald.jak.gun.MorphGunItemRenderer. Ici l'ECHELLE seule : 1/0,9375 en troisieme personne (1 m de Jak = 1 bloc, le joueur est dessine a 0,9375), 0,65 en premiere personne (cadrage reduit). Orientation et prise par famille : GunHold.",
+  "gui_light": "front",
+  "display": {
+    "thirdperson_righthand": { "rotation": [0, 0, 0], "translation": [0, 0, 0], "scale": [1.0666667, 1.0666667, 1.0666667] },
+    "thirdperson_lefthand":  { "rotation": [0, 0, 0], "translation": [0, 0, 0], "scale": [1.0666667, 1.0666667, 1.0666667] },
+    "firstperson_righthand": { "rotation": [0, 0, 0], "translation": [0, 0, 0], "scale": [0.65, 0.65, 0.65] },
+    "firstperson_lefthand":  { "rotation": [0, 0, 0], "translation": [0, 0, 0], "scale": [0.65, 0.65, 0.65] },
+    "gui":    { "rotation": [0, 0, 0], "translation": [0, 0, 0], "scale": [1, 1, 1] },
+    "ground": { "rotation": [0, 0, 0], "translation": [0, 0, 0], "scale": [0.5, 0.5, 0.5] },
+    "fixed":  { "rotation": [0, 0, 0], "translation": [0, 0, 0], "scale": [1, 1, 1] },
+    "head":   { "rotation": [0, 0, 0], "translation": [0, 0, 0], "scale": [1, 1, 1] }
+  }
+}

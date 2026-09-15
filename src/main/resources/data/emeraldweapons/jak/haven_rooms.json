@@ -28,7 +28,7 @@
     "hq.vote.floor : cellule de sol libre proposee pour l'element de vote, pres du comptoir."
   ],
   "volume": "ctyport",
-  "sha1": "27b452a6e3d5770cfb3b1efd580f31e385d37410",
+  "sha1": "90057df845849a98fa66b48374b3f1ac29964502",
   "origin": [-434.7777, -57.50163, 1126.3511],
   "cell": 1.0,
   "dims": [1227, 158, 695],

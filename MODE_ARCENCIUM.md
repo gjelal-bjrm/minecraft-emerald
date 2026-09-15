@@ -45,9 +45,21 @@ de Jak 3, dimension `emeraldweapons:haven`) : dans un monde neuf, ou apres
 `/arcencium setup` dans un monde qui a deja sa ville. Un monde ancien sans
 ville commence au village, comme avant.
 
-- **Dans la ville** : mode aventure, ni degats, ni faim, ni combat, pas de
-  sortie. L'inventaire n'est pas touche ; le mode de jeu d'origine est rendu
-  au village.
+- **Dans la ville** : mode aventure (rien ne se casse a la main), ni faim, ni
+  combat entre joueurs, pas de sortie ; seuls les monstres de l'invasion
+  blessent (decision du joueur, 13 sept.). L'inventaire n'est pas touche ; le
+  mode de jeu d'origine est rendu au village.
+- **Le port** (`tools/jak_voxelize.py`, lecons 1 a 12) : collision de CPO, HHG
+  et GGA, dessous et corps des tours repris du decor, eau, rideau de barrieres.
+  Cables rendus (13 sept., soir) : l'elagage des pieces detachees avait retire
+  les cables des tours du large, les deux catenaires et les rails de glisse sous
+  les arcades (285 pieces, 1 338 blocs, en pointille dans la collision), et le
+  joueur y tenait. Ils sont repris du decor visuel en lignes continues de blocs
+  de mur (85 tubes, 2 248 blocs, Y 85 a 126), hors de toute zone protegee et de
+  toute cellule d'apparition au sol. La pointe de la tour du large ouest,
+  l'applique du bras central et les 14 lampes du stand de tir (pendues a leur
+  plafond par une tige) sont gardees nommement (`KEEP_DETACHED`). Plus aucune
+  piece visible ne se retire sans rendu montre au joueur.
 - **Appartements** : les 3 garages du bras ouest (`haven_rooms.json`). On
   remplit un appartement jusqu'a 3 joueurs, puis le suivant ; au-dela de 9, le
   moins rempli. Aucune place n'est liberee tant que le lobby est ouvert. Le
@@ -67,12 +79,27 @@ ville commence au village, comme avant.
   PARTI et ses joueurs partent au village.
 - **Voitures** : cara, carb et carc devant les appartements 1, 2 et 3, solides,
   indestructibles, trois places, conduite a 40 m/s au plus comme dans Jak 3
-  (`VehicleSpec.MAX_SPEED_MS`, choix du joueur). Touche R : rase-sol ou voie
+  (`VehicleSpec.MAX_SPEED_MS`, choix du joueur). Espace : rase-sol ou voie
   haute, a la hauteur ou le jeu tient ses voitures : carte de trafic en
   cellule 75 (Y 80), neuf blocs au-dessus de la rue, plancher virtuel 1,5 bloc
   plus haut (loi de hvehicle-physics.gc reprise telle quelle). Une voiture
   tombee a l'eau ou sortie de la ville revient sur sa place ; toutes
   disparaissent au depart.
+  Touche (13 sept.) : R2 dans le jeu ; R d'abord, abandonnee parce qu'elle
+  recharge aussi les shaders d'Iris (le jeu figeait a chaque changement de
+  zone) et sert a JEI, Iron's Spellbooks et au retour d'artefact. Espace, dans
+  un contexte actif au volant seulement (`JakVehicleClient.AT_THE_WHEEL`) : a
+  pied, Espace ne fait que sauter, et le menu des touches ne signale pas de
+  conflit. Nouvel identifiant `key.emeraldweapons.vehicle_zone` : options.txt
+  gardait R sous l'ancien.
+  Arrets nets en pleine course (13 sept.) : le serveur rangeait le deplacement
+  recu du conducteur dans getDeltaMovement, et ServerEntity le renvoyait tous
+  les trois ticks a tous, conducteur compris (ClientboundSetEntityMotionPacket,
+  applique sans garde par Entity.lerpMotion). Un tick du serveur sans paquet du
+  conducteur -- horloges qui derivent, a-coup du client -- valait zero : la
+  voiture s'arretait. Le serveur garde maintenant ce deplacement a part
+  (vitesse nulle, comme Boat), et le client qui conduit ignore les paquets de
+  vitesse (`JakVehicleEntity.lerpMotion`).
 - **Motos monoplaces** (decision du joueur, 13 sept.) : bikea, bikeb et bikec a
   cote des voitures des appartements 1, 2 et 3, sur la place `bike` de
   `haven_rooms.json` (air 3 x 3 x 7 sur sol plein, du cote +z de la voiture, une
@@ -82,7 +109,7 @@ ville commence au village, comme avant.
   conduite identique) : masse 2, poussee 50, reponse 60, admission 1,5, frein
   3,5, gain 4, sonde 5 m, ressort 0,3, 40 m/s ; seuls la hauteur des propulseurs
   et le siege different. Memes lois de rase-sol et de voie haute que les
-  voitures, meme touche R, sans le saut de Jak 3. Boites : trois carres au tiers
+  voitures, meme touche Espace, sans le saut de Jak 3. Boites : trois carres au tiers
   de la longueur (1,77 a 1,94 bloc), sans vide entre eux. Registre et marque
   par place : `appartement_n` pour la voiture, `appartement_n_moto` pour la moto.
   Hauteur pilotee corrigee (13 sept.) : la moto pilotee restait vers 3,1 blocs
@@ -98,6 +125,60 @@ ville commence au village, comme avant.
 - **Amenagement des appartements** : releve en jeu (`/arcencium haven salle
   <n> capture` ou la Sonde), copie dans le mod par
   `tools/jak_zone_apply.py`, rejoue a chaque pose de la ville.
+- **Invasion** (`haven/invasion`, carte validee `data/emeraldweapons/jak/haven_invasion.json`) :
+  zombies, villageois zombies, squelettes (casque de fer incassable) et phantoms
+  (Y 100 a 155), jamais de robots KG. Apparitions autour des joueurs dans les
+  tuiles au sol de la carte, a plus de 24 blocs des portes et de l'entree du bar,
+  de 16 a 40 blocs du joueur, hors de sa vue a moins de 24 blocs (hors de vue
+  jusqu'a 40, les places degagees du bar et du bras ouest ne se remplissaient
+  pas : 3 et 4 monstres apres 20 s) ; plafonds 28 au sol + 4 phantoms
+  par joueur, chaque monstre comptant pour le joueur le plus proche (compte dans un
+  rayon, ceux qui flanaient au-dela laissaient leur place, puis revenaient tous en
+  combat), 120 en tout, 6 apparitions par joueur et par seconde, retrait a 72 blocs
+  (15 sept.). Le premier reglage (12 + 2 dans 64 blocs,
+  56 en tout, apparitions de 24 a 56 blocs) a paru vide en jeu le 14 sept. : 27
+  monstres, plantes hors de vue. Au soleil fige, noActionTime montait sans joueur a
+  moins de 32 blocs, et RandomStrollGoal refusait de flaner ; `HavenInvasion.sweep`
+  le remet a zero. Zones
+  sures (appartements, Hip Hog) : aucun monstre n'y entre ni n'y blesse. Mort :
+  reapparition dans l'appartement, poches et experience gardees (`HavenKeep`).
+  Soleil fige sans brulure (`Level.isDay()` faux a heure fixe).
+- **Bouton du QG** (bout du comptoir, cellule 333 69 167) : bascule toute la ville
+  INVASION / PAISIBLE (villageois des 7 regions, invulnerables, sans metier, 24 par
+  joueur et 96 en tout, comptes de meme, aux memes places hors de vue ; 10 par
+  joueur et 40 en tout d'abord, 13 vus en jeu), 2 s de delai global ; retour en invasion a chaque
+  reouverture. Commande `/arcencium haven invasion etat | invasion | paisible | reconstruire`.
+- **Decor destructible** (`HavenDestruction`, `HavenProtection`) : seulement par les
+  armes, sans butin, retour a l'identique (etat et NBT) apres 10 a 15 s, 96 casses
+  et 256 reconstructions par tique au plus. Jamais : appartements, bar et parvis,
+  borne, bouton, places des vehicules, rideau, et toute cellule y <= 57 (sous l'eau).
+- **Morph Gun, jalon A** (`jak/gun`, decisions du joueur du 13 sept.) : un seul
+  objet dont la forme et les quatre reserves vivent dans son composant ; donne a
+  l'arrivee, retire par tous les chemins de sortie (voyage de dimension, jet,
+  menus, sacs, coffre de l'Ender, mort, deconnexion, lobby ferme), modele de Jak 3
+  en main (1 m = 1 bloc en troisieme personne, 0,65 en premiere). Croix de Jak 3 sur
+  les fleches, tir au clic gauche (`GunTriggerPayload`, redit toutes les 5 tiques,
+  relachement perdu borne a 10 tiques). Quatre armes de base, chiffres de GOAL
+  convertis (`GunSpec`) : Scatter Gun (appui, 22 tiques, 19 sondes de 15 blocs en
+  3 tiques, une touche par cible), Blaster (appui avec attente de 2 tiques, 6,4
+  tiques en moyenne par compteur, tir de 10 blocs/tique pendant 60 tiques), Vulcan
+  Fury (canon tournant 800/600 degres/s2 jusqu'a 1200 degres/s, delai de 8 a 2
+  tiques, rayon de 80 blocs, dispersion 1,1 degre ; rotation des cylindres deduite
+  des tiques de gachette du composant), Peace Maker (charge au canon d'au moins 6
+  tiques, eco rendue si interrompue, boule chercheuse de 5,4 blocs/tique, impact a
+  30 tiques, 16 cibles dans 10 blocs, foudre toutes les 2 tiques). Regle des
+  degats : 1 point de Jak = 4 PV (un grunt de Jak 3 a 5 points, un zombie 20 PV).
+  Cibles : seulement les monstres de l'invasion ; ni joueur, ni habitant, ni
+  explosion vanilla. Decor casse : Blaster 4 blocs dans 1,2, Vulcan le bloc touche,
+  Scatter 6 par tir, Peace Maker 40 dans un rayon de 3. Reserves (rouge 100, jaune
+  200, bleue 200, sombre 15, pleines a la reapparition) ; reserve vide : bascule
+  jaune 1, rouge 1, bleu 1, sombre 1 (`target-gun.gc:585-631`), chargeur de la
+  famille a l'echelle 0. Munitions d'eco (modeles gun-ammo, 10/5/10/1) aux 12
+  points, de retour apres 30 s ; une lachee par monstre tue, couleur ponderee par
+  la part manquante du tueur (regle ammo-random), 20 s de vie, retirees en
+  paisible. HUD (`GunHud`) au-dessus des coeurs, masque en voiture. Particules :
+  neuf types neufs (`tools/gun_particles.py`, planche `build/jak/gun/planche-tir.png`),
+  sons de Minecraft. Banc : `EMERALDWEAPONS_AUTOTEST=armes`.
 
 ### Conditions de fin
 
@@ -5461,13 +5542,21 @@ et les cadeaux passent tous par la. L'Etabli a sertir garde ses cases : on y
 POSE les Eclats et la rune, c'est la mise. Les trophees sont coupes a la
 source (`trophymanager-server.toml`, dropFromMobs = false).
 
-Deux pieges de l'API du sac, lus au banc puis dans le bytecode :
+Trois pieges de l'API du sac, lus au banc puis dans le bytecode :
 
 1. **Un sac neuf n'a pas d'identite.** Tant que la pile ne porte pas d'UUID
    de contenu, `getUpgradeHandler()` rend un conteneur factice a zero case
    (« Slot 0 not in valid range - [0,0) »). `setContentsUuid` d'abord.
 2. Le nombre de cases s'ecrit sur la pile a la premiere ouverture ;
    `setSlotNumbers` le fait a la main.
+3. **Les teintes sont en ARGB** (15 sept., « notre sac a dos est mal
+   texture ») : `ModItemColors` rend la couleur stockee telle quelle, les
+   couleurs par defaut du sac valent 0xFF......, et ItemRenderer 1.21.1 lit
+   l'alpha. Nos 0x2F8F5A et 0x9CE8FF sans alpha rendaient la toile
+   transparente : il ne restait que les attaches grises. Teintes posees en
+   0xFF2F8F5A / 0xFF9CE8FF ; le nom garde du RVB (TextColor s'ecrit en
+   #RRGGBB). Un sac deja donne garde ses anciennes couleurs : `/arcencium sac`
+   en redonne un.
 
 `verify_sac.sh` : sac donne par `/arcencium sac`, « dans le dos » ; six
 piles jetees aux pieds ; dix secondes plus tard, Eclats 5, Pierres 2, fer 8

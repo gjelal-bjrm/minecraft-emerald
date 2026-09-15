@@ -63,7 +63,8 @@ CE QUE LES ESSAIS EN JEU ONT APPRIS, dans l'ordre.
    pendues du stand de tir. Aucune regle ajoutee ne les fabriquait. On rend
    d'abord leur corps aux tours, depuis le decor visuel et dans leur seule
    emprise ; puis on retire tout ce qui ne touche ni la ville ni l'eau, en
-   26-connexite. Ce qui plonge dans l'eau reste, meme petit : le joueur l'a
+   26-connexite -- sauf les cables et les pieces nommees, que la lecon 12
+   rend. Ce qui plonge dans l'eau reste, meme petit : le joueur l'a
    voulu pour une colonne isolee de 11 blocs du bassin. Les sommets de colonne
    se calculent APRES cet elagage : un anneau retire laissait sinon le toit de
    sa tour classe en sol.
@@ -88,6 +89,19 @@ CE QUE LES ESSAIS EN JEU ONT APPRIS, dans l'ordre.
    ecrites en barrier[waterlogged=true], qui bloque autant et reste de l'eau
    a l'oeil.
    Les bouts des bras sont mures au bloc de mur.
+
+12. LES CABLES FONT LA VILLE. L'elagage de la lecon 9 avait emporte, avec
+   quelques eclats, les cables qui partent des deux tours du large vers le bord
+   sud, les deux catenaires et les rails de glisse sous les arcades : 1 338 blocs
+   en 285 pieces. Le joueur les a vus disparaitre, et il y tenait. La collision
+   ne les donnait qu'en pointille ; on les reprend donc du decor visuel, APRES
+   l'elagage : l'axe de chaque tube (ses anneaux de sommets), pose en ligne de
+   blocs de mur reliees par leurs faces, les troncons voisins raccordes. Les
+   autres pieces visibles reviennent aussi, nommees dans KEEP_DETACHED : la
+   pointe de la tour du large ouest, l'applique du bras central, et les quatorze
+   lampes du stand de tir, pendues a leur plafond par une tige. Aucune regle
+   de taille ne separe un eclat d'une piece voulue : on regarde les rendus (de
+   cote et de dessus, pieces retirees en couleur) avant d'elaguer quoi que ce soit.
 
 Usage :
     python tools/jak_voxelize.py CPO --name ctyport --with HHG GGA --rooms haven_rooms.json
@@ -180,6 +194,33 @@ PIPE_RISE = 40        # cellules au-dessus du sommet
 # palais tombe, les catenaires), les debris du palais, les decalcomanies et les
 # lumieres, qui ne sont que des aplats ou des points.
 TOWER_SKIP = ("cable", "fallen-palace", "decal", "stain", "blotch", "lamp", "light", "bulb")
+
+# Les cables du port, repris du decor visuel APRES l'elagage (voir la lecon 12) :
+# ceux qui partent des tours du large et les catenaires (city-port-tower-cable-01),
+# et les rails de glisse sous les arcades (city-port-smallpipe-straight-grind-01).
+# L'axe de chaque tube est pose en ligne continue de blocs de mur.
+CABLE_MESHES = ("city-port-tower-cable-01", "city-port-smallpipe-straight-grind-01")
+# Deux bouts de tubes a moins de cette distance, en unites du jeu, sont relies :
+# un cable du jeu est une suite de troncons droits qui ne partagent aucun sommet.
+CABLE_JOIN = 1.5
+# L'ecart, le long de l'axe, au-dela duquel deux sommets ne sont plus du meme anneau.
+CABLE_RING = 0.3
+
+# Les pieces detachees gardees malgre l'elagage (voir la lecon 12), en cellules :
+# emprise en x, en y, en z, et s'il faut les pendre. Une piece n'est gardee que si
+# elle tient entiere dans sa boite ; une piece a pendre recoit une tige de mur
+# jusqu'au bloc au-dessus d'elle, s'il est a moins de HANG_REACH cellules.
+KEEP_DETACHED = [
+    # les lampes du stand de tir (gun-hanging-lamp) : le decor les accroche au
+    # plafond en y 80, la collision s'arrete une cellule dessous
+    ("lampes pendues du stand de tir", (720, 830), (76, 79), (15, 75), True),
+    # la pointe de la couronne de la tour (city-port-metal-green-main-side), a une
+    # cellule de sa couronne
+    ("pointe de la tour du large ouest", (348, 350), (113, 127), (364, 366), False),
+    # l'applique contre le mur du bras central (city-port-lamp-wallsconse-01)
+    ("applique du bras central", (660, 661), (72, 76), (106, 108), False),
+]
+HANG_REACH = 4
 
 # Les bouts des bras, a murer (voir la lecon 11), en cellules : x, y, z. Le
 # mur monte du sol du quai (cellule 61) jusqu'a la hauteur donnee.
@@ -723,7 +764,176 @@ def complete_towers(voxels, forced, dims, origin, cell, floor_y):
     return report
 
 
-def prune_detached(voxels, forced, dims, water_y, keep_min):
+def cable_axes(verts, faces, names):
+    """Les axes des cables du decor, en polylignes (voir la lecon 12).
+
+    Un tube est une composante de triangles relies par leurs sommets. On
+    projette ses sommets sur sa direction principale et on les regroupe en
+    anneaux, tant que les projections se suivent a moins de CABLE_RING ; le
+    centre de chaque anneau est un point de l'axe. Un troncon droit du jeu n'a
+    que ses deux anneaux de bout.
+    """
+    chosen = [i for i, n in enumerate(names) if any(m in n for m in CABLE_MESHES)]
+    parent = {}
+
+    def find(key):
+        root = key
+        while parent.setdefault(root, root) != root:
+            root = parent[root]
+        while parent[key] != root:
+            parent[key], key = root, parent[key]
+        return root
+
+    def rounded(p):
+        return (round(p[0], 2), round(p[1], 2), round(p[2], 2))
+
+    for i in chosen:
+        keys = [rounded(verts[k]) for k in faces[i]]
+        for other in keys[1:]:
+            a, b = find(keys[0]), find(other)
+            if a != b:
+                parent[a] = b
+    groups = {}
+    for i in chosen:
+        for k in faces[i]:
+            key = rounded(verts[k])
+            groups.setdefault(find(key), set()).add(key)
+
+    axes = []
+    for points in groups.values():
+        pts = list(points)
+        n = len(pts)
+        c = [sum(p[a] for p in pts) / n for a in range(3)]
+        cov = [[sum((p[a] - c[a]) * (p[b] - c[b]) for p in pts) for b in range(3)] for a in range(3)]
+        spans = [max(p[a] for p in pts) - min(p[a] for p in pts) for a in range(3)]
+        longest = spans.index(max(spans))
+        # la puissance iteree part de l'axe le plus etendu, jamais d'un vecteur
+        # qui pourrait etre orthogonal a la direction cherchee
+        e = [1.0 if a == longest else 0.3137 for a in range(3)]
+        norm = 1.0
+        for _ in range(60):
+            e = [sum(cov[a][b] * e[b] for b in range(3)) for a in range(3)]
+            norm = math.sqrt(sum(x * x for x in e))
+            if norm < 1e-12:
+                break
+            e = [x / norm for x in e]
+        if norm < 1e-12:
+            continue
+        along = sorted((sum((p[a] - c[a]) * e[a] for a in range(3)), p) for p in pts)
+        if along[-1][0] - along[0][0] < 1.0:
+            continue
+        rings = [[along[0][1]]]
+        for (t, p), (prev, _) in zip(along[1:], along):
+            if t - prev > CABLE_RING:
+                rings.append([])
+            rings[-1].append(p)
+        axes.append([tuple(sum(p[a] for p in ring) / len(ring) for a in range(3)) for ring in rings])
+    return axes
+
+
+def voxel_line(a, b):
+    """Les cellules que traverse le segment a-b, reliees par leurs faces.
+
+    Traversee d'Amanatides et Woo : on passe d'une cellule a la voisine par la
+    face que le segment franchit en premier. Le nombre de pas est l'ecart de
+    Manhattan entre les deux cellules ; a egalite de franchissement, on ne
+    choisit qu'un axe qui doit encore avancer.
+    """
+    cell = [int(math.floor(a[i])) for i in range(3)]
+    last = [int(math.floor(b[i])) for i in range(3)]
+    step = [0, 0, 0]
+    t_max = [math.inf] * 3
+    t_delta = [math.inf] * 3
+    for i in range(3):
+        d = b[i] - a[i]
+        if d > 0:
+            step[i] = 1
+            t_max[i] = (math.floor(a[i]) + 1 - a[i]) / d
+            t_delta[i] = 1.0 / d
+        elif d < 0:
+            step[i] = -1
+            t_max[i] = (math.floor(a[i]) - a[i]) / d
+            t_delta[i] = -1.0 / d
+    cells = [tuple(cell)]
+    for _ in range(sum(abs(last[i] - cell[i]) for i in range(3))):
+        i = min((k for k in range(3) if cell[k] != last[k]), key=lambda k: t_max[k])
+        cell[i] += step[i]
+        t_max[i] += t_delta[i]
+        cells.append(tuple(cell))
+    return cells
+
+
+def lay_cables(voxels, forced, dims, origin, cell):
+    """Pose les cables du port en lignes continues de mur (voir la lecon 12).
+
+    Chaque axe devient une suite de cellules reliees par leurs faces, et les
+    bouts de troncons voisins sont relies de la meme facon. Rien ne remplace un
+    bloc, rien ne sort de la grille. Rend les cellules posees.
+    """
+    path = os.path.join(LEVELS, "ctyport", "ctyport-background.glb")
+    if not os.path.isfile(path):
+        sys.exit("decor des cables absent : %s" % path)
+    verts, faces, names = mesh_triangles(path, with_names=True)
+    axes = cable_axes(verts, faces, names)
+
+    def to_cell(p):
+        return tuple((p[i] - origin[i]) / cell for i in range(3))
+
+    segments = []
+    for line in axes:
+        pts = [to_cell(p) for p in line]
+        segments.extend(zip(pts, pts[1:]))
+    ends = [(k, to_cell(p)) for k, line in enumerate(axes) for p in (line[0], line[-1])]
+    joins = 0
+    for i, (ka, pa) in enumerate(ends):
+        for kb, pb in ends[i + 1:]:
+            if ka != kb and math.dist(pa, pb) <= CABLE_JOIN / cell:
+                segments.append((pa, pb))
+                joins += 1
+    posed = []
+    for a, b in segments:
+        for key in voxel_line(a, b):
+            if not all(0 <= key[i] < dims[i] for i in range(3)):
+                continue
+            if key in voxels or key in forced:
+                continue
+            forced[key] = WALL
+            posed.append(key)
+    print("  cables    %d tubes, %d raccords, %d blocs de mur" % (len(axes), joins, len(posed)))
+    return posed
+
+
+def hang(voxels, forced, members, dims):
+    """Pend une piece au bloc au-dessus d'elle par une tige de mur ; rend la longueur de la tige.
+
+    On prend la colonne de la piece dont le bloc du dessus est le plus proche,
+    puis la plus proche du centre de la piece.
+    """
+    cx = sum(p[0] for p in members) / len(members)
+    cz = sum(p[2] for p in members) / len(members)
+    tops = {}
+    for (x, y, z) in members:
+        if tops.get((x, z), -1) < y:
+            tops[(x, z)] = y
+    best = None
+    for (x, z), top in tops.items():
+        for gap in range(1, HANG_REACH + 1):
+            if top + gap >= dims[1]:
+                break
+            if (x, top + gap, z) in voxels or (x, top + gap, z) in forced:
+                rank = (gap, (x - cx) ** 2 + (z - cz) ** 2)
+                if best is None or rank < best[0]:
+                    best = (rank, x, top, z)
+                break
+    if best is None:
+        return 0
+    (gap, _), x, top, z = best
+    for y in range(top + 1, top + gap):
+        forced[(x, y, z)] = WALL
+    return gap - 1
+
+
+def prune_detached(voxels, forced, dims, water_y, keep_min, keep=()):
     """Retire ce qui ne touche ni la ville ni l'eau, en 26-connexite (lecon 9).
 
     Garde la plus grande composante -- la ville -- et toute composante dont le
@@ -734,11 +944,14 @@ def prune_detached(voxels, forced, dims, water_y, keep_min):
 
     Le seuil keep_min ne vaut que pour les pieces qui ne touchent pas l'eau :
     elles ne restent qu'a partir de keep_min blocs. Dans le port, la plus
-    grosse en fait 198 (x 528 a 725, cellules 106 a 120) : toutes partent. Ce sont
-    des pieces que la collision a detachees de ce qui les portait : rails de
-    glisse, catenaires, lampes pendues du stand de tir, eclats.
+    grosse en fait 198 (x 528 a 725, cellules 106 a 120). Ce sont des eclats, et
+    les cables et rails en pointille que lay_cables repose en entier apres
+    (lecon 12).
 
-    Rend la liste des pieces retirees : (taille, boite, plus bas bloc).
+    Une piece qui tient entiere dans une boite de `keep` (KEEP_DETACHED) reste
+    aussi, et recoit sa tige si la boite est a pendre.
+
+    Rend la liste des pieces retirees : (taille, boite, plus bas bloc, cellules).
     """
     solids = set(voxels) | set(forced)
     label = {}
@@ -765,6 +978,7 @@ def prune_detached(voxels, forced, dims, water_y, keep_min):
     main = max(range(len(comps)), key=lambda c: len(comps[c]))
     removed = []
     kept = []
+    named = {}
     for cid, members in enumerate(comps):
         if cid == main:
             continue
@@ -773,16 +987,26 @@ def prune_detached(voxels, forced, dims, water_y, keep_min):
         if low <= water_y or len(members) >= keep_min:
             kept.append(len(members))
             continue
+        entry = next((e for e in keep if all(e[1][0] <= p[0] <= e[1][1] and e[2][0] <= p[1] <= e[2][1]
+                                             and e[3][0] <= p[2] <= e[3][1] for p in members)), None)
+        if entry is not None:
+            kept.append(len(members))
+            stem = hang(voxels, forced, members, dims) if entry[4] else 0
+            count, blocks, stems = named.get(entry[0], (0, 0, 0))
+            named[entry[0]] = (count + 1, blocks + len(members), stems + stem)
+            continue
         for p in members:
             voxels.pop(p, None)
             forced.pop(p, None)
         box = (min(p[0] for p in members), max(p[0] for p in members),
                low, max(p[1] for p in members),
                min(p[2] for p in members), max(p[2] for p in members))
-        removed.append((len(members), box, low))
+        removed.append((len(members), box, low, members))
     print("  elagage   %d composantes : ville %d blocs, %d gardees (dans l'eau ou grosses) %s, %d retirees (%d blocs)" % (
         len(comps), len(comps[main]), len(kept), sorted(kept, reverse=True), len(removed),
         sum(r[0] for r in removed)))
+    for label, (count, blocks, stems) in named.items():
+        print("  gardee    %-34s %3d piece(s), %4d blocs, tiges %d blocs" % (label, count, blocks, stems))
     return removed, len(comps), 1 + len(kept)
 
 
@@ -1288,10 +1512,13 @@ def main():
                         help="taille minimale d'une piece detachee gardee si elle ne touche pas l'eau "
                              "(celles qui plongent dans l'eau restent toutes) ; -1 n'elague rien")
     parser.add_argument("--dump-pruned", help="fichier JSON ou lister les pieces retirees")
+    parser.add_argument("--dump-cables", help="fichier JSON ou lister les cellules des cables poses")
     parser.add_argument("--no-haven", action="store_true",
                         help="sans les retouches du port pour la dimension haven : tours, bouts "
                              "des bras, appartements, poches, rideau de barrieres")
     parser.add_argument("--rooms", help="ecrire les salles et le QG dans ce JSON (a cote du volume)")
+    parser.add_argument("--out-dir", default=OUT_DIR,
+                        help="dossier du volume et des salles (defaut : les donnees du mod)")
     args = parser.parse_args()
 
     codes = [args.code] + list(args.extra)
@@ -1350,12 +1577,18 @@ def main():
     if haven:
         complete_towers(voxels, forced, dims, origin, args.cell, floor_y)
     if args.keep_detached >= 0:
-        removed, before, after = prune_detached(voxels, forced, dims, water_y, args.keep_detached)
+        removed, before, after = prune_detached(voxels, forced, dims, water_y, args.keep_detached,
+                                                KEEP_DETACHED if haven else ())
         if args.dump_pruned:
             with open(args.dump_pruned, "w", encoding="utf-8") as handle:
                 json.dump({"components_before": before, "components_after": after,
-                           "removed": [{"size": n, "box": list(box), "low": low}
-                                       for n, box, low in removed]}, handle, indent=1)
+                           "removed": [{"size": n, "box": list(box), "low": low, "cells": sorted(cells)}
+                                       for n, box, low, cells in removed]}, handle, indent=1)
+    if haven:
+        cables = lay_cables(voxels, forced, dims, origin, args.cell)
+        if args.dump_cables:
+            with open(args.dump_cables, "w", encoding="utf-8") as handle:
+                json.dump({"cells": sorted(cables)}, handle)
     rooms = hq = None
     if haven:
         close_ends(voxels, forced)
@@ -1375,14 +1608,14 @@ def main():
                if haven else frozenset())
     runs = encode(voxels, dims, quay_y, water_y, args.depth, tops, sea, edges, forced,
                   pockets, barrier_y)
-    os.makedirs(OUT_DIR, exist_ok=True)
-    path = os.path.join(OUT_DIR, "%s.jakv" % args.name)
+    os.makedirs(args.out_dir, exist_ok=True)
+    path = os.path.join(args.out_dir, "%s.jakv" % args.name)
     packed, digest = write_blob(path, dims, runs, origin, args.cell)
     print("  plages    %d" % len(runs))
     print("  sha1      %s" % digest)
     print("  fichier   %s  (%.1f Mo compresses)" % (path, packed / 1048576.0))
     if haven and args.rooms:
-        write_rooms(os.path.join(OUT_DIR, args.rooms), rooms, hq,
+        write_rooms(os.path.join(args.out_dir, args.rooms), rooms, hq,
                     os.path.splitext(os.path.basename(path))[0], origin, args.cell, dims, digest)
 
 

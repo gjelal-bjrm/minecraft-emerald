@@ -58,8 +58,13 @@ import java.util.Map;
 public final class ArcenciumBackpack {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(EmeraldWeaponsMod.MODID);
-    private static final int MAIN = 0x2F8F5A;      // le vert de l'Arcencium
-    private static final int ACCENT = 0x9CE8FF;    // le bleu clair du mode
+    // TEINTES EN ARGB OPAQUE. En 1.21.1, ItemRenderer lit aussi l'alpha de la teinte
+    // (FastColor.ARGB32.alpha) : sans 0xFF, les faces teintees du sac -- sa toile --
+    // etaient transparentes, et il ne restait que les attaches grises (« notre sac a dos
+    // est mal texture », 15 sept.). Le nom garde une couleur RVB : TextColor ecrit sa
+    // valeur en #RRGGBB, et « #FF9CE8FF » ne se relirait pas.
+    private static final int MAIN = 0xFF2F8F5A;      // le vert de l'Arcencium
+    private static final int ACCENT = 0xFF9CE8FF;    // le bleu clair du mode
     private static final String CURIOS_BACK = "back";
 
     /** Un objet par mod : sous « par mod », c'est le mod qui compte, pas l'objet. */
@@ -89,7 +94,7 @@ public final class ArcenciumBackpack {
     public static ItemStack make() {
         ItemStack pack = new ItemStack(net.p3pp3rf1y.sophisticatedbackpacks.init.ModItems.NETHERITE_BACKPACK.get());
         pack.set(DataComponents.CUSTOM_NAME, Component.literal("Sac d'Arcencium")
-                .withStyle(style -> style.withColor(ACCENT).withItalic(false)));
+                .withStyle(style -> style.withColor(ACCENT & 0xFFFFFF).withItalic(false)));
         IBackpackWrapper wrapper = BackpackWrapper.fromStack(pack);
         // UN SAC NEUF N'A PAS D'IDENTITE : tant que la pile ne porte pas
         // d'UUID de contenu, l'enveloppe rend un conteneur d'ameliorations

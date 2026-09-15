@@ -117,6 +117,8 @@ public class JakVehicleEntity extends Entity {
     private double serverY;
     private double serverZ;
     private boolean serverKnown;
+    /** Le deplacement recu du client du conducteur au dernier tick, cote serveur (voir tick). */
+    private Vec3 drivenMotion = Vec3.ZERO;
     /** Le siege que vient de quitter le passager en train de descendre. */
     private int leavingSeat = EMPTY;
 
@@ -137,6 +139,13 @@ public class JakVehicleEntity extends Entity {
      * mesurerait jamais en jeu.
      */
     private boolean autotestDriver;
+    /**
+     * Un client conduit, impose par l'autotest, cote serveur. Le serveur d'essai
+     * n'a pas de joueur, et un FakePlayer ne monte dans rien : avec ce drapeau, le
+     * serveur traite la voiture comme conduite par un client, et l'autotest rejoue
+     * les positions que ce client enverrait.
+     */
+    private boolean autotestRemoteDriver;
 
     public JakVehicleEntity(EntityType<? extends JakVehicleEntity> type, Level level) {
         super(type, level);
@@ -219,6 +228,10 @@ public class JakVehicleEntity extends Entity {
 
     public void setAutotestDriver(boolean driver) {
         this.autotestDriver = driver;
+    }
+
+    public void setAutotestRemoteDriver(boolean remote) {
+        this.autotestRemoteDriver = remote;
     }
 
     /** Un pilote pese sur le vehicule : un joueur a la place 0, ou le poids impose par l'autotest. */
@@ -490,6 +503,8 @@ public class JakVehicleEntity extends Entity {
             this.entityData.set(SEATS.get(seat), EMPTY);
             this.leavingSeat = seat;
             if (seat == 0) {
+                // le serveur reprend la physique : la voiture garde son elan
+                this.setDeltaMovement(this.drivenMotion);
                 // le jeu remet la voie a zero quand on sort (hvehicle.gc:1113)
                 this.controls.reset();
                 if (this.mode() != VehicleDynamics.MODE_SOL) {
@@ -504,6 +519,11 @@ public class JakVehicleEntity extends Entity {
     @Override
     public LivingEntity getControllingPassenger() {
         return this.occupant(0) instanceof Player player ? player : null;
+    }
+
+    @Override
+    public boolean isControlledByLocalInstance() {
+        return !this.autotestRemoteDriver && super.isControlledByLocalInstance();
     }
 
     @Override
@@ -637,6 +657,7 @@ public class JakVehicleEntity extends Entity {
         this.setMode(VehicleDynamics.MODE_SOL);
         this.controls.reset();
         this.setDeltaMovement(Vec3.ZERO);
+        this.drivenMotion = Vec3.ZERO;
         this.lerpSteps = 0;
         this.serverKnown = false;
     }
@@ -655,9 +676,19 @@ public class JakVehicleEntity extends Entity {
         if (this.isControlledByLocalInstance()) {
             VehiclePhysics.tick(this, this.input());
         } else {
-            if (!client && this.serverKnown) {
-                this.setDeltaMovement(this.getX() - this.serverX, this.getY() - this.serverY,
-                        this.getZ() - this.serverZ);
+            if (!client) {
+                this.drivenMotion = this.serverKnown
+                        ? new Vec3(this.getX() - this.serverX, this.getY() - this.serverY, this.getZ() - this.serverZ)
+                        : Vec3.ZERO;
+                // PAS DANS getDeltaMovement, comme le bateau (Boat.tick). Le serveur
+                // renvoie tous les trois ticks la vitesse de ses entites a ceux qui
+                // les voient, conducteur compris (ServerEntity.sendChanges,
+                // ClientboundSetEntityMotionPacket), et le client la pose telle quelle
+                // (Entity.lerpMotion). Ce deplacement vaut zero sur un tick du serveur
+                // ou n'est arrive aucun paquet du conducteur -- les deux horloges
+                // derivent, et un a-coup du client suffit : la voiture du conducteur
+                // s'arretait net en pleine course. Voir aussi lerpMotion.
+                this.setDeltaMovement(Vec3.ZERO);
             }
             this.syncParts();
         }
@@ -687,7 +718,7 @@ public class JakVehicleEntity extends Entity {
             // a cet instant la voiture n'a pas encore bouge, l'ecart vaut toujours zero,
             // et la montee finissait en pleine course (mesure : fin au tick 7, 3,2 blocs
             // de depassement au lieu de 1,4).
-            double vy = this.getDeltaMovement().y;
+            double vy = this.serverMotion().y;
             // fin de montee : l'origine a moins de 2 m de la carte de trafic, a moins
             // de 2 m/s (hvehicle.gc:577-589) ; au-dela de deux secondes, on redescend
             if (!Double.isNaN(traffic) && Math.abs(this.getY() - traffic) < 2.0 && Math.abs(vy) < 0.1) {
@@ -701,6 +732,25 @@ public class JakVehicleEntity extends Entity {
                     VehiclePhysics.probe(this, spec.thrusterRearZ))) {
                 this.setMode(VehicleDynamics.MODE_SOL);
             }
+        }
+    }
+
+    /** La vitesse vue du serveur : celle de sa physique, ou le deplacement recu du conducteur. */
+    Vec3 serverMotion() {
+        return this.isControlledByLocalInstance() ? this.getDeltaMovement() : this.drivenMotion;
+    }
+
+    /**
+     * Le client du conducteur garde sa vitesse : c'est lui qui simule la voiture.
+     * Un paquet de vitesse du serveur ne peut que la ramener en arriere -- a zero
+     * quand le serveur n'a recu aucune position au tick precedent.
+     * ClientPacketListener ne protege que les positions d'une entite pilotee
+     * (handleMoveEntity, handleTeleportEntity), pas sa vitesse (handleSetEntityMotion).
+     */
+    @Override
+    public void lerpMotion(double x, double y, double z) {
+        if (!this.isControlledByLocalInstance()) {
+            super.lerpMotion(x, y, z);
         }
     }
 
@@ -727,7 +777,7 @@ public class JakVehicleEntity extends Entity {
         for (AABB box : boxes) {
             all = all.minmax(box);
         }
-        Vec3 motion = this.getDeltaMovement();
+        Vec3 motion = this.serverMotion();
         double strength = 0.15 + Math.sqrt(motion.x * motion.x + motion.z * motion.z);
         for (LivingEntity entity : this.level().getEntitiesOfClass(LivingEntity.class, all.inflate(0.05),
                 e -> e.isPushable() && !e.isSpectator() && !e.isPassengerOfSameVehicle(this))) {

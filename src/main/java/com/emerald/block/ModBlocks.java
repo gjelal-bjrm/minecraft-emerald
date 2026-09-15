@@ -260,6 +260,18 @@ public class ModBlocks {
                     .mapColor(MapColor.COLOR_RED)
                     .sound(SoundType.METAL)));
 
+    /**
+     * Le bouton d'alerte du QG de Haven (voir HavenInvasionButtonBlock), sur le
+     * bout du comptoir du Hip Hog. Sans objet : HavenInvasionButton le pose et
+     * le retire comme la borne. Incassable, sans butin, non poussable.
+     */
+    public static final DeferredBlock<HavenInvasionButtonBlock> HAVEN_INVASION_BUTTON = registerBlockOnly("haven_invasion_button",
+            () -> new HavenInvasionButtonBlock(BlockBehaviour.Properties.of()
+                    .strength(-1.0F, 3600000.0F).noLootTable()
+                    .pushReaction(net.minecraft.world.level.material.PushReaction.BLOCK)
+                    .mapColor(MapColor.COLOR_RED)
+                    .sound(SoundType.METAL)));
+
     private static <T extends Block> DeferredBlock<T> registerBlockOnly(String name, Supplier<T> block) {
         return BLOCKS.register(name, block);
     }

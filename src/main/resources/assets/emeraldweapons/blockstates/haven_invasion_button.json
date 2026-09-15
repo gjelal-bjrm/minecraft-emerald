@@ -1,0 +1,34 @@
+{
+  "variants": {
+    "facing=south,peaceful=false": {
+      "model": "emeraldweapons:block/haven_invasion_button_invasion"
+    },
+    "facing=south,peaceful=true": {
+      "model": "emeraldweapons:block/haven_invasion_button_paisible"
+    },
+    "facing=west,peaceful=false": {
+      "model": "emeraldweapons:block/haven_invasion_button_invasion",
+      "y": 90
+    },
+    "facing=west,peaceful=true": {
+      "model": "emeraldweapons:block/haven_invasion_button_paisible",
+      "y": 90
+    },
+    "facing=north,peaceful=false": {
+      "model": "emeraldweapons:block/haven_invasion_button_invasion",
+      "y": 180
+    },
+    "facing=north,peaceful=true": {
+      "model": "emeraldweapons:block/haven_invasion_button_paisible",
+      "y": 180
+    },
+    "facing=east,peaceful=false": {
+      "model": "emeraldweapons:block/haven_invasion_button_invasion",
+      "y": 270
+    },
+    "facing=east,peaceful=true": {
+      "model": "emeraldweapons:block/haven_invasion_button_paisible",
+      "y": 270
+    }
+  }
+}

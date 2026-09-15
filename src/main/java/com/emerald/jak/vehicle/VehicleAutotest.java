@@ -7,7 +7,9 @@ import com.emerald.haven.HavenState;
 import com.emerald.init.Jak3Registry;
 import com.emerald.main.EmeraldWeaponsMod;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerEntity;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.TicketType;
 import net.minecraft.util.Mth;
@@ -70,6 +72,11 @@ import java.util.UUID;
  * seulement ce qu'ils evitent, puis comme en jeu, controles compris. Pendant ces
  * essais, chaque tick est surveille : aucune boite dans un bloc, et la coupe de
  * coin -- le trajet droit entre deux ticks, echantillonne -- sous CUT_TOLERANCE.
+ *
+ * LA CONDUITE PAR UN CLIENT se juge a ce que le serveur renverrait au conducteur :
+ * la place 0 prise et la voiture declaree conduite par un client, ses positions
+ * rejouees comme handleMoveVehicle, et un ServerEntity temoin qui capte les
+ * paquets (voir planDriverSync).
  *
  * Rapport dans vehicules_autotest.txt, dans le dossier du serveur, puis arret.
  */
@@ -140,6 +147,27 @@ public final class VehicleAutotest {
     private static int ceilingY;
     private static double sumYaw;
     private static double sumForward;
+
+    // conduite par un client (planDriverSync)
+    @Nullable
+    private static JakVehicleEntity drivenCar;
+    @Nullable
+    private static ArmorStand driverSeat;
+    @Nullable
+    private static ServerEntity witness;
+    private static final List<Vec3> motionSent = new ArrayList<>();
+    private static int emptyTicks;
+    private static int motionMismatches;
+    private static double drivenX;
+    private static double expectedMotionX;
+    /**
+     * Les paquets du conducteur arrives entre deux ticks du serveur, en boucle : les
+     * deux horloges derivent, et un a-coup du client laisse des ticks vides puis en
+     * rattrape plusieurs. Trois ticks vides d'affilee : ServerEntity ne regarde la
+     * vitesse que tous les trois ticks (updateInterval), l'un d'eux tombe dessus.
+     */
+    private static final int[] DRIVER_PACKETS = {1, 1, 2, 1, 0, 1, 1, 0, 0, 0, 3, 1, 1, 2, 1};
+    private static final int DRIVER_TICKS = 150;
 
     /**
      * Coupe de coin toleree, en blocs : le trajet droit entre deux ticks peut
@@ -269,6 +297,7 @@ public final class VehicleAutotest {
         planApartments(server, state);
         planStreet(state, street);
         planSea(state);
+        planDriverSync();
         for (String model : JakVehicleEntity.BIKES) {
             planBike(state, street, model);
         }
@@ -912,6 +941,137 @@ public final class VehicleAutotest {
                 car.discard();
                 car = null;
             }
+            return true;
+        });
+    }
+
+    // ------------------------------------------------------------- conduite par un client
+
+    /**
+     * Ce que le client du conducteur recoit du serveur pendant qu'il conduit.
+     *
+     * Le client du conducteur simule la voiture et envoie ses positions. Le serveur
+     * rangeait le deplacement recu dans getDeltaMovement, et ServerEntity le
+     * renvoyait tous les trois ticks a ceux qui voient la voiture, conducteur
+     * compris (ClientboundSetEntityMotionPacket), que le client pose sans garde
+     * (Entity.lerpMotion). Un tick du serveur sans paquet valait zero : la voiture
+     * du joueur s'arretait net en pleine course.
+     *
+     * Un porte-armure prend la place 0, et le drapeau d'autotest dit au serveur
+     * qu'un client conduit (setAutotestRemoteDriver) : un FakePlayer ne monte dans
+     * rien (FakePlayer.startRiding rend faux), et le serveur d'essai n'a pas de
+     * joueur. Le serveur ne simule plus la voiture. Un
+     * ServerEntity temoin, construit comme celui du ChunkMap, capte ce qui partirait
+     * vers les clients. Entre deux ticks, on rejoue les positions du conducteur comme
+     * handleMoveVehicle (absMoveTo), deux blocs par paquet selon DRIVER_PACKETS, en
+     * aller-retour sur la mer. La garde du client (JakVehicleEntity.lerpMotion) ne
+     * s'essaie pas sans client.
+     */
+    private static void planDriverSync() {
+        STEPS.add((s, l, t) -> {
+            JakVehicleEntity c = Jak3Registry.JAK_VEHICLE.get().create(l);
+            if (c == null) {
+                check("conduite par un client : voiture posee", false, "creation impossible");
+                return true;
+            }
+            c.setModel("cara");
+            double x = sea0X + 200.0;
+            double z = sea0Z + 48.0;
+            double water = groundBelow(l, x, 90.0, z, 40.0);
+            double y = (Double.isNaN(water) ? 63.0 : water) + c.spec().equilibriumDistance(false) - c.spec().thrusterY;
+            c.moveTo(x, y, z, -90.0F, 0.0F);
+            l.addFreshEntity(c);
+            SPAWNED.add(c);
+            drivenCar = c;
+            ArmorStand seat = EntityType.ARMOR_STAND.create(l);
+            if (seat == null) {
+                check("conduite par un client : porte-armure pose", false, "creation impossible");
+                return true;
+            }
+            seat.moveTo(x, y, z, -90.0F, 0.0F);
+            l.addFreshEntity(seat);
+            SPAWNED.add(seat);
+            boolean boarded = seat.startRiding(c, true);
+            c.setAutotestRemoteDriver(true);
+            driverSeat = seat;
+            drivenX = x;
+            expectedMotionX = 0.0;
+            check("conduite par un client : place 0 prise, le serveur ne simule plus la voiture",
+                    boarded && c.occupant(0) == seat && !c.isControlledByLocalInstance(),
+                    "monte : " + boarded + ", place 0 : " + c.occupant(0)
+                            + ", simulee par le serveur : " + c.isControlledByLocalInstance());
+            return true;
+        });
+        STEPS.add((s, l, t) -> {
+            JakVehicleEntity c = drivenCar;
+            if (c == null || c.isRemoved() || driverSeat == null || c.occupant(0) != driverSeat) {
+                check("conduite par un client : voiture et conducteur toujours la", false,
+                        "retires ou descendu au tick " + t);
+                return true;
+            }
+            if (t == 0) {
+                motionSent.clear();
+                emptyTicks = 0;
+                motionMismatches = 0;
+                int id = c.getId();
+                witness = new ServerEntity(l, c, c.getType().updateInterval(), c.getType().trackDeltas(), packet -> {
+                    if (packet instanceof ClientboundSetEntityMotionPacket motion && motion.getId() == id) {
+                        motionSent.add(new Vec3(motion.getXa(), motion.getYa(), motion.getZa()));
+                    }
+                });
+            } else {
+                // ce que ChunkMap.TrackedEntity fait apres le tick des entites
+                witness.sendChanges();
+                // le deplacement recu au tick precedent, lu par la voiture a son tick
+                if (Math.abs(c.serverMotion().x - expectedMotionX) > 1.0E-6) {
+                    motionMismatches++;
+                }
+            }
+            if (t >= DRIVER_TICKS) {
+                long stops = motionSent.stream().filter(v -> v.lengthSqr() < 1.0E-4).count();
+                check("conduite par un client : le serveur ne renvoie aucune vitesse au conducteur",
+                        motionSent.isEmpty(),
+                        motionSent.size() + " paquets de vitesse, dont " + stops + " a l'arret, en " + DRIVER_TICKS
+                                + " ticks dont " + emptyTicks + " sans paquet du conducteur (intervalle "
+                                + c.getType().updateInterval() + ", vitesse suivie : " + c.getType().trackDeltas() + ")");
+                check("conduite par un client : le serveur lit la vitesse du conducteur dans ses positions",
+                        motionMismatches == 0,
+                        motionMismatches + " ticks ou serverMotion differe du deplacement recu");
+                // un dernier paquet : la voiture a de l'elan quand le conducteur descend
+                drivenX += 2.0;
+                c.absMoveTo(drivenX, c.getY(), c.getZ(), c.getYRot(), 0.0F);
+                expectedMotionX = 2.0;
+                return true;
+            }
+            int arrived = DRIVER_PACKETS[t % DRIVER_PACKETS.length];
+            double direction = (t / DRIVER_PACKETS.length) % 2 == 0 ? 1.0 : -1.0;
+            if (arrived == 0) {
+                emptyTicks++;
+            }
+            for (int i = 0; i < arrived; i++) {
+                drivenX += 2.0 * direction;
+                c.absMoveTo(drivenX, c.getY(), c.getZ(), c.getYRot(), 0.0F);
+            }
+            expectedMotionX = 2.0 * direction * arrived;
+            return false;
+        });
+        STEPS.add((s, l, t) -> {
+            JakVehicleEntity c = drivenCar;
+            if (c != null && !c.isRemoved() && driverSeat != null) {
+                Vec3 received = c.serverMotion();
+                c.setAutotestRemoteDriver(false);
+                driverSeat.stopRiding();
+                driverSeat.discard();
+                check("conduite par un client : le conducteur descend, la voiture garde son elan",
+                        Math.abs(received.x - expectedMotionX) < 1.0E-6
+                                && c.getDeltaMovement().distanceTo(received) < 1.0E-6 && c.isControlledByLocalInstance(),
+                        "deplacement recu " + fmt(received) + ", vitesse apres la descente " + fmt(c.getDeltaMovement())
+                                + ", simulee par le serveur : " + c.isControlledByLocalInstance());
+                c.discard();
+            }
+            drivenCar = null;
+            driverSeat = null;
+            witness = null;
             return true;
         });
     }

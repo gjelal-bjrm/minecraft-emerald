@@ -156,6 +156,14 @@ public class ModItems {
             ITEMS.register("artifact", () ->
                     new com.emerald.artifact.ArtifactItem(new Item.Properties()));
 
+    /**
+     * Le Morph Gun de Jak 3 (voir com.emerald.jak.gun) : n'existe que dans Haven,
+     * lobby ouvert. Hors de l'onglet creatif, sans recette ni butin.
+     */
+    public static final DeferredItem<com.emerald.jak.gun.MorphGunItem> MORPH_GUN =
+            ITEMS.register("morph_gun", () ->
+                    new com.emerald.jak.gun.MorphGunItem(new Item.Properties()));
+
     // ------------------------------------------------- derives de l'Arbre de Prisme
     // Aucune piece d'Arcencium n'est fabricable sans passer par l'arbre : c'est
     // ce qui rend le bucheronnage aussi necessaire que le minage.

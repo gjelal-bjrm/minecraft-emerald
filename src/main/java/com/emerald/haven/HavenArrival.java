@@ -425,6 +425,13 @@ public final class HavenArrival {
                 place.room().number(), distance, direction).withStyle(ChatFormatting.AQUA));
         player.displayClientMessage(Component.translatable("game.emeraldweapons.haven.arrival.bar", direction)
                 .withStyle(ChatFormatting.GOLD), true);
+        // l'etat de la ville : envahie (on arrive en invasion) ou paisible, et le bouton qui la bascule
+        boolean invasion = com.emerald.haven.invasion.HavenInvasion.mode(server)
+                == com.emerald.haven.invasion.HavenInvasion.Mode.INVASION;
+        player.sendSystemMessage(Component.translatable(invasion
+                        ? "game.emeraldweapons.haven.invasion.arrival.on"
+                        : "game.emeraldweapons.haven.invasion.arrival.off")
+                .withStyle(invasion ? ChatFormatting.RED : ChatFormatting.GREEN));
     }
 
     /**

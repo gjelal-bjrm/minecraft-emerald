@@ -37,6 +37,16 @@ public class ModDataComponents {
                     .networkSynchronized(net.minecraft.network.codec.StreamCodec.unit(
                             net.minecraft.util.Unit.INSTANCE)));
 
+    /**
+     * L'etat du Morph Gun : forme, formes possedees, reserves d'eco, numero du
+     * lobby (com.emerald.jak.gun.MorphGunData). Synchronise : le rendu en main
+     * et l'infobulle le lisent chez le client.
+     */
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<com.emerald.jak.gun.MorphGunData>>
+            MORPH_GUN = COMPONENTS.registerComponentType("morph_gun", builder -> builder
+                    .persistent(com.emerald.jak.gun.MorphGunData.CODEC)
+                    .networkSynchronized(com.emerald.jak.gun.MorphGunData.STREAM_CODEC));
+
     public static void register(IEventBus eventBus) {
         COMPONENTS.register(eventBus);
     }
