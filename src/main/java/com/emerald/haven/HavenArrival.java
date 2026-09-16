@@ -432,6 +432,7 @@ public final class HavenArrival {
                         ? "game.emeraldweapons.haven.invasion.arrival.on"
                         : "game.emeraldweapons.haven.invasion.arrival.off")
                 .withStyle(invasion ? ChatFormatting.RED : ChatFormatting.GREEN));
+        com.emerald.haven.invasion.HavenInvasion.warnPeacefulDifficulty(player);
     }
 
     /**

@@ -1,6 +1,8 @@
 package com.emerald.haven.invasion;
 
 import com.emerald.haven.Haven;
+import com.emerald.jak.vehicle.JakVehicleEntity;
+import com.emerald.jak.vehicle.VehiclePart;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
@@ -9,7 +11,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Clearable;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.decoration.HangingEntity;
-import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
@@ -54,7 +56,8 @@ import java.util.Map;
  * LA RECONSTRUCTION, entre {@link #DELAY_MIN_TICKS} et {@link #DELAY_MAX_TICKS}
  * tiques plus tard (tirage par casse), en commencant par les blocs du dessous,
  * au plus {@link #REBUILDS_PER_TICK} par tique ; l'ecoulement programme dans la
- * case est efface. Une case ou se tient un joueur attend jusqu'a cinq secondes.
+ * case est efface. Une case occupee -- joueur, monstre,
+ * habitant, vehicule -- attend qu'elle se libere : rien ne se referme sur personne.
  * Troncon non charge : on attend qu'il le soit.
  *
  * PLAFONDS : {@link #BREAKS_PER_TICK} casses par tique (une explosion de dix blocs
@@ -78,9 +81,14 @@ public final class HavenDestruction {
     public static final int EFFECTS_PER_TICK = 8;
     /** Un bloc casse et ce qui tombe avec lui. */
     public static final int MAX_GROUP = 16;
-    /** Un joueur dans la case : attente par pas de dix tiques, cinq secondes au plus. */
-    private static final int PLAYER_WAIT_STEP = 10;
-    private static final int PLAYER_WAIT_MAX = 100;
+    /**
+     * Une case occupee attend, par pas de dix tiques, SANS LIMITE. Le premier reglage
+     * attendait cinq secondes puis reposait le bloc quand meme : un joueur reste dans
+     * un trou plus de cinq secondes, et il se retrouvait mure (revue du 13 sept.). Les
+     * monstres, les habitants et les vehicules comptent aussi : un bloc dans un zombie
+     * l'etouffe, un bloc dans une voiture la bloque.
+     */
+    private static final int OCCUPIED_WAIT_STEP = 10;
 
     /** 2|16 : ni voisins prevenus, ni formes recalculees. */
     private static final int QUIET = Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE;
@@ -291,9 +299,9 @@ public final class HavenDestruction {
                 next = Math.min(next, pending.due);
                 continue;
             }
-            if (pending.waited < PLAYER_WAIT_MAX && playerInside(level, pos)) {
-                pending.due = now + PLAYER_WAIT_STEP;
-                pending.waited += PLAYER_WAIT_STEP;
+            if (occupied(level, pos)) {
+                pending.due = now + OCCUPIED_WAIT_STEP;
+                pending.waited += OCCUPIED_WAIT_STEP;
                 next = Math.min(next, pending.due);
                 continue;
             }
@@ -373,8 +381,10 @@ public final class HavenDestruction {
         level.sendBlockUpdated(pos, pending.state, pending.state, Block.UPDATE_CLIENTS);
     }
 
-    private static boolean playerInside(ServerLevel level, BlockPos pos) {
-        return !level.getEntitiesOfClass(Player.class, new AABB(pos)).isEmpty();
+    /** Quelqu'un dans la case : joueur, monstre, habitant, ou une voiture et ses parties. */
+    private static boolean occupied(ServerLevel level, BlockPos pos) {
+        return !level.getEntitiesOfClass(Entity.class, new AABB(pos), e -> e.isAlive()
+                && (e instanceof LivingEntity || e instanceof JakVehicleEntity || e instanceof VehiclePart)).isEmpty();
     }
 
     // ================================================================ banc d'essai

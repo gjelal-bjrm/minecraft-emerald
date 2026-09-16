@@ -1,5 +1,7 @@
 package com.emerald.jak.vehicle;
 
+import com.emerald.haven.traffic.HavenTraffic;
+import com.emerald.haven.traffic.TrafficDriver;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
@@ -81,6 +83,7 @@ public class JakVehicleEntity extends Entity {
     private static final String TAG_MODEL = "Modele";
     private static final String TAG_ROOM = "Appartement";
     private static final String TAG_MODE = "Zone";
+    private static final String TAG_TRAFFIC = "Trafic";
 
     private static final int EMPTY = -1;
 
@@ -146,6 +149,9 @@ public class JakVehicleEntity extends Entity {
      * les positions que ce client enverrait.
      */
     private boolean autotestRemoteDriver;
+    /** Le pilote du trafic de la ville paisible, cote serveur ; null pour un vehicule des appartements ou d'essai. */
+    @Nullable
+    private TrafficDriver traffic;
 
     public JakVehicleEntity(EntityType<? extends JakVehicleEntity> type, Level level) {
         super(type, level);
@@ -234,6 +240,15 @@ public class JakVehicleEntity extends Entity {
         this.autotestRemoteDriver = remote;
     }
 
+    @Nullable
+    public TrafficDriver traffic() {
+        return this.traffic;
+    }
+
+    public void setTraffic(@Nullable TrafficDriver traffic) {
+        this.traffic = traffic;
+    }
+
     /** Un pilote pese sur le vehicule : un joueur a la place 0, ou le poids impose par l'autotest. */
     public boolean hasDriverWeight() {
         return this.autotestDriver || this.getControllingPassenger() != null;
@@ -275,6 +290,10 @@ public class JakVehicleEntity extends Entity {
         // personne ne conduit une voiture qu'on recharge : celle qui etait en l'air redescend
         this.setMode(tag.getInt(TAG_MODE) == VehicleDynamics.MODE_SOL
                 ? VehicleDynamics.MODE_SOL : VehicleDynamics.MODE_DESCENTE);
+        this.traffic = tag.contains(TAG_TRAFFIC, Tag.TAG_COMPOUND) ? TrafficDriver.load(tag.getCompound(TAG_TRAFFIC)) : null;
+        if (this.traffic != null) {
+            this.setMode(VehicleDynamics.MODE_HAUT);      // le trafic roule en voie haute, et ne redescend pas
+        }
     }
 
     @Override
@@ -284,6 +303,9 @@ public class JakVehicleEntity extends Entity {
             tag.putString(TAG_ROOM, this.room);
         }
         tag.putInt(TAG_MODE, this.mode());
+        if (this.traffic != null) {
+            tag.put(TAG_TRAFFIC, this.traffic.save());
+        }
     }
 
     // ------------------------------------------------------------- boites
@@ -475,6 +497,9 @@ public class JakVehicleEntity extends Entity {
 
     @Override
     protected boolean canAddPassenger(Entity passenger) {
+        if (this.traffic != null && passenger instanceof Player) {
+            return false;                 // on ne monte pas dans le trafic (pas de detournement, pour l'instant)
+        }
         return !this.isRemoved() && this.getPassengers().size() < Math.min(SEATS.size(), this.spec().seatCount());
     }
 
@@ -673,7 +698,13 @@ public class JakVehicleEntity extends Entity {
             }
         }
         this.tickLerp();
-        if (this.isControlledByLocalInstance()) {
+        if (!client && this.traffic != null) {
+            // le trafic : le serveur conduit sur les voies de Jak 3, a la place de la physique de vol
+            HavenTraffic.drive(this);
+            if (this.isRemoved()) {
+                return;
+            }
+        } else if (this.isControlledByLocalInstance()) {
             VehiclePhysics.tick(this, this.input());
         } else {
             if (!client) {
@@ -736,7 +767,7 @@ public class JakVehicleEntity extends Entity {
     }
 
     /** La vitesse vue du serveur : celle de sa physique, ou le deplacement recu du conducteur. */
-    Vec3 serverMotion() {
+    public Vec3 serverMotion() {
         return this.isControlledByLocalInstance() ? this.getDeltaMovement() : this.drivenMotion;
     }
 

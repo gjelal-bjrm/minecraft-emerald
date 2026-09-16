@@ -37,13 +37,15 @@ import java.util.List;
  * LES PLACES viennent de la carte validee (HavenInvasionData) : une cellule de pieds
  * d'une tuile au sol, ou un point de la bande de vol d'une tuile de phantoms. Elles
  * sont REVALIDEES DANS LE MONDE au moment de l'apparition : une arme a pu casser le
- * sol, un habitant peut occuper la case, le troncon peut ne pas tiquer. Au sol, elles
- * doivent aussi echapper a la vue des joueurs proches (seen).
+ * sol, un habitant peut occuper la case, le troncon peut ne pas etre charge. Au sol,
+ * elles doivent aussi echapper a la vue des joueurs proches (seen).
  */
 public final class HavenSpawner {
 
     /** Essais par apparition avant d'abandonner jusqu'a la seconde suivante. */
     private static final int TRIES = 12;
+    /** Portee de la recherche autour d'un point, pour le banc d'essai (findGround). */
+    private static final double NEAR_REACH = 40.0;
 
     /** Une apparition, pour le banc d'essai. */
     public record Spawned(@Nullable HavenInvasion.Kind kind, @Nullable VillagerType villagerType, Vec3 position, long tick) {
@@ -55,27 +57,48 @@ public final class HavenSpawner {
     // ================================================================ places
 
     /**
-     * Une cellule de pieds au sol pour une apparition pres d'une ancre.
+     * Une cellule de pieds d'une tuile, pour la population de la ville : sol plein,
+     * a plus de SPAWN_MIN de tout joueur, hors des centres d'exclusion et des zones
+     * sures, et hors de la vue d'un joueur a moins de SIGHT_RADIUS si {@code hidden}.
      *
-     * @param anchors toutes les ancres : on n'apparait pas a moins de SPAWN_MIN d'aucune
-     * @return les pieds en coordonnees du monde, ou null
+     * @return les pieds en coordonnees du monde, ou null apres TRIES essais
      */
     @Nullable
-    public static BlockPos findGround(ServerLevel level, HavenInvasionData.Data data, BlockPos origin, Vec3 anchor,
-                                      List<Vec3> anchors, RandomSource random) {
-        return findGround(level, data, origin, anchor, anchors, random, true);
+    public static BlockPos findInTile(ServerLevel level, HavenInvasionData.Data data, BlockPos origin,
+                                      HavenInvasionData.GroundTile tile, List<Vec3> anchors, RandomSource random,
+                                      boolean hidden) {
+        int[] cells = tile.cells();
+        for (int i = 0; i < TRIES; i++) {
+            int cell = cells[random.nextInt(cells.length)];
+            BlockPos feet = origin.offset(HavenInvasionData.unpackX(cell), HavenInvasionData.unpackY(cell),
+                    HavenInvasionData.unpackZ(cell));
+            double x = feet.getX() + 0.5;
+            double z = feet.getZ() + 0.5;
+            if (!clearOfAnchors(anchors, x, z) || !clearOfCenters(data, origin, x, z) || !standable(level, feet)) {
+                continue;
+            }
+            if (hidden && HavenInvasion.nearestDistance(anchors, x, z) <= HavenInvasion.SIGHT_RADIUS
+                    && seen(level, anchors, feet)) {
+                continue;
+            }
+            return feet;
+        }
+        return null;
     }
 
     /**
-     * @param hidden faux seulement pour le banc d'essai, qui cherche une place a ciel
-     *               ouvert pres d'un joueur simule : la regle de vue les refuse presque toutes
+     * Une cellule de pieds au sol pres d'un point, a moins de NEAR_REACH : le banc
+     * d'essai s'en sert pour poser son temoin. La ville, elle, peuple par tuile.
+     *
+     * @param hidden faux pour une place a ciel ouvert pres d'un joueur simule : la
+     *               regle de vue les refuse presque toutes
      */
     @Nullable
     public static BlockPos findGround(ServerLevel level, HavenInvasionData.Data data, BlockPos origin, Vec3 anchor,
                                       List<Vec3> anchors, RandomSource random, boolean hidden) {
         double cx = anchor.x - origin.getX();
         double cz = anchor.z - origin.getZ();
-        double reach = HavenInvasion.SPAWN_MAX + HavenInvasionData.TILE;
+        double reach = NEAR_REACH + HavenInvasionData.TILE;
         List<HavenInvasionData.GroundTile> tiles = new ArrayList<>();
         for (HavenInvasionData.GroundTile tile : data.groundTiles()) {
             double tx = tile.tx() * HavenInvasionData.TILE + 8.0;
@@ -93,10 +116,17 @@ public final class HavenSpawner {
             int cell = tile.cells()[random.nextInt(tile.cells().length)];
             BlockPos feet = origin.offset(HavenInvasionData.unpackX(cell), HavenInvasionData.unpackY(cell),
                     HavenInvasionData.unpackZ(cell));
-            if (placeOk(level, data, origin, feet.getX() + 0.5, feet.getZ() + 0.5, anchor, anchors, HavenInvasion.SPAWN_MAX)
-                    && standable(level, feet) && (!hidden || !seen(level, anchors, feet))) {
-                return feet;
+            double x = feet.getX() + 0.5;
+            double z = feet.getZ() + 0.5;
+            if (HavenInvasion.horizontal(anchor, x, z) > NEAR_REACH || !clearOfAnchors(anchors, x, z)
+                    || !clearOfCenters(data, origin, x, z) || !standable(level, feet)) {
+                continue;
             }
+            if (hidden && HavenInvasion.nearestDistance(anchors, x, z) <= HavenInvasion.SIGHT_RADIUS
+                    && seen(level, anchors, feet)) {
+                continue;
+            }
+            return feet;
         }
         return null;
     }
@@ -130,7 +160,8 @@ public final class HavenSpawner {
             double z = origin.getZ() + tile.tz() * HavenInvasionData.TILE + random.nextInt(HavenInvasionData.TILE) + 0.5;
             double y = origin.getY() + tile.floor() + random.nextInt(band + 1);
             BlockPos at = BlockPos.containing(x, y, z);
-            if (placeOk(level, data, origin, x, z, anchor, anchors, HavenInvasion.PHANTOM_MAX)
+            if (HavenInvasion.horizontal(anchor, x, z) <= HavenInvasion.PHANTOM_MAX && clearOfAnchors(anchors, x, z)
+                    && clearOfCenters(data, origin, x, z) && level.isLoaded(at)
                     && level.noCollision(EntityType.PHANTOM.getSpawnAABB(x, y, z).inflate(0.5))
                     && level.getFluidState(at).isEmpty()) {
                 return new Vec3(x, y, z);
@@ -139,17 +170,18 @@ public final class HavenSpawner {
         return null;
     }
 
-    /** Distance aux ancres, centres d'exclusion, zone sure, troncon qui tique. */
-    private static boolean placeOk(ServerLevel level, HavenInvasionData.Data data, BlockPos origin, double x, double z,
-                                   Vec3 anchor, List<Vec3> anchors, double max) {
-        if (HavenInvasion.horizontal(anchor, x, z) > max) {
-            return false;
-        }
+    /** A plus de SPAWN_MIN de tout joueur. */
+    private static boolean clearOfAnchors(List<Vec3> anchors, double x, double z) {
         for (Vec3 other : anchors) {
             if (HavenInvasion.horizontal(other, x, z) < HavenInvasion.SPAWN_MIN) {
                 return false;
             }
         }
+        return true;
+    }
+
+    /** Hors des centres d'exclusion : les portes des appartements et l'entree du bar. */
+    private static boolean clearOfCenters(HavenInvasionData.Data data, BlockPos origin, double x, double z) {
         double cellX = x - origin.getX();
         double cellZ = z - origin.getZ();
         for (HavenInvasionData.Center center : data.centers()) {
@@ -159,20 +191,24 @@ public final class HavenSpawner {
                 return false;
             }
         }
-        BlockPos probe = BlockPos.containing(x, origin.getY() + 70, z);
-        return level.isPositionEntityTicking(probe);
+        return true;
     }
 
     /**
      * Vrai si un joueur a moins de SIGHT_RADIUS voit ces pieds : un trait libre de
-     * ses yeux au bas ou au haut du corps. Les rues de Haven sont etroites : plus pres
-     * qu'avant, une apparition doit se faire derriere un mur ou un coin.
+     * ses yeux au bas ou au haut du corps. Les rues de Haven sont etroites : pres
+     * d'un joueur, une apparition doit se faire derriere un mur ou un coin.
      */
     static boolean seen(ServerLevel level, List<Vec3> anchors, BlockPos feet) {
+        return seen(level, anchors, feet, HavenInvasion.SIGHT_RADIUS);
+    }
+
+    /** Idem, pour les joueurs a moins de {@code radius} blocs (le trafic regarde plus loin). */
+    public static boolean seen(ServerLevel level, List<Vec3> anchors, BlockPos feet, double radius) {
         Vec3 low = Vec3.atBottomCenterOf(feet).add(0.0, 0.3, 0.0);
         Vec3 high = low.add(0.0, 1.5, 0.0);
         for (Vec3 anchor : anchors) {
-            if (HavenInvasion.horizontal(anchor, low.x, low.z) > HavenInvasion.SIGHT_RADIUS) {
+            if (HavenInvasion.horizontal(anchor, low.x, low.z) > radius) {
                 continue;
             }
             Vec3 eyes = anchor.add(0.0, 1.62, 0.0);
@@ -188,7 +224,7 @@ public final class HavenSpawner {
                 CollisionContext.empty())).getType() == HitResult.Type.MISS;
     }
 
-    /** Un sol qui porte, deux cases libres et seches au-dessus. */
+    /** Un sol qui porte, deux cases libres et seches au-dessus, hors zone sure ; troncon charge. */
     public static boolean standable(ServerLevel level, BlockPos feet) {
         if (!level.isLoaded(feet)) {
             return false;
@@ -219,7 +255,8 @@ public final class HavenSpawner {
      * Ni bebe ni chevaucheur de poulet (ZombieGroupData faux, faux), ni renforts
      * (chance ramenee a zero, modificateurs de chef compris), ni ramassage d'objets ;
      * casque de fer INCASSABLE sur les trois especes au sol ; aucun equipement ne
-     * tombe (chances a zero). Etiquete, non persistant.
+     * tombe (chances a zero). Etiquete, PERSISTANT : le jeu ne le retire jamais
+     * lui-meme, et remet son noActionTime a zero (il flane au soleil fige).
      *
      * @param helmet faux seulement pour le temoin sans casque du banc d'essai
      * @return le monstre ajoute au monde, ou null
@@ -240,6 +277,7 @@ public final class HavenSpawner {
         SpawnGroupData group = mob instanceof Zombie ? new Zombie.ZombieGroupData(false, false) : null;
         EventHooks.finalizeMobSpawn(mob, level, level.getCurrentDifficultyAt(mob.blockPosition()), MobSpawnType.EVENT, group);
         mob.setCanPickUpLoot(false);
+        mob.setPersistenceRequired();
         if (mob instanceof Zombie zombie) {
             zombie.setBaby(false);
             AttributeInstance reinforcements = zombie.getAttribute(Attributes.SPAWN_REINFORCEMENTS_CHANCE);
@@ -272,7 +310,8 @@ public final class HavenSpawner {
 
     /**
      * Fait naitre un habitant : adulte, de la region demandee, sans metier (donc sans
-     * commerce), invulnerable. Pas de finalizeSpawn : il prendrait la region du biome.
+     * commerce), invulnerable, persistant. Pas de finalizeSpawn : il prendrait la
+     * region du biome.
      */
     @Nullable
     public static Villager spawnVillager(ServerLevel level, VillagerType type, Vec3 at) {
@@ -281,6 +320,7 @@ public final class HavenSpawner {
         villager.setVillagerData(villager.getVillagerData().setType(type).setProfession(VillagerProfession.NONE));
         villager.setInvulnerable(true);
         villager.setCanPickUpLoot(false);
+        villager.setPersistenceRequired();
         villager.addTag(HavenInvasion.VILLAGER_TAG);
         return level.addFreshEntity(villager) ? villager : null;
     }

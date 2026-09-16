@@ -682,6 +682,7 @@
   "game.emeraldweapons.haven.invasion.closed": "The button does not respond: the city is not receiving players",
   "game.emeraldweapons.haven.invasion.arrival.on": "The city is under invasion. The alarm button, on the Hip Hog counter, makes it peaceful.",
   "game.emeraldweapons.haven.invasion.arrival.off": "The city is peaceful. The alarm button, on the Hip Hog counter, restarts the invasion.",
+  "game.emeraldweapons.haven.invasion.peaceful_difficulty": "World difficulty: Peaceful. The game removes every monster, so the invasion cannot happen: switch to Easy or higher (/difficulty easy).",
   "game.emeraldweapons.haven.invasion.mode.invasion": "invasion",
   "game.emeraldweapons.haven.invasion.mode.paisible": "peaceful",
   "command.emeraldweapons.haven.invasion.status": "Haven: %s mode, %s monsters, %s townsfolk, %s blocks to rebuild",

@@ -119,9 +119,11 @@ zone de survol exactement comme une voiture (mêmes touches, Espace compris), à
 ### L'invasion
 
 - On arrive en **invasion** : zombies, villageois zombies et squelettes casqués
-  qui rôdent dans les rues, phantoms dans le ciel. Ils apparaissent à distance,
-  jamais sous vos yeux quand ils sont proches, et à plus de 24 blocs des portes
-  des appartements et de l'entrée du bar.
+  qui rôdent dans **toutes** les rues, phantoms dans le ciel. La ville entière
+  est peuplée, pas seulement autour de vous : où que vous alliez en voiture, les
+  rues sont habitées, et les monstres restent là où vous les avez laissés. Ils
+  apparaissent à distance, jamais sous vos yeux quand ils sont proches, et à
+  plus de 24 blocs des portes des appartements et de l'entrée du bar.
   **Les appartements et le bar du
   Hip Hog sont des abris** : aucun monstre n'y entre, aucun ne vous y blesse.
 - Les monstres blessent, et l'on peut mourir. On réapparaît dans son
@@ -130,9 +132,13 @@ zone de survol exactement comme une voiture (mêmes touches, Espace compris), à
 - **Le bouton du QG**, au bout du comptoir du Hip Hog, près de la borne : voyant
   rouge en invasion, bleu en paisible. N'importe quel joueur passe toute la ville
   en **mode paisible** : les monstres partent, des villageois des sept régions
-  se promènent dans les rues (invulnérables, sans commerce). Un nouvel appui
-  relance l'invasion (deux secondes entre deux appuis). Chaque réouverture du
-  lobby remet l'invasion.
+  se promènent dans toutes les rues de la ville (invulnérables, sans commerce),
+  et le **trafic de Jak 3** circule sur la voie haute : voitures et motos
+  civiles, un habitant au volant, sur les voies du jeu, à leur vitesse (15 m/s,
+  bien moins que vous). On ne monte pas dedans ; on s'y cogne, et elles freinent
+  derrière vous si vous prenez leur voie. Un nouvel appui relance l'invasion
+  (deux secondes entre deux appuis). Chaque réouverture du lobby remet
+  l'invasion.
 
 ### Le Morph Gun
 

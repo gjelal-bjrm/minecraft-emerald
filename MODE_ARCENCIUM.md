@@ -149,7 +149,8 @@ ville commence au village, comme avant.
   joueur et 40 en tout d'abord, 13 vus en jeu), 2 s de delai global ; retour en invasion a chaque
   reouverture. Commande `/arcencium haven invasion etat | invasion | paisible | reconstruire`.
 - **Decor destructible** (`HavenDestruction`, `HavenProtection`) : seulement par les
-  armes, sans butin, retour a l'identique (etat et NBT) apres 10 a 15 s, 96 casses
+  armes, sans butin, retour a l'identique (etat et NBT) apres 10 a 15 s (jamais sur
+  quelqu'un : une case occupee attend qu'elle se libere, 16 sept.), 96 casses
   et 256 reconstructions par tique au plus. Jamais : appartements, bar et parvis,
   borne, bouton, places des vehicules, rideau, et toute cellule y <= 57 (sous l'eau).
 - **Morph Gun, jalon A** (`jak/gun`, decisions du joueur du 13 sept.) : un seul
@@ -5564,3 +5565,247 @@ dans les poches, chair putrefiee 0 (ramassee puis detruite), brut 0 (deja
 en cuisson) ; `/arcencium sac payer` sur l'epee en main : Pierre 2 -> 1,
 fer 8 -> 4, pris DANS le sac -- la barre d'objets ne portait que le charbon
 et l'epee ; quarante secondes plus tard, quatre lingots d'Arcencium cuits.
+
+## 66. Idees pour plus tard : le Defi plus dur, les vendeurs de Haven, le mode libre masque *(dictees le 13 sept. 2026, notees le 16)*
+
+Notees ici a la demande du joueur, une fois le premier chantier des armes de
+Haven livre, et PAS A IMPLEMENTER pour l'instant : rien de ce qui suit n'est
+commence.
+
+### A. Le nouveau Defi
+
+- Volontairement plus difficile : on ne le finit pas du premier coup.
+- La defaite ramene tout le monde dans la ville de Haven, SANS rien perdre :
+  tout l'inventaire (pas seulement l'equipement), les runes gravees, les
+  ameliorations, la rarete, le niveau de Specialisation et le niveau Heros.
+- Chaque nouvelle tentative se joue dans un MONDE NEUF, jamais dans le meme ;
+  on repart du village de depart, qui ne change pas.
+- Dans le Defi, jamais les armes de Jak ni ses pouvoirs : ils restent dans
+  Haven (le confinement de MorphGunKeeper, deja en place).
+- Les ameliorations deviennent plus dures : baisser les chances de reussite
+  des ameliorations d'arme, des runes et de la Specialisation -- aujourd'hui
+  chaque grade passe trop facilement. Cela va avec le Defi plus dur et avec
+  les objets vendus qui garantissent une reussite.
+
+### B. Les vendeurs de Haven
+
+- Des PNJ vendeurs DANS LA VILLE seulement, jamais au village du Defi. A
+  l'arrivee apres une defaite, un message annonce qu'ils sont apparus.
+- Ils vendent des objets speciaux : par exemple un objet qui garantit la
+  reussite de la prochaine amelioration d'arme, de la prochaine montee de
+  rarete ou de la prochaine Specialisation. D'autres idees d'objets a trouver.
+- On paie en QUETES, pas en monnaie -- c'est ce qui donne une vraie utilite a
+  la ville : tuer certains monstres, survivre une minute dans la ville pendant
+  un evenement difficile, des epreuves de conduite (passer en voiture dans des
+  cercles apparus sur la carte, en temps limite). La quete remplie, on va
+  chercher l'objet chez le vendeur.
+
+### C. Le mode libre masque
+
+En meme temps que la refonte du Defi, pas avant : la vitre bleue de la borne
+s'eteint et ne repond plus (message « bientot »), la rouge seule vote le
+Defi. Il faudra pouvoir la rallumer facilement.
+
+### D. A concevoir le moment venu
+
+Le lien avec la Specialisation, qui se garde deja d'une partie a l'autre
+(SpecializationStore), et la facon de transporter inventaire, runes, rarete
+et niveaux vers un monde neuf : un fichier par joueur cote serveur, sans
+doute, sur le modele de specialization.json.
+
+## 67. Des rues pleines partout, et ce que le joueur a decide le 16 sept. *(16 sept. 2026)*
+
+### A. « Quand je me deplace en voiture un peu plus loin dans la ville, les rues sont vides »
+
+Le reglage du 15 septembre peuplait une BULLE autour du joueur : apparitions
+de 16 a 40 blocs, retrait a 72. A pied, ca passe ; a 40 m/s, on traverse la
+bulle en une seconde et l'on arrive toujours dans des rues vides. La bulle
+n'a jamais ete un bon modele pour une ville qu'on traverse en volant.
+
+**La population est maintenant celle de toute la ville** (`HavenInvasion`,
+refonte du 16 sept.) :
+
+- chaque tuile au sol de la carte d'invasion -- un troncon du monde -- a un
+  QUOTA tire de sa surface praticable : une cellule sur 150 pour les monstres,
+  sur 180 pour les habitants, arrondi par un hasard fixe de la tuile (sinon
+  les rues etroites restaient toutes vides). Ville entiere : ~1 200 monstres
+  ou ~1 000 habitants ; autour d'un joueur a dix troncons de vue : 128 monstres
+  au sol mesures, une centaine d'habitants ;
+- chaque seconde, les troncons CHARGES (blocs et entites) sous leur quota sont
+  completes, les plus loin des joueurs d'abord (ils viennent d'apparaitre au
+  bord de la vue), 64 apparitions par seconde au plus, a plus de 16 blocs de
+  tout joueur et hors de sa vue a moins de 24 ;
+- chaque entite compte pour le troncon ou elle est NEE (`homeOf`, donnees
+  persistantes), pas pour celui ou elle se tient : au premier essai, les
+  monstres qui convergeaient sur les cobayes vidaient leurs troncons, que la
+  ville remplissait a nouveau sans fin (188 troncons vides et 16 monstres de
+  trop sur un seul apres 30 s de combat) ;
+- les entites sont PERSISTANTES (`setPersistenceRequired`) : le jeu ne les
+  retire ni au loin ni au repos, et `Mob.checkDespawn` remet alors leur
+  noActionTime a zero (elles flanent au soleil fige sans notre balayage). Loin
+  des joueurs, leurs troncons se dechargent avec elles ; elles gelent, et sont
+  la ou on les a laissees quand on revient ;
+- un monstre ou un habitant qui se recharge n'est accepte que s'il est de la
+  ville d'aujourd'hui (`welcome` : ville ouverte, generation courante,
+  espece du mode). La GENERATION (`HavenInvasionState`) change a chaque
+  retrait general (fermeture, pose) : ce qui dormait dans un troncon
+  decharge ne revient jamais -- sans elle, les monstres d'un banc d'essai
+  precedent seraient revenus dans la rue du banc des vehicules ;
+- garde-fous : 600 monstres et 480 habitants charges, quelle que soit la
+  distance de vue ; sans aucun joueur dans la ville, rien n'apparait ; les
+  phantoms restent par joueur (4).
+
+Le banc (`invasion`, 43 OK) charge cinq zones de 13 x 13 troncons -- bien plus
+qu'un joueur n'en voit : 522 monstres sur 343 troncons a quota (98 %, aucun en
+exces, 7 vides), 445 habitants (98 %), 6 apparitions pres des joueurs toutes
+hors de vue, 316 monstres qui tiquent tous deplaces sauf 5 (207 geles dans des
+troncons charges sans tique, comme au-dela de la distance de simulation en
+jeu), rechargement accepte ou refuse selon generation et mode. Tique : 6,8 ms
+au repos et 16,0 ms en combat a 541 monstres, 16,8 ms a 445 habitants, sur une
+reference de 3,8 ms. Deux lecons de banc : ne juger que les entites dont le
+troncon tique ; compter par naissance, jamais par position.
+
+### B. Deux correctifs du meme jour
+
+- La reconstruction du decor attendait cinq secondes qu'un joueur sorte du
+  trou, puis reposait le bloc quand meme : mure. Une case occupee -- joueur,
+  monstre, habitant, voiture et ses parties -- attend maintenant qu'elle se
+  libere, sans limite (`HavenDestruction.occupied`).
+- En difficulte Paisible, le jeu retire tout monstre et l'invasion ne peut pas
+  avoir lieu ; seul le journal le disait. Le joueur en est prevenu a
+  l'arrivee et au bouton (`warnPeacefulDifficulty`).
+
+### C. Ce que le joueur a decide
+
+- Ordre des chantiers : rues pleines (fait), puis le TRAFIC VOLANT en ville
+  paisible, puis les huit ameliorations du Morph Gun.
+- **Les armes par quetes** (a faire avec le jalon B) : au depart, SEULE l'arme
+  rouge (Scatter Gun) ; des PNJ de Haven donnent des quetes dont les
+  recompenses sont les armes suivantes ET des bonus utilisables dans le Defi.
+  « Un reel interet a rester dans la ville, deux gameplays differents. »
+  Rejoint les vendeurs payes en quetes du §66.
+
+### D. Le trafic de Jak 3, lu dans les sources (etude du 16 sept.)
+
+Les voitures civiles suivent un GRAPHE ORIENTE (`nav-graph`, pas un nav-mesh
+ni un chemin), enfoui dans le bsp-header du niveau (champ `city-level-info`),
+que le decompilateur n'exporte pas. `tools/jak_navgraph.py` le lit octet a
+octet dans `raw_obj/ctyport-vis.go` (offsets verifies contre les types de
+`nav-graph-h.gc` et `traffic-engine-h.gc`) : graphe 112, 118 noeuds et 128
+branches vehicule (a sens unique, 15 m/s presque partout, 4 m de large, rayon
+de virage 8 m, 11 carrefours), 311 segments de voie (7 160 m), 1 sortie vers
+le quartier industriel. Le trafic PNJ ne roule QUE sur la voie haute, a
+l'altitude de `*traffic-height-map*` (17,5 m = cellule 75 sur tout le port,
+quelques bosses), avec un pilote `citizen-norm-rider` au siege 0 et des
+sieges passagers vides. Conduite : consigne de vitesse proportionnelle (gain
+2/s) avec 0,4 s d'anticipation, arcs de virage aux noeuds, freinage derriere
+le vehicule de devant (collision predite a 2 s dans un cone de 45 degres),
+repulsion laterale, cap lisse par la vitesse ; le jeu ne tient que ~6
+vehicules civils a la fois (a verifier), apparus a 12 m + hasard x 180 m les
+uns des autres. Rendu de controle : `build/jak/traffic/ctyport_navgraph.png`,
+verifie : les voies suivent les rues, les deux bras, le pont et le bras central.
+
+## 68. Le trafic volant de la ville paisible *(16 sept. 2026)*
+
+« La ville se remplit de villageois des differentes regions qui marchent,
+certains volent en voiture volante. » Fait : en mode paisible, les voitures et
+les motos civiles de Jak 3 circulent sur la voie haute, un habitant au volant.
+
+### A. Les voies : le graphe du jeu, extrait a la main
+
+Le decompilateur d'OpenGOAL n'exporte pas le `nav-graph` (voir §67 D).
+`tools/jak_navgraph.py` le lit dans `raw_obj/ctyport-vis.go` et ecrit
+`data/emeraldweapons/jak/haven_traffic.json` : 118 noeuds et 128 branches
+vehicule, en cellules du volume, avec pour chaque noeud l'altitude de la voie
+d'apres `*traffic-height-map*` (75,0 presque partout, quelques bosses jusqu'a
+86), son cap et son rayon de virage (8 m partout), et pour chaque branche sa
+vitesse (15 m/s, 10 sur cinq d'entre elles), sa largeur (4 m) et son nombre
+maximal d'usagers. Une seule sortie du quartier, au bout du bras est (branche
+47, vers le quartier industriel) : on s'y eloigne de 30 blocs et l'on
+disparait. Rendu de controle par-dessus la vue de dessus du volume, verifie :
+les voies suivent les rues, les deux bras, le pont entre les tours et le bras
+central. Un seul segment sur 311 frole des blocs du volume (un toit a un bloc
+sous l'origine, bout du bras est), sans consequence.
+
+### B. Le pilote : la conduite IA de Jak 3, portee et simplifiee (`TrafficDriver`)
+
+Cote serveur, a chaque tique, a la place de la physique de vol :
+
+- le point vise est 0,4 s devant sur la voie (hvehicle-util.gc:185), et
+  deborde sur la branche suivante, choisie d'avance au hasard parmi celles qui
+  partent du noeud d'arrivee, sans depasser leur nombre d'usagers
+  (vehicle-control.gc:181-219) ;
+- la vitesse suit la consigne au gain 2/s (a = 2 (v visee - v),
+  hvehicle-util.gc:213) : la vitesse de la branche plus l'ecart propre du
+  vehicule (car-a/b +0..3 m/s, car-c -2..0, motos +0..4), bornee au bout de
+  la branche par la vitesse de virage sqrt(rayon x 12 m/s2), elargie jusqu'au
+  double pour un virage doux, sans borne sous 10 degres, appliquee des la
+  distance de freinage (vehicle-control.gc:98-131, hvehicle-util.gc:49-55) ;
+- le vehicule de devant : s'il passe a moins de 4,5 blocs de notre axe et
+  qu'une collision est predite dans les 2 s, on ne va pas plus vite que lui
+  (hvehicle-util.gc:131-145). Un premier critere « a moins de 10 blocs dans un
+  cone de 45 degres » attrapait les voitures de la voie d'en face (a 6,9 blocs
+  au plus pres, 24 en mediane) ;
+- l'altitude suit la voie entre les deux noeuds : a_y = 8 (h - y) - v_y
+  (hvehicle.gc:623-624), l'origine du vehicule sur la carte de hauteur comme
+  dans le jeu (hvehicle.gc:66-78) ;
+- le deplacement est cinematique mais passe par `VehiclePhysics.move`, donc par
+  les collisions de la ville et des autres vehicules : contre un obstacle (une
+  voiture de joueur garee sur la voie), la vitesse bloquee tombe a zero et le
+  vehicule repart quand la voie se libere ; le cap suit la vitesse, lisse a
+  0,6 x v(m/s) par seconde (hvehicle.gc:639-646).
+
+### C. La population des voies (`HavenTraffic`)
+
+Comme celle des rues : chaque branche a un quota tire de sa longueur (un
+vehicule tous les 80 blocs, arrondi par un hasard fixe ; Jak 3 : 12 m + hasard
+x 180 m, ~100 m en moyenne, mais six vehicules civils en tout pour la ville),
+et les branches dont le depart est charge sont completees, les plus loin des
+joueurs d'abord, quatre apparitions par seconde, 60 vehicules charges au plus.
+Un vehicule nait sur sa voie a plus de 64 blocs de tout joueur, hors de sa vue
+a moins de 96 (les voies sont en plein ciel : a 160, presque tout se voyait et
+rien n'apparaissait), a plus de 24 blocs d'un autre, dans l'air libre, DANS UN
+TRONCON QUI TIQUE, lance a la vitesse de la branche. Modele au hasard parmi les
+six civils (comme le jeu). Le pilote est un habitant d'une des sept regions,
+sans metier, sans intelligence (setNoAi), invulnerable, assis a la place 0 ;
+il ne compte pas pour la population des rues.
+
+UN VEHICULE GELE EST RETIRE. Au bord de la zone qui tique (la distance de
+simulation, en jeu), une entite s'arrete net ; sur une voie, les suivants
+freinent derriere elle et s'entassent : le banc a montre quatre vehicules a
+12 blocs d'intervalle, tous a l'arret, derriere un cinquieme gele. Jak 3 fait
+disparaitre ses voitures au-dela de 247 m de la camera ; ici, celui qui entre
+dans un troncon sans tique disparait a la seconde suivante et renait plus
+loin.
+
+Persistants et de la ville d'aujourd'hui comme les habitants (etiquettes,
+generation, `HavenInvasion.welcome` traite un vehicule du trafic comme un
+habitant : PAISIBLE seulement) ; le pilote, sauvegarde DANS son vehicule,
+porte les memes etiquettes. Retires au retour de l'invasion, a la fermeture, a
+une pose, au depart, hors de la grille. On ne monte pas dedans (Jak 3 les
+detourne ; pas ici, pas pour l'instant) ; on s'y cogne, et ils freinent
+derriere une voiture de joueur qui prend leur voie. Indestructibles comme tous
+les vehicules ; les faire exploser sous le Morph Gun est une idee pour plus
+tard.
+
+### D. Le banc
+
+Trois zones de voies loin des joueurs simules s'ajoutent au banc de l'invasion
+(bras ouest, bras est, pont) : le trafic n'apparait qu'a 64 blocs et hors de
+vue a moins de 96, et les cinq zones des ancres n'ont presque aucune voie qui
+convienne. Verifie : vehicules sur leur branche (ecart lateral maximal ~1
+bloc) et a l'altitude de la voie (0,4 bloc au plus), avec pilote, distance
+parcourue par vehicule pendant sa vie (les zones du banc ne tiquent que sur
+80 blocs : un vehicule les traverse en cinq secondes), vitesse de croisiere,
+acceptes au rechargement en paisible, tous retires au retour de l'invasion.
+Deux lecons de banc : un vehicule qui « a une vitesse » mais ne bouge pas est
+un vehicule gele ; et une file de vehicules a l'arret a toujours une tete.
+
+Mesure du 16 sept. (banc invasion, 47 OK) : 14 vehicules pour un quota de 38
+sur 48 branches chargees (les zones du banc ne tiquent que sur 80 blocs, un
+vehicule les traverse en cinq secondes ; 76 vehicules observes en 20 s), tous
+sur leur branche (0,9 bloc d'ecart au plus) et a l'altitude de la voie (0,9),
+tous avec pilote ; 8 sur 8 suivis deux secondes ont parcouru plus de 10 blocs,
+14 sur 14 entre 5 et 22 m/s ; tique 16,0 ms a 522 habitants et 14 vehicules,
+sur une reference de 4,7 ms. En jeu, autour d'un joueur, la zone qui tique
+fait 300 blocs de cote et les voies s'y remplissent a leur quota.

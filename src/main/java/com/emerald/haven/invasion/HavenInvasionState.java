@@ -18,7 +18,8 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * L'etat sauvegarde de l'invasion : le mode de la ville et le registre des blocs casses.
+ * L'etat sauvegarde de l'invasion : le mode de la ville, la generation de sa
+ * population et le registre des blocs casses.
  *
  * RANGE DANS LE STOCKAGE DU NIVEAU DE HAVEN, sauvegarde avec ses troncons : un
  * arret sauvegarde en meme temps les trous et la liste qui les rebouche, et un
@@ -27,6 +28,11 @@ import java.util.Map;
  * LE REGISTRE garde, par position, l'etat complet du bloc casse, le NBT de son
  * entite de bloc s'il en avait une, et la tique (temps de jeu du monde) ou il
  * revient.
+ *
+ * LA GENERATION change a chaque retrait general de la population (fermeture de
+ * la ville, pose) : les monstres et les habitants portent celle de leur naissance,
+ * et un troncon recharge ne rend que ceux de la generation courante
+ * (HavenInvasion.welcome).
  */
 public final class HavenInvasionState extends SavedData {
 
@@ -62,6 +68,7 @@ public final class HavenInvasionState extends SavedData {
     }
 
     private HavenInvasion.Mode mode = HavenInvasion.Mode.INVASION;
+    private long generation;
     final Map<Long, Pending> pending = new LinkedHashMap<>();
     /** L'echeance la plus proche du registre (volatile) ; MIN_VALUE force un parcours. */
     long earliest = Long.MIN_VALUE;
@@ -91,6 +98,7 @@ public final class HavenInvasionState extends SavedData {
         } catch (IllegalArgumentException e) {
             this.mode = HavenInvasion.Mode.INVASION;
         }
+        this.generation = tag.getLong("Generation");
         this.pending.clear();
         this.earliest = Long.MIN_VALUE;
         var blocks = registries.lookupOrThrow(Registries.BLOCK);
@@ -108,6 +116,7 @@ public final class HavenInvasionState extends SavedData {
     @Override
     public CompoundTag save(CompoundTag tag, HolderLookup.Provider registries) {
         tag.putString("Mode", this.mode.name());
+        tag.putLong("Generation", this.generation);
         ListTag list = new ListTag();
         for (Map.Entry<Long, Pending> entry : this.pending.entrySet()) {
             CompoundTag block = new CompoundTag();
@@ -132,6 +141,15 @@ public final class HavenInvasionState extends SavedData {
             this.mode = mode;
             setDirty();
         }
+    }
+
+    public long generation() {
+        return this.generation;
+    }
+
+    void bumpGeneration() {
+        this.generation++;
+        setDirty();
     }
 
     public int pendingCount() {

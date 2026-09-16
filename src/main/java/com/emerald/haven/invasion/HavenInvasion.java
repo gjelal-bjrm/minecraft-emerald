@@ -5,27 +5,30 @@ import com.emerald.haven.HavenArrival;
 import com.emerald.haven.HavenRules;
 import com.emerald.haven.HavenSite;
 import com.emerald.haven.HavenState;
+import com.emerald.haven.traffic.HavenTraffic;
 import com.emerald.main.EmeraldWeaponsMod;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.SectionPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.Difficulty;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.monster.Phantom;
 import net.minecraft.world.entity.monster.Skeleton;
-import net.minecraft.world.entity.monster.ZombieVillager;
 import net.minecraft.world.entity.monster.Zombie;
+import net.minecraft.world.entity.monster.ZombieVillager;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.entity.npc.VillagerProfession;
 import net.minecraft.world.entity.npc.VillagerType;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.Difficulty;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.entity.EntityTypeTest;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.EventPriority;
@@ -41,16 +44,19 @@ import net.neoforged.neoforge.event.entity.living.LivingExperienceDropEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import net.neoforged.neoforge.server.ServerLifecycleHooks;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -61,7 +67,8 @@ import java.util.UUID;
  * - {@link #isHavenMonster(Entity)} et {@link #kindOf(Entity)} : reconnaitre un monstre de l'invasion ;
  * - {@link HavenMonsterKilledEvent} sur NeoForge.EVENT_BUS : un monstre de Haven est mort (son butin vanilla
  *   et son experience sont supprimes ; c'est la qu'on lache les munitions) ;
- * - {@link #isHavenVillager(Entity)} : un habitant de la ville paisible (invulnerable, sans commerce).
+ * - {@link #isHavenVillager(Entity)} : un habitant de la ville paisible (invulnerable, sans commerce) ;
+ * - {@link #loadedMonsters} et {@link #loadedVillagers} : ce qui est charge en ce moment.
  *
  * LE MODE est sauvegarde (HavenInvasionState). On arrive en INVASION : chaque
  * reouverture du lobby le remet. Le bouton du QG le bascule pour toute la ville.
@@ -69,21 +76,41 @@ import java.util.UUID;
  * LA VILLE OUVERTE ({@link #cityOpen}) : lobby ouvert, ville posee, aucune pose en
  * cours. Hors de la, rien n'apparait, et tout ce qui etait la est retire.
  *
- * LES APPARITIONS, toutes les secondes, autour de chaque joueur de la ville (hors
- * spectateurs et operateurs en chantier), dans les tuiles de la carte validee :
- * au sol entre {@link #SPAWN_MIN} et {@link #SPAWN_MAX} blocs du joueur (et a au
- * moins SPAWN_MIN de tout joueur), dans une cellule de pieds de la carte -- donc a
- * plus de 24 blocs des portes et de l'entree du bar, hors zone sure --, revalidee
- * dans le monde (sol plein, deux cases libres, troncon qui tique) et HORS DE LA VUE
- * de tout joueur a moins de {@link #SIGHT_RADIUS} : on ne voit rien surgir au milieu
- * de la rue ; les phantoms dans leur bande de vol. Plafonds : {@link #GROUND_PER_PLAYER}
- * au sol et {@link #PHANTOMS_PER_PLAYER} phantoms par joueur, chacun comptant pour le
- * joueur le plus proche, {@link #MONSTERS_TOTAL} en tout ; habitants
- * {@link #VILLAGERS_PER_PLAYER} par joueur et {@link #VILLAGERS_TOTAL} en tout.
- * Chiffres retenus apres mesure du MSPT (banc « invasion »).
+ * LA POPULATION EST CELLE DE TOUTE LA VILLE, PAS D'UNE BULLE AUTOUR DU JOUEUR
+ * (refonte du 16 sept.). Le premier reglage faisait apparaitre les monstres a 16-40
+ * blocs des joueurs et les retirait a 72 : « ils apparaissent a cote de moi, mais
+ * quand je me deplace en voiture un peu plus loin dans la ville, les rues sont
+ * vides ». A 40 m/s, on traverse une telle bulle en une seconde. Desormais chaque
+ * tuile au sol de la carte -- un troncon du monde -- a un QUOTA tire de sa surface
+ * praticable ({@link #quota} : une cellule sur {@link #MONSTER_CELLS} pour les
+ * monstres, sur {@link #VILLAGER_CELLS} pour les habitants, arrondi par un hasard
+ * fixe de la tuile pour que les petites rues ne restent pas toutes vides). Chaque
+ * entite compte pour le troncon ou elle est NEE ({@link #homeOf}, sauvegarde avec
+ * elle), pas pour celui ou elle se tient. Chaque seconde, les troncons CHARGES
+ * (blocs et entites) sous leur quota sont completes,
+ * les plus loin des joueurs d'abord -- ils viennent d'apparaitre au bord de la vue --,
+ * a {@link #SPAWNS_PER_SECOND} apparitions au plus. Une apparition se fait a plus de
+ * {@link #SPAWN_MIN} blocs de tout joueur, hors de sa vue a moins de
+ * {@link #SIGHT_RADIUS}, hors des centres d'exclusion (portes, entree du bar) et des
+ * zones sures, sur un sol plein (HavenSpawner). Sans aucun joueur dans la ville,
+ * rien n'apparait.
  *
- * LES MONSTRES FLANENT AU SOLEIL FIGE : sans cela, ils restaient plantes ou ils
- * etaient apparus des qu'aucun joueur n'etait a moins de 32 blocs (voir sweep).
+ * LES ENTITES SONT PERSISTANTES : le jeu ne les retire jamais lui-meme
+ * (setPersistenceRequired : ni au loin, ni au repos ; Mob.checkDespawn remet alors
+ * noActionTime a zero a chaque tique, donc les monstres flanent au soleil fige au
+ * lieu de rester plantes). Loin des joueurs, leurs troncons se dechargent avec elles ;
+ * quand on revient, elles sont la ou on les a laissees. Un monstre ou un habitant
+ * qui se recharge n'est accepte que s'il est de la ville d'aujourd'hui ({@link #welcome} :
+ * ville ouverte, generation courante, espece du mode) ; sinon il est refuse. La
+ * generation change a chaque retrait general (fermeture, pose), pour que ce qui
+ * dormait dans un troncon decharge ne revienne jamais. La ville ne retire elle-meme
+ * que ce qui sort de la grille ; tout au changement de mode, a la fermeture ou a une
+ * pose (troncons charges ; les autres au rechargement). Garde-fou :
+ * {@link #LOADED_MAX_MONSTERS} et {@link #LOADED_MAX_VILLAGERS} entites chargees,
+ * quelle que soit la distance de vue.
+ *
+ * LES PHANTOMS restent autour des joueurs : {@link #PHANTOMS_PER_PLAYER} par joueur,
+ * chacun comptant pour le joueur le plus proche, dans leur bande de vol.
  *
  * LE SOLEIL FIGE NE BRULE PAS : Mob.isSunBurnTick exige level.isDay(), et
  * Level.isDay() rend faux dans une dimension a heure fixe (Level.java:425 ;
@@ -91,11 +118,6 @@ import java.util.UUID;
  * et AbstractSkeleton.aiStep ne mettent pas le feu a un porteur de casque, et le
  * casque d'origine s'userait jusqu'a casser. Le phantom (Phantom.aiStep) n'a pas de
  * casque : il ne brule pas pour la meme raison, mesure sur 60 secondes par le banc.
- *
- * NON PERSISTANTS ET PISTES : retires quand plus aucun joueur n'est a moins de
- * {@link #DESPAWN_RADIUS} blocs, au passage en paisible (monstres) ou en invasion
- * (habitants), a la fermeture de la ville. Un monstre ou un habitant sauvegarde avec
- * un troncon ne revient pas : il est refuse a son rechargement (etiquette).
  *
  * LES ZONES SURES : un monstre ou un habitant qui y entre est ramene a sa derniere
  * position dehors ; un monstre ne vise pas un joueur qui s'y tient, et ne l'y blesse
@@ -115,46 +137,47 @@ public final class HavenInvasion {
     public static final String MONSTER_TAG = "emeraldweapons.haven_monstre";
     /** L'etiquette d'entite d'un habitant de la ville paisible. */
     public static final String VILLAGER_TAG = "emeraldweapons.haven_habitant";
+    /** Le prefixe de l'etiquette de generation : la ville dans laquelle l'entite est nee. */
+    public static final String GENERATION_TAG = "emeraldweapons.haven_gen.";
+    /** La cle, dans les donnees persistantes de l'entite, du troncon ou elle est nee. */
+    public static final String HOME_KEY = "emeraldweapons.haven_troncon";
 
     /** Les sept regions des habitants. */
     public static final List<VillagerType> VILLAGER_TYPES = List.of(VillagerType.DESERT, VillagerType.JUNGLE,
             VillagerType.PLAINS, VillagerType.SAVANNA, VillagerType.SNOW, VillagerType.SWAMP, VillagerType.TAIGA);
 
-    // ------------------------------------------------------------- plafonds (mesures par le banc)
+    // ------------------------------------------------------------- densites (mesurees par le banc)
     //
-    // Premiers chiffres (13 sept.) : 12 au sol et 10 habitants par joueur dans 64 blocs,
-    // apparus de 24 a 56 blocs. En jeu, le joueur a trouve les rues vides : 27 monstres
-    // apres deux minutes, 13 habitants (journal du 14 sept.), plantes loin et hors de
-    // vue. Deuxieme reglage (15 sept.) : deux fois plus nombreux, plus pres, hors de
-    // vue, et des monstres qui flanent au soleil (voir sweep).
+    // Premiers chiffres (13 sept.) : 12 au sol et 10 habitants par joueur dans 64 blocs.
+    // Deuxieme reglage (15 sept.) : 28 et 24 par joueur, de 16 a 40 blocs, hors de vue.
+    // En voiture, les rues restaient vides des qu'on quittait la bulle (16 sept.) :
+    // troisieme reglage, par troncon, pour toute la ville.
 
     /**
-     * Monstres au sol par joueur. CHAQUE MONSTRE COMPTE POUR LE JOUEUR LE PLUS PROCHE, ou
-     * qu'il soit (nearestIndex). Compte dans un rayon, un monstre qui flanait au-dela
-     * laissait sa place a un autre, et tous revenaient ensemble sur le joueur en combat :
-     * 33 au sol et 7 phantoms autour d'un seul au banc, pour 28 et 4.
+     * Cellules praticables par monstre au sol. A 150 : 1 200 monstres dans la ville,
+     * 125 a 140 charges autour d'un joueur a dix troncons de vue (banc du 16 sept.).
      */
-    public static final int GROUND_PER_PLAYER = 28;
+    public static final int MONSTER_CELLS = 150;
+    /** Cellules praticables par habitant : 1 000 dans la ville, une centaine charges autour d'un joueur. */
+    public static final int VILLAGER_CELLS = 180;
+    /**
+     * Garde-fous sur ce qui est charge, quelle que soit la distance de vue du serveur.
+     * Le banc en charge 535 et 454 (cinq zones de 13 x 13 troncons) : 11 ms de tique en
+     * combat a 416 monstres, 9 ms a 320 habitants, sur une reference de 4,5 ms.
+     */
+    public static final int LOADED_MAX_MONSTERS = 600;
+    public static final int LOADED_MAX_VILLAGERS = 640;
     public static final int PHANTOMS_PER_PLAYER = 4;
-    public static final int MONSTERS_TOTAL = 120;
-    /** Habitants par joueur, comptes de meme. */
-    public static final int VILLAGERS_PER_PLAYER = 24;
-    public static final int VILLAGERS_TOTAL = 96;
-    /** Apparitions au sol au plus par joueur et par seconde. */
-    public static final int SPAWNS_PER_CYCLE = 6;
+    /** Apparitions au sol au plus par seconde, toute la ville confondue. */
+    public static final int SPAWNS_PER_SECOND = 64;
+    /** Aucune apparition au sol a moins de ce rayon d'un joueur. */
     public static final double SPAWN_MIN = 16.0;
-    public static final double SPAWN_MAX = 40.0;
     /**
      * Une apparition au sol a moins de ce rayon d'un joueur doit etre hors de sa vue ;
      * au-dela, comme les apparitions de la nuit vanilla (24 blocs), elle peut se voir.
-     * Hors de vue jusqu'a SPAWN_MAX, les places degagees -- autour du bar et du bras
-     * ouest -- ne se remplissaient pas : 3 et 4 monstres apres 20 s, 0 et 2 habitants,
-     * pour 27 dans les rues etroites (banc du 15 sept.).
      */
     public static final double SIGHT_RADIUS = 24.0;
     public static final double PHANTOM_MAX = 48.0;
-    /** Au-dela du plus proche joueur, monstres et habitants sont retires. */
-    public static final double DESPAWN_RADIUS = 72.0;
     /** Deux secondes entre deux appuis du bouton. */
     public static final int BUTTON_COOLDOWN = 40;
 
@@ -163,14 +186,15 @@ public final class HavenInvasion {
 
     // ------------------------------------------------------------- memoire volatile
 
-    private static final List<Mob> MONSTERS = new ArrayList<>();
-    private static final List<Villager> VILLAGERS = new ArrayList<>();
-    /** Derniere position hors zone sure de chaque monstre ou habitant suivi. */
+    /** Derniere position hors zone sure de chaque monstre ou habitant charge. */
     private static final Map<UUID, Vec3> LAST_OUTSIDE = new HashMap<>();
     /** Les apparitions recentes, pour le banc d'essai (256 au plus). */
     static final List<HavenSpawner.Spawned> RECENT = new ArrayList<>();
     /** Les ancres du banc d'essai : des joueurs simules, en plus des vrais. */
     static final List<Vec3> TEST_ANCHORS = new ArrayList<>();
+    /** Les quotas par troncon, pour la carte et l'origine courantes. */
+    @Nullable
+    private static Quotas quotas;
 
     private static int ticks;
     private static boolean started;
@@ -231,16 +255,130 @@ public final class HavenInvasion {
         return entity instanceof Skeleton ? Kind.SKELETON : null;
     }
 
-    /** Les monstres suivis encore vivants (copie). */
-    public static List<Mob> monsters() {
-        MONSTERS.removeIf(Entity::isRemoved);
-        return List.copyOf(MONSTERS);
+    /** Les monstres de l'invasion charges dans la ville (copie). */
+    public static List<Mob> loadedMonsters(ServerLevel level) {
+        return new ArrayList<>(level.getEntities(EntityTypeTest.forClass(Mob.class),
+                m -> m.getTags().contains(MONSTER_TAG) && !m.isRemoved()));
     }
 
-    /** Les habitants suivis encore presents (copie). */
+    /** Les habitants charges dans la ville (copie). */
+    public static List<Villager> loadedVillagers(ServerLevel level) {
+        return new ArrayList<>(level.getEntities(EntityTypeTest.forClass(Villager.class),
+                v -> v.getTags().contains(VILLAGER_TAG) && !v.getTags().contains(HavenTraffic.DRIVER_TAG) && !v.isRemoved()));
+    }
+
+    /** Les monstres charges, sur le serveur en cours ; vide sans serveur ni ville. */
+    public static List<Mob> monsters() {
+        ServerLevel level = currentLevel();
+        return level == null ? List.of() : loadedMonsters(level);
+    }
+
+    /** Les habitants charges, sur le serveur en cours ; vide sans serveur ni ville. */
     public static List<Villager> villagers() {
-        VILLAGERS.removeIf(Entity::isRemoved);
-        return List.copyOf(VILLAGERS);
+        ServerLevel level = currentLevel();
+        return level == null ? List.of() : loadedVillagers(level);
+    }
+
+    @Nullable
+    private static ServerLevel currentLevel() {
+        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+        return server == null ? null : Haven.level(server);
+    }
+
+    /** L'etiquette de generation de la ville d'aujourd'hui. */
+    public static String generationTag(ServerLevel level) {
+        return GENERATION_TAG + HavenInvasionState.get(level).generation();
+    }
+
+    /**
+     * Un monstre ou un habitant qui se recharge avec son troncon est-il de la ville
+     * d'aujourd'hui ? Ville ouverte, generation courante, espece du mode. Une entite
+     * qui n'est pas de l'invasion est toujours la bienvenue.
+     */
+    public static boolean welcome(ServerLevel level, Entity entity) {
+        boolean monster = entity.getTags().contains(MONSTER_TAG);
+        // un habitant, un vehicule du trafic ou son pilote : la ville paisible
+        boolean villager = entity.getTags().contains(VILLAGER_TAG) || entity.getTags().contains(HavenTraffic.TRAFFIC_TAG);
+        if (!monster && !villager) {
+            return true;
+        }
+        if (!cityOpen(level.getServer())) {
+            return false;
+        }
+        HavenInvasionState state = HavenInvasionState.get(level);
+        if (!entity.getTags().contains(GENERATION_TAG + state.generation())) {
+            return false;
+        }
+        return monster ? state.mode() == Mode.INVASION : state.mode() == Mode.PAISIBLE;
+    }
+
+    // ================================================================ quotas
+
+    /**
+     * Le quota d'une tuile : sa surface praticable divisee par {@code cellsPer}, arrondi
+     * par un hasard FIXE de la tuile. Un arrondi ordinaire laissait vides toutes les
+     * tuiles sous la moitie du pas -- les rues etroites --, et un plafond entier leur
+     * donnait a toutes un monstre : le hasard fixe donne a chacune sa chance, et la
+     * meme d'une seconde a l'autre.
+     */
+    public static int quota(HavenInvasionData.GroundTile tile, int cellsPer) {
+        long h = tile.tx() * 0x9E3779B97F4A7C15L + tile.tz() * 0xC2B2AE3D27D4EB4FL;
+        h ^= h >>> 29;
+        h *= 0xBF58476D1CE4E5B9L;
+        h ^= h >>> 32;
+        double frac = (h & 0xFFFFFFL) / (double) 0x1000000;
+        return (int) Math.floor(tile.cells().length / (double) cellsPer + frac);
+    }
+
+    /**
+     * Le troncon pour lequel une entite compte : celui ou elle est nee, sauvegarde avec
+     * elle ; sinon (posee par le banc) celui ou elle se tient. COMPTER PAR NAISSANCE ET
+     * NON PAR POSITION : sinon les monstres qui convergent sur un joueur en combat
+     * videraient leurs troncons, que la ville remplirait a nouveau, sans fin (mesure au
+     * banc : 188 troncons vides et 16 monstres de trop sur un seul apres 30 s de combat).
+     */
+    public static long homeOf(Entity entity) {
+        return entity.getPersistentData().contains(HOME_KEY)
+                ? entity.getPersistentData().getLong(HOME_KEY) : entity.chunkPosition().toLong();
+    }
+
+    /** Le troncon du monde d'une tuile : celui de sa premiere cellule (l'origine de pose est alignee sur 16). */
+    public static long chunkKey(BlockPos origin, HavenInvasionData.GroundTile tile) {
+        return ChunkPos.asLong(SectionPos.blockToSectionCoord(origin.getX() + tile.tx() * HavenInvasionData.TILE),
+                SectionPos.blockToSectionCoord(origin.getZ() + tile.tz() * HavenInvasionData.TILE));
+    }
+
+    /** Les tuiles au sol par troncon du monde, avec leurs quotas, pour une carte et une origine. */
+    static final class Quotas {
+        final HavenInvasionData.Data data;
+        final BlockPos origin;
+        final Map<Long, HavenInvasionData.GroundTile> tiles = new HashMap<>();
+        final Map<Long, Integer> monsters = new HashMap<>();
+        final Map<Long, Integer> villagers = new HashMap<>();
+
+        Quotas(HavenInvasionData.Data data, BlockPos origin) {
+            this.data = data;
+            this.origin = origin;
+            for (HavenInvasionData.GroundTile tile : data.groundTiles()) {
+                long key = chunkKey(origin, tile);
+                this.tiles.put(key, tile);
+                this.monsters.put(key, quota(tile, MONSTER_CELLS));
+                this.villagers.put(key, quota(tile, VILLAGER_CELLS));
+            }
+        }
+    }
+
+    @Nullable
+    private static Quotas quotas(MinecraftServer server) {
+        HavenInvasionData.Data data = HavenInvasionData.get(server);
+        if (data == null) {
+            return null;
+        }
+        BlockPos origin = HavenState.get(server).origin();
+        if (quotas == null || quotas.data != data || !quotas.origin.equals(origin)) {
+            quotas = new Quotas(data, origin);
+        }
+        return quotas;
     }
 
     // ================================================================ mode
@@ -265,7 +403,8 @@ public final class HavenInvasion {
             return false;
         }
         state.setMode(mode);
-        int removed = mode == Mode.PAISIBLE ? removeMonsters(level) : removeVillagers(level);
+        int removed = mode == Mode.PAISIBLE ? removeMonsters(level)
+                : removeVillagers(level) + HavenTraffic.removeAll(level);
         HavenInvasionButton.keep(server, true);
         announce(level, mode, who);
         LOGGER.info("ville de Haven : mode {} ({}), {} entites retirees", mode,
@@ -294,6 +433,21 @@ public final class HavenInvasion {
         level.playSound(null, pos, SoundEvents.STONE_BUTTON_CLICK_ON, SoundSource.BLOCKS, 0.9F, 0.8F);
         Mode next = mode(server) == Mode.INVASION ? Mode.PAISIBLE : Mode.INVASION;
         setMode(server, next, player.getDisplayName());
+        if (next == Mode.INVASION) {
+            warnPeacefulDifficulty(player);
+        }
+    }
+
+    /**
+     * En difficulte PAISIBLE, le jeu retire tout monstre (Mob.checkDespawn) : l'invasion
+     * ne peut pas avoir lieu. On le dit au joueur, a l'arrivee et au bouton ; seul le
+     * journal le disait (spawn), et un joueur ne lit pas le journal.
+     */
+    public static void warnPeacefulDifficulty(ServerPlayer player) {
+        if (player.server.getWorldData().getDifficulty() == Difficulty.PEACEFUL) {
+            player.sendSystemMessage(Component.translatable("game.emeraldweapons.haven.invasion.peaceful_difficulty")
+                    .withStyle(ChatFormatting.YELLOW));
+        }
     }
 
     public static Component modeName(Mode mode) {
@@ -331,7 +485,8 @@ public final class HavenInvasion {
      * Une tique de la ville : cycle de vie, reconstructions, balayage, apparitions.
      *
      * - premiere tique du serveur : le registre des casses est reconstruit en
-     *   entier (un redemarrage ne laisse pas de trou), les restes etiquetes retires ;
+     *   entier (un redemarrage ne laisse pas de trou) ; la population sauvegardee
+     *   reste si la ville est ouverte, sinon tout ce qui est charge est retire ;
      * - une pose commence : les trous encore vides sont rebouches, tout est retire ;
      * - le lobby se rouvre (phase PARTI ou ABSENTE vers ACCUEIL) : retour en INVASION ;
      * - la ville se ferme (depart vers la partie) : tout est retire, tout est reconstruit.
@@ -346,7 +501,7 @@ public final class HavenInvasion {
         if (!started) {
             started = true;
             int rebuilt = busy ? HavenDestruction.flushForPose(level) : HavenDestruction.rebuildAll(level);
-            int removed = removeAll(level);
+            int removed = cityOpen(server) ? 0 : removeAll(level);
             if (rebuilt > 0 || removed > 0) {
                 LOGGER.info("ville de Haven : demarrage, {} blocs reconstruits, {} entites de l'invasion retirees",
                         rebuilt, removed);
@@ -385,16 +540,16 @@ public final class HavenInvasion {
         }
         if (ticks % SPAWN_PERIOD == 0) {
             spawn(level);
+            HavenTraffic.update(level, mode(server), anchors(level));
         }
     }
 
     @SubscribeEvent
     public static void onServerStopped(ServerStoppedEvent event) {
-        MONSTERS.clear();
-        VILLAGERS.clear();
         LAST_OUTSIDE.clear();
         RECENT.clear();
         TEST_ANCHORS.clear();
+        quotas = null;
         ticks = 0;
         started = false;
         lastOpen = false;
@@ -407,7 +562,7 @@ public final class HavenInvasion {
     // ================================================================ ancres
 
     /** Les points autour desquels la ville vit : les joueurs de Haven (ni spectateur, ni chantier), et le banc. */
-    static List<Vec3> anchors(ServerLevel level) {
+    public static List<Vec3> anchors(ServerLevel level) {
         List<Vec3> out = new ArrayList<>(TEST_ANCHORS);
         for (ServerPlayer player : level.players()) {
             if (!player.isFakePlayer() && !player.isSpectator() && player.isAlive() && !HavenRules.chantier(player)) {
@@ -421,6 +576,15 @@ public final class HavenInvasion {
         double dx = a.x - x;
         double dz = a.z - z;
         return Math.sqrt(dx * dx + dz * dz);
+    }
+
+    /** La distance a plat au joueur le plus proche ; infinie sans joueur. */
+    public static double nearestDistance(List<Vec3> anchors, double x, double z) {
+        double best = Double.MAX_VALUE;
+        for (Vec3 anchor : anchors) {
+            best = Math.min(best, horizontal(anchor, x, z));
+        }
+        return best;
     }
 
     /** L'ancre la plus proche de l'entite, a plat : celle pour qui elle compte. */
@@ -437,65 +601,43 @@ public final class HavenInvasion {
         return best;
     }
 
-    private static double nearest(List<Vec3> anchors, Entity entity) {
-        double best = Double.MAX_VALUE;
-        for (Vec3 anchor : anchors) {
-            best = Math.min(best, horizontal(anchor, entity.getX(), entity.getZ()));
-        }
-        return best;
-    }
-
     // ================================================================ balayage
 
     /**
-     * Toutes les demi-secondes : pistes perdues, joueurs trop loin, zones sures,
-     * cibles a l'abri, metiers des habitants.
+     * Toutes les demi-secondes, sur ce qui est charge : hors de la grille, zones
+     * sures, cibles a l'abri, metiers des habitants.
      */
     private static void sweep(ServerLevel level) {
         MinecraftServer server = level.getServer();
-        List<Vec3> anchors = anchors(level);
         HavenInvasionData.Data data = HavenInvasionData.get(server);
         BlockPos origin = HavenState.get(server).origin();
-        for (Mob mob : List.copyOf(MONSTERS)) {
-            if (mob.isRemoved()) {
-                forget(mob);
-                continue;
-            }
-            if (anchors.isEmpty() || nearest(anchors, mob) > DESPAWN_RADIUS || outside(data, origin, mob)) {
+        Set<UUID> seen = new HashSet<>();
+        for (Mob mob : loadedMonsters(level)) {
+            if (outside(data, origin, mob)) {
                 mob.discard();
-                forget(mob);
                 continue;
             }
-            // LE SOLEIL FIGE LES MONSTRES. En pleine lumiere, Monster.updateNoActionTime
-            // ajoute 2 par tique a noActionTime, que seul un joueur a moins de 32 blocs
-            // remet a zero (Mob.checkDespawn). Au-dela de 100, RandomStrollGoal refuse de
-            // flaner ; au-dela de 600, un monstre sur 800 par tique disparait. Apparus a
-            // plus de 24 blocs, les monstres restaient donc plantes hors de vue, puis
-            // s'effacaient : le joueur a trouve les rues vides. Remis a zero toutes les
-            // demi-secondes, ils flanent comme la nuit ; la ville les retire elle-meme.
-            mob.setNoActionTime(0);
+            seen.add(mob.getUUID());
             keepOutOfSafeZones(server, mob);
             if (mob.getTarget() instanceof Player target
                     && HavenProtection.inSafeZone(server, target.getX(), target.getY(), target.getZ())) {
                 mob.setTarget(null);
             }
         }
-        for (Villager villager : List.copyOf(VILLAGERS)) {
-            if (villager.isRemoved()) {
-                forget(villager);
-                continue;
-            }
-            if (anchors.isEmpty() || nearest(anchors, villager) > DESPAWN_RADIUS || outside(data, origin, villager)) {
+        for (Villager villager : loadedVillagers(level)) {
+            if (outside(data, origin, villager)) {
                 villager.discard();
-                forget(villager);
                 continue;
             }
+            seen.add(villager.getUUID());
             keepOutOfSafeZones(server, villager);
             if (villager.getVillagerData().getProfession() != VillagerProfession.NONE) {
                 // un poste de travail trouve dans la ville : sans metier, pas de commerce
                 villager.setVillagerData(villager.getVillagerData().setProfession(VillagerProfession.NONE));
             }
         }
+        // les entites dechargees reprennent leur memoire au rechargement, depuis leur position
+        LAST_OUTSIDE.keySet().retainAll(seen);
     }
 
     /** Hors de la grille, ou trop haut (un phantom parti dans le ciel). */
@@ -517,7 +659,6 @@ public final class HavenInvasion {
         Vec3 back = LAST_OUTSIDE.get(mob.getUUID());
         if (back == null) {
             mob.discard();
-            forget(mob);
             return;
         }
         mob.getNavigation().stop();
@@ -526,19 +667,17 @@ public final class HavenInvasion {
         mob.teleportTo(back.x, back.y, back.z);
     }
 
-    private static void forget(Entity entity) {
-        MONSTERS.remove(entity);
-        VILLAGERS.remove(entity);
-        LAST_OUTSIDE.remove(entity.getUUID());
-    }
-
     // ================================================================ apparitions
+
+    /** Un troncon charge sous son quota, et sa distance au joueur le plus proche. */
+    private record Deficit(HavenInvasionData.GroundTile tile, int missing, double distance) {
+    }
 
     private static void spawn(ServerLevel level) {
         MinecraftServer server = level.getServer();
-        HavenInvasionData.Data data = HavenInvasionData.get(server);
+        Quotas q = quotas(server);
         List<Vec3> anchors = anchors(level);
-        if (data == null || anchors.isEmpty()) {
+        if (q == null || anchors.isEmpty()) {
             return;
         }
         if (server.getWorldData().getDifficulty() == Difficulty.PEACEFUL) {
@@ -547,56 +686,67 @@ public final class HavenInvasion {
                 LOGGER.warn("ville de Haven : difficulte PAISIBLE, le jeu retire tout monstre ; l'invasion ne peut pas avoir lieu");
             }
         }
-        MONSTERS.removeIf(Entity::isRemoved);
-        VILLAGERS.removeIf(Entity::isRemoved);
-        BlockPos origin = HavenState.get(server).origin();
-        List<Integer> order = new ArrayList<>();
-        for (int i = 0; i < anchors.size(); i++) {
-            order.add(i);
-        }
-        Collections.shuffle(order, new java.util.Random(level.random.nextLong()));
+        String generation = generationTag(level);
+        long now = level.getGameTime();
         if (mode(server) == Mode.INVASION) {
-            int[] ground = new int[anchors.size()];
+            Map<Long, Integer> counts = new HashMap<>();
             int[] phantoms = new int[anchors.size()];
-            for (Mob mob : MONSTERS) {
+            int ground = 0;
+            for (Mob mob : loadedMonsters(level)) {
                 if (mob instanceof Phantom) {
                     phantoms[nearestIndex(anchors, mob)]++;
                 } else {
-                    ground[nearestIndex(anchors, mob)]++;
+                    counts.merge(homeOf(mob), 1, Integer::sum);
+                    ground++;
                 }
             }
-            for (int k : order) {
-                Vec3 anchor = anchors.get(k);
-                int budget = Math.min(SPAWNS_PER_CYCLE, GROUND_PER_PLAYER - ground[k]);
-                for (int i = 0; i < budget && MONSTERS.size() < MONSTERS_TOTAL; i++) {
-                    BlockPos feet = HavenSpawner.findGround(level, data, origin, anchor, anchors, level.random);
+            int budget = Math.min(SPAWNS_PER_SECOND, LOADED_MAX_MONSTERS - ground);
+            for (Deficit deficit : deficits(level, q, q.monsters, counts, anchors)) {
+                if (budget <= 0) {
+                    break;
+                }
+                for (int i = 0; i < deficit.missing() && budget > 0; i++) {
+                    BlockPos feet = HavenSpawner.findInTile(level, q.data, q.origin, deficit.tile(), anchors, level.random, true);
                     if (feet == null) {
                         break;
                     }
                     Kind kind = HavenSpawner.pickGroundKind(level.random);
-                    track(HavenSpawner.spawnMonster(level, kind, Vec3.atBottomCenterOf(feet), true), kind);
+                    Mob mob = HavenSpawner.spawnMonster(level, kind, Vec3.atBottomCenterOf(feet), true);
+                    if (mob != null) {
+                        mob.addTag(generation);
+                        mob.getPersistentData().putLong(HOME_KEY, chunkKey(q.origin, deficit.tile()));
+                        budget--;
+                        record(new HavenSpawner.Spawned(kind, null, mob.position(), now));
+                    }
                 }
-                if (phantoms[k] < PHANTOMS_PER_PLAYER && MONSTERS.size() < MONSTERS_TOTAL && level.random.nextInt(4) == 0) {
-                    Vec3 at = HavenSpawner.findPhantom(level, data, origin, anchor, anchors, level.random);
+            }
+            for (int k = 0; k < anchors.size(); k++) {
+                if (phantoms[k] < PHANTOMS_PER_PLAYER && level.random.nextInt(4) == 0) {
+                    Vec3 at = HavenSpawner.findPhantom(level, q.data, q.origin, anchors.get(k), anchors, level.random);
                     if (at != null) {
-                        track(HavenSpawner.spawnMonster(level, Kind.PHANTOM, at, true), Kind.PHANTOM);
+                        Mob phantom = HavenSpawner.spawnMonster(level, Kind.PHANTOM, at, true);
+                        if (phantom != null) {
+                            phantom.addTag(generation);
+                            record(new HavenSpawner.Spawned(Kind.PHANTOM, null, phantom.position(), now));
+                        }
                     }
                 }
             }
         } else {
+            Map<Long, Integer> counts = new HashMap<>();
             Map<VillagerType, Integer> byType = new HashMap<>();
-            for (Villager villager : VILLAGERS) {
+            List<Villager> loaded = loadedVillagers(level);
+            for (Villager villager : loaded) {
+                counts.merge(homeOf(villager), 1, Integer::sum);
                 byType.merge(villager.getVillagerData().getType(), 1, Integer::sum);
             }
-            int[] near = new int[anchors.size()];
-            for (Villager villager : VILLAGERS) {
-                near[nearestIndex(anchors, villager)]++;
-            }
-            for (int k : order) {
-                Vec3 anchor = anchors.get(k);
-                int budget = Math.min(SPAWNS_PER_CYCLE, VILLAGERS_PER_PLAYER - near[k]);
-                for (int i = 0; i < budget && VILLAGERS.size() < VILLAGERS_TOTAL; i++) {
-                    BlockPos feet = HavenSpawner.findGround(level, data, origin, anchor, anchors, level.random);
+            int budget = Math.min(SPAWNS_PER_SECOND, LOADED_MAX_VILLAGERS - loaded.size());
+            for (Deficit deficit : deficits(level, q, q.villagers, counts, anchors)) {
+                if (budget <= 0) {
+                    break;
+                }
+                for (int i = 0; i < deficit.missing() && budget > 0; i++) {
+                    BlockPos feet = HavenSpawner.findInTile(level, q.data, q.origin, deficit.tile(), anchors, level.random, true);
                     if (feet == null) {
                         break;
                     }
@@ -609,20 +759,41 @@ public final class HavenInvasion {
                     }
                     Villager villager = HavenSpawner.spawnVillager(level, type, Vec3.atBottomCenterOf(feet));
                     if (villager != null) {
-                        VILLAGERS.add(villager);
+                        villager.addTag(generation);
+                        villager.getPersistentData().putLong(HOME_KEY, chunkKey(q.origin, deficit.tile()));
                         byType.merge(type, 1, Integer::sum);
-                        record(new HavenSpawner.Spawned(null, type, villager.position(), level.getGameTime()));
+                        budget--;
+                        record(new HavenSpawner.Spawned(null, type, villager.position(), now));
                     }
                 }
             }
         }
     }
 
-    private static void track(@Nullable Mob mob, Kind kind) {
-        if (mob != null) {
-            MONSTERS.add(mob);
-            record(new HavenSpawner.Spawned(kind, null, mob.position(), mob.level().getGameTime()));
+    /**
+     * Les troncons charges (blocs ET entites, sinon on doublerait ce qui n'est pas
+     * encore lu) sous leur quota, les plus loin des joueurs d'abord.
+     */
+    private static List<Deficit> deficits(ServerLevel level, Quotas q, Map<Long, Integer> quota,
+                                          Map<Long, Integer> counts, List<Vec3> anchors) {
+        List<Deficit> out = new ArrayList<>();
+        for (Map.Entry<Long, HavenInvasionData.GroundTile> entry : q.tiles.entrySet()) {
+            long key = entry.getKey();
+            int want = quota.getOrDefault(key, 0);
+            int have = counts.getOrDefault(key, 0);
+            if (want <= have) {
+                continue;
+            }
+            if (!level.getChunkSource().hasChunk(ChunkPos.getX(key), ChunkPos.getZ(key)) || !level.areEntitiesLoaded(key)) {
+                continue;
+            }
+            HavenInvasionData.GroundTile tile = entry.getValue();
+            double cx = q.origin.getX() + tile.tx() * HavenInvasionData.TILE + 8.0;
+            double cz = q.origin.getZ() + tile.tz() * HavenInvasionData.TILE + 8.0;
+            out.add(new Deficit(tile, want - have, nearestDistance(anchors, cx, cz)));
         }
+        out.sort(Comparator.comparingDouble(Deficit::distance).reversed());
+        return out;
     }
 
     private static void record(HavenSpawner.Spawned spawned) {
@@ -632,58 +803,46 @@ public final class HavenInvasion {
         }
     }
 
-    /** Suit un monstre pose par un autre chemin (le banc d'essai). */
-    static void adopt(Mob mob) {
-        if (mob.getTags().contains(MONSTER_TAG) && !MONSTERS.contains(mob)) {
-            MONSTERS.add(mob);
-        }
-    }
-
     // ================================================================ retraits
 
-    /** Retire monstres et habitants de l'invasion, suivis ou non. */
+    /**
+     * Retire monstres et habitants charges, et change de generation : ce qui dormait
+     * dans un troncon decharge sera refuse a son rechargement (voir {@link #welcome}).
+     */
     public static int removeAll(ServerLevel level) {
-        return removeMonsters(level) + removeVillagers(level);
+        int removed = removeMonsters(level) + removeVillagers(level) + HavenTraffic.removeAll(level);
+        HavenInvasionState.get(level).bumpGeneration();
+        return removed;
     }
 
     public static int removeMonsters(ServerLevel level) {
         int removed = 0;
-        for (Mob mob : level.getEntities(EntityTypeTest.forClass(Mob.class), m -> m.getTags().contains(MONSTER_TAG))) {
+        for (Mob mob : loadedMonsters(level)) {
+            LAST_OUTSIDE.remove(mob.getUUID());
             mob.discard();
             removed++;
         }
-        for (Mob mob : MONSTERS) {
-            LAST_OUTSIDE.remove(mob.getUUID());
-        }
-        MONSTERS.clear();
         return removed;
     }
 
     public static int removeVillagers(ServerLevel level) {
         int removed = 0;
-        for (Villager villager : level.getEntities(EntityTypeTest.forClass(Villager.class),
-                v -> v.getTags().contains(VILLAGER_TAG))) {
+        for (Villager villager : loadedVillagers(level)) {
+            LAST_OUTSIDE.remove(villager.getUUID());
             villager.discard();
             removed++;
         }
-        for (Villager villager : VILLAGERS) {
-            LAST_OUTSIDE.remove(villager.getUUID());
-        }
-        VILLAGERS.clear();
         return removed;
     }
 
     // ================================================================ evenements
 
-    /** Un monstre ou un habitant sauvegarde avec son troncon ne revient pas. */
+    /** Un monstre ou un habitant qui se recharge avec son troncon : accepte s'il est de la ville d'aujourd'hui. */
     @SubscribeEvent
     public static void onJoin(EntityJoinLevelEvent event) {
         if (event.loadedFromDisk() && !event.getLevel().isClientSide() && event.getLevel() instanceof ServerLevel level
-                && Haven.is(level)) {
-            Entity entity = event.getEntity();
-            if (entity.getTags().contains(MONSTER_TAG) || entity.getTags().contains(VILLAGER_TAG)) {
-                event.setCanceled(true);
-            }
+                && Haven.is(level) && !welcome(level, event.getEntity())) {
+            event.setCanceled(true);
         }
     }
 
@@ -701,7 +860,7 @@ public final class HavenInvasion {
         ServerPlayer killer = event.getSource().getEntity() instanceof ServerPlayer player ? player
                 : mob.getKillCredit() instanceof ServerPlayer credited ? credited : null;
         NeoForge.EVENT_BUS.post(new HavenMonsterKilledEvent(level, mob, kind, event.getSource(), killer));
-        forget(mob);
+        LAST_OUTSIDE.remove(mob.getUUID());
     }
 
     /** Ni butin vanilla, ni equipement, pour les monstres et les habitants. */
@@ -755,7 +914,7 @@ public final class HavenInvasion {
 
     // ================================================================ banc d'essai
 
-    /** Compte par espece des monstres suivis. */
+    /** Compte par espece des monstres charges. */
     static Map<Kind, Integer> countByKind() {
         Map<Kind, Integer> out = new EnumMap<>(Kind.class);
         for (Mob mob : monsters()) {

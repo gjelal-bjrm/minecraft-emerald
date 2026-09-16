@@ -10,6 +10,10 @@ import com.emerald.haven.HavenRooms;
 import com.emerald.haven.HavenRules;
 import com.emerald.haven.HavenSite;
 import com.emerald.haven.HavenState;
+import com.emerald.haven.traffic.HavenTraffic;
+import com.emerald.haven.traffic.HavenTrafficData;
+import com.emerald.haven.traffic.TrafficDriver;
+import com.emerald.jak.vehicle.JakVehicleEntity;
 import com.emerald.haven.HavenVote;
 import com.emerald.jak.JakBuilder;
 import com.emerald.main.EmeraldWeaponsMod;
@@ -28,6 +32,7 @@ import net.minecraft.world.entity.ExperienceOrb;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.monster.Skeleton;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.monster.Zombie;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.entity.npc.VillagerProfession;
@@ -116,6 +121,15 @@ public final class HavenInvasionAutotest {
     private static int failed;
 
     private static final List<ChunkPos> HELD = new ArrayList<>();
+    /**
+     * Trois zones de voies loin des ancres (bras ouest, bras est, pont entre les tours) :
+     * le trafic n'apparait qu'a plus de 64 blocs d'un joueur, et hors de sa vue a moins
+     * de 96 ; autour des ancres, les voies en plein ciel se voient presque toutes.
+     */
+    private static final BlockPos[] TRAFFIC_CELLS = {
+            new BlockPos(300, 76, 520), new BlockPos(930, 76, 520), new BlockPos(650, 76, 610)};
+    private static final int TRAFFIC_TICKET_DISTANCE = 4;
+    private static final List<ChunkPos> HELD_TRAFFIC = new ArrayList<>();
     private static ChunkPos forced;
     /** Au releve des apparitions : tique de vie et position de chaque monstre, pour prouver qu'ils vivent. */
     private static final Map<UUID, Vec3> SPAWN_POS = new HashMap<>();
@@ -136,6 +150,10 @@ public final class HavenInvasionAutotest {
     private static double combatDamage;
     private static int combatHits;
     private static final Map<UUID, Vec3> VILLAGER_START = new HashMap<>();
+    /** Le trafic, tique par tique pendant la ville paisible : derniere position, distance parcourue, tiques observees. */
+    private static final Map<UUID, Vec3> TRAFFIC_LAST = new HashMap<>();
+    private static final Map<UUID, Double> TRAFFIC_TRAVELLED = new HashMap<>();
+    private static final Map<UUID, Integer> TRAFFIC_TICKS = new HashMap<>();
 
     // destruction
     private static BlockPos streetPos;
@@ -259,13 +277,13 @@ public final class HavenInvasionAutotest {
                         int fighting = HavenInvasion.monsters().size();
                         line("MSPT en combat : " + window(fighting
                                 + " monstres lances sur 4 cobayes, 30 s") + " ; reference " + baseline);
-                        check("MSPT moyen en combat sous 15 ms, a " + fighting + " monstres",
-                                !Double.isNaN(combatMs) && combatMs < 15.0,
+                        check("MSPT moyen en combat sous 30 ms, a " + fighting + " monstres (cinq zones de 13 x 13 troncons et trois de 9 x 9 chargees)",
+                                !Double.isNaN(combatMs) && combatMs < 30.0,
                                 String.format(Locale.ROOT, "%.2f ms", combatMs));
                         check("en combat, les monstres blessent les cobayes (joueurs hors zone sure)",
                                 combatHits > 0 && combatDamage > 0.0,
                                 combatHits + " coups portes, " + String.format(Locale.ROOT, "%.1f", combatDamage) + " points de vie");
-                        caps("apres 30 s de combat");
+                        caps(level, "apres 30 s de combat", false);
                         damage(server, level);
                         kill(level);
                         keep(server, level);
@@ -278,6 +296,7 @@ public final class HavenInvasionAutotest {
                     }
                     if (t >= 200) {
                         sample(server);
+                        trackTraffic(level);
                     }
                     if (t == 300) {
                         for (Villager villager : HavenInvasion.villagers()) {
@@ -287,12 +306,13 @@ public final class HavenInvasionAutotest {
                     if (t >= 600) {
                         double peacefulMs = averageMs();
                         int living = HavenInvasion.villagers().size();
-                        line("MSPT ville paisible : " + window(living + " habitants, 20 s")
-                                + " ; reference " + baseline);
-                        check("MSPT moyen en ville paisible sous 10 ms, a " + living + " habitants",
-                                !Double.isNaN(peacefulMs) && peacefulMs < 10.0,
+                        line("MSPT ville paisible : " + window(living + " habitants et " + HavenTraffic.loaded(level).size()
+                                + " vehicules du trafic, 20 s") + " ; reference " + baseline);
+                        check("MSPT moyen en ville paisible sous 30 ms, a " + living + " habitants (cinq zones de 13 x 13 troncons et trois de 9 x 9 chargees)",
+                                !Double.isNaN(peacefulMs) && peacefulMs < 30.0,
                                 String.format(Locale.ROOT, "%.2f ms", peacefulMs));
                         villagerChecks(server, level);
+                        trafficChecks(server, level);
                         pressInvasion(server, level);
                         next(Stage.FINAL);
                     }
@@ -547,9 +567,15 @@ public final class HavenInvasionAutotest {
         // UN TRONCON FORCE : ServerLevel.tick cesse de faire tiquer les entites d'un niveau
         // sans joueur ni troncon force apres 300 tiques (emptyTime). Sans lui, les monstres
         // du banc seraient figes : ni marche, ni combat, ni soleil a mesurer.
+        for (BlockPos cell : TRAFFIC_CELLS) {
+            ChunkPos chunk = new ChunkPos(o.offset(cell));
+            level.getChunkSource().addRegionTicket(JakBuilder.TICKET, chunk, TRAFFIC_TICKET_DISTANCE, chunk);
+            HELD_TRAFFIC.add(chunk);
+        }
         forced = new ChunkPos(centers.get(0));
         level.setChunkForced(forced.x, forced.z, true);
-        line("tickets tenus autour de " + centers.size() + " points (distance " + TICKET_DISTANCE + "), troncon "
+        line("tickets tenus autour de " + centers.size() + " points (distance " + TICKET_DISTANCE + ") et de "
+                + TRAFFIC_CELLS.length + " zones de voies (distance " + TRAFFIC_TICKET_DISTANCE + "), troncon "
                 + forced + " force pour que le niveau sans joueur fasse tiquer ses entites");
     }
 
@@ -572,9 +598,6 @@ public final class HavenInvasionAutotest {
         }
         if (spot != null) {
             control = HavenSpawner.spawnMonster(level, HavenInvasion.Kind.ZOMBIE, Vec3.atBottomCenterOf(spot), false);
-            if (control != null) {
-                HavenInvasion.adopt(control);
-            }
         }
         line("temoin : zombie SANS casque en " + (spot == null ? "aucune place" : spot.toShortString() + ", ciel "
                 + level.canSeeSky(spot.above())) + " ; level.isDay() = " + level.isDay()
@@ -601,7 +624,7 @@ public final class HavenInvasionAutotest {
         }
         check("les quatre especes apparaissent : zombie, villageois zombie, squelette, phantom",
                 kinds.size() == 4, "apparitions " + kinds + ", presents " + HavenInvasion.countByKind());
-        caps("apres 20 s d'apparitions");
+        caps(level, "apres 20 s d'apparitions", true);
 
         int helmets = 0;
         int ground = 0;
@@ -689,39 +712,111 @@ public final class HavenInvasionAutotest {
                 closeGround + " a moins de " + (int) HavenInvasion.SIGHT_RADIUS + " blocs d'un joueur, " + seenGround
                         + " visibles, " + tooNear + " trop pres (plus proche "
                         + String.format(Locale.ROOT, "%.1f", nearestSpawn) + ")");
-        check("monstres non persistants, etiquetes", monsters.stream().allMatch(m -> !m.isPersistenceRequired()
-                && m.getTags().contains(HavenInvasion.MONSTER_TAG)), monsters.size() + " monstres");
+        check("monstres persistants (le jeu ne les retire jamais lui-meme), etiquetes", monsters.stream().allMatch(
+                m -> m.isPersistenceRequired() && m.getTags().contains(HavenInvasion.MONSTER_TAG)), monsters.size() + " monstres");
+        // LE RECHARGEMENT D'UN TRONCON : un monstre de la ville d'aujourd'hui revient en
+        // invasion ; un habitant, ou un monstre d'une ville fermee (autre generation), non.
+        Mob sample = monsters.stream().filter(m -> m != control && HavenInvasion.kindOf(m) != HavenInvasion.Kind.PHANTOM)
+                .findFirst().orElse(null);
+        Villager stray = new Villager(EntityType.VILLAGER, level);
+        stray.addTag(HavenInvasion.VILLAGER_TAG);
+        stray.addTag(HavenInvasion.generationTag(level));
+        Zombie stale = new Zombie(level);
+        stale.addTag(HavenInvasion.MONSTER_TAG);
+        stale.addTag(HavenInvasion.GENERATION_TAG + "-1");
+        boolean backOk = sample != null && HavenInvasion.welcome(level, sample);
+        boolean strayOk = !HavenInvasion.welcome(level, stray);
+        boolean staleOk = !HavenInvasion.welcome(level, stale);
+        check("rechargement d'un troncon : un monstre de la ville d'aujourd'hui revient en invasion, un habitant ou un monstre"
+                        + " d'une ville fermee est refuse",
+                backOk && strayOk && staleOk,
+                "monstre accepte " + backOk + ", habitant refuse " + strayOk + ", ancienne generation refusee " + staleOk);
         for (Mob mob : monsters) {
             SPAWN_POS.put(mob.getUUID(), mob.position());
             SPAWN_TICK.put(mob.getUUID(), mob.tickCount);
         }
     }
 
-    private static void caps(String when) {
+    /**
+     * La population par troncon : les troncons charges (blocs et entites) remplis a
+     * 80 % de leur quota au moins, aucun bien au-dessus (les monstres marchent : +4
+     * toleres), phantoms <= 4 + 1 par ancre, et le garde-fou des entites chargees.
+     * En combat les monstres convergent sur les cobayes : on ne juge plus que le
+     * remplissage, a 50 %.
+     */
+    private static void caps(ServerLevel level, String when, boolean settled) {
+        MinecraftServer server = level.getServer();
         List<Mob> monsters = HavenInvasion.monsters();
-        StringBuilder per = new StringBuilder();
-        boolean ok = monsters.size() <= HavenInvasion.MONSTERS_TOTAL + 1;       // + le temoin
-        for (int k = 0; k < ANCHORS.size(); k++) {
-            int ground = 0;
-            int phantoms = 0;
-            for (Mob mob : monsters) {
-                // chaque monstre compte pour l'ancre la plus proche, comme dans HavenInvasion.spawn
-                if (mob != control && HavenInvasion.nearestIndex(ANCHORS, mob) == k) {
-                    if (HavenInvasion.kindOf(mob) == HavenInvasion.Kind.PHANTOM) {
-                        phantoms++;
-                    } else {
-                        ground++;
-                    }
+        int[] phantoms = new int[ANCHORS.size()];
+        Map<Long, Integer> counts = new HashMap<>();
+        int ground = 0;
+        int nearBar = 0;
+        for (Mob mob : monsters) {
+            if (mob == control) {
+                continue;
+            }
+            if (HavenInvasion.kindOf(mob) == HavenInvasion.Kind.PHANTOM) {
+                phantoms[HavenInvasion.nearestIndex(ANCHORS, mob)]++;
+            } else {
+                counts.merge(HavenInvasion.homeOf(mob), 1, Integer::sum);
+                ground++;
+                if (HavenInvasion.horizontal(ANCHORS.get(1), mob.getX(), mob.getZ()) <= 160.0) {
+                    nearBar++;
                 }
             }
-            // +2 au sol, +1 phantom : une apparition est comptee pour l'ancre qui l'a demandee
-            // jusqu'au cycle suivant, meme si elle tombe plus pres d'une autre
-            ok &= ground <= HavenInvasion.GROUND_PER_PLAYER + 2 && phantoms <= HavenInvasion.PHANTOMS_PER_PLAYER + 1;
-            per.append(ground).append('+').append(phantoms).append(' ');
         }
-        check("plafonds " + when + " : au sol <= " + HavenInvasion.GROUND_PER_PLAYER + " et phantoms <= "
-                        + HavenInvasion.PHANTOMS_PER_PLAYER + " par joueur, <= " + HavenInvasion.MONSTERS_TOTAL + " en tout",
-                ok && !monsters.isEmpty(), monsters.size() + " en tout ; par ancre (sol+phantoms) " + per);
+        Fill fill = fill(level, Objects.requireNonNull(HavenInvasionData.get(server)), HavenState.get(server).origin(),
+                counts, HavenInvasion.MONSTER_CELLS);
+        boolean phantomsOk = true;
+        StringBuilder per = new StringBuilder();
+        for (int p : phantoms) {
+            phantomsOk &= p <= HavenInvasion.PHANTOMS_PER_PLAYER + 1;
+            per.append(p).append(' ');
+        }
+        double least = settled ? 0.8 : 0.5;
+        boolean ok = !monsters.isEmpty() && ground <= HavenInvasion.LOADED_MAX_MONSTERS && phantomsOk
+                && fill.ratio() >= least && (!settled || fill.maxOver() <= 4);
+        check("population par troncon " + when + " : troncons charges remplis a " + Math.round(100 * least)
+                        + " % de leur quota" + (settled ? ", aucun a plus de 4 au-dessus" : "") + ", phantoms <= "
+                        + HavenInvasion.PHANTOMS_PER_PLAYER + " par ancre, <= " + HavenInvasion.LOADED_MAX_MONSTERS + " charges",
+                ok, ground + " au sol dans " + fill.tiles() + " troncons charges a quota (quota " + fill.quota() + ", remplis "
+                        + Math.round(100 * fill.ratio()) + " %, au plus " + fill.maxOver() + " au-dessus, " + fill.empty()
+                        + " vides) ; phantoms par ancre " + per + "; dans 160 blocs de l'ancre 2 (dix troncons de vue) : "
+                        + nearBar + " au sol");
+    }
+
+    /** Le remplissage des troncons charges a quota : quota total, presents comptes jusqu'au quota, depassement maximal, vides. */
+    private record Fill(int tiles, int quota, int inQuota, int maxOver, int empty) {
+        double ratio() {
+            return this.quota == 0 ? 1.0 : this.inQuota / (double) this.quota;
+        }
+    }
+
+    private static Fill fill(ServerLevel level, HavenInvasionData.Data data, BlockPos origin, Map<Long, Integer> counts,
+                             int cellsPer) {
+        int tiles = 0;
+        int quota = 0;
+        int inQuota = 0;
+        int maxOver = 0;
+        int empty = 0;
+        for (HavenInvasionData.GroundTile tile : data.groundTiles()) {
+            long key = HavenInvasion.chunkKey(origin, tile);
+            if (!level.getChunkSource().hasChunk(ChunkPos.getX(key), ChunkPos.getZ(key)) || !level.areEntitiesLoaded(key)) {
+                continue;
+            }
+            int want = HavenInvasion.quota(tile, cellsPer);
+            int have = counts.getOrDefault(key, 0);
+            if (want > 0) {
+                tiles++;
+                quota += want;
+                inQuota += Math.min(have, want);
+                if (have == 0) {
+                    empty++;
+                }
+            }
+            maxOver = Math.max(maxOver, have - want);
+        }
+        return new Fill(tiles, quota, inQuota, maxOver, empty);
     }
 
     private static void sunChecks(MinecraftServer server, ServerLevel level) {
@@ -741,6 +836,7 @@ public final class HavenInvasionAutotest {
         int alive = 0;
         int ticked = 0;
         int moved = 0;
+        int frozen = 0;
         int phantoms = 0;
         int phantomsTicked = 0;
         for (Mob mob : HavenInvasion.monsters()) {
@@ -756,6 +852,12 @@ public final class HavenInvasionAutotest {
                 phantomsTicked += lived ? 1 : 0;
                 continue;
             }
+            // charge sans tiquer (troncon au bord des tickets) : gele, comme au-dela de la
+            // distance de simulation en jeu ; on ne juge que ceux qui tiquent
+            if (!level.isPositionEntityTicking(mob.blockPosition())) {
+                frozen++;
+                continue;
+            }
             alive++;
             ticked += lived ? 1 : 0;
             if (SPAWN_POS.get(mob.getUUID()).distanceTo(mob.position()) > 1.0) {
@@ -765,13 +867,13 @@ public final class HavenInvasionAutotest {
         // SANS VRAI JOUEUR, UN MONSTRE FLANE QUAND MEME. En pleine lumiere, noActionTime
         // montait (Monster.updateNoActionTime) jusqu'a ce que RandomStrollGoal refuse de
         // flaner, et seul un joueur a moins de 32 blocs le remettait a zero : le premier
-        // releve donnait 0 deplace sur 48, et le joueur a trouve les rues vides.
-        // HavenInvasion.sweep le remet a zero toutes les demi-secondes.
+        // releve donnait 0 deplace sur 48, et le joueur a trouve les rues vides. Les
+        // monstres sont persistants : Mob.checkDespawn le remet a zero a chaque tique.
         check("les monstres au sol vivent pendant la minute et flanent sans joueur proche : ils tiquent,"
                         + " la moitie au moins s'est deplacee de plus d'un bloc",
                 alive > 0 && ticked == alive && moved * 2 >= alive,
-                alive + " au sol suivis depuis le releve, " + ticked + " ont tique ; " + moved
-                        + " deplaces de plus d'un bloc ; phantoms " + phantomsTicked + " sur " + phantoms
+                alive + " au sol dans des troncons qui tiquent, " + ticked + " ont tique ; " + moved
+                        + " deplaces de plus d'un bloc ; " + frozen + " geles dans des troncons charges sans tique ; phantoms " + phantomsTicked + " sur " + phantoms
                         + " ont tique (les autres sortis des troncons du banc)");
         boolean controlOk = control != null && control.isAlive() && !control.isOnFire()
                 && control.getHealth() == control.getMaxHealth() && control.tickCount >= 1400;
@@ -1006,28 +1108,31 @@ public final class HavenInvasionAutotest {
                 unsafe++;
             }
             Vec3 start = VILLAGER_START.get(villager.getUUID());
-            if (start != null) {
+            if (start != null && level.isPositionEntityTicking(villager.blockPosition())) {
                 compared++;
                 if (start.distanceTo(villager.position()) > 1.5) {
                     moved++;
                 }
             }
         }
-        long worst = 0;
-        for (int k = 0; k < ANCHORS.size(); k++) {
-            int anchor = k;
-            long mine = villagers.stream().filter(v -> HavenInvasion.nearestIndex(ANCHORS, v) == anchor).count();
-            worst = Math.max(worst, mine);
-            per.append(mine).append(' ');
+        Map<Long, Integer> counts = new HashMap<>();
+        for (Villager villager : villagers) {
+            counts.merge(HavenInvasion.homeOf(villager), 1, Integer::sum);
         }
-        check("habitants des 7 regions presents, plafonnes (" + HavenInvasion.VILLAGERS_PER_PLAYER + " par joueur, "
-                        + HavenInvasion.VILLAGERS_TOTAL + " en tout), sans metier, hors zones sures, aucun monstre",
-                types.size() == 7 && villagers.size() <= HavenInvasion.VILLAGERS_TOTAL && noJob == villagers.size()
-                        && worst <= HavenInvasion.VILLAGERS_PER_PLAYER + 1
-                        && unsafe == 0 && HavenInvasion.monsters().isEmpty(),
-                villagers.size() + " habitants, regions " + types.size() + " " + types + ", par ancre " + per
-                        + ", sans metier " + noJob + ", en zone sure " + unsafe);
-        check("les habitants marchent dans les rues (deplaces de plus de 1,5 bloc en 15 s)",
+        Fill fill = fill(level, Objects.requireNonNull(HavenInvasionData.get(server)), HavenState.get(server).origin(),
+                counts, HavenInvasion.VILLAGER_CELLS);
+        Villager first = villagers.isEmpty() ? null : villagers.get(0);
+        check("habitants des 7 regions presents, par troncon (une cellule sur " + HavenInvasion.VILLAGER_CELLS
+                        + "), troncons charges remplis a 80 % au moins, persistants et acceptes au rechargement,"
+                        + " sans metier, hors zones sures, aucun monstre",
+                types.size() == 7 && villagers.size() <= HavenInvasion.LOADED_MAX_VILLAGERS && fill.ratio() >= 0.8
+                        && fill.maxOver() <= 4 && noJob == villagers.size() && unsafe == 0 && HavenInvasion.monsters().isEmpty()
+                        && first != null && first.isPersistenceRequired() && HavenInvasion.welcome(level, first),
+                villagers.size() + " habitants dans " + fill.tiles() + " troncons charges a quota (quota " + fill.quota()
+                        + ", remplis " + Math.round(100 * fill.ratio()) + " %, au plus " + fill.maxOver() + " au-dessus, "
+                        + fill.empty() + " vides), regions " + types.size() + " " + types + ", sans metier " + noJob
+                        + ", en zone sure " + unsafe + per);
+        check("les habitants qui tiquent marchent dans les rues (deplaces de plus de 1,5 bloc en 15 s)",
                 compared > 0 && moved * 2 >= compared, moved + " sur " + compared);
         if (villagers.isEmpty()) {
             return;
@@ -1062,6 +1167,144 @@ public final class HavenInvasionAutotest {
                 HavenInvasion.mode(server) == HavenInvasion.Mode.INVASION && left == 0
                         && !level.getBlockState(pos).getValue(HavenInvasionButtonBlock.PEACEFUL),
                 "mode " + HavenInvasion.mode(server) + ", habitants restants " + left + ", voyant " + level.getBlockState(pos));
+        check("retour de l'invasion : vehicules du trafic et pilotes retires",
+                HavenTraffic.loaded(level).isEmpty() && HavenTraffic.drivers(level).isEmpty(),
+                HavenTraffic.loaded(level).size() + " vehicules, " + HavenTraffic.drivers(level).size() + " pilotes");
+    }
+
+    /** La distance parcourue par chaque vehicule du trafic, tique par tique. */
+    private static void trackTraffic(ServerLevel level) {
+        for (JakVehicleEntity car : HavenTraffic.loaded(level)) {
+            Vec3 last = TRAFFIC_LAST.get(car.getUUID());
+            if (last != null) {
+                TRAFFIC_TRAVELLED.merge(car.getUUID(), last.distanceTo(car.position()), Double::sum);
+            }
+            TRAFFIC_LAST.put(car.getUUID(), car.position());
+            TRAFFIC_TICKS.merge(car.getUUID(), 1, Integer::sum);
+        }
+    }
+
+    /**
+     * Le trafic de la ville paisible : des vehicules sur les branches chargees, chacun
+     * sur sa voie et a son altitude, avec un pilote, qui roulent, et acceptes au
+     * rechargement.
+     */
+    private static void trafficChecks(MinecraftServer server, ServerLevel level) {
+        line("--- ville paisible : le trafic");
+        HavenTrafficData.Data data = HavenTrafficData.get(server);
+        if (data == null) {
+            check("trafic : voies lues (haven_traffic.json)", false, "absentes");
+            return;
+        }
+        BlockPos o = HavenState.get(server).origin();
+        List<JakVehicleEntity> cars = HavenTraffic.loaded(level);
+        int branchesLoaded = 0;
+        int quotaLoaded = 0;
+        for (HavenTrafficData.Branch branch : data.branches()) {
+            long chunk = HavenTraffic.spawnChunk(data, branch, o);
+            if (level.getChunkSource().hasChunk(ChunkPos.getX(chunk), ChunkPos.getZ(chunk)) && level.areEntitiesLoaded(chunk)) {
+                branchesLoaded++;
+                quotaLoaded += HavenTraffic.quota(branch);
+            }
+        }
+        int onLane = 0;
+        int atHeight = 0;
+        int withDriver = 0;
+        int compared = 0;
+        int moving = 0;
+        int cruising = 0;
+        int frozen = 0;
+        double worstLateral = 0.0;
+        double worstHeight = 0.0;
+        Villager anyDriver = null;
+        List<JakVehicleEntity> stuck = new ArrayList<>();
+        for (JakVehicleEntity car : cars) {
+            TrafficDriver driver = Objects.requireNonNull(car.traffic());
+            HavenTrafficData.Branch branch = data.branch(driver.branch());
+            Vec3 a = data.start(branch, o);
+            Vec3 e = data.end(branch, o);
+            double length = Math.hypot(e.x - a.x, e.z - a.z);
+            double dx = (e.x - a.x) / length;
+            double dz = (e.z - a.z) / length;
+            double s = (car.getX() - a.x) * dx + (car.getZ() - a.z) * dz;
+            double lateral = Math.abs((car.getX() - a.x) * dz - (car.getZ() - a.z) * dx);
+            worstLateral = Math.max(worstLateral, lateral);
+            if (lateral <= branch.width() + 4.0 && s >= -8.0 && s <= length + 8.0) {
+                onLane++;
+            }
+            double laneY = a.y + (e.y - a.y) * Math.max(0.0, Math.min(1.0, s / length));
+            worstHeight = Math.max(worstHeight, Math.abs(car.getY() - laneY));
+            if (Math.abs(car.getY() - laneY) <= 3.0) {
+                atHeight++;
+            }
+            if (car.occupant(0) instanceof Villager villager && villager.getTags().contains(HavenTraffic.DRIVER_TAG)) {
+                withDriver++;
+                anyDriver = villager;
+            }
+            if (!level.isPositionEntityTicking(car.blockPosition())) {
+                frozen++;                 // retire a la prochaine seconde par HavenTraffic.update
+            }
+            // observe deux secondes au moins : a 15 m/s, dix blocs se font en 0,7 s
+            if (TRAFFIC_TICKS.getOrDefault(car.getUUID(), 0) >= 40) {
+                compared++;
+                if (TRAFFIC_TRAVELLED.getOrDefault(car.getUUID(), 0.0) > 10.0) {
+                    moving++;
+                } else if (stuck.size() < 8) {
+                    stuck.add(car);
+                }
+            }
+            Vec3 v = car.getDeltaMovement();
+            double speed = Math.hypot(v.x, v.z) * 20.0;
+            if (speed >= 5.0 && speed <= 22.0) {
+                cruising++;
+            }
+        }
+        check("trafic : des vehicules sur les voies chargees (30 % du quota au moins, " + HavenTraffic.LOADED_MAX
+                        + " au plus), chacun sur sa branche, a l'altitude de la voie, avec un pilote",
+                !cars.isEmpty() && cars.size() * 10 >= quotaLoaded * 3 && cars.size() <= HavenTraffic.LOADED_MAX
+                        && onLane == cars.size() && atHeight == cars.size() && withDriver == cars.size(),
+                cars.size() + " vehicules pour un quota de " + quotaLoaded + " sur " + branchesLoaded + " branches chargees ;"
+                        + " sur leur voie " + onLane + " (ecart maximal " + String.format(Locale.ROOT, "%.1f", worstLateral)
+                        + "), a l'altitude " + atHeight + " (ecart maximal " + String.format(Locale.ROOT, "%.1f", worstHeight)
+                        + "), avec pilote " + withDriver);
+        for (JakVehicleEntity car : stuck) {
+            TrafficDriver driver = Objects.requireNonNull(car.traffic());
+            HavenTrafficData.Branch branch = data.branch(driver.branch());
+            Vec3 a = data.start(branch, o);
+            Vec3 e = data.end(branch, o);
+            double length = Math.hypot(e.x - a.x, e.z - a.z);
+            Vec3 dir = new Vec3((e.x - a.x) / length, 0.0, (e.z - a.z) / length);
+            Vec3 v = car.getDeltaMovement();
+            Vec3 allowed = com.emerald.jak.vehicle.VehiclePhysics.collide(car, dir.scale(0.5));
+            JakVehicleEntity nearest = null;
+            double best = Double.MAX_VALUE;
+            for (JakVehicleEntity other : level.getEntitiesOfClass(JakVehicleEntity.class, car.getBoundingBox().inflate(48.0), x -> x != car)) {
+                double d = other.distanceTo(car);
+                if (d < best) {
+                    best = d;
+                    nearest = other;
+                }
+            }
+            String neighbour = nearest == null ? "aucun voisin a 48 blocs" : String.format(Locale.ROOT,
+                    "voisin %s a %.1f (devant %.1f, de cote %.1f, trafic %b)", nearest.model(), best,
+                    (nearest.getX() - car.getX()) * dir.x + (nearest.getZ() - car.getZ()) * dir.z,
+                    Math.abs((nearest.getX() - car.getX()) * dir.z - (nearest.getZ() - car.getZ()) * dir.x), nearest.traffic() != null);
+            line(String.format(Locale.ROOT, "    immobile : %s branche %d -> %d en (%.1f ; %.1f ; %.1f), vitesse %.1f m/s, passage libre %.2f sur 0,50, limite de devant %.1f m/s, %s",
+                    car.model(), driver.branch(), driver.next(), car.getX(), car.getY(), car.getZ(), Math.hypot(v.x, v.z) * 20.0,
+                    allowed.length(), Math.min(99.0, TrafficDriver.leaderLimit(car, dir, v) * 20.0), neighbour));
+        }
+        check("trafic : les vehicules roulent (les trois quarts de ceux observes deux secondes au moins ont parcouru plus de"
+                        + " 10 blocs ; les trois quarts entre 5 et 22 m/s)",
+                compared > 0 && moving * 4 >= compared * 3 && cruising * 4 >= cars.size() * 3,
+                moving + " sur " + compared + " ont parcouru plus de 10 blocs (" + TRAFFIC_TICKS.size()
+                        + " vehicules observes en tout, " + frozen + " geles en attente de retrait) ; "
+                        + cruising + " sur " + cars.size() + " entre 5 et 22 m/s");
+        if (!cars.isEmpty() && anyDriver != null) {
+            check("trafic : vehicule et pilote persistants, acceptes au rechargement en paisible",
+                    cars.get(0).getTags().contains(HavenTraffic.TRAFFIC_TAG) && HavenInvasion.welcome(level, cars.get(0))
+                            && anyDriver.isPersistenceRequired() && HavenInvasion.welcome(level, anyDriver),
+                    "vehicule " + HavenInvasion.welcome(level, cars.get(0)) + ", pilote " + HavenInvasion.welcome(level, anyDriver));
+        }
     }
 
     // ================================================================ limites et depart
@@ -1210,6 +1453,9 @@ public final class HavenInvasionAutotest {
             HavenInvasion.setMode(server, HavenInvasion.Mode.INVASION, null);
             for (ChunkPos pos : HELD) {
                 level.getChunkSource().removeRegionTicket(JakBuilder.TICKET, pos, TICKET_DISTANCE, pos);
+            }
+            for (ChunkPos pos : HELD_TRAFFIC) {
+                level.getChunkSource().removeRegionTicket(JakBuilder.TICKET, pos, TRAFFIC_TICKET_DISTANCE, pos);
             }
             if (forced != null) {
                 level.setChunkForced(forced.x, forced.z, false);
