@@ -194,6 +194,24 @@ public final class RuneDrops {
     }
 
     /**
+     * UNE RUNE GARANTIE, tiree comme sur une bete de tant de points de vie : meme coup
+     * de chance, meme plafond de la bete et de la phase. Pour les butins qui ont deja
+     * decide qu'il y aurait une rune -- la Cache des poches de mine.
+     *
+     * simulate() n'y convient pas : elle rejoue AUSSI la chance que la bete ne laisse
+     * rien, et rend alors null -- neuf fois sur dix a 60 points de vie. La Cache posait
+     * cette absence dans une pile : une rune sans rang ni option (« une rune sans
+     * options », 15 sept.).
+     */
+    public static RuneMark guaranteed(net.minecraft.server.level.ServerLevel level, double health,
+                                      RandomSource random) {
+        RuneFamily[] families = RuneFamily.values();
+        RuneFamily family = families[random.nextInt(families.length)];
+        return RuneMark.roll(family, lucky(random) ? 1 + random.nextInt(8)
+                : rank(health, phaseCeiling(level), random), random);
+    }
+
+    /**
      * Un tirage complet, comme si l'on venait de tuer une bete de tant de PV.
      *
      * Sert au banc d'essai (/arcencium rune drop). Elle appelle la MEME loi que

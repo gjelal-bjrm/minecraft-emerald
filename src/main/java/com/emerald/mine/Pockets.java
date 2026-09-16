@@ -271,8 +271,10 @@ public final class Pockets {
         }
         loot.add(new ItemStack(Items.TORCH, 8 + random.nextInt(8)));
         if (random.nextInt(3) == 0) {
+            // une rune GARANTIE : le tirage d'une chance sur trois vient d'etre fait
+            // (simulate rejouait la chance d'un monstre et laissait une rune vide)
             loot.add(com.emerald.rune.RuneItem.stack(
-                    com.emerald.rune.RuneDrops.simulate(60.0, random),
+                    com.emerald.rune.RuneDrops.guaranteed(level, 60.0, random),
                     com.emerald.item.ModItems.RUNE.get()));
         }
         // eparpilles dans le coffre, pas alignes : c'est une cache, pas un etal
