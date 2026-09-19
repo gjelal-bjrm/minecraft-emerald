@@ -114,6 +114,12 @@ public class ModNetwork {
                     }
                 }));
 
+        // la detonation d'une Super Nova : eclair blanc et secousse chez les clients proches
+        registrar.playToClient(com.emerald.jak.gun.GunNovaPayload.TYPE,
+                com.emerald.jak.gun.GunNovaPayload.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(
+                        () -> com.emerald.jak.gun.GunNovaClient.accept(payload)));
+
         // les traces des tirs instantanes du Morph Gun (Scatter Gun, Vulcan Fury)
         registrar.playToClient(com.emerald.jak.gun.GunTracePayload.TYPE,
                 com.emerald.jak.gun.GunTracePayload.STREAM_CODEC,

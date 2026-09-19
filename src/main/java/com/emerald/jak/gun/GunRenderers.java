@@ -32,7 +32,9 @@ import org.joml.Vector3f;
  *    coeur lavande) en melange additif, retire toutes les deux tiques ;
  *  - Shockwave : l'anneau rouge du Wave Concussor, qui suit le front de l'onde ;
  *  - Grenade : la grenade gun-grenade du Plasmite RPG, dans son halo rouge ;
- *  - Saucer : la soucoupe gun-saucer du Gyro Burster, qui tourne, halo jaune en rafale.
+ *  - Saucer : la soucoupe gun-saucer du Gyro Burster, qui tourne, halo jaune en rafale ;
+ *  - GravityField : le bord violet du champ du Mass Inverter ;
+ *  - Nuke : le missile gun-nuke de la Super Nova, puis sa boule de feu.
  */
 public final class GunRenderers {
 
@@ -410,6 +412,144 @@ public final class GunRenderers {
 
         @Override
         public ResourceLocation getTextureLocation(GunSaucerEntity entity) {
+            return HALO;
+        }
+    }
+
+    // ================================================================ champ du Mass Inverter
+
+    /**
+     * Le bord du champ : un anneau violet a plat qui suit son rayon, et un rideau bas.
+     * Plein pendant que le champ s'etend, il palit ensuite jusqu'a la fin du champ.
+     */
+    public static final class GravityField extends EntityRenderer<GunGravityFieldEntity> {
+
+        private static final int SEGMENTS = 96;
+
+        public GravityField(EntityRendererProvider.Context context) {
+            super(context);
+        }
+
+        @Override
+        public boolean shouldRender(GunGravityFieldEntity field, net.minecraft.client.renderer.culling.Frustum frustum,
+                                    double x, double y, double z) {
+            return field.shouldRender(x, y, z) && frustum.isVisible(field.getBoundingBoxForCulling());
+        }
+
+        @Override
+        public void render(GunGravityFieldEntity field, float yaw, float partial, PoseStack poseStack,
+                           MultiBufferSource buffers, int light) {
+            double age = field.tickCount + partial;
+            float radius = (float) GunGravityFieldEntity.radiusAt(age);
+            float fade = age <= GunSpec.INVERTER_GROW_TICKS ? 1.0F
+                    : Math.max(0.0F, 1.0F - (float) ((age - GunSpec.INVERTER_GROW_TICKS)
+                    / (GunSpec.INVERTER_FIELD_TICKS - GunSpec.INVERTER_GROW_TICKS)));
+            float glow = 0.25F + 0.75F * fade;
+            if (radius < 0.05F) {
+                return;
+            }
+            float inner = Math.max(0.0F, radius - 3.0F);
+            VertexConsumer out = buffers.getBuffer(RenderType.lightning());
+            Matrix4f m = poseStack.last().pose();
+            for (int i = 0; i < SEGMENTS; i++) {
+                double a0 = Math.PI * 2.0 * i / SEGMENTS;
+                double a1 = Math.PI * 2.0 * (i + 1) / SEGMENTS;
+                float c0 = (float) Math.cos(a0);
+                float s0 = (float) Math.sin(a0);
+                float c1 = (float) Math.cos(a1);
+                float s1 = (float) Math.sin(a1);
+                float y = 0.1F;
+                for (int face = 0; face < 2; face++) {
+                    boolean up = face == 0;
+                    ring(m, out, up ? c0 : c1, up ? s0 : s1, up ? c1 : c0, up ? s1 : s0, inner, radius, y, 0.6F * glow);
+                }
+                out.addVertex(m, c0 * radius, y, s0 * radius).setColor(0.62F, 0.3F, 1.0F, 0.7F * glow);
+                out.addVertex(m, c1 * radius, y, s1 * radius).setColor(0.62F, 0.3F, 1.0F, 0.7F * glow);
+                out.addVertex(m, c1 * radius, 1.8F, s1 * radius).setColor(0.45F, 0.15F, 0.9F, 0.0F);
+                out.addVertex(m, c0 * radius, 1.8F, s0 * radius).setColor(0.45F, 0.15F, 0.9F, 0.0F);
+                out.addVertex(m, c0 * radius, 1.8F, s0 * radius).setColor(0.45F, 0.15F, 0.9F, 0.0F);
+                out.addVertex(m, c1 * radius, 1.8F, s1 * radius).setColor(0.45F, 0.15F, 0.9F, 0.0F);
+                out.addVertex(m, c1 * radius, y, s1 * radius).setColor(0.62F, 0.3F, 1.0F, 0.7F * glow);
+                out.addVertex(m, c0 * radius, y, s0 * radius).setColor(0.62F, 0.3F, 1.0F, 0.7F * glow);
+            }
+            super.render(field, yaw, partial, poseStack, buffers, light);
+        }
+
+        private static void ring(Matrix4f m, VertexConsumer out, float c0, float s0, float c1, float s1,
+                                 float inner, float outer, float y, float alpha) {
+            out.addVertex(m, c0 * inner, y, s0 * inner).setColor(0.45F, 0.15F, 0.9F, 0.0F);
+            out.addVertex(m, c0 * outer, y, s0 * outer).setColor(0.7F, 0.4F, 1.0F, alpha);
+            out.addVertex(m, c1 * outer, y, s1 * outer).setColor(0.7F, 0.4F, 1.0F, alpha);
+            out.addVertex(m, c1 * inner, y, s1 * inner).setColor(0.45F, 0.15F, 0.9F, 0.0F);
+        }
+
+        @Override
+        public ResourceLocation getTextureLocation(GunGravityFieldEntity entity) {
+            return TextureAtlas.LOCATION_BLOCKS;
+        }
+    }
+
+    // ================================================================ missile de la Super Nova
+
+    /**
+     * Le missile gun-nuke de Jak 3, a l'echelle du jeu (2,5), le nez dans sa course ;
+     * plante, il clignote ; detone, il laisse place a une boule blanche et violette
+     * qui grossit puis s'efface.
+     */
+    public static final class Nuke extends EntityRenderer<GunNukeEntity> {
+
+        public Nuke(EntityRendererProvider.Context context) {
+            super(context);
+        }
+
+        @Override
+        public void render(GunNukeEntity nuke, float yaw, float partial, PoseStack poseStack, MultiBufferSource buffers,
+                           int light) {
+            float t = nuke.tickCount + partial;
+            poseStack.pushPose();
+            if (nuke.state() == GunNukeEntity.DETONATED) {
+                float age = nuke.detonationAge < 0 ? 0.0F : t - nuke.detonationAge;
+                float f = Math.min(1.0F, age / 24.0F);
+                float size = 4.0F + 36.0F * (float) Math.sqrt(f);
+                int alpha = (int) (255.0F * (1.0F - f) * (1.0F - f));
+                poseStack.mulPose(this.entityRenderDispatcher.cameraOrientation());
+                poseStack.mulPose(Axis.YP.rotationDegrees(180.0F));
+                VertexConsumer out = buffers.getBuffer(RenderType.entityTranslucentEmissive(HALO));
+                poseStack.pushPose();
+                poseStack.scale(size, size, size);
+                billboard(poseStack.last(), out, 170, 90, 255, alpha);
+                poseStack.popPose();
+                poseStack.scale(size * 0.5F, size * 0.5F, size * 0.5F);
+                billboard(poseStack.last(), out, 255, 245, 255, alpha);
+            } else {
+                JakGunModel model = JakGunModel.get("gun_nuke");
+                Vec3 v = nuke.getDeltaMovement();
+                if (v.lengthSqr() > 1.0e-6) {
+                    float heading = (float) Math.toDegrees(Math.atan2(v.x, v.z));
+                    float pitch = (float) Math.toDegrees(Math.atan2(v.y, Math.sqrt(v.x * v.x + v.z * v.z)));
+                    poseStack.mulPose(Axis.YP.rotationDegrees(heading));
+                    poseStack.mulPose(Axis.XP.rotationDegrees(-pitch));
+                }
+                boolean blink = nuke.state() == GunNukeEntity.EMBEDDED && ((int) t / 2) % 2 == 0;
+                if (model != null) {
+                    poseStack.pushPose();
+                    poseStack.scale(2.5F, 2.5F, 2.5F);
+                    model(model, poseStack.last(), buffers.getBuffer(RenderType.entityCutoutNoCull(MorphGunItemRenderer.ATLAS)));
+                    poseStack.popPose();
+                }
+                poseStack.mulPose(this.entityRenderDispatcher.cameraOrientation());
+                poseStack.mulPose(Axis.YP.rotationDegrees(180.0F));
+                float glow = blink ? 2.4F : 1.3F;
+                poseStack.scale(glow, glow, glow);
+                billboard(poseStack.last(), buffers.getBuffer(RenderType.entityTranslucentEmissive(HALO)), 170, 90, 255,
+                        blink ? 230 : 150);
+            }
+            poseStack.popPose();
+            super.render(nuke, yaw, partial, poseStack, buffers, light);
+        }
+
+        @Override
+        public ResourceLocation getTextureLocation(GunNukeEntity entity) {
             return HALO;
         }
     }

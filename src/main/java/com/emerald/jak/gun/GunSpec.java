@@ -4,7 +4,7 @@ import javax.annotation.Nullable;
 
 /**
  * Les chiffres de tir des armes du Morph Gun, pris dans les sources GOAL de Jak 3 et convertis : les quatre
- * armes de base (jalon A), puis les ameliorations rouges et jaunes (jalon B ; etude au cahier, section 70).
+ * armes de base (jalon A), puis les huit ameliorations (jalon B ; etude au cahier, section 70).
  *
  * LES CONVERSIONS (plan, cadre) : 1 m = 1 bloc ; tiques Jak / 15 = tiques
  * Minecraft (300 tiques Jak par seconde) ; m/s / 20 = blocs par tique ;
@@ -23,6 +23,14 @@ import javax.annotation.Nullable;
  * le tir part au relachement :
  *  - CHARGE : tenue, l'arme charge (au plus 1 s) et debite son eco par paliers ;
  *    relachee -- ou gachette perdue --, l'onde part avec la force de la charge.
+ * Et une cinquieme, pour l'Arc Wielder, un canon tournant dont le jeu force le
+ * delai a zero (target-gun.gc:3353-3357) :
+ *  - BEAM : tenue, l'arme agit A CHAQUE TIQUE et boit son eco au fil du temps ; le
+ *    canon tourne comme celui de la Vulcan Fury.
+ *
+ * LES DELAIS PROPRES (`cooldown`, gun-util.gc:1121-1141, target-gun-can-fire-dark?) :
+ * 2 s entre deux Mass Inverter, 9 s entre deux Super Nova, EN PLUS du delai de
+ * gachette, et gardes quand on change d'arme.
  *
  * LE COUT SE PAIE DE DEUX FACONS (target-gun.gc:773-809 et 2899-2916) : `cost` est
  * le SEUIL qui autorise le tir, `debit` ce que le tir preleve aussitot. Le Wave
@@ -45,9 +53,13 @@ public enum GunSpec {
     WAVE(GunForm.RED_2, Trigger.CHARGE, 240, 1, 0),
     PLASMITE(GunForm.RED_3, Trigger.PRESS, 330, 10, 10),
     REFLEXOR(GunForm.YELLOW_2, Trigger.PRESS, 96, 1, 1),
-    GYRO(GunForm.YELLOW_3, Trigger.PRESS, 0, 10, 0);
+    GYRO(GunForm.YELLOW_3, Trigger.PRESS, 0, 10, 0),
+    ARC(GunForm.BLUE_2, Trigger.BEAM, 0, 1, 1),
+    NEEDLE(GunForm.BLUE_3, Trigger.SPIN, 120, 2, 2),
+    INVERTER(GunForm.DARK_2, Trigger.HOLD, 255, 1, 1, 40),
+    NOVA(GunForm.DARK_3, Trigger.HOLD, 255, 10, 10, 180);
 
-    public enum Trigger { PRESS, HOLD, SPIN, CHARGE }
+    public enum Trigger { PRESS, HOLD, SPIN, CHARGE, BEAM }
 
     // ------------------------------------------------------------- communs
 
@@ -256,6 +268,102 @@ public enum GunSpec {
     /** Deux tours par seconde (:714). */
     public static final float GYRO_SPIN_DEGREES = 36.0F;
 
+    // ------------------------------------------------------------- Arc Wielder (gun-blue-shot.gc:642-760, 1326-1950)
+
+    /** Un eco bleu a l'amorce, puis 7,5 par seconde (:1369, 1432-1440). */
+    public static final int ARC_IGNITION = 1;
+    public static final double ARC_DRAIN = 7.5 / 20.0;
+    /** La corde : 12 noeuds espaces de 6 m (:1355-1367). */
+    public static final int ARC_NODES = 12;
+    public static final double ARC_SEGMENT = 6.0;
+    /** Un noeud s'accroche au monstre le plus proche dans 4 m, dans un cone de 53 degres (dot > 0,6), un monstre par chaine (:1627-1682). */
+    public static final double ARC_HOOK = 4.0;
+    public static final double ARC_HOOK_COS = 0.6;
+    /** 2,5 points par cible, et l'identifiant d'attaque du jeu ne change que toutes les 0,4 s : un coup par cible et par 8 tiques (:667-675, 2534). */
+    public static final float ARC_DAMAGE = 2.5F;
+    public static final int ARC_HIT_TICKS = 8;
+    /** Un segment libre touche aussi le premier monstre sur son trajet, dans 0,5 bloc. */
+    public static final float ARC_SEGMENT_RADIUS = 0.5F;
+
+    // ------------------------------------------------------------- Needle Lazer (gun-blue-shot.gc:127-623, 2166-2193)
+
+    /** Trois aiguilles par salve (:2186-2188), 2 eco bleus la salve (:2174-2180). */
+    public static final int NEEDLE_PER_SALVO = 3;
+    /** 327680 = 80 m/s au depart ; en vol, de 30 a 100 m/s selon l'alignement sur la cible (:216-218, 615). */
+    public static final double NEEDLE_LAUNCH_SPEED = 4.0;
+    public static final double NEEDLE_SPEED_MIN = 1.5;
+    public static final double NEEDLE_SPEED_MAX = 5.0;
+    /** La cible se tire au sort dans 40 m autour de la bouche, jamais a plus de 30 degres au-dessus (:438-568). */
+    public static final double NEEDLE_RANGE = 40.0;
+    public static final double NEEDLE_MAX_UP = 0.5;
+    /** Poids du tirage : 1, +2 devant le tireur, +4 a moins de 12 m (:438-568 ; les autres poids visent des especes absentes de Haven). */
+    public static final double NEEDLE_NEAR = 12.0;
+    /** L'aiguille part EXPRES de travers : 15 degres du cote oppose a la cible, +-15 au hasard, y de -0,1 a +0,4 (:570-597). */
+    public static final double NEEDLE_SIDE_DEGREES = 15.0;
+    /** Vol libre de 3 a 10 m, ou jusqu'a 10 m de la cible (:192-207, 381-387). */
+    public static final double NEEDLE_FREE_MIN = 3.0;
+    public static final double NEEDLE_FREE_MAX = 10.0;
+    public static final double NEEDLE_FREE_NEAR = 10.0;
+    /** Le virage : 360 degres/s, 720 a moins de 12 m, double apres 1 s de poursuite (:241-251) ; en degres par tique. */
+    public static final double NEEDLE_TURN = 18.0;
+    public static final double NEEDLE_TURN_NEAR = 36.0;
+    public static final int NEEDLE_TURN_BOOST_AFTER = 20;
+    public static final float NEEDLE_DAMAGE = 1.0F;
+    public static final int NEEDLE_LIFE = 60;
+    /** Aiguilles en vol au plus par tireur : une salve de plus retire les plus vieilles (un paquet de traces en porte 32). */
+    public static final int NEEDLE_MAX = 32;
+
+    // ------------------------------------------------------------- Mass Inverter (gun-dark-shot.gc:2123-3567)
+
+    /** Le champ nait au sol sous le tireur et s'etend de 0 a 30 m en 1 s (:3282-3318), puis tient jusqu'a 6,75 s (:3321-3324). */
+    public static final double INVERTER_RADIUS = 30.0;
+    public static final int INVERTER_GROW_TICKS = 20;
+    public static final int INVERTER_FIELD_TICKS = 135;
+    /** La levitation dure 7 a 9 s (:2888-2908), entre 1 et 3,5 m du sol (:2246-2275). */
+    public static final int INVERTER_FLOAT_MIN = 140;
+    public static final int INVERTER_FLOAT_SPAN = 40;
+    public static final double INVERTER_BAND_LOW = 1.0;
+    public static final double INVERTER_BAND_HIGH = 3.5;
+    /** A la retombee : 2 x les degats pris en l'air, plus max(1 ; hauteur / 2 m) (:2937-3000), en points de Jak. */
+    public static final float INVERTER_MULTIPLIER = 2.0F;
+    public static final float INVERTER_FALL_MIN = 1.0F;
+    /** Le billard : un monstre frappe en l'air file vers un autre dans 25 m, a 45 degres, en vue (:2411-2571). */
+    public static final double INVERTER_BILLIARD_RANGE = 25.0;
+    public static final double INVERTER_BILLIARD_COS = 0.707;
+    /** Un choc a plus de 10 m/s ajoute sa vitesse / 10 m/s aux degats gardes (:2817-2828). */
+    public static final double INVERTER_IMPACT_SPEED = 0.5;
+    public static final int INVERTER_TARGETS = 64;
+
+    // ------------------------------------------------------------- Super Nova (gun-dark-shot.gc:265-1421)
+
+    /** Le vol du missile, par paliers (:509-691) : 8 m/s 0,2 s ; 15 -> 50 m/s en 0,4 s ; 50 -> 135 m/s en 0,5 s, avec un arc de 8,5 m ; puis tout droit 4 s. */
+    public static final int NOVA_PHASE0_TICKS = 4;
+    public static final double NOVA_PHASE0_SPEED = 0.4;
+    public static final int NOVA_PHASE1_TICKS = 8;
+    public static final double NOVA_PHASE1_FROM = 0.75;
+    public static final double NOVA_PHASE1_TO = 2.5;
+    public static final int NOVA_PHASE2_TICKS = 10;
+    public static final double NOVA_PHASE2_TO = 6.75;
+    public static final double NOVA_ARC = 8.5;
+    public static final int NOVA_PHASE3_TICKS = 80;
+    /** Plante dans un mur pendant les deux premiers paliers : deux bips, puis la detonation 1,4 s plus tard (:888-928). */
+    public static final int NOVA_EMBEDDED_TICKS = 28;
+    /** La frappe tombe 0,3 s apres la detonation (:1257-1266) : 32 points a 64 cibles au plus (:718, 732-811). */
+    public static final int NOVA_STRIKE_DELAY = 6;
+    public static final float NOVA_DAMAGE = 32.0F;
+    public static final int NOVA_TARGETS = 64;
+    /**
+     * Le rayon de la frappe. Le jeu dit 300 m : tout le niveau charge. Ici la ville
+     * fait 1 200 blocs et ses monstres gelent loin des joueurs ; 96 blocs couvrent
+     * ce qu'on voit et ce qui tique autour du tireur.
+     */
+    public static final double NOVA_RADIUS = 96.0;
+    public static final double NOVA_BREAK_RADIUS = 6.0;
+    public static final int NOVA_BLOCKS = 96;
+    /** L'eclair blanc dure 2 s, vu a 128 blocs au plus (gun-part.gc:3858). */
+    public static final int NOVA_FLASH_TICKS = 40;
+    public static final double NOVA_FLASH_RANGE = 128.0;
+
     // ------------------------------------------------------------- munitions (collectables.gc:2511-2524)
 
     /** Un ramassage vaut 10 en jaune et en bleu, 5 en rouge, 1 en sombre. */
@@ -275,13 +383,20 @@ public enum GunSpec {
     public final int cost;
     /** Ce que le tir preleve aussitot ; le reste, l'arme le preleve elle-meme (voir l'en-tete). */
     public final int debit;
+    /** Le delai propre de l'arme, en tiques Minecraft, entre deux tirs (0 : aucun). */
+    public final int cooldown;
 
     GunSpec(GunForm form, Trigger trigger, double delayJak, int cost, int debit) {
+        this(form, trigger, delayJak, cost, debit, 0);
+    }
+
+    GunSpec(GunForm form, Trigger trigger, double delayJak, int cost, int debit, int cooldown) {
         this.form = form;
         this.trigger = trigger;
         this.delayJak = delayJak;
         this.cost = cost;
         this.debit = debit;
+        this.cooldown = cooldown;
     }
 
     /** Le delai de tir en tiques Minecraft, a la rotation donnee (canon tournant seulement). */
@@ -293,7 +408,7 @@ public enum GunSpec {
         return (SPIN_DELAY_SLOW + (SPIN_DELAY_FAST - SPIN_DELAY_SLOW) * f) / JAK_TICKS;
     }
 
-    /** L'arme d'une forme ; null pour les ameliorations bleues et sombres, pas encore portees. */
+    /** L'arme d'une forme ; les douze sont portees. */
     @Nullable
     public static GunSpec of(GunForm form) {
         for (GunSpec spec : values()) {

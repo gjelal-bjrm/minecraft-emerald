@@ -6075,3 +6075,85 @@ invasion 47, aucun KO.
 **Reste du jalon B** : Arc Wielder, Needle Lazer, Mass Inverter, Super Nova
 (modeles `gun-dark-2-ring`, `gun-nuke`, `gun-nuke-sphere` deja extraits), puis
 les quetes.
+
+## 72. Jalon B, seconde moitie : les armes bleues et sombres ameliorees *(19 sept. 2026)*
+
+Les douze formes du Morph Gun tirent. Toutes donnees a l'arrivee
+(`GunForm.ARRIVAL_MASK` = les douze) jusqu'aux quetes (§71.1). Chiffres : §70 et
+`GunSpec`.
+
+### 72.1 Les quatre armes, et les choix de portage
+
+- **Arc Wielder** (`GunArcBeam`, gachette BEAM). Le jeu en fait un canon tournant
+  dont il force le delai a zero : le tir ALLUME l'arc (1 eco), puis il agit a
+  chaque tique tant que la gachette est tenue et boit 0,375 eco par tique --
+  exact en binaire (3/8), donc un simple cumul dans `GunFire.State`, rien a
+  virgule sur la pile. La corde : 12 noeuds de 6 blocs, chaque noeud s'accroche au
+  monstre le plus proche de sa place libre (4 blocs, cone de 53 degres), un monstre
+  par chaine, et le premier mur la coupe. **Un coup par monstre et par 8 tiques**
+  (2,5 points) : c'est ce que fait l'identifiant d'attaque du jeu, renouvele
+  toutes les 0,4 s. L'arc casse le bloc qui l'arrete, mais UN TOUTES LES DEUX
+  TIQUES : a un par tique il forait vingt blocs par seconde (le banc l'a montre :
+  le mur d'essai perce en une tique, le monstre « protege » tue derriere).
+- **Needle Lazer** (`GunNeedles`). Pas des entites, comme le Beam Reflexor : a
+  pleine cadence l'arme en tire trente par seconde ; elles vivent en memoire du
+  serveur, un paquet par tireur et par tique (des paires debut-fin, 32 aiguilles
+  au plus). **Le guidage a du etre repris dans le source** (gun-blue-shot.gc:
+  159-304), l'etude l'avait resume a l'envers : 360 degres/s de base ; A MOINS DE
+  12 m, de 360 (contre la cible) a 720 (a 12 m), multiplie par (2 - alignement),
+  puis jusqu'au double entre 1 s et 1,5 s de poursuite ; vitesse de 30 a 100 m/s
+  selon le carre de l'alignement ; deux sous-pas par image. Deux lecons du banc :
+  (1) a un pas par tique, une aiguille a 5 blocs par tique depassait sa cible :
+  QUATRE SOUS-PAS par tique ; (2) meme ainsi, une aiguille qui frolait la boite
+  etroite d'un zombie (0,6 bloc) se mettait EN ORBITE STABLE a 2,2 blocs et ne
+  touchait jamais -- un monstre survivait a trente-deux aiguilles. Dans le jeu les
+  ennemis ont de grosses spheres de collision, un passage a un metre y est une
+  touche : l'aiguille touche donc SA cible a moins d'un bloc du centre
+  (`PROXIMITY`), et pique dessus si elle est a moins de 3 blocs et de travers.
+- **Mass Inverter** (`GunGravityFieldEntity`, `GunLevitation`). Un champ au sol
+  sous le tireur, 0 -> 30 blocs en une seconde, tenu 6,75 s ; les monstres pris
+  levitent 7 a 9 s, sans poids, tenus entre 1 et 3,5 blocs du sol, en rotation,
+  sans cible ni chemin. **Il ne blesse pas, il multiplie** : un coup sur un monstre
+  en l'air est ANNULE et GARDE (`LivingIncomingDamageEvent`), et a la retombee le
+  monstre prend 2 x ce qui a ete garde + max(1 ; hauteur / 2). Billard : le monstre
+  frappe en l'air file vers un autre (25 blocs, 45 degres, en vue) et le choc a
+  plus de 10 m/s s'ajoute. Le drapeau « sans poids » s'ECRIT DANS LE MONDE : on le
+  retire a l'arret du serveur AVANT la sauvegarde (`ServerStoppingEvent`, pas
+  `Stopped`), et a son retour pour un monstre dont le troncon a ete decharge en
+  pleine levitation -- sinon des zombies flotteraient pour toujours.
+- **Super Nova** (`GunNukeEntity`, modele `gun-nuke`). Vol par paliers du jeu, dont
+  l'arc de 8,5 blocs (sinus de 0 a 270 degres : le missile monte, revient, puis
+  PLONGE sous sa ligne) ; plante dans un mur pendant la sortie du canon : deux
+  bips, detonation 28 tiques plus tard ; sinon detonation au contact. La frappe
+  tombe 6 tiques apres : 32 points a 64 monstres. **Ecart assume : 96 blocs de
+  rayon, pas 300** -- le jeu frappe tout son niveau charge ; ici la ville fait
+  1 200 blocs et ses monstres gelent loin des joueurs. Eclair blanc (2 s, en
+  carre : il aveugle une demi-seconde) et secousse de 3 degres cote client
+  (`GunNovaPayload`, `GunNovaClient`), selon la distance, rien au-dela de 128 blocs.
+- **Delais propres** (`GunSpec.cooldown`) : 40 tiques pour le Mass Inverter, 180
+  pour la Super Nova, par arme et par joueur, en plus du delai de gachette ; tenue
+  pendant l'attente, la gachette tire des qu'elle le peut, sans clic.
+- `gun-dark-2-ring` n'est PAS cuit : il ne vit que par l'echelle de ses os, animee
+  par le jeu ; au repos c'est un disque plat. Le mod dessine son anneau lui-meme.
+
+### 72.2 Verifications
+
+- Banc `armes` : **174 OK**. Arc : amorce 199, corde de 5 noeuds sur trois
+  monstres et coupee par le mur, 6 coups en 16 tiques, 184 apres 41 tiques, arret
+  au relachement, reserve de 3 bue en 7 tiques. Aiguilles : 198, ecarts au regard
+  de 18 a 22 degres, 3 touches sur 3, 13 salves en 2 s (ecarts 7 5 5 4 3 3 2...),
+  26 eco. Inverter : 14, levitation a 6 et 20 blocs mais pas a 35, pas de second
+  champ avant 2 s puis 13, trois tirs de Blaster gardes (PV 20, garde 6,0),
+  retombee 0 / 16,3 / 20. Nova : sous 10 eco l'arme bascule sur le Peace Maker
+  (comme le jeu), 15 -> 5, pas de second missile avant 9 s, trois monstres frappes,
+  missile plante puis detone.
+- Les six bancs apres ce lot : armes 174, haven 11, salles 26, vote 36, vehicules 129,
+  invasion 47, aucun KO.
+- Un banc peut se polluer lui-meme : des aiguilles perdues d'un essai piquaient un
+  monstre du suivant (`purge` eteint desormais les tirs en vol et rend leur poids
+  aux monstres).
+- Planche C (`tools/gun_particles.py --planche-c`) : l'arc et les sillages etaient
+  trop fins, les colonnes du champ perdues dans 2 800 blocs carres ; grossis (0,28,
+  0,19) et densifiees (14 par tique) avant livraison.
+- Non vu sans le jeu : les anneaux (onde, champ), les modeles en mouvement,
+  l'eclair et la secousse. C'est la premiere chose a regarder en jeu.

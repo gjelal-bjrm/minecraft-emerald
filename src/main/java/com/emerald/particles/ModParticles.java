@@ -141,4 +141,30 @@ public class ModParticles {
 
     public static final DeferredHolder<ParticleType<?>, SimpleParticleType> GUN_GYRO_SPARK =
             PARTICLES.register("gun_gyro_spark", () -> new SimpleParticleType(true));
+
+    // Les ameliorations bleues et sombres : huit de plus.
+
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> GUN_ARC_BOLT =
+            PARTICLES.register("gun_arc_bolt", () -> new SimpleParticleType(true));
+
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> GUN_ARC_SPARK =
+            PARTICLES.register("gun_arc_spark", () -> new SimpleParticleType(true));
+
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> GUN_NEEDLE_TRAIL =
+            PARTICLES.register("gun_needle_trail", () -> new SimpleParticleType(true));
+
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> GUN_NEEDLE_SPARK =
+            PARTICLES.register("gun_needle_spark", () -> new SimpleParticleType(true));
+
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> GUN_INVERTER_RISE =
+            PARTICLES.register("gun_inverter_rise", () -> new SimpleParticleType(true));
+
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> GUN_INVERTER_MOTE =
+            PARTICLES.register("gun_inverter_mote", () -> new SimpleParticleType(true));
+
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> GUN_NOVA_MOTE =
+            PARTICLES.register("gun_nova_mote", () -> new SimpleParticleType(true));
+
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> GUN_NOVA_BLAST =
+            PARTICLES.register("gun_nova_blast", () -> new SimpleParticleType(true));
 }

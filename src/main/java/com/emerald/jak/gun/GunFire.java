@@ -35,8 +35,7 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * La gachette du Morph Gun, cote serveur : cadence, reserves, les quatre armes de base, et les
- * ameliorations rouges et jaunes (Wave Concussor, Plasmite RPG, Beam Reflexor, Gyro Burster).
+ * La gachette du Morph Gun, cote serveur : cadence, reserves, et les douze armes.
  *
  * TOUT EST REVALIDE A CHAQUE TIQUE, quoi que dise le client : dans Haven lobby
  * ouvert (MorphGunKeeper.allowed), vivant, pas spectateur, l'arme EN MAIN
@@ -74,6 +73,12 @@ import java.util.UUID;
  * qu'elle ne tire pas encore la reveille sur place, et ne coute rien ; pendant sa
  * rafale, l'appui ne fait qu'un clic.
  *
+ * L'ARC WIELDER : le tir l'ALLUME (1 eco bleu), puis il agit a chaque tique tant que la
+ * gachette est tenue et boit 7,5 eco par seconde ; reserve vide, il s'eteint. LES
+ * DELAIS PROPRES du Mass Inverter (2 s) et de la Super Nova (9 s) s'ajoutent au delai
+ * de gachette, par arme et par joueur, et tiennent quand on change d'arme ; tenue
+ * pendant l'attente, la gachette tire des qu'elle le peut, sans clic.
+ *
  * LES CIBLES ET LE DECOR : GunImpacts. Aucun joueur n'est touche.
  */
 @EventBusSubscriber(modid = EmeraldWeaponsMod.MODID)
@@ -105,6 +110,16 @@ public final class GunFire {
         int wavePaid;
         @Nullable
         GunSaucerEntity saucer;
+        // l'arc de l'Arc Wielder : allume, eco du au fil des tiques, et la retenue des coups par monstre
+        boolean arcOn;
+        double arcDebt;
+        final Map<Integer, Long> arcGate = new HashMap<>();
+        /** Dernier tir de chaque arme a delai propre, par ordinal de GunSpec. */
+        final long[] lastUse = new long[GunSpec.values().length];
+
+        State() {
+            java.util.Arrays.fill(this.lastUse, Long.MIN_VALUE / 4);
+        }
         // la salve du Scatter Gun en cours
         final ArrayDeque<Vec3> probes = new ArrayDeque<>();
         Vec3 probeFrom = Vec3.ZERO;
@@ -115,10 +130,13 @@ public final class GunFire {
         final List<long[]> probeBatches = new ArrayList<>();
         /** Les ondes parties : {tique, tiques de charge, eco paye, rayon final x 100}. */
         final List<long[]> waves = new ArrayList<>();
+        /** Les tiques d'arc de l'Arc Wielder. */
+        final List<GunArcBeam.Result> arcs = new ArrayList<>();
 
         boolean idle() {
             return !this.down && this.pending == 0 && this.charge == null && this.probes.isEmpty() && this.spin <= 0.0
-                    && !this.spinHeld && this.waveStart < 0L && (this.saucer == null || this.saucer.isRemoved());
+                    && !this.spinHeld && this.waveStart < 0L && (this.saucer == null || this.saucer.isRemoved())
+                    && !this.arcOn;
         }
     }
 
@@ -310,7 +328,14 @@ public final class GunFire {
             s.shots.clear();
             s.probeBatches.clear();
             s.waves.clear();
+            s.arcs.clear();
         }
+    }
+
+    /** Les tiques d'arc de l'Arc Wielder (banc d'essai). */
+    static List<GunArcBeam.Result> arcLog(ServerPlayer player) {
+        State s = STATES.get(player.getUUID());
+        return s == null ? List.of() : List.copyOf(s.arcs);
     }
 
     /** Le banc remet un tireur a neuf : gachette, delai, rotation. */
@@ -380,6 +405,7 @@ public final class GunFire {
         if (data == null || spec == null) {
             s.edge = false;
             s.pending = 0;
+            s.arcOn = false;
             if (refusal != Refusal.NONE) {
                 s.down = false;
             }
@@ -398,7 +424,7 @@ public final class GunFire {
 
         MorphGunData next = data;
         boolean active = now - data.changeTick() >= transformTicks(data);
-        if (spec.trigger == GunSpec.Trigger.SPIN) {
+        if (spec.trigger == GunSpec.Trigger.SPIN || spec.trigger == GunSpec.Trigger.BEAM) {
             boolean spinning = s.down && active;
             if (spinning && !s.spinHeld) {
                 // le client repart de la bonne vitesse : debut recule de la rotation restante
@@ -447,11 +473,19 @@ public final class GunFire {
                     s.pending = 1;
                 }
             }
+            case BEAM -> {
+                if (s.down && active && !s.arcOn) {
+                    s.pending = 1;
+                }
+            }
         }
         s.edge = false;
         if (s.pending > 0 && active && since >= delay && s.waveStart < 0L) {
             s.pending = 0;
             next = fire(level, player, next, spec, s, now, delay);
+        }
+        if (s.arcOn) {
+            next = spec == GunSpec.ARC && s.down && active ? arcTick(level, player, next, s, now) : arcOff(s, next);
         }
         if (!next.equals(data)) {
             MorphGunData.write(stack, next);
@@ -488,6 +522,11 @@ public final class GunFire {
             }
             return data;
         }
+        if (spec.cooldown > 0 && now - s.lastUse[spec.ordinal()] < spec.cooldown) {
+            // le delai propre de l'arme : la gachette tenue tirera des qu'il sera passe, sans clic
+            s.pending = s.down ? 1 : 0;
+            return data;
+        }
         if (data.eco(family) < spec.cost) {
             GunForm other = outOfAmmo(data);
             if (other != null) {
@@ -513,7 +552,26 @@ public final class GunFire {
             case PLASMITE -> shootPlasmite(level, player);
             case REFLEXOR -> shootReflexor(level, player);
             case GYRO -> launchSaucer(level, player, s);
+            case ARC -> {
+                s.arcOn = true;
+                s.arcDebt = 0.0;
+                s.arcGate.clear();
+                level.playSound(null, player.getX(), player.getEyeY(), player.getZ(), SoundEvents.BEACON_POWER_SELECT,
+                        SoundSource.PLAYERS, 0.5F, 2.0F);
+            }
+            case NEEDLE -> {
+                GunNeedles.salvo(level, player);
+                level.playSound(null, player.getX(), player.getEyeY(), player.getZ(), SoundEvents.AMETHYST_BLOCK_RESONATE,
+                        SoundSource.PLAYERS, 0.7F, 1.9F);
+            }
+            case INVERTER -> {
+                GunGravityFieldEntity.spawn(level, player);
+                level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.BEACON_ACTIVATE,
+                        SoundSource.PLAYERS, 1.0F, 0.5F);
+            }
+            case NOVA -> shootNova(level, player);
         }
+        s.lastUse[spec.ordinal()] = now;
         s.lastFire = now - (s.lastFire + delay) < 1.0 ? s.lastFire + delay : now;
         if (s.shots.size() < LOG_MAX) {
             s.shots.add(new long[]{now, spec.ordinal()});
@@ -725,6 +783,48 @@ public final class GunFire {
         level.addFreshEntity(saucer);
         s.saucer = saucer;
         level.playSound(null, eye.x, eye.y, eye.z, SoundEvents.TRIDENT_THROW.value(), SoundSource.PLAYERS, 0.9F, 1.5F);
+    }
+
+    // ------------------------------------------------------------- Arc Wielder
+
+    /** Une tique d'arc allume : l'eco du au fil du temps, puis la corde de foudre. Reserve vide : il s'eteint. */
+    private static MorphGunData arcTick(ServerLevel level, ServerPlayer player, MorphGunData data, State s, long now) {
+        MorphGunData next = data;
+        s.arcDebt += GunSpec.ARC_DRAIN;
+        while (s.arcDebt >= 1.0) {
+            int blue = next.eco(GunForm.Family.BLUE);
+            if (blue < 1) {
+                return arcOff(s, next);
+            }
+            next = next.withEco(GunForm.Family.BLUE, blue - 1);
+            s.arcDebt -= 1.0;
+        }
+        GunArcBeam.Result result = GunArcBeam.fire(level, player, s.arcGate, now);
+        if (s.arcs.size() < LOG_MAX) {
+            s.arcs.add(result);
+        }
+        if (now % 3L == 0L) {
+            level.playSound(null, player.getX(), player.getEyeY(), player.getZ(), SoundEvents.LIGHTNING_BOLT_IMPACT,
+                    SoundSource.PLAYERS, 0.12F, 2.0F);
+        }
+        return next;
+    }
+
+    private static MorphGunData arcOff(State s, MorphGunData data) {
+        s.arcOn = false;
+        s.arcDebt = 0.0;
+        return data;
+    }
+
+    // ------------------------------------------------------------- Super Nova
+
+    private static void shootNova(ServerLevel level, ServerPlayer player) {
+        Vec3 eye = player.getEyePosition();
+        Vec3 look = player.getLookAngle();
+        GunNukeEntity nuke = new GunNukeEntity(level, player);
+        nuke.launch(new Vec3(eye.x + look.x * 0.8, eye.y - 0.2 + look.y * 0.8, eye.z + look.z * 0.8), look);
+        level.addFreshEntity(nuke);
+        level.playSound(null, eye.x, eye.y, eye.z, SoundEvents.WITHER_SHOOT, SoundSource.PLAYERS, 0.9F, 0.6F);
     }
 
     // ------------------------------------------------------------- traces

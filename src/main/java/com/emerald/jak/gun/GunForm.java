@@ -72,12 +72,11 @@ public enum GunForm {
     public static final int BASE_MASK = RED_1.bit() | YELLOW_1.bit() | BLUE_1.bit() | DARK_1.bit();
 
     /**
-     * Les formes DONNEES A L'ARRIVEE : les armes de base, et les ameliorations deja
-     * portees (rouges et jaunes). Provisoire, decision du joueur du 16 sept. : quand
-     * les quetes des PNJ de Haven existeront, on n'arrivera plus qu'avec le Scatter
-     * Gun, et les autres se gagneront ; d'ici la, tout ce qui est code s'essaie.
+     * Les formes DONNEES A L'ARRIVEE : les douze. Provisoire, decision du joueur du
+     * 16 sept. : quand les quetes des PNJ de Haven existeront, on n'arrivera plus
+     * qu'avec le Scatter Gun, et les autres se gagneront ; d'ici la, tout s'essaie.
      */
-    public static final int ARRIVAL_MASK = BASE_MASK | RED_2.bit() | RED_3.bit() | YELLOW_2.bit() | YELLOW_3.bit();
+    public static final int ARRIVAL_MASK = (1 << 12) - 1;
 
     public final Family family;
     /** 1, 2 ou 3 dans sa famille. */

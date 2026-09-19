@@ -35,6 +35,15 @@ import net.neoforged.neoforge.client.event.RegisterParticleProvidersEvent;
  *  - gun_reflexor_spark : l'eclat de ses rebonds ;
  *  - gun_gyro_tracer    : le trait dore des tirs de la soucoupe du Gyro Burster ;
  *  - gun_gyro_spark     : leurs eclats, et les feux de la soucoupe.
+ * Et huit pour les ameliorations bleues et sombres :
+ *  - gun_arc_bolt       : la foudre de l'Arc Wielder, semee sur sa corde a chaque tique ;
+ *  - gun_arc_spark      : l'eclat sur un monstre accroche, ou sur le mur qui coupe l'arc ;
+ *  - gun_needle_trail   : le sillage d'une aiguille du Needle Lazer (6 tiques : la courbe se voit) ;
+ *  - gun_needle_spark   : l'eclat de son impact ;
+ *  - gun_inverter_rise  : les colonnes montantes du champ du Mass Inverter ;
+ *  - gun_inverter_mote  : les motes d'un monstre souleve (emises par le serveur) ;
+ *  - gun_nova_mote      : la trainee du missile de la Super Nova et les debris de sa detonation ;
+ *  - gun_nova_blast     : l'onde de sa detonation, qui grandit jusqu'a 60 blocs.
  */
 public final class GunParticles {
 
@@ -82,6 +91,24 @@ public final class GunParticles {
         event.registerSpriteSet(ModParticles.GUN_GYRO_SPARK.get(),
                 sprites -> (type, level, x, y, z, dx, dy, dz) -> new Spark(level, x, y, z, dx, dy, dz, sprites,
                         1.0F, 0.75F, 0.2F));
+        event.registerSpriteSet(ModParticles.GUN_ARC_BOLT.get(),
+                sprites -> (type, level, x, y, z, dx, dy, dz) -> new Line(level, x, y, z, sprites, 2, 0.28F, 0.62F, 0.85F, 1.0F));
+        event.registerSpriteSet(ModParticles.GUN_ARC_SPARK.get(),
+                sprites -> (type, level, x, y, z, dx, dy, dz) -> new Spark(level, x, y, z, dx, dy, dz, sprites,
+                        0.7F, 0.9F, 1.0F));
+        event.registerSpriteSet(ModParticles.GUN_NEEDLE_TRAIL.get(),
+                sprites -> (type, level, x, y, z, dx, dy, dz) -> new Line(level, x, y, z, sprites, 6, 0.19F, 0.35F, 0.6F, 1.0F));
+        event.registerSpriteSet(ModParticles.GUN_NEEDLE_SPARK.get(),
+                sprites -> (type, level, x, y, z, dx, dy, dz) -> new Spark(level, x, y, z, dx, dy, dz, sprites,
+                        0.45F, 0.7F, 1.0F));
+        event.registerSpriteSet(ModParticles.GUN_INVERTER_RISE.get(),
+                sprites -> (type, level, x, y, z, dx, dy, dz) -> new Rise(level, x, y, z, dy, sprites));
+        event.registerSpriteSet(ModParticles.GUN_INVERTER_MOTE.get(),
+                sprites -> (type, level, x, y, z, dx, dy, dz) -> new Line(level, x, y, z, sprites, 8, 0.14F, 0.7F, 0.45F, 1.0F));
+        event.registerSpriteSet(ModParticles.GUN_NOVA_MOTE.get(),
+                sprites -> (type, level, x, y, z, dx, dy, dz) -> new Shard(level, x, y, z, dx, dy, dz, sprites));
+        event.registerSpriteSet(ModParticles.GUN_NOVA_BLAST.get(),
+                sprites -> (type, level, x, y, z, dx, dy, dz) -> new Nova(level, x, y, z, sprites));
     }
 
     /** La base : sans physique ni frottement, pleine lumiere, transparente. */
@@ -301,6 +328,78 @@ public final class GunParticles {
         public void tick() {
             super.tick();
             this.alpha = 1.0F - 0.6F * progress();
+        }
+    }
+
+    /**
+     * Un point de trait, immobile, qui palit et retrecit : la foudre de l'Arc Wielder
+     * (bleu-blanc, 2 tiques), le sillage des aiguilles du Needle Lazer (bleu, 6 tiques :
+     * on voit la courbe), les motes des monstres souleves par le Mass Inverter.
+     */
+    static final class Line extends Glow {
+        Line(ClientLevel level, double x, double y, double z, SpriteSet sprites, int life, float size,
+             float r, float g, float b) {
+            super(level, x, y, z, 0.0, 0.0, 0.0, sprites, life, size);
+            this.setColor(r, g, b);
+        }
+
+        @Override
+        public void tick() {
+            super.tick();
+            float t = progress();
+            this.quadSize = this.size0 * (1.0F - 0.6F * t);
+            this.alpha = 1.0F - 0.7F * t;
+        }
+    }
+
+    /** Une colonne montante du champ du Mass Inverter : un trait violet qui s'eleve et s'efface. */
+    static final class Rise extends Glow {
+        Rise(ClientLevel level, double x, double y, double z, double rise, SpriteSet sprites) {
+            super(level, x, y, z, 0.0, rise, 0.0, sprites, 16 + level.random.nextInt(8), 0.24F);
+            this.setColor(0.66F, 0.38F, 1.0F);
+        }
+
+        @Override
+        public void tick() {
+            super.tick();
+            float t = progress();
+            this.alpha = (1.0F - t) * 0.85F;
+            this.quadSize = this.size0 * (1.0F - 0.4F * t);
+        }
+    }
+
+    /** Un eclat de la Super Nova : la trainee du missile (sans vitesse) et les debris de la detonation. */
+    static final class Shard extends Glow {
+        Shard(ClientLevel level, double x, double y, double z, double dx, double dy, double dz, SpriteSet sprites) {
+            super(level, x, y, z, dx, dy, dz, sprites, 12 + level.random.nextInt(10), 0.3F + level.random.nextFloat() * 0.25F);
+            this.friction = 0.9F;
+            this.setColor(0.8F, 0.55F, 1.0F);
+        }
+
+        @Override
+        public void tick() {
+            super.tick();
+            float t = progress();
+            this.setColor(0.8F - 0.4F * t, 0.55F - 0.4F * t, 1.0F - 0.3F * t);
+            this.alpha = 1.0F - t;
+            this.quadSize = this.size0 * (1.0F - 0.5F * t);
+        }
+    }
+
+    /** L'onde de la Super Nova : un anneau blanc-violet qui grandit jusqu'a 60 blocs en une seconde et demie. */
+    static final class Nova extends Glow {
+        Nova(ClientLevel level, double x, double y, double z, SpriteSet sprites) {
+            super(level, x, y, z, 0.0, 0.0, 0.0, sprites, 30, 2.0F);
+            this.setColor(0.9F, 0.8F, 1.0F);
+        }
+
+        @Override
+        public void tick() {
+            super.tick();
+            float t = progress();
+            this.quadSize = 2.0F + 58.0F * (float) Math.sqrt(t);
+            this.setColor(0.9F - 0.3F * t, 0.8F - 0.45F * t, 1.0F);
+            this.alpha = (1.0F - t) * (1.0F - t);
         }
     }
 

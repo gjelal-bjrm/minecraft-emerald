@@ -114,6 +114,14 @@ public final class GunClient {
             gyro(level, payload);
             return;
         }
+        if (payload.weapon() == GunTracePayload.ARC) {
+            arc(level, payload, shooter instanceof Player ? from : new Vec3(payload.ox(), payload.oy(), payload.oz()));
+            return;
+        }
+        if (payload.weapon() == GunTracePayload.NEEDLES) {
+            needles(level, payload);
+            return;
+        }
         boolean scatter = payload.weapon() == GunTracePayload.SCATTER;
         if (scatter) {
             level.addParticle(ModParticles.GUN_SCATTER_FLASH.get(), true, from.x, from.y, from.z, 0.0, 0.0, 0.0);
@@ -182,6 +190,56 @@ public final class GunClient {
         }
     }
 
+    /** La corde de foudre de l'Arc Wielder pendant une tique : une ligne brisee qui tremble, un eclat a chaque monstre accroche. */
+    private static void arc(ClientLevel level, GunTracePayload payload, Vec3 from) {
+        RandomSource random = level.random;
+        float[] ends = payload.ends();
+        Vec3 at = from;
+        for (int i = 0; i < payload.count(); i++) {
+            Vec3 end = new Vec3(ends[i * 4], ends[i * 4 + 1], ends[i * 4 + 2]);
+            Vec3 d = end.subtract(at);
+            int dots = Math.min(40, Math.max(1, (int) (d.length() * 4.0)));
+            for (int k = 0; k < dots; k++) {
+                double t = k / (double) dots;
+                // la foudre tremble : un ecart au hasard, nul aux deux bouts du segment
+                double shake = 0.4 * Math.sin(Math.PI * t);
+                level.addParticle(ModParticles.GUN_ARC_BOLT.get(), true,
+                        at.x + d.x * t + (random.nextDouble() - 0.5) * shake, at.y + d.y * t + (random.nextDouble() - 0.5) * shake,
+                        at.z + d.z * t + (random.nextDouble() - 0.5) * shake, 0.0, 0.0, 0.0);
+            }
+            if ((int) ends[i * 4 + 3] != GunTracePayload.MISS) {
+                for (int k = 0; k < 3; k++) {
+                    level.addParticle(ModParticles.GUN_ARC_SPARK.get(), true, end.x, end.y, end.z,
+                            (random.nextDouble() - 0.5) * 0.3, random.nextDouble() * 0.2, (random.nextDouble() - 0.5) * 0.3);
+                }
+            }
+            at = end;
+        }
+    }
+
+    /** Les aiguilles du Needle Lazer : des paires debut-fin, le chemin de chacune pendant la tique. */
+    private static void needles(ClientLevel level, GunTracePayload payload) {
+        RandomSource random = level.random;
+        float[] ends = payload.ends();
+        for (int i = 0; i + 1 < payload.count(); i += 2) {
+            Vec3 from = new Vec3(ends[i * 4], ends[i * 4 + 1], ends[i * 4 + 2]);
+            Vec3 to = new Vec3(ends[(i + 1) * 4], ends[(i + 1) * 4 + 1], ends[(i + 1) * 4 + 2]);
+            Vec3 d = to.subtract(from);
+            int dots = Math.min(24, Math.max(1, (int) (d.length() * 4.0)));
+            for (int k = 0; k < dots; k++) {
+                double t = k / (double) dots;
+                level.addParticle(ModParticles.GUN_NEEDLE_TRAIL.get(), true, from.x + d.x * t, from.y + d.y * t,
+                        from.z + d.z * t, 0.0, 0.0, 0.0);
+            }
+            if ((int) ends[(i + 1) * 4 + 3] != GunTracePayload.MISS) {
+                for (int k = 0; k < 3; k++) {
+                    level.addParticle(ModParticles.GUN_NEEDLE_SPARK.get(), true, to.x, to.y, to.z,
+                            (random.nextDouble() - 0.5) * 0.25, random.nextDouble() * 0.15, (random.nextDouble() - 0.5) * 0.25);
+                }
+            }
+        }
+    }
+
     /** La salve de la soucoupe du Gyro Burster : un trait par tir, de la soucoupe a sa fin. */
     private static void gyro(ClientLevel level, GunTracePayload payload) {
         RandomSource random = level.random;
@@ -226,12 +284,17 @@ public final class GunClient {
             event.registerEntityRenderer(Jak3Registry.GUN_SHOCKWAVE.get(), GunRenderers.Shockwave::new);
             event.registerEntityRenderer(Jak3Registry.GUN_GRENADE.get(), GunRenderers.Grenade::new);
             event.registerEntityRenderer(Jak3Registry.GUN_SAUCER.get(), GunRenderers.Saucer::new);
+            event.registerEntityRenderer(Jak3Registry.GUN_GRAVITY_FIELD.get(), GunRenderers.GravityField::new);
+            event.registerEntityRenderer(Jak3Registry.GUN_NUKE.get(), GunRenderers.Nuke::new);
         }
 
         @SubscribeEvent
         public static void onLayers(RegisterGuiLayersEvent event) {
             event.registerAbove(VanillaGuiLayers.AIR_LEVEL,
                     ResourceLocation.fromNamespaceAndPath(EmeraldWeaponsMod.MODID, "morph_gun_hud"), GunHud::render);
+            // l'eclair de la Super Nova couvre tout, HUD compris
+            event.registerAboveAll(ResourceLocation.fromNamespaceAndPath(EmeraldWeaponsMod.MODID, "super_nova_flash"),
+                    GunNovaClient::render);
         }
     }
 }

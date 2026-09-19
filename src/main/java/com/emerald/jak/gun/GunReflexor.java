@@ -172,6 +172,11 @@ public final class GunReflexor {
         SHOTS.clear();
     }
 
+    /** Eteint tous les tirs en vol (banc d'essai). */
+    static void clearAll() {
+        SHOTS.clear();
+    }
+
     // ================================================================ une tique de vol
 
     private static void step(Shot shot) {

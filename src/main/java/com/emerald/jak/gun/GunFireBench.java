@@ -153,12 +153,19 @@ final class GunFireBench {
         phase("recharge par ramassage", 60, this::pickups);
         phase("recharge par monstre tue", 2, this::killDrop);
         for (GunSpec spec : GunSpec.values()) {
+            if (spec == GunSpec.INVERTER) {
+                continue;       // le Mass Inverter ne tue pas : il souleve et multiplie (voir son essai)
+            }
             phase("monstre tue par " + spec.form.id, 240, t -> killWith(spec, t));
         }
         phase("Wave Concussor", 120, this::wave);
         phase("Plasmite RPG", 120, this::plasmite);
         phase("Beam Reflexor", 80, this::reflexor);
         phase("Gyro Burster", 320, this::gyro);
+        phase("Arc Wielder", 90, this::arc);
+        phase("Needle Lazer", 100, this::needle);
+        phase("Mass Inverter", 330, this::inverter);
+        phase("Super Nova", 130, this::nova);
         phase("joueur factice, habitant et zombie sans etiquette intacts", 90, this::harmless);
         phase("decor casse puis reconstruit", 420, this::decor);
         phase("blocs proteges intacts", 12, this::guarded);
@@ -861,7 +868,7 @@ final class GunFireBench {
         if (!dead) {
             boolean down = switch (spec.trigger) {
                 case PRESS, HOLD -> t % 2 == 0;
-                case SPIN -> true;
+                case SPIN, BEAM -> true;
                 // une demi-seconde de charge, puis le relachement qui fait partir l'onde
                 case CHARGE -> t % 24 < 12;
             };
@@ -906,6 +913,10 @@ final class GunFireBench {
         for (GunEcoEntity e : ecoAround(this.site, 96.0)) {
             e.discard();
         }
+        // les tirs encore en vol de l'essai precedent piqueraient les monstres du suivant
+        GunNeedles.clearAll();
+        GunReflexor.clearAll();
+        GunLevitation.releaseAll();
     }
 
     /** Un pan de pierres ; rend ses positions, pour le retirer avant l'essai suivant. */
@@ -1332,6 +1343,349 @@ final class GunFireBench {
             if (saucer != null) {
                 saucer.discard();
             }
+            purge();
+            full(f);
+            return true;
+        }
+        GunFire.tick(f);
+        return false;
+    }
+
+
+    // ================================================================ ameliorations bleues et sombres
+
+    private void hold(FakePlayer f) {
+        GunFire.onTrigger(f, true);
+        GunFire.tick(f);
+    }
+
+    /** Arc Wielder : amorce, eco au fil des tiques, chaine de monstre en monstre, mur qui coupe, un coup par 8 tiques, arret. */
+    private boolean arc(int t) {
+        FakePlayer f = this.a;
+        if (t == 0) {
+            purge();
+            form(f, GunForm.BLUE_2);
+            full(f);
+            look(f, EAST, 0.0F);
+            GunFire.clearLog(f);
+            Vec3 eye = f.getEyePosition();
+            this.memo.put("a1", monster(HavenInvasion.Kind.ZOMBIE, eye.add(8.0, 0.0, 0.0)));
+            this.memo.put("a2", monster(HavenInvasion.Kind.ZOMBIE, eye.add(13.0, 0.0, 2.5)));
+            this.memo.put("a3", monster(HavenInvasion.Kind.ZOMBIE, eye.add(18.0, 0.0, 5.0)));
+            this.memo.put("a4", monster(HavenInvasion.Kind.ZOMBIE, eye.add(24.5, 0.0, 8.2)));
+            BlockPos e = BlockPos.containing(eye);
+            this.memo.put("arcWall", slab(e.offset(21, -3, 2), e.offset(21, 3, 11)));
+        }
+        if (t <= 40) {
+            hold(f);
+            if (t == 0) {
+                List<GunArcBeam.Result> log = GunFire.arcLog(f);
+                GunArcBeam.Result first = log.isEmpty() ? null : log.get(0);
+                check("Arc Wielder : l'appui allume l'arc (1 eco bleu : 200 -> 199) ; la corde saute sur trois monstres,"
+                                + " et le mur coupe l'arc avant le quatrieme",
+                        data(f).ecoBlue() == 199 && first != null && first.hooked() == 3 && first.hurt() == 3 && first.blocked()
+                                && first.nodes() == 5,
+                        "bleu " + data(f).ecoBlue() + (first == null ? ", pas d'arc" : ", noeuds " + first.nodes() + ", accroches "
+                                + first.hooked() + ", touches " + first.hurt() + ", coupe " + first.blocked()
+                                + String.format(Locale.ROOT, ", longueur %.1f", first.length())));
+                // l'arc casse le bloc qui l'arrete : le mur d'un bloc sera perce, et le quatrieme monstre accroche a
+                // son tour. On le retire : la suite compte les coups sur les trois premiers.
+                if (this.memo.get("a4") instanceof Mob behind) {
+                    check("Arc Wielder : a la premiere tique, le monstre derriere le mur est intact", behind.getHealth() == 20.0F,
+                            "PV " + behind.getHealth());
+                    behind.discard();
+                }
+            }
+            if (t == 15) {
+                int hurt = 0;
+                for (GunArcBeam.Result r : GunFire.arcLog(f)) {
+                    hurt += r.hurt();
+                }
+                check("Arc Wielder : un coup par monstre et par 8 tiques (2,5 points : 6,25 par seconde), pas un par tique",
+                        hurt == 6, hurt + " coups en 16 tiques sur trois monstres");
+            }
+            if (t == 40) {
+                boolean dead = health(this.memo.get("a1")) == 0.0F && health(this.memo.get("a2")) == 0.0F
+                        && health(this.memo.get("a3")) == 0.0F;
+                check("Arc Wielder : 7,5 eco bleus par seconde au fil des tiques (41 tiques : 15 de plus, 199 -> 184), les"
+                                + " trois monstres accroches sont tues",
+                        data(f).ecoBlue() == 184 && dead, "bleu " + data(f).ecoBlue() + ", morts " + dead);
+            }
+            return false;
+        }
+        if (t == 41) {
+            GunFire.onTrigger(f, false);
+            GunFire.tick(f);
+            this.memo.put("arcEco", data(f).ecoBlue());
+            this.memo.put("arcTicks", GunFire.arcLog(f).size());
+            return false;
+        }
+        if (t < 50) {
+            GunFire.tick(f);
+            return false;
+        }
+        if (t == 50) {
+            check("Arc Wielder : gachette relachee, l'arc s'eteint et ne boit plus rien",
+                    data(f).ecoBlue() == (int) this.memo.get("arcEco") && GunFire.arcLog(f).size() == (int) this.memo.get("arcTicks"),
+                    "bleu " + data(f).ecoBlue() + ", tiques d'arc " + GunFire.arcLog(f).size());
+            form(f, GunForm.BLUE_2);
+            eco(f, 0, 0, 3, 0);
+            GunFire.clearLog(f);
+            return false;
+        }
+        if (t < 64) {
+            hold(f);
+            return false;
+        }
+        check("Arc Wielder : reserve de 3 : l'amorce, puis sept tiques d'arc (0,375 eco par tique) et l'arc s'eteint, reserve vide",
+                data(f).ecoBlue() == 0 && GunFire.arcLog(f).size() >= 6 && GunFire.arcLog(f).size() <= 8,
+                "bleu " + data(f).ecoBlue() + ", tiques d'arc " + GunFire.arcLog(f).size());
+        GunFire.onTrigger(f, false);
+        GunFire.tick(f);
+        unslab("arcWall");
+        purge();
+        full(f);
+        return true;
+    }
+
+    /** Needle Lazer : trois aiguilles par salve, 2 eco, depart de travers, tete chercheuse, cadence du canon tournant. */
+    @SuppressWarnings("unchecked")
+    private boolean needle(int t) {
+        FakePlayer f = this.a;
+        if (t == 0) {
+            purge();
+            form(f, GunForm.BLUE_3);
+            full(f);
+            look(f, EAST, 0.0F);
+            GunFire.clearLog(f);
+            Vec3 eye = f.getEyePosition();
+            this.memo.put("n1", monster(HavenInvasion.Kind.ZOMBIE, eye.add(15.0, 0.0, 0.0)));
+            this.memo.put("n2", monster(HavenInvasion.Kind.ZOMBIE, eye.add(10.0, 2.0, -8.0)));
+            press(f);
+            List<GunNeedles.Needle> needles = GunNeedles.of(f);
+            Vec3 look = f.getLookAngle();
+            int wide = 0;
+            boolean askew = true;
+            boolean targeted = true;
+            StringBuilder angles = new StringBuilder();
+            for (GunNeedles.Needle n : needles) {
+                double angle = Math.toDegrees(Math.acos(Math.max(-1.0, Math.min(1.0, n.direction().dot(look)))));
+                askew &= angle < 45.0;
+                wide += angle > 3.0 ? 1 : 0;
+                targeted &= n.target() != null;
+                angles.append(String.format(Locale.ROOT, "%.0f ", angle));
+            }
+            check("Needle Lazer : 2 eco bleus par salve (200 -> 198), trois aiguilles, chacune avec sa cible, parties EXPRES de"
+                            + " travers (jusqu'a 30 degres du regard)",
+                    data(f).ecoBlue() == 198 && needles.size() == 3 && askew && wide >= 2 && targeted,
+                    "bleu " + data(f).ecoBlue() + ", aiguilles " + needles.size() + ", ecarts au regard " + angles + "degres");
+            this.memo.put("needles", needles);
+            return false;
+        }
+        if (t < 30) {
+            GunFire.tick(f);
+            return false;
+        }
+        if (t == 30) {
+            List<GunNeedles.Needle> needles = (List<GunNeedles.Needle>) this.memo.get("needles");
+            int hits = 0;
+            int homed = 0;
+            for (GunNeedles.Needle n : needles) {
+                hits += n.hit() ? 1 : 0;
+                homed += n.homing() ? 1 : 0;
+            }
+            float lost = 40.0F - health(this.memo.get("n1")) - health(this.memo.get("n2"));
+            StringBuilder state = new StringBuilder();
+            for (GunNeedles.Needle n : needles) {
+                state.append(String.format(Locale.ROOT, " [age %d, morte %b, touche %b, vitesse %.2f, a %.1f de sa cible, parcouru %.1f]",
+                        n.age, n.dead, n.hit, n.speed, n.target == null ? -1.0 : GunImpacts.center(n.target).distanceTo(n.position),
+                        n.travelled));
+            }
+            check("Needle Lazer : parties de travers, les aiguilles virent et touchent leur monstre (1 point chacune)",
+                    hits >= 2 && homed == needles.size() && lost > 6.0F,
+                    hits + " touche(s) sur " + needles.size() + ", en poursuite " + homed + ", PV perdus " + lost + state);
+            GunFire.clearLog(f);
+            this.memo.put("needleEco", data(f).ecoBlue());
+            return false;
+        }
+        if (t <= 70) {
+            hold(f);
+            return false;
+        }
+        if (t == 71) {
+            GunFire.onTrigger(f, false);
+            GunFire.tick(f);
+            int salvos = ticksOf(f, GunSpec.NEEDLE).size();
+            int spent = (int) this.memo.get("needleEco") - data(f).ecoBlue();
+            check("Needle Lazer : canon tournant tenu 2 s : la cadence monte (une salve toutes les 8 tiques, puis 2), 2 eco"
+                            + " par salve, 32 aiguilles en vol au plus",
+                    salvos >= 8 && salvos <= 16 && spent == 2 * salvos && GunNeedles.of(f).size() <= GunSpec.NEEDLE_MAX
+                            && health(this.memo.get("n1")) == 0.0F && health(this.memo.get("n2")) == 0.0F,
+                    salvos + " salves (ecarts " + gaps(ticksOf(f, GunSpec.NEEDLE)) + "), eco " + spent + ", en vol "
+                            + GunNeedles.of(f).size() + ", PV " + health(this.memo.get("n1")) + " / " + health(this.memo.get("n2")));
+            purge();
+            return true;
+        }
+        return false;
+    }
+
+    /** Mass Inverter : champ de 30 blocs, levitation, delai de 2 s, coups gardes puis doubles a la retombee. */
+    private boolean inverter(int t) {
+        FakePlayer f = this.a;
+        AABB around = new AABB(this.site, this.site).inflate(48.0);
+        if (t == 0) {
+            purge();
+            form(f, GunForm.DARK_2);
+            full(f);
+            look(f, EAST, 0.0F);
+            GunFire.clearLog(f);
+            Vec3 eye = f.getEyePosition();
+            this.memo.put("m1", monster(HavenInvasion.Kind.ZOMBIE, eye.add(6.0, 0.0, 0.0)));
+            this.memo.put("m2", monster(HavenInvasion.Kind.ZOMBIE, eye.add(20.0, 0.0, 5.0)));
+            this.memo.put("m3", monster(HavenInvasion.Kind.ZOMBIE, eye.add(35.0, 0.0, 0.0)));
+            hold(f);
+            List<GunGravityFieldEntity> fields = this.level.getEntitiesOfClass(GunGravityFieldEntity.class, around);
+            check("Mass Inverter : 1 eco sombre (15 -> 14), un champ nait sous le tireur", data(f).ecoDark() == 14
+                    && fields.size() == 1, "sombre " + data(f).ecoDark() + ", champs " + fields.size());
+            this.memo.put("field", fields.isEmpty() ? null : fields.get(0));
+            return false;
+        }
+        if (t <= 44) {
+            hold(f);
+            if (t == 25) {
+                GunGravityFieldEntity field = (GunGravityFieldEntity) this.memo.get("field");
+                check("Mass Inverter : en 1 s le champ atteint 30 blocs : les monstres a 6 et 20 blocs levitent, celui a 35 blocs non",
+                        GunLevitation.floating((Entity) this.memo.get("m1")) && GunLevitation.floating((Entity) this.memo.get("m2"))
+                                && !GunLevitation.floating((Entity) this.memo.get("m3")) && field != null && field.lifted() == 2,
+                        "souleves " + (field == null ? -1 : field.lifted()) + ", en l'air " + GunLevitation.count());
+                check("Mass Inverter : gachette tenue, pas de second champ avant 2 s (delai propre de l'arme)",
+                        data(f).ecoDark() == 14, "sombre " + data(f).ecoDark());
+            }
+            if (t == 44) {
+                int fields = this.level.getEntitiesOfClass(GunGravityFieldEntity.class, around).size();
+                check("Mass Inverter : gachette tenue, le second champ part des que les 2 s sont passees (15 -> 13)",
+                        data(f).ecoDark() == 13 && fields == 2, "sombre " + data(f).ecoDark() + ", champs " + fields);
+            }
+            return false;
+        }
+        if (t == 45) {
+            GunFire.onTrigger(f, false);
+            form(f, GunForm.YELLOW_1);
+            aim(f, GunImpacts.center((Entity) this.memo.get("m1")));
+            return false;
+        }
+        if (t == 46 || t == 54 || t == 62) {
+            press(f);
+            return false;
+        }
+        if (t == 72) {
+            Entity m1 = (Entity) this.memo.get("m1");
+            check("Mass Inverter : un monstre en l'air ne prend PAS les coups, il les garde : trois tirs de Blaster (2 points"
+                            + " chacun), PV intacts, 6 points gardes",
+                    health(m1) == 20.0F && Math.abs(GunLevitation.cached(m1) - 6.0F) < 1.0e-3,
+                    "PV " + health(m1) + ", garde " + GunLevitation.cached(m1));
+            return false;
+        }
+        if (t == 300) {
+            check("Mass Inverter : a la retombee, 2 x les coups gardes + la chute (2 x 6 + 1 = 13 points : 52 PV) : le monstre"
+                            + " mitraille meurt ; l'autre ne prend que sa chute (1 point) ; celui hors du champ est intact",
+                    health(this.memo.get("m1")) == 0.0F && health(this.memo.get("m2")) > 14.0F && health(this.memo.get("m2")) < 18.0F
+                            && health(this.memo.get("m3")) == 20.0F && GunLevitation.count() == 0,
+                    "PV " + health(this.memo.get("m1")) + " / " + health(this.memo.get("m2")) + " / " + health(this.memo.get("m3"))
+                            + ", encore en l'air " + GunLevitation.count());
+            purge();
+            return true;
+        }
+        GunFire.tick(f);
+        return false;
+    }
+
+    /** Super Nova : seuil de 10, delai de 9 s, vol par paliers, detonation sur un mur, frappe de zone, missile plante. */
+    private boolean nova(int t) {
+        FakePlayer f = this.a;
+        AABB around = new AABB(this.site, this.site).inflate(96.0);
+        if (t == 0) {
+            purge();
+            form(f, GunForm.DARK_3);
+            eco(f, 0, 0, 0, 9);
+            look(f, EAST, 0.0F);
+            GunFire.clearLog(f);
+            hold(f);
+            check("Super Nova : sous 10 eco sombres (9), aucun missile ne part : comme dans le jeu, l'arme bascule sur le"
+                            + " Peace Maker, la premiere arme qui a de quoi tirer",
+                    data(f).ecoDark() == 9 && data(f).form() == GunForm.DARK_1
+                            && this.level.getEntitiesOfClass(GunNukeEntity.class, around).isEmpty(),
+                    "forme " + data(f).form().id + ", sombre " + data(f).ecoDark());
+            GunFire.onTrigger(f, false);
+            return false;
+        }
+        if (t == 2) {
+            form(f, GunForm.DARK_3);
+            full(f);
+            Vec3 eye = f.getEyePosition();
+            this.memo.put("v1", monster(HavenInvasion.Kind.ZOMBIE, eye.add(25.0, 0.0, 6.0)));
+            this.memo.put("v2", monster(HavenInvasion.Kind.ZOMBIE, eye.add(10.0, -3.0, -20.0)));
+            this.memo.put("v3", monster(HavenInvasion.Kind.SKELETON, eye.add(-5.0, 5.0, 30.0)));
+            BlockPos e = BlockPos.containing(eye);
+            this.memo.put("novaWall", slab(e.offset(30, -12, -3), e.offset(30, 12, 3)));
+            this.memo.put("novaExplosions", GunEco.explosions().size());
+            hold(f);
+            List<GunNukeEntity> nukes = this.level.getEntitiesOfClass(GunNukeEntity.class, around);
+            check("Super Nova : 10 eco sombres (15 -> 5), un missile qui sort lentement du canon (0,4 bloc par tique)",
+                    data(f).ecoDark() == 5 && nukes.size() == 1 && nukes.get(0).state() == GunNukeEntity.FLYING
+                            && Math.abs(nukes.get(0).getDeltaMovement().length() - GunSpec.NOVA_PHASE0_SPEED) < 1.0e-6,
+                    "sombre " + data(f).ecoDark() + ", missiles " + nukes.size());
+            this.memo.put("nuke", nukes.isEmpty() ? null : nukes.get(0));
+            return false;
+        }
+        if (t < 20) {
+            hold(f);
+            if (t == 19) {
+                check("Super Nova : gachette tenue, pas de second missile avant 9 s (delai propre de l'arme)",
+                        data(f).ecoDark() == 5 && this.level.getEntitiesOfClass(GunNukeEntity.class, around).size() == 1,
+                        "sombre " + data(f).ecoDark());
+                GunFire.onTrigger(f, false);
+            }
+            return false;
+        }
+        if (t == 45) {
+            GunNukeEntity nuke = (GunNukeEntity) this.memo.get("nuke");
+            List<GunEco.Explosion> all = GunEco.explosions();
+            int before = (int) this.memo.get("novaExplosions");
+            boolean dead = health(this.memo.get("v1")) == 0.0F && health(this.memo.get("v2")) == 0.0F
+                    && health(this.memo.get("v3")) == 0.0F;
+            check("Super Nova : le missile accelere, detone sur le mur a 30 blocs ; 6 tiques plus tard la frappe tue les trois"
+                            + " monstres des alentours (32 points : 128 PV), credites au tireur",
+                    nuke != null && nuke.struck() == 3 && dead && all.size() == before + 1,
+                    (nuke == null ? "pas de missile" : "frappes " + nuke.struck() + ", etat " + nuke.state()) + ", morts " + dead
+                            + ", explosions " + before + " -> " + all.size());
+            unslab("novaWall");
+            purge();
+            BlockPos e = BlockPos.containing(f.getEyePosition());
+            this.memo.put("novaNear", slab(e.offset(4, -3, -3), e.offset(4, 3, 3)));
+            form(f, GunForm.DARK_3);
+            full(f);
+            look(f, EAST, 0.0F);
+            this.memo.put("novaExplosions", GunEco.explosions().size());
+            hold(f);
+            GunFire.onTrigger(f, false);
+            List<GunNukeEntity> nukes = this.level.getEntitiesOfClass(GunNukeEntity.class, around, n -> n.state() == GunNukeEntity.FLYING);
+            this.memo.put("nuke", nukes.isEmpty() ? null : nukes.get(0));
+            return false;
+        }
+        if (t == 60) {
+            GunNukeEntity nuke = (GunNukeEntity) this.memo.get("nuke");
+            check("Super Nova : un mur a 4 blocs, touche pendant la sortie du canon : le missile se PLANTE, il ne detone pas tout de suite",
+                    nuke != null && nuke.state() == GunNukeEntity.EMBEDDED && GunEco.explosions().size() == (int) this.memo.get("novaExplosions"),
+                    nuke == null ? "pas de missile" : "etat " + nuke.state());
+            return false;
+        }
+        if (t == 100) {
+            GunNukeEntity nuke = (GunNukeEntity) this.memo.get("nuke");
+            check("Super Nova : plante, il detone 28 tiques plus tard (deux bips entre-temps)",
+                    nuke != null && nuke.struck() >= 0 && GunEco.explosions().size() == (int) this.memo.get("novaExplosions") + 1,
+                    nuke == null ? "pas de missile" : "frappes " + nuke.struck() + ", etat " + nuke.state());
+            unslab("novaNear");
             purge();
             full(f);
             return true;
@@ -1891,7 +2245,8 @@ final class GunFireBench {
         }
         AABB around = new AABB(this.site, this.site).inflate(96.0);
         for (Class<? extends Entity> type : List.of(GunBlasterShotEntity.class, GunPeaceBallEntity.class, GunArcEntity.class,
-                GunShockwaveEntity.class, GunGrenadeEntity.class, GunSaucerEntity.class)) {
+                GunShockwaveEntity.class, GunGrenadeEntity.class, GunSaucerEntity.class, GunGravityFieldEntity.class,
+                GunNukeEntity.class)) {
             for (Entity e : this.level.getEntitiesOfClass(type, around)) {
                 e.discard();
                 entities++;
@@ -1903,6 +2258,7 @@ final class GunFireBench {
             entities++;
         }
         entities += GunEco.removeAll(this.level, true);
+        GunLevitation.releaseAll();
         int rebuilt = HavenDestruction.rebuildAll(this.level);
         for (BlockPos p : this.placed) {
             this.level.setBlock(p, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS);

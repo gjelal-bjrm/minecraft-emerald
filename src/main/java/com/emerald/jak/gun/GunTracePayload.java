@@ -12,8 +12,10 @@ import net.minecraft.resources.ResourceLocation;
  * dessine les trainees et les eclats.
  *
  *  - {@link #SCATTER}, {@link #VULCAN}, {@link #GYRO} : des traces EN EVENTAIL, chacune de l'origine a sa fin ;
- *  - {@link #REFLEXOR} : UNE LIGNE BRISEE, le chemin du tir pendant la tique, de
- *    l'origine au premier point, puis de point en point (rebonds).
+ *  - {@link #REFLEXOR}, {@link #ARC} : UNE LIGNE BRISEE, de l'origine au premier
+ *    point, puis de point en point (rebonds du tir, noeuds de la corde de foudre) ;
+ *  - {@link #NEEDLES} : DES PAIRES debut-fin, le petit segment que chaque aiguille
+ *    d'un tireur vient de parcourir.
  *
  * @param shooter l'identifiant d'entite du tireur, dont le client calcule la bouche du canon ; -1 quand la
  *                trace part de l'origine donnee (soucoupe du Gyro Burster, tir du Beam Reflexor deja en vol)
@@ -27,6 +29,8 @@ public record GunTracePayload(int shooter, int weapon, double ox, double oy, dou
     public static final int VULCAN = 1;
     public static final int REFLEXOR = 2;
     public static final int GYRO = 3;
+    public static final int ARC = 4;
+    public static final int NEEDLES = 5;
 
     public static final int MISS = 0;
     public static final int BLOCK = 1;

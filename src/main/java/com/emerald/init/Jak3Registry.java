@@ -163,6 +163,30 @@ public class Jak3Registry {
                             .updateInterval(1)
                             .build("gun_saucer"));
 
+    /** Champ du Mass Inverter : immobile, le client le dessine d'apres son age. */
+    public static final DeferredHolder<EntityType<?>, EntityType<com.emerald.jak.gun.GunGravityFieldEntity>> GUN_GRAVITY_FIELD =
+            ENTITIES.register("gun_gravity_field", () ->
+                    EntityType.Builder.<com.emerald.jak.gun.GunGravityFieldEntity>of(
+                                    com.emerald.jak.gun.GunGravityFieldEntity::new, MobCategory.MISC)
+                            .noSave()
+                            .sized(0.5f, 0.5f)
+                            .fireImmune()
+                            .clientTrackingRange(10)
+                            .updateInterval(Integer.MAX_VALUE)
+                            .build("gun_gravity_field"));
+
+    /** Missile de la Super Nova : jusqu'a 6,75 blocs par tique, suivi a chaque tique (positions, pas vitesses). */
+    public static final DeferredHolder<EntityType<?>, EntityType<com.emerald.jak.gun.GunNukeEntity>> GUN_NUKE =
+            ENTITIES.register("gun_nuke", () ->
+                    EntityType.Builder.<com.emerald.jak.gun.GunNukeEntity>of(
+                                    com.emerald.jak.gun.GunNukeEntity::new, MobCategory.MISC)
+                            .noSave()
+                            .sized(0.5f, 0.5f)
+                            .fireImmune()
+                            .clientTrackingRange(12)
+                            .updateInterval(1)
+                            .build("gun_nuke"));
+
     // -------------------------------------------------------------------------
     // Structure types
     // -------------------------------------------------------------------------

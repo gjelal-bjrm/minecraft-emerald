@@ -156,8 +156,9 @@ zone de survol exactement comme une voiture (mêmes touches, Espace compris), à
   « Vulcanoshooteur »), → sombre (Peace Maker, « Pacificateur »). **Un nouvel
   appui sur la même flèche passe à l'arme suivante de la famille**, en boucle :
   ↑ Scatter Gun → Wave Concussor → Plasmite RPG, ↓ Blaster → Beam Reflexor →
-  Gyro Burster. Touches réassignables dans Options > Commandes > Morph Gun
-  (Haven). Pendant la transformation (un tiers de seconde, presque une seconde
+  Gyro Burster, ← Vulcan Fury → Arc Wielder → Needle Lazer, → Peace Maker →
+  Mass Inverter → Super Nova. Touches réassignables dans Options > Commandes >
+  Morph Gun (Haven). Pendant la transformation (un tiers de seconde, presque une seconde
   vers le bleu), l'arme ne tire pas. Pendant qu'une boule du Peace Maker ou une
   onde du Wave Concussor charge, on ne change pas d'arme.
 - **Tirer : clic gauche**, arme en main, hors voiture et moto. Le clic ne frappe
@@ -170,9 +171,8 @@ zone de survol exactement comme une voiture (mêmes touches, Espace compris), à
 | Vulcan Fury | tenir | le canon s'emballe en 1,5 s : de 0,4 à 0,1 s entre deux balles | 1 éco bleue par balle | balle instantanée sur 80 blocs : 8 PV | le bloc touché |
 | Peace Maker | tenir pour charger (0,3 s au moins), relâcher pour tirer | 0,85 s | 1 éco sombre à la charge (rendue si la charge est interrompue) | boule en spirale qui poursuit le monstre visé ; à l'impact, 64 PV au monstre le plus proche dans 10 blocs, puis la foudre saute de monstre en monstre toutes les 0,1 s (16 au plus) | 40 blocs au plus dans un rayon de 3 |
 
-**Les améliorations rouges et jaunes** (pour l'instant données à l'arrivée, le
-temps de les essayer ; elles se gagneront plus tard auprès des personnages de la
-ville) :
+**Les huit améliorations** (pour l'instant données à l'arrivée, le temps de les
+essayer ; elles se gagneront plus tard auprès des personnages de la ville) :
 
 | Arme | Gâchette | Cadence | Coût | Ce qu'elle fait | Décor cassé |
 |---|---|---|---|---|---|
@@ -180,6 +180,10 @@ ville) :
 | Plasmite RPG (« RPG plasmique ») | un clic par tir | 1,1 s | 10 écos rouges | une **grenade** lancée en cloche, toujours un peu vers le haut ; s'il y a un monstre devant vous à moins de 35 blocs, **elle vise pour vous** ; elle rebondit sur les murs, explose près d'un monstre ou au bout de 3 s : **48 PV à tous les monstres dans 20 blocs** | 48 blocs au plus dans un rayon de 3,5 |
 | Beam Reflexor (« Réflectorayon ») | un clic par tir | 0,32 s | 1 éco jaune, plus 1 au 2e et au 3e monstre | un tir qui **rebondit** sur les murs pendant 3 s et, trois fois sur quatre, **se revise vers un monstre** après chaque rebond ; il ne repart jamais vers le ciel ; **4 monstres au plus** : 6 PV au premier, 4 aux suivants | le bloc touché, 3 au plus |
 | Gyro Burster (« Tournoyeur ») | un clic **lance la soucoupe** ; un second clic avant qu'elle ne tire **la réveille sur place** ; une seule à la fois | — | il faut 10 écos jaunes ; elle en boit 50 sur sa rafale | une **tourelle volante** : elle freine, dérive en tournant, puis tire 4 s, **40 tirs par seconde**, sur les monstres qu'elle voit à 35 blocs (8 PV par tir), vers le bas faute de cible ; puis elle tombe et s'éteint. Réserve vide : elle s'arrête | un bloc par salve |
+| Arc Wielder (« Arcbuteur ») | **tenir** : l'arc agit tant que la gâchette est tenue, le canon tourne | continu | 1 éco bleue pour l'allumer, puis 7,5 par seconde | une **corde de foudre** de 66 blocs au plus qui **saute de monstre en monstre** (chacun à moins de 4 blocs du fil, un seul passage par monstre) : 10 PV par monstre toutes les 0,4 s ; le premier mur coupe l'arc | le bloc qui l'arrête, un toutes les deux tiques |
+| Needle Lazer (« Aiguillolaser ») | tenir : canon tournant, comme la Vulcan Fury (de 0,4 à 0,1 s entre deux salves) | jusqu'à 10 salves par seconde | 2 écos bleues par salve | **trois aiguilles à tête chercheuse** par salve : chacune choisit un monstre en vue à 40 blocs, part exprès de travers, puis vire sur lui : 4 PV par aiguille ; aucune ne rebondit | le bloc touché |
+| Mass Inverter (« Superimploseur ») | tenir | 2 s entre deux champs | 1 éco sombre | un **champ d'apesanteur** de 30 blocs autour de vous : les monstres **lévitent 7 à 9 s**, désarmés. Il ne blesse presque pas, il **multiplie** : un monstre en l'air ne prend pas les coups, il les **garde**, et retombe avec **le double** (plus sa chute, 4 PV). Un monstre frappé en l'air est projeté vers un autre : le choc compte aussi | rien |
+| Super Nova | tenir | 9 s entre deux missiles | 10 écos sombres (sur 15) | un **missile** qui sort lentement du canon, accélère en décrivant un arc, et détone au premier obstacle : **128 PV à 64 monstres dans 96 blocs**, éclair blanc et secousse pour tous ceux qui sont près. Planté dans un mur au départ, il bipe deux fois et détone 1,4 s plus tard | 96 blocs au plus dans un rayon de 6 |
 
 - Un zombie meurt en 3 tirs de Blaster, 2 ou 3 de Scatter Gun, 3 balles de
   Vulcan Fury ou une boule du Peace Maker. Les armes ne blessent **que les
@@ -567,7 +571,7 @@ Sur un serveur d'essai (`run-server`), chacun écrit son rapport puis arrête le
 - `EMERALDWEAPONS_AUTOTEST=salles ./gradlew runServer` : relevé et rejeu des salles, rapport `run-server/salles_autotest.txt` ;
 - `EMERALDWEAPONS_AUTOTEST=vehicules ./gradlew runServer` : voitures et motos, rapport `run-server/vehicules_autotest.txt` ;
 - `EMERALDWEAPONS_AUTOTEST=invasion ./gradlew runServer` : invasion, décor destructible, bouton du QG et MSPT, rapport `run-server/invasion_autotest.txt` ;
-- `EMERALDWEAPONS_AUTOTEST=armes ./gradlew runServer` : Morph Gun (poses, confinement, tir des quatre armes de base et des quatre améliorations rouges et jaunes, munitions, décor, MSPT avec quatre tireurs), rapport `run-server/armes_autotest.txt`.
+- `EMERALDWEAPONS_AUTOTEST=armes ./gradlew runServer` : Morph Gun (poses, confinement, tir des douze armes, munitions, décor, MSPT avec quatre tireurs), rapport `run-server/armes_autotest.txt`.
 
 Les chiffres de tir des armes sont dans `jak/gun/GunSpec.java` ; les textures des particules
 et la planche de contrôle (`build/jak/gun/planche-tir.png`) sortent de `python tools/gun_particles.py`.

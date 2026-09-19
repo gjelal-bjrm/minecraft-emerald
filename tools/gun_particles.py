@@ -2,7 +2,7 @@
 """
 Le tir du Morph Gun : les textures des particules et des entites, et la planche de controle.
 
-DIX-SEPT PARTICULES NEUVES, une par usage, qu'aucun autre systeme du mod n'emploie
+VINGT-CINQ PARTICULES NEUVES, une par usage, qu'aucun autre systeme du mod n'emploie
 (ni le sceptre, ni l'arc, ni les meteos, ni les plantes), et deux textures
 d'entite :
 
@@ -23,6 +23,14 @@ d'entite :
   gun_reflexor_spark  eclat de ses rebonds (etincelle a six branches)
   gun_gyro_tracer     trait des tirs de la soucoupe du Gyro Burster (point net)
   gun_gyro_spark      leurs eclats, et les feux de la soucoupe (trait oblique)
+  gun_arc_bolt        foudre de l'Arc Wielder (point lumineux)
+  gun_arc_spark       eclat d'un monstre accroche par l'arc (etincelle a quatre branches)
+  gun_needle_trail    sillage d'une aiguille du Needle Lazer (point fin)
+  gun_needle_spark    eclat de son impact (etincelle a six branches)
+  gun_inverter_rise   colonne montante du champ du Mass Inverter (trait vertical)
+  gun_inverter_mote   mote d'un monstre souleve (croissant)
+  gun_nova_mote       trainee et debris de la Super Nova (point large)
+  gun_nova_blast      onde de sa detonation (anneau fin, 64 pixels)
   entity/gun/eco_halo.png    halo d'une munition d'eco
   entity/gun/peace_orb.png   boule du Peace Maker (spirale)
 
@@ -36,6 +44,7 @@ Usage :
     python tools/gun_particles.py            textures, definitions et planche
     python tools/gun_particles.py --planche  la planche seule
     python tools/gun_particles.py --planche-b  la planche du jalon B seule (ameliorations rouges et jaunes)
+    python tools/gun_particles.py --planche-c  celle des ameliorations bleues et sombres
 """
 
 import json
@@ -182,6 +191,15 @@ PARTICLES = {
     "gun_reflexor_spark": lambda: star(16, 6, 0.12, 0.3),
     "gun_gyro_tracer": lambda: glow(16, 0.45, 2.8),
     "gun_gyro_spark": lambda: slash(16, -45.0),
+    # les ameliorations bleues et sombres
+    "gun_arc_bolt": lambda: glow(16, 0.35, 2.0),
+    "gun_arc_spark": lambda: star(16, 4, 0.14, 0.3),
+    "gun_needle_trail": lambda: glow(16, 0.25, 2.4),
+    "gun_needle_spark": lambda: star(16, 6, 0.1, 0.25),
+    "gun_inverter_rise": lambda: slash(16, 90.0, 0.9, 0.16),
+    "gun_inverter_mote": lambda: crescent(16, 0.5, 0.3, 20.0, 230.0),
+    "gun_nova_mote": lambda: glow(16, 0.3, 1.3),
+    "gun_nova_blast": lambda: ring(64, 0.8, 0.16, 0.12),
 }
 ENTITIES = {"eco_halo": lambda: halo(64), "peace_orb": lambda: orb(64)}
 
@@ -267,6 +285,22 @@ class P:
         elif kind == "gun_gyro_spark":
             self.life, self.size0, self.rgb = 5 + rng.randrange(4), 0.09 + rng.random() * 0.04, (1.0, 0.75, 0.2)
             self.friction, self.gravity = 0.82, 0.3
+        elif kind in ("gun_arc_bolt", "gun_needle_trail", "gun_inverter_mote"):
+            # GunParticles.Line : duree, taille, couleur
+            life, size, rgb = {"gun_arc_bolt": (2, 0.28, (0.62, 0.85, 1.0)), "gun_needle_trail": (6, 0.19, (0.35, 0.6, 1.0)),
+                               "gun_inverter_mote": (8, 0.14, (0.7, 0.45, 1.0))}[kind]
+            self.life, self.size0, self.rgb = life, size, rgb
+        elif kind in ("gun_arc_spark", "gun_needle_spark"):
+            self.life, self.size0 = 5 + rng.randrange(4), 0.09 + rng.random() * 0.04
+            self.rgb = (0.7, 0.9, 1.0) if kind == "gun_arc_spark" else (0.45, 0.7, 1.0)
+            self.friction, self.gravity = 0.82, 0.3
+        elif kind == "gun_inverter_rise":
+            self.life, self.size0, self.rgb = 16 + rng.randrange(8), 0.24, (0.66, 0.38, 1.0)
+        elif kind == "gun_nova_mote":
+            self.life, self.size0, self.rgb = 12 + rng.randrange(10), 0.3 + rng.random() * 0.25, (0.8, 0.55, 1.0)
+            self.friction = 0.9
+        elif kind == "gun_nova_blast":
+            self.life, self.size0, self.rgb = 30, 2.0, (0.9, 0.8, 1.0)
         elif kind.startswith("gun_eco_glint"):
             fam = int(kind[-1])
             self.kind = "gun_eco_glint"
@@ -319,6 +353,18 @@ class P:
             self.alpha = 1.0 - t
         elif k == "gun_gyro_tracer":
             self.alpha = 1.0 - 0.6 * t
+        elif k in ("gun_arc_bolt", "gun_needle_trail", "gun_inverter_mote"):
+            self.size, self.alpha = self.size0 * (1.0 - 0.6 * t), 1.0 - 0.7 * t
+        elif k in ("gun_arc_spark", "gun_needle_spark"):
+            self.alpha = 1.0 - t
+        elif k == "gun_inverter_rise":
+            self.alpha, self.size = (1.0 - t) * 0.85, self.size0 * (1.0 - 0.4 * t)
+        elif k == "gun_nova_mote":
+            self.rgb = (0.8 - 0.4 * t, 0.55 - 0.4 * t, 1.0 - 0.3 * t)
+            self.alpha, self.size = 1.0 - t, self.size0 * (1.0 - 0.5 * t)
+        elif k == "gun_nova_blast":
+            self.size = 2.0 + 58.0 * math.sqrt(t)
+            self.rgb, self.alpha = (0.9 - 0.3 * t, 0.8 - 0.45 * t, 1.0), (1.0 - t) * (1.0 - t)
 
 
 def blit(target, tex, cx, cy, width_px, rgb, alpha, roll=0.0):
@@ -726,6 +772,9 @@ def planche(textures):
              "gun_wave_charge": (1.0, 0.45, 0.12), "gun_wave_dust": (1.0, 0.45, 0.12), "gun_plasmite_trail": (1.0, 0.45, 0.12),
              "gun_plasmite_blast": (1.0, 0.55, 0.25), "gun_reflexor_bolt": (1.0, 0.98, 0.72),
              "gun_reflexor_spark": (1.0, 0.97, 0.7), "gun_gyro_tracer": (1.0, 0.72, 0.18), "gun_gyro_spark": (1.0, 0.75, 0.2),
+             "gun_arc_bolt": (0.62, 0.85, 1.0), "gun_arc_spark": (0.7, 0.9, 1.0), "gun_needle_trail": (0.35, 0.6, 1.0),
+             "gun_needle_spark": (0.45, 0.7, 1.0), "gun_inverter_rise": (0.66, 0.38, 1.0), "gun_inverter_mote": (0.7, 0.45, 1.0),
+             "gun_nova_mote": (0.8, 0.55, 1.0), "gun_nova_blast": (0.9, 0.8, 1.0),
              "eco_halo": (0.36, 0.78, 1.0), "peace_orb": (0.59, 0.31, 1.0)}
     for name, tex in textures.items():
         tile = Image.new("RGBA", (150, 190), (24, 26, 32, 255))
@@ -1024,9 +1073,232 @@ def planche_b(textures):
     print("planche B ->", path, board.size)
 
 
+# ============================================================== planche C (bleu et sombre ameliores)
+
+def scene_arc(textures):
+    """La corde de foudre d'une tique, vue de dessus : GunClient.arc, 4 points par bloc, tremblement nul aux noeuds."""
+    rng = random.Random(51)
+    size, ppb = (960, 260), 12.0
+    origin = (40.0, 60.0)
+    img = Image.new("RGBA", size, (70, 72, 78, 255))
+    d = ImageDraw.Draw(img)
+    nodes = [(0.3, 0.0), (8.0, 0.0), (13.0, 2.5), (18.0, 5.0), (23.4, 7.7), (29.4, 10.4), (35.4, 13.1)]
+    hooked = {1, 2, 3}
+    parts = []
+    for tick in range(2):
+        for i, (a, b) in enumerate(zip(nodes, nodes[1:])):
+            length = math.hypot(b[0] - a[0], b[1] - a[1])
+            dots = min(40, max(1, int(length * 4.0)))
+            for k in range(dots):
+                f = k / dots
+                shake = 0.4 * math.sin(math.pi * f)
+                parts.append(P("gun_arc_bolt", (a[0] + (b[0] - a[0]) * f + (rng.random() - 0.5) * shake, 0.0,
+                                                a[1] + (b[1] - a[1]) * f + (rng.random() - 0.5) * shake), rng=rng))
+            if i + 1 in hooked:
+                for _ in range(3):
+                    parts.append(P("gun_arc_spark", (b[0], 0.0, b[1]), ((rng.random() - 0.5) * 0.3, rng.random() * 0.2,
+                                                                       (rng.random() - 0.5) * 0.3), rng))
+        if tick == 0:
+            step(parts)
+    for i in hooked:
+        x, z = nodes[i]
+        d.rectangle([origin[0] + (x - 0.3) * ppb, origin[1] + (z - 0.3) * ppb, origin[0] + (x + 0.3) * ppb, origin[1] + (z + 0.3) * ppb],
+                    fill=(60, 120, 70, 255))
+    for q in parts:
+        if q.alive:
+            blit(img, textures[q.kind], origin[0] + q.pos[0] * ppb, origin[1] + q.pos[2] * ppb, 2.0 * q.size * ppb, q.rgb, q.alpha)
+    return img, "vue de dessus, deux tiques superposees : l'arc saute sur trois monstres (carres verts) puis file tout droit ; le trait ne dure que 2 tiques"
+
+
+def turn_toward(direction, to, max_rad):
+    ax, az = direction
+    bx, bz = to
+    cross = ax * bz - az * bx
+    dot = max(-1.0, min(1.0, ax * bx + az * bz))
+    angle = math.acos(dot)
+    if angle <= max_rad:
+        return bx, bz
+    s = max_rad if cross > 0 else -max_rad
+    return ax * math.cos(s) - az * math.sin(s), ax * math.sin(s) + az * math.cos(s)
+
+
+def scene_needles(textures):
+    """Trois salves de trois aiguilles, vues de dessus : la loi de GunNeedles (4 sous-pas, virage du jeu, touche de proximite)."""
+    rng = random.Random(61)
+    size, ppb = (960, 330), 12.0
+    origin = (40.0, 165.0)
+    img = Image.new("RGBA", size, (70, 72, 78, 255))
+    d = ImageDraw.Draw(img)
+    targets = [(34.0, -6.0), (26.0, 9.0)]
+    for x, z in targets:
+        d.rectangle([origin[0] + (x - 0.3) * ppb, origin[1] + (z - 0.3) * ppb, origin[0] + (x + 0.3) * ppb, origin[1] + (z + 0.3) * ppb],
+                    fill=(60, 120, 70, 255))
+    parts = []
+    needles = []
+    for tick in range(14):
+        if tick in (0, 4, 8):
+            for _ in range(3):
+                goal = targets[rng.randrange(2)]
+                away = -1.0 if goal[1] >= 0 else 1.0
+                yaw = math.radians(away * 15.0 + (rng.random() * 2 - 1) * 15.0)
+                needles.append({"pos": [0.4, 0.0], "dir": (math.cos(yaw), math.sin(yaw)), "goal": goal,
+                                "free": 3.0 + rng.random() * 7.0, "done": 0.0, "homing": False, "pursuit": 0, "dead": False})
+        for n in needles:
+            if n["dead"]:
+                continue
+            start = tuple(n["pos"])
+            if n["homing"]:
+                n["pursuit"] += 1
+            boost = 1.0 + max(0.0, min(1.0, (n["pursuit"] - 20) / 10.0))
+            for _ in range(4):
+                to = (n["goal"][0] - n["pos"][0], n["goal"][1] - n["pos"][1])
+                dist = math.hypot(*to)
+                if dist <= 1.0:
+                    n["dead"] = True
+                    for _k in range(3):
+                        parts.append(P("gun_needle_spark", (n["pos"][0], 0.0, n["pos"][1]),
+                                       ((rng.random() - 0.5) * 0.25, rng.random() * 0.15, (rng.random() - 0.5) * 0.25), rng))
+                    break
+                unit = (to[0] / dist, to[1] / dist)
+                dot = unit[0] * n["dir"][0] + unit[1] * n["dir"][1]
+                if not n["homing"] and (n["done"] >= n["free"] or dist <= 10.0):
+                    n["homing"] = True
+                if n["homing"]:
+                    turn = 18.0
+                    if dist < 12.0:
+                        turn = (18.0 + 18.0 * dist / 12.0) * (2.0 - (1.0 + dot) / 2.0) * boost
+                    if dot > 0.99 or (dist < 3.0 and dot < 0.5):
+                        n["dir"] = unit
+                    else:
+                        n["dir"] = turn_toward(n["dir"], unit, math.radians(turn / 4.0))
+                    dot = unit[0] * n["dir"][0] + unit[1] * n["dir"][1]
+                aligned = (1.0 + dot) / 2.0
+                speed = 1.5 + 3.5 * aligned * aligned
+                n["pos"][0] += n["dir"][0] * speed / 4.0
+                n["pos"][1] += n["dir"][1] * speed / 4.0
+                n["done"] += speed / 4.0
+            end = tuple(n["pos"])
+            length = math.hypot(end[0] - start[0], end[1] - start[1])
+            dots = min(24, max(1, int(length * 4.0)))
+            for k in range(dots):
+                f = k / dots
+                parts.append(P("gun_needle_trail", (start[0] + (end[0] - start[0]) * f, 0.0, start[1] + (end[1] - start[1]) * f), rng=rng))
+        if tick < 13:
+            step(parts)
+    for q in parts:
+        if q.alive:
+            blit(img, textures[q.kind], origin[0] + q.pos[0] * ppb, origin[1] + q.pos[2] * ppb, 2.0 * q.size * ppb, q.rgb, q.alpha)
+    return img, "vue de dessus, 14e tique, trois salves : les aiguilles partent de travers puis virent sur leur monstre ; le sillage dure 6 tiques"
+
+
+def scene_inverter(textures):
+    """Le champ du Mass Inverter vu de dessus a trois ages : le bord de GunRenderers.GravityField et les colonnes montantes."""
+    out = []
+    for age in (8, 20, 90):
+        rng = random.Random(70 + age)
+        size, ppb = (310, 310), 4.6
+        origin = (size[0] / 2.0, size[1] / 2.0)
+        img = Image.new("RGBA", size, (70, 72, 78, 255))
+        radius = 30.0 * min(1.0, age / 20.0)
+        fade = 1.0 if age <= 20 else max(0.0, 1.0 - (age - 20) / 115.0)
+        glow = 0.25 + 0.75 * fade
+        layer = Image.new("RGBA", size, (0, 0, 0, 0))
+        px = layer.load()
+        inner = max(0.0, radius - 3.0)
+        for y in range(size[1]):
+            for x in range(size[0]):
+                dd = math.hypot((x - origin[0]) / ppb, (y - origin[1]) / ppb)
+                if inner <= dd <= radius:
+                    f = (dd - inner) / max(1e-6, radius - inner)
+                    px[x, y] = (int(255 * (0.45 + 0.25 * f)), int(255 * (0.15 + 0.25 * f)), int(255 * (0.9 + 0.1 * f)), int(255 * 0.6 * glow * f))
+        img.alpha_composite(layer)
+        parts = []
+        for tick in range(max(0, age - 20), age):
+            r_now = 30.0 * min(1.0, tick / 20.0)
+            for _ in range(14):
+                a = rng.random() * math.tau
+                r = math.sqrt(rng.random()) * r_now
+                parts.append(P("gun_inverter_rise", (math.cos(a) * r, 0.1, math.sin(a) * r), (0.0, 0.12 + rng.random() * 0.1, 0.0), rng))
+            step(parts)
+        for q in parts:
+            if q.alive:
+                blit(img, textures[q.kind], origin[0] + q.pos[0] * ppb, origin[1] + q.pos[2] * ppb, max(2.0, 2.0 * q.size * ppb * 2.0), q.rgb, q.alpha)
+        ImageDraw.Draw(img).ellipse([origin[0] - 3, origin[1] - 3, origin[0] + 3, origin[1] + 3], fill=(240, 240, 240, 255))
+        out.append((img, "tique %d : rayon %.0f blocs" % (age, radius)))
+    return out
+
+
+def scene_nova(textures):
+    """La detonation de la Super Nova vue de cote, a trois instants : l'onde (gun_nova_blast), les debris, la boule du rendu."""
+    out = []
+    for age in (3, 10, 22):
+        rng = random.Random(80)
+        size, ppb = (310, 250), 4.0
+        origin = (size[0] / 2.0, 170.0)
+        img = Image.new("RGBA", size, (150, 182, 222, 255))
+        d = ImageDraw.Draw(img)
+        d.rectangle([0, origin[1] + 2 * ppb, size[0], size[1]], fill=(86, 88, 94, 255))
+        parts = [P("gun_nova_blast", (0.0, 0.0, 0.0), rng=rng)]
+        for _ in range(120):
+            parts.append(P("gun_nova_mote", (rng.gauss(0, 2.5), rng.gauss(0, 2.5), rng.gauss(0, 2.5)),
+                           tuple(rng.gauss(0, 0.9) for _ in range(3)), rng))
+        for _ in range(age):
+            step(parts)
+        f = min(1.0, age / 24.0)
+        ball = 4.0 + 36.0 * math.sqrt(f)
+        alpha = (1.0 - f) * (1.0 - f)
+        blit(img, textures["eco_halo"], origin[0], origin[1], ball * ppb, (0.67, 0.35, 1.0), alpha)
+        blit(img, textures["eco_halo"], origin[0], origin[1], ball * 0.5 * ppb, (1.0, 0.96, 1.0), alpha)
+        for q in parts:
+            if q.alive:
+                blit(img, textures[q.kind], origin[0] + q.pos[0] * ppb, origin[1] - q.pos[1] * ppb, 2.0 * q.size * ppb, q.rgb, q.alpha)
+        flash = int(255 * max(0.0, (40 - age) / 40.0) ** 2)
+        d.rectangle([size[0] - 46, 6, size[0] - 6, 30], fill=(244, 236, 255, flash), outline=(255, 255, 255, 255))
+        out.append((img, "tique %d : boule de %.0f blocs ; eclair a %d %% (carre)" % (age, ball, flash * 100 // 255)))
+    return out
+
+
+def planche_c(textures):
+    os.makedirs(BUILD, exist_ok=True)
+    F14, F18, F24 = label_font(14), label_font(18), label_font(24)
+    blocks = []
+    for title, scene in (("Arc Wielder (Arcbuteur)", scene_arc), ("Needle Lazer (Aiguillolaser)", scene_needles)):
+        img, caption = scene(textures)
+        blocks.append((title + " : " + caption, img))
+    for title, frames in (("Mass Inverter (Superimploseur) : le champ vu de dessus, le tireur au centre ; il palit apres son extension",
+                           scene_inverter(textures)),
+                          ("Super Nova : la detonation vue de cote ; en haut a droite, la force de l'eclair blanc a cet instant",
+                           scene_nova(textures))):
+        row = Image.new("RGBA", (sum(f[0].width for f in frames) + 10 * len(frames), frames[0][0].height + 24), (24, 26, 32, 255))
+        rd = ImageDraw.Draw(row)
+        x = 0
+        for img, caption in frames:
+            row.alpha_composite(img, (x, 0))
+            rd.text((x + 6, img.height + 4), caption, font=F14, fill=(200, 200, 200))
+            x += img.width + 10
+        blocks.append((title, row))
+    width = max(b[1].width for b in blocks) + 24
+    height = 60 + sum(b[1].height + 44 for b in blocks)
+    board = Image.new("RGBA", (width, height), (24, 26, 32, 255))
+    d = ImageDraw.Draw(board)
+    d.text((12, 10), "Morph Gun, jalon B : les ameliorations bleues et sombres (memes couleurs, tailles et durees que le Java)",
+           font=F24, fill=(255, 255, 255))
+    y = 52
+    for title, img in blocks:
+        d.text((12, y), title, font=F18, fill=(220, 220, 220))
+        board.alpha_composite(img, (12, y + 28))
+        y += img.height + 44
+    path = os.path.join(BUILD, "planche-tir-c.png")
+    board.convert("RGB").save(path)
+    print("planche C ->", path, board.size)
+
+
 def main():
     if "--planche-b" in sys.argv:
         planche_b(read_textures())
+        return
+    if "--planche-c" in sys.argv:
+        planche_c(read_textures())
         return
     if "--planche" in sys.argv:
         textures = read_textures()
@@ -1034,6 +1306,7 @@ def main():
         textures = write_textures()
     planche(textures)
     planche_b(textures)
+    planche_c(textures)
 
 
 if __name__ == "__main__":
