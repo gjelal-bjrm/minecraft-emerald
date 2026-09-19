@@ -35,7 +35,8 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * La gachette du Morph Gun, cote serveur : cadence, reserves, et les quatre armes de base.
+ * La gachette du Morph Gun, cote serveur : cadence, reserves, les quatre armes de base, et les
+ * ameliorations rouges et jaunes (Wave Concussor, Plasmite RPG, Beam Reflexor, Gyro Burster).
  *
  * TOUT EST REVALIDE A CHAQUE TIQUE, quoi que dise le client : dans Haven lobby
  * ouvert (MorphGunKeeper.allowed), vivant, pas spectateur, l'arme EN MAIN
@@ -60,6 +61,18 @@ import java.util.UUID;
  * memoire, par joueur. La pile ne recoit au plus qu'une ecriture par tique : les
  * reserves debitees et, pour la Vulcan Fury, les tiques de debut et de fin de
  * gachette dont le client deduit la rotation du canon.
+ *
+ * LA CHARGE DU WAVE CONCUSSOR (gun-red-shot.gc:700-770) : le tir ouvre une charge,
+ * qui dure tant que la gachette est tenue, une seconde au plus utile. Elle DEBITE
+ * SON ECO PAR PALIERS (GunSpec.waveCost : 1 a 5), et gele sa force si la reserve
+ * rouge se vide. L'onde part au relachement, jamais avant 0,1 s -- et une gachette
+ * PERDUE (plus de nouvelles du client) vaut un relachement : elle tire, elle
+ * n'annule pas. Si l'arme quitte la main, la charge s'eteint et l'eco est rendu.
+ * Changer d'arme est refuse pendant la charge, comme pour le Peace Maker.
+ *
+ * LE GYRO BURSTER : une soucoupe a la fois. L'appui la lance ; un nouvel appui tant
+ * qu'elle ne tire pas encore la reveille sur place, et ne coute rien ; pendant sa
+ * rafale, l'appui ne fait qu'un clic.
  *
  * LES CIBLES ET LE DECOR : GunImpacts. Aucun joueur n'est touche.
  */
@@ -86,6 +99,12 @@ public final class GunFire {
         long lastClick = Long.MIN_VALUE / 4;
         @Nullable
         GunPeaceBallEntity charge;
+        // la charge du Wave Concussor : tique du debut (-1 hors charge), tiques comptees, eco deja paye
+        long waveStart = -1L;
+        int waveTicks;
+        int wavePaid;
+        @Nullable
+        GunSaucerEntity saucer;
         // la salve du Scatter Gun en cours
         final ArrayDeque<Vec3> probes = new ArrayDeque<>();
         Vec3 probeFrom = Vec3.ZERO;
@@ -94,10 +113,12 @@ public final class GunFire {
         // releves
         final List<long[]> shots = new ArrayList<>();
         final List<long[]> probeBatches = new ArrayList<>();
+        /** Les ondes parties : {tique, tiques de charge, eco paye, rayon final x 100}. */
+        final List<long[]> waves = new ArrayList<>();
 
         boolean idle() {
             return !this.down && this.pending == 0 && this.charge == null && this.probes.isEmpty() && this.spin <= 0.0
-                    && !this.spinHeld;
+                    && !this.spinHeld && this.waveStart < 0L && (this.saucer == null || this.saucer.isRemoved());
         }
     }
 
@@ -235,10 +256,17 @@ public final class GunFire {
         return s != null && s.down;
     }
 
-    /** Une boule du Peace Maker est-elle en charge au canon ? (le changement d'arme est alors refuse) */
+    /** Une charge est-elle en cours -- boule du Peace Maker au canon, ou Wave Concussor ? (le changement d'arme est alors refuse) */
     public static boolean isCharging(ServerPlayer player) {
         State s = STATES.get(player.getUUID());
-        return s != null && s.charge != null && !s.charge.isRemoved() && !s.charge.launched();
+        return s != null && (s.waveStart >= 0L || (s.charge != null && !s.charge.isRemoved() && !s.charge.launched()));
+    }
+
+    /** La soucoupe du Gyro Burster de ce joueur, ou null. */
+    @Nullable
+    public static GunSaucerEntity saucer(ServerPlayer player) {
+        State s = STATES.get(player.getUUID());
+        return s == null || s.saucer == null || s.saucer.isRemoved() ? null : s.saucer;
     }
 
     /** La rotation du canon, en degres par seconde. */
@@ -247,11 +275,14 @@ public final class GunFire {
         return s == null ? 0.0 : s.spin;
     }
 
-    /** Oublie l'etat d'un joueur (depart, deconnexion) ; une boule en charge s'eteint, sans remboursement. */
+    /** Oublie l'etat d'un joueur (depart, deconnexion) ; une boule en charge s'eteint, sans remboursement, et sa soucoupe avec. */
     public static void forget(UUID player) {
         State s = STATES.remove(player);
         if (s != null && s.charge != null && !s.charge.isRemoved() && !s.charge.launched()) {
             s.charge.fizzle();
+        }
+        if (s != null && s.saucer != null && !s.saucer.isRemoved()) {
+            s.saucer.discard();
         }
     }
 
@@ -267,11 +298,18 @@ public final class GunFire {
         return s == null ? List.of() : List.copyOf(s.probeBatches);
     }
 
+    /** Les ondes du Wave Concussor : {tique, tiques de charge, eco paye, rayon final x 100}. */
+    static List<long[]> waveLog(ServerPlayer player) {
+        State s = STATES.get(player.getUUID());
+        return s == null ? List.of() : List.copyOf(s.waves);
+    }
+
     static void clearLog(ServerPlayer player) {
         State s = STATES.get(player.getUUID());
         if (s != null) {
             s.shots.clear();
             s.probeBatches.clear();
+            s.waves.clear();
         }
     }
 
@@ -325,6 +363,20 @@ public final class GunFire {
             }
             data = refusal == Refusal.NONE ? MorphGunData.of(stack) : null;
         }
+        if (s.waveStart >= 0L && spec != GunSpec.WAVE) {
+            // meme regle que la boule : l'arme a quitte la main, la charge s'eteint et l'eco paye est rendu
+            ItemStack gun = MorphGunKeeper.find(player);
+            if (gun != null && s.wavePaid > 0) {
+                MorphGunData.refill(gun, GunForm.Family.RED, s.wavePaid);
+            }
+            s.waveStart = -1L;
+            s.wavePaid = 0;
+            s.waveTicks = 0;
+            data = refusal == Refusal.NONE ? MorphGunData.of(stack) : null;
+        }
+        if (s.saucer != null && s.saucer.isRemoved()) {
+            s.saucer = null;
+        }
         if (data == null || spec == null) {
             s.edge = false;
             s.pending = 0;
@@ -367,6 +419,10 @@ public final class GunFire {
             s.spin = Math.max(0.0, s.spin - GunSpec.SPIN_DOWN);
         }
 
+        if (s.waveStart >= 0L) {
+            next = chargeWave(level, player, next, s, now);
+        }
+
         double delay = spec.delay(s.spin);
         double since = now - s.lastFire;
         double window = delay - GunSpec.PENDING_WINDOW;
@@ -386,9 +442,14 @@ public final class GunFire {
                     s.pending = 1;
                 }
             }
+            case CHARGE -> {
+                if (s.down && s.waveStart < 0L && since > window) {
+                    s.pending = 1;
+                }
+            }
         }
         s.edge = false;
-        if (s.pending > 0 && active && since >= delay) {
+        if (s.pending > 0 && active && since >= delay && s.waveStart < 0L) {
             s.pending = 0;
             next = fire(level, player, next, spec, s, now, delay);
         }
@@ -415,6 +476,18 @@ public final class GunFire {
     private static MorphGunData fire(ServerLevel level, ServerPlayer player, MorphGunData data, GunSpec spec,
                                      State s, long now, double delay) {
         GunForm.Family family = spec.form.family;
+        if (spec == GunSpec.GYRO && s.saucer != null && !s.saucer.isRemoved() && s.saucer.busy()) {
+            // une soucoupe a la fois : l'appui la reveille, ou ne fait qu'un clic pendant sa rafale
+            if (s.saucer.activate()) {
+                level.playSound(null, s.saucer.getX(), s.saucer.getY(), s.saucer.getZ(), SoundEvents.BEACON_ACTIVATE,
+                        SoundSource.PLAYERS, 0.7F, 1.9F);
+            } else if (now - s.lastClick >= CLICK_TICKS) {
+                s.lastClick = now;
+                level.playSound(null, player.getX(), player.getEyeY(), player.getZ(), SoundEvents.DISPENSER_FAIL,
+                        SoundSource.PLAYERS, 0.6F, 1.4F);
+            }
+            return data;
+        }
         if (data.eco(family) < spec.cost) {
             GunForm other = outOfAmmo(data);
             if (other != null) {
@@ -430,12 +503,16 @@ public final class GunFire {
             s.lastFire = NEVER;
             return data;
         }
-        MorphGunData next = data.withEco(family, data.eco(family) - spec.cost);
+        MorphGunData next = data.withEco(family, data.eco(family) - spec.debit);
         switch (spec) {
             case SCATTER -> startScatter(level, player, s, now);
             case BLASTER -> shootBlaster(level, player);
             case VULCAN -> shootVulcan(level, player);
             case PEACE -> startCharge(level, player, s);
+            case WAVE -> next = startWave(level, player, next, s, now);
+            case PLASMITE -> shootPlasmite(level, player);
+            case REFLEXOR -> shootReflexor(level, player);
+            case GYRO -> launchSaucer(level, player, s);
         }
         s.lastFire = now - (s.lastFire + delay) < 1.0 ? s.lastFire + delay : now;
         if (s.shots.size() < LOG_MAX) {
@@ -567,6 +644,89 @@ public final class GunFire {
         }
     }
 
+    // ------------------------------------------------------------- Wave Concussor
+
+    /** Le tir ouvre la charge ; les tiques de gachette de la pile la montrent au client (jauge du HUD). */
+    private static MorphGunData startWave(ServerLevel level, ServerPlayer player, MorphGunData data, State s, long now) {
+        s.waveStart = now;
+        s.waveTicks = 0;
+        s.wavePaid = 0;
+        level.playSound(null, player.getX(), player.getEyeY(), player.getZ(), SoundEvents.RESPAWN_ANCHOR_CHARGE,
+                SoundSource.PLAYERS, 0.7F, 0.8F);
+        return data.withTrigger(now, Math.min(data.triggerEnd(), now - 1L));
+    }
+
+    /**
+     * Une tique de charge : le palier paye s'il y a de quoi, sinon la force se fige ;
+     * au relachement apres {@value GunSpec#WAVE_CHARGE_MIN} tiques, l'onde part.
+     */
+    private static MorphGunData chargeWave(ServerLevel level, ServerPlayer player, MorphGunData data, State s, long now) {
+        MorphGunData next = data;
+        if (s.waveTicks < GunSpec.WAVE_CHARGE_FULL) {
+            int wanted = s.waveTicks + 1;
+            if (GunSpec.waveCost(wanted) <= s.wavePaid) {
+                s.waveTicks = wanted;
+            } else if (next.eco(GunForm.Family.RED) >= 1) {
+                next = next.withEco(GunForm.Family.RED, next.eco(GunForm.Family.RED) - 1);
+                s.wavePaid++;
+                s.waveTicks = wanted;
+            }
+        }
+        if (now % 2L == 0L) {
+            Vec3 at = GunPeaceBallEntity.muzzle(player);
+            int count = 1 + s.waveTicks / 5;
+            level.sendParticles(ModParticles.GUN_WAVE_CHARGE.get(), at.x, at.y, at.z, count, 0.12, 0.12, 0.12, 0.0);
+        }
+        if (s.down || now - s.waveStart < GunSpec.WAVE_CHARGE_MIN) {
+            return next;
+        }
+        if (s.wavePaid > 0) {
+            double strength = Math.min(1.0, s.waveTicks / (double) GunSpec.WAVE_CHARGE_FULL);
+            GunShockwaveEntity wave = GunShockwaveEntity.spawn(level, player, strength);
+            level.playSound(null, wave.getX(), wave.getY(), wave.getZ(), SoundEvents.WARDEN_SONIC_BOOM, SoundSource.PLAYERS,
+                    0.9F, 1.3F - 0.4F * (float) strength);
+            if (s.waves.size() < LOG_MAX) {
+                s.waves.add(new long[]{now, s.waveTicks, s.wavePaid, Math.round(wave.maxRadius() * 100.0)});
+            }
+        }
+        s.waveStart = -1L;
+        s.waveTicks = 0;
+        s.wavePaid = 0;
+        return next.withTrigger(next.triggerStart(), now);
+    }
+
+    // ------------------------------------------------------------- Plasmite RPG
+
+    private static void shootPlasmite(ServerLevel level, ServerPlayer player) {
+        Vec3 eye = player.getEyePosition();
+        Vec3 direction = GunGrenadeEntity.aim(level, player);
+        GunGrenadeEntity grenade = new GunGrenadeEntity(level, player);
+        grenade.launch(new Vec3(eye.x + direction.x * 0.6, eye.y - 0.15 + direction.y * 0.6, eye.z + direction.z * 0.6), direction);
+        level.addFreshEntity(grenade);
+        level.playSound(null, eye.x, eye.y, eye.z, SoundEvents.FIRECHARGE_USE, SoundSource.PLAYERS, 1.0F, 0.7F);
+    }
+
+    // ------------------------------------------------------------- Beam Reflexor
+
+    private static void shootReflexor(ServerLevel level, ServerPlayer player) {
+        Vec3 eye = player.getEyePosition();
+        Vec3 look = player.getLookAngle();
+        GunReflexor.launch(level, player, new Vec3(eye.x + look.x * 0.3, eye.y - 0.1 + look.y * 0.3, eye.z + look.z * 0.3), look);
+        level.playSound(null, eye.x, eye.y, eye.z, SoundEvents.SHULKER_SHOOT, SoundSource.PLAYERS, 0.8F, 1.35F);
+    }
+
+    // ------------------------------------------------------------- Gyro Burster
+
+    private static void launchSaucer(ServerLevel level, ServerPlayer player, State s) {
+        Vec3 eye = player.getEyePosition();
+        Vec3 look = player.getLookAngle();
+        GunSaucerEntity saucer = new GunSaucerEntity(level, player);
+        saucer.launch(new Vec3(eye.x + look.x * 0.8, eye.y - 0.1, eye.z + look.z * 0.8), look);
+        level.addFreshEntity(saucer);
+        s.saucer = saucer;
+        level.playSound(null, eye.x, eye.y, eye.z, SoundEvents.TRIDENT_THROW.value(), SoundSource.PLAYERS, 0.9F, 1.5F);
+    }
+
     // ------------------------------------------------------------- traces
 
     private static void put(float[] ends, int i, GunImpacts.Ray ray) {
@@ -581,12 +741,19 @@ public final class GunFire {
         PacketDistributor.sendToPlayersNear(level, null, from.x, from.y, from.z, 128.0, payload);
     }
 
+    /** Les armes dont le serveur emet les eclats d'impact. */
+    enum Sparks { BLASTER, VULCAN, REFLEXOR }
+
     /** Les eclats de l'impact d'un tir, emis par le serveur (types neufs, un par arme). */
     static void sparks(ServerLevel level, Vec3 at, boolean blaster) {
-        if (blaster) {
-            level.sendParticles(ModParticles.GUN_BLASTER_SPARK.get(), at.x, at.y, at.z, 10, 0.08, 0.08, 0.08, 0.22);
-        } else {
-            level.sendParticles(ModParticles.GUN_VULCAN_SPARK.get(), at.x, at.y, at.z, 4, 0.05, 0.05, 0.05, 0.15);
+        sparks(level, at, blaster ? Sparks.BLASTER : Sparks.VULCAN);
+    }
+
+    static void sparks(ServerLevel level, Vec3 at, Sparks weapon) {
+        switch (weapon) {
+            case BLASTER -> level.sendParticles(ModParticles.GUN_BLASTER_SPARK.get(), at.x, at.y, at.z, 10, 0.08, 0.08, 0.08, 0.22);
+            case VULCAN -> level.sendParticles(ModParticles.GUN_VULCAN_SPARK.get(), at.x, at.y, at.z, 4, 0.05, 0.05, 0.05, 0.15);
+            case REFLEXOR -> level.sendParticles(ModParticles.GUN_REFLEXOR_SPARK.get(), at.x, at.y, at.z, 8, 0.08, 0.08, 0.08, 0.2);
         }
     }
 }

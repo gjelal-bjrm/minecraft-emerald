@@ -106,6 +106,14 @@ public final class GunClient {
         Vec3 from = shooter instanceof Player player ? muzzle(player, partial)
                 : new Vec3(payload.ox(), payload.oy(), payload.oz());
         RandomSource random = level.random;
+        if (payload.weapon() == GunTracePayload.REFLEXOR) {
+            reflexor(level, payload, shooter instanceof Player ? from : new Vec3(payload.ox(), payload.oy(), payload.oz()));
+            return;
+        }
+        if (payload.weapon() == GunTracePayload.GYRO) {
+            gyro(level, payload);
+            return;
+        }
         boolean scatter = payload.weapon() == GunTracePayload.SCATTER;
         if (scatter) {
             level.addParticle(ModParticles.GUN_SCATTER_FLASH.get(), true, from.x, from.y, from.z, 0.0, 0.0, 0.0);
@@ -150,6 +158,54 @@ public final class GunClient {
         }
     }
 
+    /** Le chemin du Beam Reflexor pendant une tique : une ligne brisee, un eclat a chaque rebond. */
+    private static void reflexor(ClientLevel level, GunTracePayload payload, Vec3 from) {
+        RandomSource random = level.random;
+        float[] ends = payload.ends();
+        Vec3 at = from;
+        for (int i = 0; i < payload.count(); i++) {
+            Vec3 end = new Vec3(ends[i * 4], ends[i * 4 + 1], ends[i * 4 + 2]);
+            Vec3 d = end.subtract(at);
+            int dots = Math.min(64, Math.max(1, (int) (d.length() * 4.0)));
+            for (int k = 0; k < dots; k++) {
+                double t = k / (double) dots;
+                level.addParticle(ModParticles.GUN_REFLEXOR_BOLT.get(), true, at.x + d.x * t, at.y + d.y * t, at.z + d.z * t,
+                        0.0, 0.0, 0.0);
+            }
+            if ((int) ends[i * 4 + 3] != GunTracePayload.MISS) {
+                for (int k = 0; k < 6; k++) {
+                    level.addParticle(ModParticles.GUN_REFLEXOR_SPARK.get(), true, end.x, end.y, end.z,
+                            (random.nextDouble() - 0.5) * 0.3, random.nextDouble() * 0.2, (random.nextDouble() - 0.5) * 0.3);
+                }
+            }
+            at = end;
+        }
+    }
+
+    /** La salve de la soucoupe du Gyro Burster : un trait par tir, de la soucoupe a sa fin. */
+    private static void gyro(ClientLevel level, GunTracePayload payload) {
+        RandomSource random = level.random;
+        Vec3 from = new Vec3(payload.ox(), payload.oy(), payload.oz());
+        float[] ends = payload.ends();
+        for (int i = 0; i < payload.count(); i++) {
+            Vec3 end = new Vec3(ends[i * 4], ends[i * 4 + 1], ends[i * 4 + 2]);
+            Vec3 d = end.subtract(from);
+            level.addParticle(ModParticles.GUN_GYRO_TRACER.get(), true, from.x, from.y, from.z, d.x / 2.0, d.y / 2.0, d.z / 2.0);
+            int dots = Math.min(72, (int) (d.length() / 0.5));
+            for (int k = 1; k <= dots; k++) {
+                double t = k / (double) (dots + 1);
+                level.addParticle(ModParticles.GUN_GYRO_TRACER.get(), true, from.x + d.x * t, from.y + d.y * t,
+                        from.z + d.z * t, 0.0, 0.0, 0.0);
+            }
+            if ((int) ends[i * 4 + 3] != GunTracePayload.MISS) {
+                for (int k = 0; k < 3; k++) {
+                    level.addParticle(ModParticles.GUN_GYRO_SPARK.get(), true, end.x, end.y, end.z,
+                            (random.nextDouble() - 0.5) * 0.25, random.nextDouble() * 0.15, (random.nextDouble() - 0.5) * 0.25);
+                }
+            }
+        }
+    }
+
     /** Les enregistrements du bus du mod : particules, rendus d'entites, HUD. */
     @EventBusSubscriber(modid = EmeraldWeaponsMod.MODID, value = Dist.CLIENT, bus = EventBusSubscriber.Bus.MOD)
     public static final class Setup {
@@ -167,6 +223,9 @@ public final class GunClient {
             event.registerEntityRenderer(Jak3Registry.GUN_PEACE_BALL.get(), GunRenderers.Ball::new);
             event.registerEntityRenderer(Jak3Registry.GUN_ARC.get(), GunRenderers.Arc::new);
             event.registerEntityRenderer(Jak3Registry.GUN_ECO.get(), GunRenderers.Eco::new);
+            event.registerEntityRenderer(Jak3Registry.GUN_SHOCKWAVE.get(), GunRenderers.Shockwave::new);
+            event.registerEntityRenderer(Jak3Registry.GUN_GRENADE.get(), GunRenderers.Grenade::new);
+            event.registerEntityRenderer(Jak3Registry.GUN_SAUCER.get(), GunRenderers.Saucer::new);
         }
 
         @SubscribeEvent

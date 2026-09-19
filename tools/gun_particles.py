@@ -2,7 +2,7 @@
 """
 Le tir du Morph Gun : les textures des particules et des entites, et la planche de controle.
 
-NEUF PARTICULES NEUVES, une par usage, qu'aucun autre systeme du mod n'emploie
+DIX-SEPT PARTICULES NEUVES, une par usage, qu'aucun autre systeme du mod n'emploie
 (ni le sceptre, ni l'arc, ni les meteos, ni les plantes), et deux textures
 d'entite :
 
@@ -15,6 +15,14 @@ d'entite :
   gun_peace_mote      mote de la boule du Peace Maker (croissant)
   gun_peace_blast     anneau de l'explosion du Peace Maker
   gun_eco_glint       etincelle d'une munition d'eco (losange etire)
+  gun_wave_charge     braise de la charge du Wave Concussor (point doux)
+  gun_wave_dust       braise du front de son onde (trait vertical)
+  gun_plasmite_trail  trainee et eclats de la grenade du Plasmite RPG (point large)
+  gun_plasmite_blast  boule de feu de son explosion (anneau plein)
+  gun_reflexor_bolt   trait du Beam Reflexor (point fin)
+  gun_reflexor_spark  eclat de ses rebonds (etincelle a six branches)
+  gun_gyro_tracer     trait des tirs de la soucoupe du Gyro Burster (point net)
+  gun_gyro_spark      leurs eclats, et les feux de la soucoupe (trait oblique)
   entity/gun/eco_halo.png    halo d'une munition d'eco
   entity/gun/peace_orb.png   boule du Peace Maker (spirale)
 
@@ -27,6 +35,7 @@ bitmap de Minecraft lue dans le jar client, au-dessus de la barre d'objets.
 Usage :
     python tools/gun_particles.py            textures, definitions et planche
     python tools/gun_particles.py --planche  la planche seule
+    python tools/gun_particles.py --planche-b  la planche du jalon B seule (ameliorations rouges et jaunes)
 """
 
 import json
@@ -164,6 +173,15 @@ PARTICLES = {
     "gun_peace_mote": lambda: crescent(16),
     "gun_peace_blast": lambda: ring(32),
     "gun_eco_glint": lambda: diamond(16),
+    # les ameliorations rouges et jaunes (jalon B)
+    "gun_wave_charge": lambda: glow(16, 0.2, 1.4),
+    "gun_wave_dust": lambda: slash(16, 90.0, 0.8, 0.24),
+    "gun_plasmite_trail": lambda: glow(16, 0.35, 1.2),
+    "gun_plasmite_blast": lambda: ring(32, 0.7, 0.28, 0.4),
+    "gun_reflexor_bolt": lambda: glow(16, 0.3, 2.6),
+    "gun_reflexor_spark": lambda: star(16, 6, 0.12, 0.3),
+    "gun_gyro_tracer": lambda: glow(16, 0.45, 2.8),
+    "gun_gyro_spark": lambda: slash(16, -45.0),
 }
 ENTITIES = {"eco_halo": lambda: halo(64), "peace_orb": lambda: orb(64)}
 
@@ -231,6 +249,24 @@ class P:
             self.friction = 0.88
         elif kind == "gun_peace_blast":
             self.life, self.size0, self.rgb = 8, 0.5, (0.75, 0.5, 1.0)
+        elif kind in ("gun_wave_charge", "gun_wave_dust", "gun_plasmite_trail"):
+            # GunParticles.Ember : duree, taille, chute
+            life, size, falls = {"gun_wave_charge": (4, 0.2, False), "gun_wave_dust": (9, 0.16, True),
+                                 "gun_plasmite_trail": (7, 0.26, False)}[kind]
+            self.life, self.size0, self.rgb = life + rng.randrange(3), size * (0.8 + rng.random() * 0.4), (1.0, 0.45, 0.12)
+            self.friction, self.gravity = 0.9, (0.35 if falls else 0.0)
+        elif kind == "gun_plasmite_blast":
+            self.life, self.size0, self.rgb = 10, 1.0, (1.0, 0.4, 0.1)
+        elif kind == "gun_reflexor_bolt":
+            self.life, self.size0, self.rgb = 4, 0.22, (1.0, 0.98, 0.72)
+        elif kind == "gun_reflexor_spark":
+            self.life, self.size0, self.rgb = 5 + rng.randrange(4), 0.09 + rng.random() * 0.04, (1.0, 0.97, 0.7)
+            self.friction, self.gravity = 0.82, 0.3
+        elif kind == "gun_gyro_tracer":
+            self.life, self.size0, self.rgb = 3, (0.24 if moving else 0.16), (1.0, 0.72, 0.18)
+        elif kind == "gun_gyro_spark":
+            self.life, self.size0, self.rgb = 5 + rng.randrange(4), 0.09 + rng.random() * 0.04, (1.0, 0.75, 0.2)
+            self.friction, self.gravity = 0.82, 0.3
         elif kind.startswith("gun_eco_glint"):
             fam = int(kind[-1])
             self.kind = "gun_eco_glint"
@@ -271,6 +307,18 @@ class P:
         elif k == "gun_eco_glint":
             self.alpha = (1.0 - t) * (0.6 + 0.4 * math.sin(self.age * 0.9 + self.twinkle))
             self.size = self.size0 * (1.0 - 0.5 * t)
+        elif k in ("gun_wave_charge", "gun_wave_dust", "gun_plasmite_trail"):
+            self.rgb = (1.0 - 0.3 * t, 0.45 - 0.35 * t, 0.12 - 0.1 * t)
+            self.alpha, self.size = 1.0 - t, self.size0 * (1.0 - 0.5 * t)
+        elif k == "gun_plasmite_blast":
+            self.size = 1.0 + 8.0 * math.sqrt(t)
+            self.rgb, self.alpha = (1.0, 0.4 + 0.3 * (1.0 - t), 0.1 + 0.3 * (1.0 - t)), 1.0 - t * t
+        elif k == "gun_reflexor_bolt":
+            self.size, self.alpha, self.rgb = self.size0 * (1.0 - 0.7 * t), 1.0 - 0.6 * t, (1.0, 0.98 - 0.2 * t, 0.72 - 0.4 * t)
+        elif k in ("gun_reflexor_spark", "gun_gyro_spark"):
+            self.alpha = 1.0 - t
+        elif k == "gun_gyro_tracer":
+            self.alpha = 1.0 - 0.6 * t
 
 
 def blit(target, tex, cx, cy, width_px, rgb, alpha, roll=0.0):
@@ -675,6 +723,9 @@ def planche(textures):
     tints = {"gun_scatter_pellet": (1.0, 0.55, 0.18), "gun_scatter_flash": (1.0, 0.6, 0.25), "gun_blaster_bolt": (1.0, 0.93, 0.45),
              "gun_blaster_spark": (1.0, 0.85, 0.3), "gun_vulcan_tracer": (0.2, 0.75, 1.0), "gun_vulcan_spark": (0.55, 0.9, 1.0),
              "gun_peace_mote": (0.62, 0.32, 1.0), "gun_peace_blast": (0.75, 0.5, 1.0), "gun_eco_glint": (1.0, 0.85, 0.29),
+             "gun_wave_charge": (1.0, 0.45, 0.12), "gun_wave_dust": (1.0, 0.45, 0.12), "gun_plasmite_trail": (1.0, 0.45, 0.12),
+             "gun_plasmite_blast": (1.0, 0.55, 0.25), "gun_reflexor_bolt": (1.0, 0.98, 0.72),
+             "gun_reflexor_spark": (1.0, 0.97, 0.7), "gun_gyro_tracer": (1.0, 0.72, 0.18), "gun_gyro_spark": (1.0, 0.75, 0.2),
              "eco_halo": (0.36, 0.78, 1.0), "peace_orb": (0.59, 0.31, 1.0)}
     for name, tex in textures.items():
         tile = Image.new("RGBA", (150, 190), (24, 26, 32, 255))
@@ -766,12 +817,223 @@ def planche(textures):
     print("planche ->", path, board.size)
 
 
+# ============================================================== planche du jalon B (rouge et jaune ameliores)
+
+def ring_layer(size, ppb, origin, radius, glow):
+    """L'anneau de GunRenderers.Shockwave vu de dessus : couronne fondue vers le centre, bord vif."""
+    layer = Image.new("RGBA", size, (0, 0, 0, 0))
+    px = layer.load()
+    inner = max(0.0, radius - 2.2)
+    for y in range(size[1]):
+        for x in range(size[0]):
+            d = math.hypot((x - origin[0]) / ppb, (y - origin[1]) / ppb)
+            if inner <= d <= radius:
+                f = (d - inner) / max(1e-6, radius - inner)
+                px[x, y] = (255, int(255 * (0.3 + 0.2 * f)), int(255 * (0.08 + 0.07 * f)), int(255 * 0.75 * glow * f))
+            elif radius < d <= radius + 0.12:
+                px[x, y] = (255, 107, 31, int(255 * 0.8 * glow))
+    return layer
+
+
+def scene_wave(textures, age, strength=1.0):
+    """L'onde a un age donne, vue de dessus : anneau du rendu et braises du front (GunShockwaveEntity.clientEmbers)."""
+    rng = random.Random(11 + age)
+    size, ppb = (470, 470), 12.0
+    origin = (size[0] / 2.0, size[1] / 2.0)
+    max_radius = 3.0 + 15.0 * strength
+    img = Image.new("RGBA", size, (70, 72, 78, 255))
+    parts = []
+    for tick in range(max(0, age - 8), age + 1):
+        radius = min(max_radius, 3.0 + 15.0 * tick / 14.0)
+        span = max_radius - 3.0
+        intensity = max(0.15, strength * (1.0 - (radius - 3.0) / span))
+        for _ in range(int(min(64, 10 + radius * 3.0 * intensity))):
+            a = rng.random() * math.tau
+            r = radius - rng.random() * 0.6
+            parts.append(P("gun_wave_dust", (math.cos(a) * r, 0.1 + rng.random() * 0.3, math.sin(a) * r),
+                           (math.cos(a) * 0.08, 0.08 + rng.random() * 0.12 * intensity, math.sin(a) * 0.08), rng))
+        if tick < age:
+            step(parts)
+    radius = min(max_radius, 3.0 + 15.0 * age / 14.0)
+    glow = max(0.25, strength * (1.0 - (radius - 3.0) / (max_radius - 3.0)))
+    img.alpha_composite(ring_layer(size, ppb, origin, radius, glow))
+    for q in parts:
+        blit(img, textures[q.kind], origin[0] + q.pos[0] * ppb, origin[1] + q.pos[2] * ppb, 2.0 * q.size * ppb, q.rgb, q.alpha)
+    d = ImageDraw.Draw(img)
+    d.ellipse([origin[0] - 4, origin[1] - 4, origin[0] + 4, origin[1] + 4], fill=(240, 240, 240, 255))
+    return img, "tique %d : rayon %.1f blocs, intensite %.2f" % (age, radius, glow)
+
+
+def scene_plasmite(textures):
+    """La grenade : cloche de GunGrenadeEntity (3,25 blocs par tique, gravite 0,1125), un rebond sur un mur, puis le souffle."""
+    rng = random.Random(21)
+    size, ppb = (960, 300), 12.0
+    origin = (30.0, 250.0)
+    img = Image.new("RGBA", size, (150, 182, 222, 255))
+    d = ImageDraw.Draw(img)
+    wall_x = 46.0
+    d.rectangle([origin[0] + wall_x * ppb, 20, origin[0] + wall_x * ppb + ppb, origin[1]], fill=(96, 98, 104, 255))
+    d.rectangle([0, origin[1], size[0], size[1]], fill=(86, 88, 94, 255))
+    pos, vel = [0.0, 1.5], [3.25 * 0.958, 3.25 * 0.2873]
+    trail, path = [], [tuple(pos)]
+    for tick in range(60):
+        vel[1] -= 0.1125
+        nxt = [pos[0] + vel[0], pos[1] + vel[1]]
+        if vel[0] > 0 and nxt[0] >= wall_x:
+            f = (wall_x - pos[0]) / vel[0]
+            nxt = [wall_x - 0.05, pos[1] + vel[1] * f]
+            vel = [-vel[0] * 0.6, vel[1] * 0.6]
+        if nxt[1] <= 0.16:
+            nxt[1] = 0.16
+            vel = [vel[0] * 0.6, -vel[1] * 0.6]
+            if abs(vel[1]) < 0.12:
+                pos = nxt
+                path.append(tuple(pos))
+                break
+        for i in range(4):
+            f = i / 4.0
+            trail.append(P("gun_plasmite_trail", (pos[0] + (nxt[0] - pos[0]) * f, pos[1] + (nxt[1] - pos[1]) * f + 0.16, 0.0), rng=rng))
+        pos = nxt
+        path.append(tuple(pos))
+        step(trail)
+    for a, b in zip(path, path[1:]):
+        d.line([origin[0] + a[0] * ppb, origin[1] - a[1] * ppb, origin[0] + b[0] * ppb, origin[1] - b[1] * ppb],
+               fill=(255, 255, 255, 60), width=1)
+    blast = [P("gun_plasmite_blast", (pos[0], pos[1] + 0.5, 0.0), rng=rng)]
+    for _ in range(60):
+        blast.append(P("gun_plasmite_trail", (pos[0] + rng.gauss(0, 1.2), pos[1] + 0.5 + rng.gauss(0, 1.2), rng.gauss(0, 1.2)),
+                       tuple(rng.gauss(0, 0.45) for _ in range(3)), rng))
+    for _ in range(4):
+        step(blast)
+    for q in trail + blast:
+        if q.alive:
+            blit(img, textures[q.kind], origin[0] + q.pos[0] * ppb, origin[1] - q.pos[1] * ppb, 2.0 * q.size * ppb, q.rgb, q.alpha)
+    halo_tex = textures["eco_halo"]
+    blit(img, halo_tex, origin[0] + path[6][0] * ppb, origin[1] - (path[6][1] + 0.16) * ppb, 1.1 * ppb, (1.0, 0.35, 0.16), 0.67)
+    return img, "vue de cote : la cloche (trait fin), un mur qui la renvoie a 60 %, les rebonds au sol, puis le souffle a la 4e tique"
+
+
+def scene_reflexor(textures):
+    """Le tir a rebonds vu de dessus : GunClient.reflexor seme 4 points par bloc sur la ligne brisee de chaque tique."""
+    rng = random.Random(31)
+    size, ppb = (960, 330), 12.0
+    origin = (30.0, 40.0)
+    img = Image.new("RGBA", size, (70, 72, 78, 255))
+    d = ImageDraw.Draw(img)
+    walls = [((0.0, 22.0), (76.0, 23.0)), ((0.0, -2.0), (76.0, -1.0)), ((70.0, -1.0), (71.0, 22.0))]
+    for (x0, z0), (x1, z1) in walls:
+        d.rectangle([origin[0] + x0 * ppb, origin[1] + z0 * ppb, origin[0] + x1 * ppb, origin[1] + z1 * ppb], fill=(112, 114, 120, 255))
+    pos, direction, speed = [0.0, 3.0], [0.8, 0.6], 10.0
+    parts = []
+    for tick in range(9):
+        remaining = speed
+        while remaining > 1e-3:
+            hit = None
+            for axis, limit in ((1, 22.0), (1, -1.0), (0, 70.0)):
+                if direction[axis] > 0 and limit > pos[axis] or direction[axis] < 0 and limit < pos[axis]:
+                    dist = (limit - pos[axis]) / direction[axis]
+                    if 0 < dist <= remaining and (hit is None or dist < hit[0]):
+                        hit = (dist, axis)
+            travel = hit[0] if hit else remaining
+            end = [pos[0] + direction[0] * travel, pos[1] + direction[1] * travel]
+            dots = min(64, max(1, int(travel * 4.0)))
+            for k in range(dots):
+                f = k / dots
+                parts.append(P("gun_reflexor_bolt", (pos[0] + (end[0] - pos[0]) * f, 0.0, pos[1] + (end[1] - pos[1]) * f), rng=rng))
+            pos = end
+            remaining -= travel
+            if hit:
+                direction[hit[1]] = -direction[hit[1]]
+                speed = 20.0 / 3.0
+                remaining = min(remaining, speed)
+                for _ in range(6):
+                    parts.append(P("gun_reflexor_spark", (pos[0], 0.0, pos[1]),
+                                   ((rng.random() - 0.5) * 0.3, rng.random() * 0.2, (rng.random() - 0.5) * 0.3), rng))
+        if tick < 8:
+            step(parts)
+    for q in parts:
+        if q.alive:
+            blit(img, textures[q.kind], origin[0] + q.pos[0] * ppb, origin[1] + q.pos[2] * ppb, 2.0 * q.size * ppb, q.rgb, q.alpha)
+    return img, "vue de dessus, 9e tique : le trait ne dure que 4 tiques, on voit donc la fin du chemin et l'eclat du dernier rebond"
+
+
+def scene_gyro(textures):
+    """La soucoupe en rafale, vue de cote : deux traits par tique (GunClient.gyro), eclats au bout, halo jaune."""
+    rng = random.Random(41)
+    size, ppb = (960, 300), 12.0
+    origin = (480.0, 70.0)
+    img = Image.new("RGBA", size, (150, 182, 222, 255))
+    d = ImageDraw.Draw(img)
+    ground = 17.0
+    d.rectangle([0, origin[1] + ground * ppb, size[0], size[1]], fill=(86, 88, 94, 255))
+    parts = []
+    targets = [(-22.0, ground - 1.0), (14.0, ground - 1.0), (25.0, ground - 1.0), (-6.0, ground)]
+    for tick in range(2):
+        for end in rng.sample(targets, 2):
+            e = (end[0] + rng.uniform(-0.5, 0.5), end[1] + rng.uniform(-0.5, 0.5))
+            parts.append(P("gun_gyro_tracer", (0.0, 0.0, 0.0), (e[0] / 2.0, -e[1] / 2.0, 0.0), rng))
+            length = math.hypot(*e)
+            dots = min(72, int(length / 0.5))
+            for k in range(1, dots + 1):
+                f = k / (dots + 1)
+                parts.append(P("gun_gyro_tracer", (e[0] * f, -e[1] * f, 0.0), rng=rng))
+            for _ in range(3):
+                parts.append(P("gun_gyro_spark", (e[0], -e[1], 0.0), ((rng.random() - 0.5) * 0.25, rng.random() * 0.15,
+                                                                      (rng.random() - 0.5) * 0.25), rng))
+        if tick == 0:
+            step(parts)
+    blit(img, textures["eco_halo"], origin[0], origin[1], 2.6 * ppb, (1.0, 0.84, 0.24), 0.6)
+    w = 0.5 * 3.5 * ppb
+    d.ellipse([origin[0] - w / 2, origin[1] - 3, origin[0] + w / 2, origin[1] + 3], fill=(58, 60, 50, 255), outline=(240, 200, 40, 255))
+    for q in parts:
+        if q.alive:
+            blit(img, textures[q.kind], origin[0] + q.pos[0] * ppb, origin[1] - q.pos[1] * ppb, 2.0 * q.size * ppb, q.rgb, q.alpha)
+    return img, "vue de cote : deux salves de deux tirs (une par tique), la premiere deja palie ; la soucoupe (1,75 bloc) dans son halo"
+
+
+def planche_b(textures):
+    os.makedirs(BUILD, exist_ok=True)
+    F14, F18, F24 = label_font(14), label_font(18), label_font(24)
+    blocks = []
+    waves = [scene_wave(textures, age) for age in (2, 7, 14)]
+    row = Image.new("RGBA", (sum(w[0].width for w in waves) + 20, waves[0][0].height + 24), (24, 26, 32, 255))
+    x = 0
+    rd = ImageDraw.Draw(row)
+    for img, caption in waves:
+        row.alpha_composite(img, (x, 0))
+        rd.text((x + 6, img.height + 4), caption, font=F14, fill=(200, 200, 200))
+        x += img.width + 10
+    blocks.append(("Wave Concussor (Deferlonator) : l'onde a pleine charge, vue de dessus, 12 pixels par bloc ; le tireur au centre", row))
+    for title, scene in (("Plasmite RPG (RPG plasmique)", scene_plasmite), ("Beam Reflexor (Reflectorayon)", scene_reflexor),
+                         ("Gyro Burster (Tournoyeur)", scene_gyro)):
+        img, caption = scene(textures)
+        blocks.append((title + " : " + caption, img))
+    width = max(b[1].width for b in blocks) + 24
+    height = 60 + sum(b[1].height + 44 for b in blocks)
+    board = Image.new("RGBA", (width, height), (24, 26, 32, 255))
+    d = ImageDraw.Draw(board)
+    d.text((12, 10), "Morph Gun, jalon B : les ameliorations rouges et jaunes (memes couleurs, tailles et durees que le Java)",
+           font=F24, fill=(255, 255, 255))
+    y = 52
+    for title, img in blocks:
+        d.text((12, y), title, font=F18, fill=(220, 220, 220))
+        board.alpha_composite(img, (12, y + 28))
+        y += img.height + 44
+    path = os.path.join(BUILD, "planche-tir-b.png")
+    board.convert("RGB").save(path)
+    print("planche B ->", path, board.size)
+
+
 def main():
+    if "--planche-b" in sys.argv:
+        planche_b(read_textures())
+        return
     if "--planche" in sys.argv:
         textures = read_textures()
     else:
         textures = write_textures()
     planche(textures)
+    planche_b(textures)
 
 
 if __name__ == "__main__":

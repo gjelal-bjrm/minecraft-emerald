@@ -732,9 +732,10 @@ public final class GunAutotest {
             ItemStack gun = MorphGunKeeper.find(this.a);
             MorphGunData data = gun == null ? null : MorphGunData.of(gun);
             long lobby = MorphGunKeeper.lobby(server);
-            check("arrivee (PlayerChangedDimensionEvent vers Haven) : exactement 1 arme, 4 formes de base, reserves"
-                            + " pleines 100/200/200/15, lobby courant, dans la premiere case de la barre",
-                    MorphGunKeeper.count(this.a) == 1 && data != null && data.owned() == GunForm.BASE_MASK
+            check("arrivee (PlayerChangedDimensionEvent vers Haven) : exactement 1 arme, les 8 formes donnees a l'arrivee"
+                            + " (4 de base, ameliorations rouges et jaunes), reserves pleines 100/200/200/15, lobby courant,"
+                            + " dans la premiere case de la barre",
+                    MorphGunKeeper.count(this.a) == 1 && data != null && data.owned() == GunForm.ARRIVAL_MASK
                             && data.full() && data.ecoRed() == 100 && data.ecoYellow() == 200 && data.ecoBlue() == 200
                             && data.ecoDark() == 15 && data.lobby() == lobby && slotOf(this.a, gun) == 0
                             && MorphGunKeeper.countStored(this.a) == 0,
@@ -1258,6 +1259,8 @@ public final class GunAutotest {
             arrive(m);
             ItemStack gun = MorphGunKeeper.find(m);
             m.getInventory().selected = slotOf(m, gun);
+            // ces essais partent des quatre armes de base : l'arrivee en donne davantage depuis le jalon B
+            MorphGunData.write(gun, MorphGunData.of(gun).withOwned(GunForm.BASE_MASK));
             long writes = MorphGunData.writes();
             MorphGunKeeper.Selection yellow = MorphGunKeeper.select(m, GunForm.Family.YELLOW);
             long afterYellow = MorphGunData.writes() - writes;

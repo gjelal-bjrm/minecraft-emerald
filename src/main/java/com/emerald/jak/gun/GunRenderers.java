@@ -29,7 +29,10 @@ import org.joml.Vector3f;
  *    blanc), qui grandit pendant la charge, collee a la bouche du canon du tireur,
  *    puis suit la spirale du vol ;
  *  - Arc : la foudre du Peace Maker, un zigzag de deux rubans croises (violet,
- *    coeur lavande) en melange additif, retire toutes les deux tiques.
+ *    coeur lavande) en melange additif, retire toutes les deux tiques ;
+ *  - Shockwave : l'anneau rouge du Wave Concussor, qui suit le front de l'onde ;
+ *  - Grenade : la grenade gun-grenade du Plasmite RPG, dans son halo rouge ;
+ *  - Saucer : la soucoupe gun-saucer du Gyro Burster, qui tourne, halo jaune en rafale.
  */
 public final class GunRenderers {
 
@@ -228,6 +231,186 @@ public final class GunRenderers {
         @Override
         public ResourceLocation getTextureLocation(GunArcEntity entity) {
             return TextureAtlas.LOCATION_BLOCKS;
+        }
+    }
+
+    // ================================================================ modeles de Jak 3
+
+    /** Dessine un modele cuit (tools/jak_gun.py) dans le repere courant, en pleine lumiere. */
+    private static void model(JakGunModel model, PoseStack.Pose last, VertexConsumer out) {
+        for (int tri = 0; tri < model.triangles; tri++) {
+            for (int corner = 0; corner < 4; corner++) {
+                int s = tri * 3 + Math.min(corner, 2);
+                out.addVertex(last, model.positions[s * 3], model.positions[s * 3 + 1], model.positions[s * 3 + 2])
+                        .setColor(model.colors[s])
+                        .setUv(model.uvs[s * 2], model.uvs[s * 2 + 1])
+                        .setOverlay(OverlayTexture.NO_OVERLAY)
+                        .setLight(FULL_BRIGHT)
+                        .setNormal(last, model.normals[s * 3], model.normals[s * 3 + 1], model.normals[s * 3 + 2]);
+            }
+        }
+    }
+
+    // ================================================================ onde du Wave Concussor
+
+    /**
+     * L'anneau de l'onde : une couronne a plat qui suit le front, brillante au bord et
+     * fondue vers le centre, et un rideau bas dresse sur le front. Sa lumiere suit
+     * l'intensite de l'onde, puis s'eteint en {@value GunShockwaveEntity#FADE_TICKS} tiques.
+     */
+    public static final class Shockwave extends EntityRenderer<GunShockwaveEntity> {
+
+        private static final int SEGMENTS = 64;
+
+        public Shockwave(EntityRendererProvider.Context context) {
+            super(context);
+        }
+
+        @Override
+        public boolean shouldRender(GunShockwaveEntity wave, net.minecraft.client.renderer.culling.Frustum frustum,
+                                    double x, double y, double z) {
+            return wave.shouldRender(x, y, z) && frustum.isVisible(wave.getBoundingBoxForCulling());
+        }
+
+        @Override
+        public void render(GunShockwaveEntity wave, float yaw, float partial, PoseStack poseStack, MultiBufferSource buffers,
+                           int light) {
+            double age = wave.tickCount + partial;
+            float radius = (float) wave.radiusAt(age);
+            float over = (float) Math.max(0.0, age - wave.expandTicks());
+            float fade = 1.0F - Math.min(1.0F, over / GunShockwaveEntity.FADE_TICKS);
+            float glow = (float) Math.max(0.25, wave.intensityAt(radius)) * fade;
+            if (glow <= 0.0F) {
+                return;
+            }
+            float inner = Math.max(0.0F, radius - 2.2F);
+            VertexConsumer out = buffers.getBuffer(RenderType.lightning());
+            Matrix4f m = poseStack.last().pose();
+            for (int i = 0; i < SEGMENTS; i++) {
+                double a0 = Math.PI * 2.0 * i / SEGMENTS;
+                double a1 = Math.PI * 2.0 * (i + 1) / SEGMENTS;
+                float c0 = (float) Math.cos(a0);
+                float s0 = (float) Math.sin(a0);
+                float c1 = (float) Math.cos(a1);
+                float s1 = (float) Math.sin(a1);
+                // la couronne a plat, des deux faces
+                flat(m, out, c0, s0, c1, s1, inner, radius, 0.12F, 0.0F, 0.75F * glow);
+                // le rideau du front
+                out.addVertex(m, c0 * radius, 0.12F, s0 * radius).setColor(1.0F, 0.42F, 0.12F, 0.8F * glow);
+                out.addVertex(m, c1 * radius, 0.12F, s1 * radius).setColor(1.0F, 0.42F, 0.12F, 0.8F * glow);
+                out.addVertex(m, c1 * radius, 1.3F, s1 * radius).setColor(1.0F, 0.2F, 0.05F, 0.0F);
+                out.addVertex(m, c0 * radius, 1.3F, s0 * radius).setColor(1.0F, 0.2F, 0.05F, 0.0F);
+                out.addVertex(m, c0 * radius, 1.3F, s0 * radius).setColor(1.0F, 0.2F, 0.05F, 0.0F);
+                out.addVertex(m, c1 * radius, 1.3F, s1 * radius).setColor(1.0F, 0.2F, 0.05F, 0.0F);
+                out.addVertex(m, c1 * radius, 0.12F, s1 * radius).setColor(1.0F, 0.42F, 0.12F, 0.8F * glow);
+                out.addVertex(m, c0 * radius, 0.12F, s0 * radius).setColor(1.0F, 0.42F, 0.12F, 0.8F * glow);
+            }
+            super.render(wave, yaw, partial, poseStack, buffers, light);
+        }
+
+        private static void flat(Matrix4f m, VertexConsumer out, float c0, float s0, float c1, float s1,
+                                 float inner, float outer, float y, float alphaIn, float alphaOut) {
+            out.addVertex(m, c0 * inner, y, s0 * inner).setColor(1.0F, 0.3F, 0.08F, alphaIn);
+            out.addVertex(m, c0 * outer, y, s0 * outer).setColor(1.0F, 0.5F, 0.15F, alphaOut);
+            out.addVertex(m, c1 * outer, y, s1 * outer).setColor(1.0F, 0.5F, 0.15F, alphaOut);
+            out.addVertex(m, c1 * inner, y, s1 * inner).setColor(1.0F, 0.3F, 0.08F, alphaIn);
+            out.addVertex(m, c1 * inner, y, s1 * inner).setColor(1.0F, 0.3F, 0.08F, alphaIn);
+            out.addVertex(m, c1 * outer, y, s1 * outer).setColor(1.0F, 0.5F, 0.15F, alphaOut);
+            out.addVertex(m, c0 * outer, y, s0 * outer).setColor(1.0F, 0.5F, 0.15F, alphaOut);
+            out.addVertex(m, c0 * inner, y, s0 * inner).setColor(1.0F, 0.3F, 0.08F, alphaIn);
+        }
+
+        @Override
+        public ResourceLocation getTextureLocation(GunShockwaveEntity entity) {
+            return TextureAtlas.LOCATION_BLOCKS;
+        }
+    }
+
+    // ================================================================ grenade du Plasmite RPG
+
+    /** La grenade gun-grenade de Jak 3, a l'echelle du jeu, qui roule sur elle-meme, dans son halo rouge. */
+    public static final class Grenade extends EntityRenderer<GunGrenadeEntity> {
+
+        public Grenade(EntityRendererProvider.Context context) {
+            super(context);
+        }
+
+        @Override
+        public void render(GunGrenadeEntity grenade, float yaw, float partial, PoseStack poseStack,
+                           MultiBufferSource buffers, int light) {
+            JakGunModel model = JakGunModel.get("gun_grenade");
+            float t = grenade.tickCount + partial;
+            poseStack.pushPose();
+            poseStack.translate(0.0F, 0.16F, 0.0F);
+            if (model != null) {
+                poseStack.pushPose();
+                poseStack.mulPose(Axis.YP.rotationDegrees(t * 27.0F));
+                poseStack.mulPose(Axis.XP.rotationDegrees(t * 41.0F));
+                model(model, poseStack.last(), buffers.getBuffer(RenderType.entityCutoutNoCull(MorphGunItemRenderer.ATLAS)));
+                poseStack.popPose();
+            }
+            poseStack.mulPose(this.entityRenderDispatcher.cameraOrientation());
+            poseStack.mulPose(Axis.YP.rotationDegrees(180.0F));
+            float pulse = 0.8F + 0.2F * (float) Math.sin(t * 0.9F);
+            poseStack.scale(1.1F * pulse, 1.1F * pulse, 1.1F * pulse);
+            billboard(poseStack.last(), buffers.getBuffer(RenderType.entityTranslucentEmissive(HALO)), 255, 90, 40, 170);
+            poseStack.popPose();
+            super.render(grenade, yaw, partial, poseStack, buffers, light);
+        }
+
+        @Override
+        public ResourceLocation getTextureLocation(GunGrenadeEntity entity) {
+            return HALO;
+        }
+    }
+
+    // ================================================================ soucoupe du Gyro Burster
+
+    /**
+     * La soucoupe gun-saucer de Jak 3, a l'echelle du jeu ({@value GunSpec#GYRO_SCALE}),
+     * qui tourne a deux tours par seconde ; un halo jaune pendant la rafale ; elle
+     * retrecit avant de s'eteindre.
+     */
+    public static final class Saucer extends EntityRenderer<GunSaucerEntity> {
+
+        public Saucer(EntityRendererProvider.Context context) {
+            super(context);
+            this.shadowRadius = 0.5F;
+        }
+
+        @Override
+        public void render(GunSaucerEntity saucer, float yaw, float partial, PoseStack poseStack,
+                           MultiBufferSource buffers, int light) {
+            JakGunModel model = JakGunModel.get("gun_saucer");
+            float t = saucer.tickCount + partial;
+            float scale = GunSpec.GYRO_SCALE;
+            if (saucer.phase() == GunSaucerEntity.SHRINK && saucer.shrinkAge >= 0) {
+                scale *= Math.max(0.0F, 1.0F - (t - saucer.shrinkAge) / GunSpec.GYRO_SHRINK_TICKS);
+            }
+            boolean still = saucer.phase() == GunSaucerEntity.SIT || saucer.phase() == GunSaucerEntity.SHRINK;
+            poseStack.pushPose();
+            poseStack.translate(0.0F, 0.15F, 0.0F);
+            if (model != null && scale > 0.01F) {
+                poseStack.pushPose();
+                poseStack.mulPose(Axis.YP.rotationDegrees(still ? 0.0F : t * GunSpec.GYRO_SPIN_DEGREES));
+                poseStack.scale(scale, scale, scale);
+                model(model, poseStack.last(), buffers.getBuffer(RenderType.entityCutoutNoCull(MorphGunItemRenderer.ATLAS)));
+                poseStack.popPose();
+            }
+            if (saucer.firing()) {
+                poseStack.mulPose(this.entityRenderDispatcher.cameraOrientation());
+                poseStack.mulPose(Axis.YP.rotationDegrees(180.0F));
+                float pulse = 0.8F + 0.2F * (float) Math.sin(t * 1.6F);
+                poseStack.scale(2.6F * pulse, 2.6F * pulse, 2.6F * pulse);
+                billboard(poseStack.last(), buffers.getBuffer(RenderType.entityTranslucentEmissive(HALO)), 255, 215, 60, 150);
+            }
+            poseStack.popPose();
+            super.render(saucer, yaw, partial, poseStack, buffers, light);
+        }
+
+        @Override
+        public ResourceLocation getTextureLocation(GunSaucerEntity entity) {
+            return HALO;
         }
     }
 }

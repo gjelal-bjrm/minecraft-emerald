@@ -155,6 +155,10 @@ final class GunFireBench {
         for (GunSpec spec : GunSpec.values()) {
             phase("monstre tue par " + spec.form.id, 240, t -> killWith(spec, t));
         }
+        phase("Wave Concussor", 120, this::wave);
+        phase("Plasmite RPG", 120, this::plasmite);
+        phase("Beam Reflexor", 80, this::reflexor);
+        phase("Gyro Burster", 320, this::gyro);
         phase("joueur factice, habitant et zombie sans etiquette intacts", 90, this::harmless);
         phase("decor casse puis reconstruit", 420, this::decor);
         phase("blocs proteges intacts", 12, this::guarded);
@@ -292,6 +296,17 @@ final class GunFireBench {
         }
         BlockPos feet = BlockPos.containing(this.site);
         this.level.getChunkAt(feet);
+        // les pierres d'un passage interrompu : le ciel du site n'en a pas d'autres (la ville n'emploie pas la pierre)
+        int swept = 0;
+        for (BlockPos p : BlockPos.betweenClosed(feet.offset(-4, -8, -12), feet.offset(30, 10, 12))) {
+            if (this.level.getBlockState(p).is(Blocks.STONE)) {
+                this.level.setBlock(p, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS);
+                swept++;
+            }
+        }
+        if (swept > 0) {
+            line("site : " + swept + " pierre(s) d'un passage precedent retiree(s)");
+        }
         BlockPos water = new BlockPos(feet.getX(), this.origin.getY() + 57, feet.getZ());
         boolean air = true;
         for (int dx = -2; dx <= 16; dx++) {
@@ -847,6 +862,8 @@ final class GunFireBench {
             boolean down = switch (spec.trigger) {
                 case PRESS, HOLD -> t % 2 == 0;
                 case SPIN -> true;
+                // une demi-seconde de charge, puis le relachement qui fait partir l'onde
+                case CHARGE -> t % 24 < 12;
             };
             GunFire.onTrigger(f, down);
             GunFire.tick(f);
@@ -861,6 +878,11 @@ final class GunFireBench {
                 kill = KILLS.get(i);
             }
         }
+        GunSaucerEntity saucer = GunFire.saucer(f);
+        if (saucer != null) {
+            // la soucoupe du Gyro Burster tirerait encore 4 s, sur les monstres des essais suivants
+            saucer.discard();
+        }
         int shots = GunFire.shotLog(f).size();
         long took = now() - (long) this.memo.get(key + ":start");
         check("zombie casque (20 PV) a 8 blocs tue par " + spec.form.id + ", credite au tireur",
@@ -870,6 +892,452 @@ final class GunFireBench {
             e.discard();
         }
         return true;
+    }
+
+
+    // ================================================================ ameliorations rouges et jaunes
+
+    /** Retire les monstres du banc encore en vie et les munitions lachees : chaque essai part d'un ciel vide. */
+    private void purge() {
+        for (Mob mob : this.level.getEntities(EntityTypeTest.forClass(Mob.class), m -> m.isNoAi()
+                && m.getTags().contains(HavenInvasion.MONSTER_TAG) && m.distanceToSqr(this.site) < 96.0 * 96.0)) {
+            mob.discard();
+        }
+        for (GunEcoEntity e : ecoAround(this.site, 96.0)) {
+            e.discard();
+        }
+    }
+
+    /** Un pan de pierres ; rend ses positions, pour le retirer avant l'essai suivant. */
+    private List<BlockPos> slab(BlockPos from, BlockPos to) {
+        List<BlockPos> out = new ArrayList<>();
+        for (BlockPos p : BlockPos.betweenClosed(from, to)) {
+            stone(p);
+            out.add(p.immutable());
+        }
+        return out;
+    }
+
+    @SuppressWarnings("unchecked")
+    private void unslab(String key) {
+        Object stones = this.memo.remove(key);
+        // un tir a pu casser une pierre du pan : HavenDestruction la reposerait dans 10 a 15 s, apres notre
+        // retrait, et pour de bon (le banc du 19 sept. en a laisse dans le ciel). On reconstruit donc d'abord.
+        HavenDestruction.rebuildAll(this.level);
+        if (stones instanceof List<?> list) {
+            for (BlockPos p : (List<BlockPos>) list) {
+                this.level.setBlock(p, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS);
+                this.placed.remove(p);
+            }
+        }
+    }
+
+    private void press(FakePlayer f) {
+        GunFire.onTrigger(f, true);
+        GunFire.tick(f);
+        GunFire.onTrigger(f, false);
+    }
+
+    private static float health(Object mob) {
+        return mob instanceof Mob m && m.isAlive() ? m.getHealth() : 0.0F;
+    }
+
+    /**
+     * Wave Concussor : charge payee par paliers, arme verrouillee, onde au relachement
+     * (rayon, monstres frappes une fois, intensite decroissante, tranche et ligne de
+     * vue), gachette perdue qui TIRE, charge rendue si l'arme quitte la main.
+     */
+    private boolean wave(int t) {
+        FakePlayer f = this.a;
+        if (t == 0) {
+            purge();
+            form(f, GunForm.RED_2);
+            full(f);
+            look(f, EAST, 0.0F);
+            GunFire.clearLog(f);
+            Vec3 eye = f.getEyePosition();
+            this.memo.put("w1", monster(HavenInvasion.Kind.ZOMBIE, eye.add(5.0, 0.0, 0.0)));
+            this.memo.put("w2", monster(HavenInvasion.Kind.ZOMBIE, eye.add(12.0, 0.0, 0.0)));
+            this.memo.put("w3", monster(HavenInvasion.Kind.ZOMBIE, eye.add(17.5, 0.0, 0.0)));
+            this.memo.put("w4", monster(HavenInvasion.Kind.ZOMBIE, eye.add(0.0, 8.0, 9.0)));
+            this.memo.put("w5", monster(HavenInvasion.Kind.ZOMBIE, eye.add(0.0, 0.0, -10.0)));
+            BlockPos e = BlockPos.containing(eye);
+            this.memo.put("waveWall", slab(e.offset(-2, -2, -8), e.offset(2, 3, -8)));
+        }
+        if (t <= 25) {
+            GunFire.onTrigger(f, true);
+            GunFire.tick(f);
+            if (t == 3) {
+                MorphGunKeeper.Selection refused = MorphGunKeeper.select(f, GunForm.Family.YELLOW);
+                check("Wave Concussor : la gachette ouvre une charge, 1 eco rouge au palier de 0,1 s (100 -> 99), arme"
+                                + " verrouillee pendant la charge",
+                        GunFire.isCharging(f) && data(f).ecoRed() == 99 && refused == MorphGunKeeper.Selection.CHARGING
+                                && data(f).form() == GunForm.RED_2 && GunFire.waveLog(f).isEmpty(),
+                        "charge " + GunFire.isCharging(f) + ", rouge " + data(f).ecoRed() + ", fleche jaune " + refused);
+            }
+            if (t == 25) {
+                check("Wave Concussor : charge pleine en 1 s, 5 eco rouges par paliers (0,1 / 0,25 / 0,5 / 0,75 / 1 s),"
+                                + " rien de plus ensuite, et pas d'onde tant que la gachette est tenue",
+                        GunFire.isCharging(f) && data(f).ecoRed() == 95 && GunFire.waveLog(f).isEmpty(),
+                        "rouge " + data(f).ecoRed() + " apres 25 tiques tenues, ondes " + GunFire.waveLog(f).size());
+            }
+            return false;
+        }
+        if (t == 26) {
+            GunFire.onTrigger(f, false);
+            GunFire.tick(f);
+            List<long[]> waves = GunFire.waveLog(f);
+            List<GunShockwaveEntity> rings = this.level.getEntitiesOfClass(GunShockwaveEntity.class,
+                    new AABB(this.site, this.site).inflate(8.0));
+            check("Wave Concussor : relachee, l'onde part a pleine force : 20 tiques de charge, 5 eco, rayon final 18 blocs",
+                    waves.size() == 1 && waves.get(0)[1] == 20 && waves.get(0)[2] == 5 && waves.get(0)[3] == 1800
+                            && rings.size() == 1 && !GunFire.isCharging(f),
+                    waves.size() + " onde(s)" + (waves.isEmpty() ? "" : " : charge " + waves.get(0)[1] + ", eco " + waves.get(0)[2]
+                            + ", rayon " + waves.get(0)[3] / 100.0) + ", anneaux " + rings.size());
+            this.memo.put("ring", rings.isEmpty() ? null : rings.get(0));
+            return false;
+        }
+        if (t < 46) {
+            GunFire.tick(f);
+            return false;
+        }
+        if (t == 46) {
+            float h1 = health(this.memo.get("w1"));
+            float h2 = health(this.memo.get("w2"));
+            float h3 = health(this.memo.get("w3"));
+            float h4 = health(this.memo.get("w4"));
+            float h5 = health(this.memo.get("w5"));
+            GunShockwaveEntity ring = (GunShockwaveEntity) this.memo.get("ring");
+            check("Wave Concussor : l'onde frappe une fois chaque monstre qu'elle traverse, de moins en moins fort (5, 12"
+                            + " et 17,5 blocs) ; intact hors de sa tranche (8 blocs plus haut) et derriere un mur au-dela de 6 blocs",
+                    h1 < h2 && h2 < h3 && h3 < 20.0F && h4 == 20.0F && h5 == 20.0F && ring != null && ring.struck() == 3,
+                    String.format(Locale.ROOT, "PV a 5 blocs %.1f, a 12 blocs %.1f, a 17,5 blocs %.1f ; plus haut %.1f ;"
+                                    + " derriere le mur %.1f ; frappes %d", h1, h2, h3, h4, h5,
+                            ring == null ? -1 : ring.struck()));
+            check("Wave Concussor : les monstres sont pousses vers le dehors",
+                    this.memo.get("w2") instanceof Mob m && m.getDeltaMovement().x > 0.2,
+                    this.memo.get("w2") instanceof Mob m ? "vitesse du monstre a 12 blocs " + m.getDeltaMovement() : "pas de monstre");
+            // gachette perdue : six tiques tenues, puis plus aucune nouvelle du client
+            purge();
+            form(f, GunForm.RED_2);
+            full(f);
+            GunFire.clearLog(f);
+            return false;
+        }
+        if (t <= 52) {
+            GunFire.onTrigger(f, true);
+            GunFire.tick(f);
+            return false;
+        }
+        if (t < 67) {
+            GunFire.tick(f);
+            return false;
+        }
+        if (t == 67) {
+            List<long[]> waves = GunFire.waveLog(f);
+            check("Wave Concussor : gachette perdue (plus de nouvelles du client) = relachement : l'onde PART, elle n'est pas annulee",
+                    waves.size() == 1 && waves.get(0)[1] >= 15 && !GunFire.isCharging(f),
+                    waves.size() + " onde(s)" + (waves.isEmpty() ? "" : ", charge " + waves.get(0)[1] + " tiques, eco " + waves.get(0)[2]));
+            form(f, GunForm.RED_2);
+            eco(f, 50, 200, 200, 15);
+            GunFire.clearLog(f);
+            return false;
+        }
+        if (t <= 74) {
+            GunFire.onTrigger(f, true);
+            GunFire.tick(f);
+            return false;
+        }
+        if (t == 75) {
+            int paid = 50 - data(f).ecoRed();
+            int slot = f.getInventory().selected;
+            f.getInventory().selected = (slot + 1) % 9;
+            GunFire.tick(f);
+            f.getInventory().selected = slot;
+            check("Wave Concussor : l'arme quitte la main pendant la charge : pas d'onde, l'eco paye est rendu",
+                    paid == 2 && data(f).ecoRed() == 50 && GunFire.waveLog(f).isEmpty() && !GunFire.isCharging(f),
+                    "paye " + paid + " en 7 tiques, rouge apres " + data(f).ecoRed() + ", ondes " + GunFire.waveLog(f).size());
+        }
+        unslab("waveWall");
+        purge();
+        return true;
+    }
+
+    /** Plasmite RPG : cout, cadence, tir releve, visee balistique du jeu, souffle, rebond. */
+    private boolean plasmite(int t) {
+        FakePlayer f = this.a;
+        AABB around = new AABB(this.site, this.site).inflate(48.0);
+        if (t == 0) {
+            purge();
+            form(f, GunForm.RED_3);
+            full(f);
+            look(f, EAST, 0.0F);
+            GunFire.clearLog(f);
+            press(f);
+            List<GunGrenadeEntity> grenades = this.level.getEntitiesOfClass(GunGrenadeEntity.class, around, g -> g.getOwner() == f);
+            Vec3 v = grenades.isEmpty() ? Vec3.ZERO : grenades.get(0).getDeltaMovement();
+            double speed = v.length();
+            check("Plasmite RPG : 10 eco rouges par tir (100 -> 90), une grenade a 3,25 blocs par tique, toujours vers le haut"
+                            + " (y du regard releve a 0,3 : 0,287 une fois normalise)",
+                    data(f).ecoRed() == 90 && grenades.size() == 1 && Math.abs(speed - GunSpec.PLASMITE_SPEED) < 1.0e-6
+                            && Math.abs(v.y / speed - 0.2873) < 0.002,
+                    "rouge " + data(f).ecoRed() + ", grenades " + grenades.size() + String.format(Locale.ROOT,
+                            ", vitesse %.3f, y %.4f", speed, speed < 1.0e-9 ? 0.0 : v.y / speed));
+            return false;
+        }
+        if (t == 10) {
+            press(f);
+            check("Plasmite RPG : second tir refuse avant 22 tiques (1,1 s)", data(f).ecoRed() == 90
+                    && ticksOf(f, GunSpec.PLASMITE).size() == 1, "rouge " + data(f).ecoRed());
+            for (GunGrenadeEntity g : this.level.getEntitiesOfClass(GunGrenadeEntity.class, around.inflate(200.0))) {
+                g.discard();
+            }
+            return false;
+        }
+        if (t == 24) {
+            Mob zombie = monster(HavenInvasion.Kind.ZOMBIE, f.getEyePosition().add(25.0, 0.0, 0.0));
+            this.memo.put("rpgTarget", zombie);
+            this.memo.put("rpgExplosions", GunEco.explosions().size());
+            // le regard a 20 degres a cote : c'est le jeu qui vise
+            look(f, EAST + 20.0F, 0.0F);
+            press(f);
+            List<GunGrenadeEntity> grenades = this.level.getEntitiesOfClass(GunGrenadeEntity.class, around, g -> g.getOwner() == f);
+            Vec3 v = grenades.isEmpty() ? Vec3.ZERO : grenades.get(0).getDeltaMovement().normalize();
+            check("Plasmite RPG : visee balistique du jeu sur un monstre a 25 blocs, 20 degres a cote du regard : cap sur lui,"
+                            + " angle de tir sin(asin(g d / v2) / 2) = 0,134",
+                    grenades.size() == 1 && Math.abs(v.y - 0.1344) < 0.01 && v.x > 0.98 && Math.abs(v.z) < 0.05,
+                    String.format(Locale.ROOT, "direction (%.3f ; %.4f ; %.3f)", v.x, v.y, v.z));
+            return false;
+        }
+        if (t == 60) {
+            Object zombie = this.memo.get("rpgTarget");
+            List<GunEco.Explosion> all = GunEco.explosions();
+            int before = (int) this.memo.get("rpgExplosions");
+            GunEco.Explosion last = all.size() > before ? all.get(all.size() - 1) : null;
+            check("Plasmite RPG : la grenade explose sur le monstre vise (12 points : 48 PV), credite au tireur",
+                    health(zombie) == 0.0F && last != null && last.targets() >= 1 && last.shooter().equals(f.getUUID()),
+                    "PV du monstre " + health(zombie) + ", explosions " + before + " -> " + all.size()
+                            + (last == null ? "" : ", cibles " + last.targets()));
+            purge();
+            look(f, EAST, 0.0F);
+            BlockPos e = BlockPos.containing(f.getEyePosition());
+            this.memo.put("rpgWall", slab(e.offset(12, -2, -3), e.offset(12, 7, 3)));
+            press(f);
+            return false;
+        }
+        if (t == 70) {
+            List<GunGrenadeEntity> grenades = this.level.getEntitiesOfClass(GunGrenadeEntity.class, around.inflate(64.0), g -> g.getOwner() == f);
+            GunGrenadeEntity g = grenades.isEmpty() ? null : grenades.get(0);
+            check("Plasmite RPG : un mur renvoie la grenade, qui garde 60 % de sa vitesse",
+                    g != null && g.bounces() >= 1 && g.getDeltaMovement().x < 0.0,
+                    g == null ? "grenade disparue" : "rebonds " + g.bounces() + ", vitesse " + g.getDeltaMovement());
+            for (GunGrenadeEntity other : grenades) {
+                other.discard();
+            }
+            unslab("rpgWall");
+            return true;
+        }
+        GunFire.tick(f);
+        return false;
+    }
+
+    /** Beam Reflexor : cout, rebond sur un mur, plafond du y sur un sol, quatre monstres au plus, cout des 2e et 3e, reserve vide. */
+    private boolean reflexor(int t) {
+        FakePlayer f = this.a;
+        if (t == 0) {
+            purge();
+            form(f, GunForm.YELLOW_2);
+            full(f);
+            look(f, EAST, 0.0F);
+            GunFire.clearLog(f);
+            press(f);
+            List<GunReflexor.Shot> shots = GunReflexor.of(f);
+            check("Beam Reflexor : 1 eco jaune par tir (200 -> 199), un tir a 10 blocs par tique",
+                    data(f).ecoYellow() == 199 && shots.size() == 1 && shots.get(0).speed() == GunSpec.REFLEXOR_SPEED,
+                    "jaune " + data(f).ecoYellow() + ", tirs " + shots.size());
+            return false;
+        }
+        if (t == 10) {
+            BlockPos e = BlockPos.containing(f.getEyePosition());
+            this.memo.put("refWall", slab(e.offset(15, -3, -3), e.offset(15, 3, 3)));
+            form(f, GunForm.YELLOW_2);
+            look(f, EAST, 0.0F);
+            press(f);
+            List<GunReflexor.Shot> shots = GunReflexor.of(f);
+            this.memo.put("refShot", shots.isEmpty() ? null : shots.get(shots.size() - 1));
+            return false;
+        }
+        if (t == 14) {
+            GunReflexor.Shot shot = (GunReflexor.Shot) this.memo.get("refShot");
+            check("Beam Reflexor : le tir rebondit sur un mur, repart en sens inverse a 6,67 blocs par tique, et vit toujours",
+                    shot != null && shot.bounces() == 1 && shot.direction().x < -0.9 && !shot.dead()
+                            && Math.abs(shot.speed() - GunSpec.REFLEXOR_SPEED_AFTER) < 1.0e-9,
+                    shot == null ? "pas de tir" : "rebonds " + shot.bounces() + ", direction " + shot.direction() + ", vitesse "
+                            + shot.speed() + ", eteint " + shot.dead());
+            unslab("refWall");
+            BlockPos e = BlockPos.containing(f.getEyePosition());
+            this.memo.put("refFloor", slab(e.offset(3, -5, -3), e.offset(9, -5, 3)));
+            form(f, GunForm.YELLOW_2);
+            aim(f, Vec3.atCenterOf(e.offset(6, -4, 0)));
+            press(f);
+            List<GunReflexor.Shot> shots = GunReflexor.of(f);
+            this.memo.put("refShot", shots.isEmpty() ? null : shots.get(shots.size() - 1));
+            return false;
+        }
+        if (t == 18) {
+            GunReflexor.Shot shot = (GunReflexor.Shot) this.memo.get("refShot");
+            Vec3 capped = shot == null ? null : shot.lastCapped();
+            check("Beam Reflexor : tombe sur un sol a 40 degres, le tir repart rasant (y reflechi 0,64 ramene a 0,2 avant"
+                            + " normalisation : 0,25), jamais vers le ciel",
+                    shot != null && shot.bounces() >= 1 && capped != null && capped.y > 0.15 && capped.y < 0.3,
+                    shot == null ? "pas de tir" : "rebonds " + shot.bounces() + ", direction apres le sol " + capped);
+            unslab("refFloor");
+            form(f, GunForm.YELLOW_2);
+            full(f);
+            look(f, EAST, 0.0F);
+            Vec3 eye = f.getEyePosition();
+            for (int i = 0; i < 5; i++) {
+                this.memo.put("r" + i, monster(HavenInvasion.Kind.ZOMBIE, eye.add(6.0 + 3.0 * i, 0.0, 0.0)));
+            }
+            press(f);
+            List<GunReflexor.Shot> shots = GunReflexor.of(f);
+            this.memo.put("refShot", shots.isEmpty() ? null : shots.get(shots.size() - 1));
+            return false;
+        }
+        if (t == 26) {
+            GunReflexor.Shot shot = (GunReflexor.Shot) this.memo.get("refShot");
+            float[] h = new float[5];
+            for (int i = 0; i < 5; i++) {
+                h[i] = health(this.memo.get("r" + i));
+            }
+            check("Beam Reflexor : quatre monstres au plus par tir, 1,5 point au premier puis 1, un eco jaune de plus au 2e"
+                            + " et au 3e (200 -> 197), le cinquieme intact",
+                    shot != null && shot.enemies() == 4 && shot.dead() && shot.extraPaid() == 2 && data(f).ecoYellow() == 197
+                            && h[0] < h[1] && h[1] < 20.0F && h[2] < 20.0F && h[3] < 20.0F && h[4] == 20.0F,
+                    (shot == null ? "pas de tir" : "touches " + shot.enemies() + ", eteint " + shot.dead() + ", eco de plus "
+                            + shot.extraPaid()) + ", jaune " + data(f).ecoYellow() + ", PV " + java.util.Arrays.toString(h));
+            purge();
+            form(f, GunForm.YELLOW_2);
+            eco(f, 100, 1, 200, 15);
+            look(f, EAST, 0.0F);
+            Vec3 eye = f.getEyePosition();
+            for (int i = 0; i < 3; i++) {
+                this.memo.put("r" + i, monster(HavenInvasion.Kind.ZOMBIE, eye.add(6.0 + 3.0 * i, 0.0, 0.0)));
+            }
+            press(f);
+            List<GunReflexor.Shot> shots = GunReflexor.of(f);
+            this.memo.put("refShot", shots.isEmpty() ? null : shots.get(shots.size() - 1));
+            return false;
+        }
+        if (t == 33) {
+            GunReflexor.Shot shot = (GunReflexor.Shot) this.memo.get("refShot");
+            check("Beam Reflexor : reserve vide au 2e monstre, le tir s'eteint sur lui ; le 3e est intact",
+                    shot != null && shot.enemies() == 2 && shot.dead() && shot.extraPaid() == 0 && data(f).ecoYellow() == 0
+                            && health(this.memo.get("r2")) == 20.0F,
+                    (shot == null ? "pas de tir" : "touches " + shot.enemies() + ", eteint " + shot.dead()) + ", jaune "
+                            + data(f).ecoYellow() + ", PV du 3e " + health(this.memo.get("r2")));
+            purge();
+            return true;
+        }
+        GunFire.tick(f);
+        return false;
+    }
+
+    /** Gyro Burster : seuil de 10, soucoupe unique, second appui, 160 tirs et 50 eco en 80 tiques, reserve vide, fin de vie. */
+    private boolean gyro(int t) {
+        FakePlayer f = this.a;
+        AABB around = new AABB(this.site, this.site).inflate(96.0);
+        if (t == 0) {
+            purge();
+            form(f, GunForm.YELLOW_3);
+            eco(f, 0, 9, 0, 0);
+            look(f, EAST, 0.0F);
+            GunFire.clearLog(f);
+            press(f);
+            check("Gyro Burster : sous 10 eco jaunes (9), aucune soucoupe ne part : comme dans le jeu, l'arme bascule sur"
+                            + " le Blaster, la premiere arme qui a de quoi tirer",
+                    GunFire.saucer(f) == null && data(f).form() == GunForm.YELLOW_1,
+                    "forme " + data(f).form().id + ", jaune " + data(f).ecoYellow());
+            return false;
+        }
+        if (t == 2) {
+            form(f, GunForm.YELLOW_3);
+            full(f);
+            Vec3 eye = f.getEyePosition();
+            this.memo.put("g0", monster(HavenInvasion.Kind.ZOMBIE, eye.add(10.0, 3.0, 0.0)));
+            this.memo.put("g1", monster(HavenInvasion.Kind.ZOMBIE, eye.add(8.0, 0.0, 6.0)));
+            this.memo.put("g2", monster(HavenInvasion.Kind.ZOMBIE, eye.add(12.0, -2.0, -5.0)));
+            press(f);
+            GunSaucerEntity saucer = GunFire.saucer(f);
+            check("Gyro Burster : l'appui lance la soucoupe, sans rien prelever (elle boira son eco en tirant)",
+                    saucer != null && saucer.phase() == GunSaucerEntity.FLY && !saucer.firing() && data(f).ecoYellow() == 200,
+                    saucer == null ? "pas de soucoupe" : "phase " + saucer.phase() + ", jaune " + data(f).ecoYellow());
+            return false;
+        }
+        if (t == 5) {
+            press(f);
+            GunSaucerEntity saucer = GunFire.saucer(f);
+            check("Gyro Burster : second appui avant la rafale : la soucoupe se reveille sur place et tire",
+                    saucer != null && saucer.phase() == GunSaucerEntity.SPIN && saucer.firing()
+                            && saucer.getDeltaMovement().lengthSqr() < 1.0e-9,
+                    saucer == null ? "pas de soucoupe" : "phase " + saucer.phase() + ", tire " + saucer.firing());
+            return false;
+        }
+        if (t == 8) {
+            press(f);
+            int count = this.level.getEntitiesOfClass(GunSaucerEntity.class, around, s -> s.getOwner() == f).size();
+            check("Gyro Burster : une seule soucoupe a la fois : l'appui pendant la rafale ne lance rien",
+                    count == 1 && data(f).ecoYellow() > 190, count + " soucoupe(s), jaune " + data(f).ecoYellow());
+            this.memo.put("gyro", GunFire.saucer(f));
+            return false;
+        }
+        if (t == 95) {
+            GunSaucerEntity saucer = (GunSaucerEntity) this.memo.get("gyro");
+            boolean dead = health(this.memo.get("g0")) == 0.0F && health(this.memo.get("g1")) == 0.0F
+                    && health(this.memo.get("g2")) == 0.0F;
+            check("Gyro Burster : 80 tiques de rafale, 2 tirs par tique (160), 50 eco jaunes bus au fil des tiques (200 -> 150),"
+                            + " les trois monstres vus sont tues, puis les tirs partent vers le bas",
+                    saucer != null && saucer.shots() == 160 && saucer.spent() == 50 && data(f).ecoYellow() == 150 && dead
+                            && saucer.strays() > 0 && saucer.hits() >= 6 && !saucer.firing(),
+                    saucer == null ? "pas de soucoupe" : "tirs " + saucer.shots() + ", touches " + saucer.hits() + ", perdus "
+                            + saucer.strays() + ", eco bu " + saucer.spent() + ", jaune " + data(f).ecoYellow() + ", monstres morts "
+                            + dead + ", phase " + saucer.phase());
+            return false;
+        }
+        if (t == 230) {
+            GunSaucerEntity saucer = (GunSaucerEntity) this.memo.get("gyro");
+            boolean gone = saucer != null && saucer.isRemoved();
+            purge();
+            form(f, GunForm.YELLOW_3);
+            eco(f, 0, 20, 0, 0);
+            look(f, EAST, 0.0F);
+            press(f);
+            GunSaucerEntity next = GunFire.saucer(f);
+            check("Gyro Burster : la rafale finie, la soucoupe tombe, se pose et s'eteint ; un nouveau lancer est alors permis",
+                    gone && next != null && next != saucer, "premiere retiree " + gone + ", nouvelle " + (next != null));
+            this.memo.put("gyro", next);
+            return false;
+        }
+        if (t == 233) {
+            press(f);
+            return false;
+        }
+        if (t == 275) {
+            GunSaucerEntity saucer = (GunSaucerEntity) this.memo.get("gyro");
+            check("Gyro Burster : reserve de 20 : la soucoupe boit tout (32 ou 33 tiques de rafale), puis s'arrete et tombe",
+                    saucer != null && saucer.spent() == 20 && data(f).ecoYellow() == 0 && !saucer.firing()
+                            && saucer.shots() >= 64 && saucer.shots() <= 66,
+                    saucer == null ? "pas de soucoupe" : "eco bu " + saucer.spent() + ", jaune " + data(f).ecoYellow() + ", tirs "
+                            + saucer.shots() + ", phase " + saucer.phase());
+            if (saucer != null) {
+                saucer.discard();
+            }
+            purge();
+            full(f);
+            return true;
+        }
+        GunFire.tick(f);
+        return false;
     }
 
     private boolean harmless(int t) {
@@ -1422,7 +1890,8 @@ final class GunFireBench {
             }
         }
         AABB around = new AABB(this.site, this.site).inflate(96.0);
-        for (Class<? extends Entity> type : List.of(GunBlasterShotEntity.class, GunPeaceBallEntity.class, GunArcEntity.class)) {
+        for (Class<? extends Entity> type : List.of(GunBlasterShotEntity.class, GunPeaceBallEntity.class, GunArcEntity.class,
+                GunShockwaveEntity.class, GunGrenadeEntity.class, GunSaucerEntity.class)) {
             for (Entity e : this.level.getEntitiesOfClass(type, around)) {
                 e.discard();
                 entities++;

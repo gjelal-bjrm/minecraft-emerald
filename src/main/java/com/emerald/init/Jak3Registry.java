@@ -127,6 +127,42 @@ public class Jak3Registry {
                             .updateInterval(5)
                             .build("gun_eco"));
 
+    /** Onde du Wave Concussor : immobile, le client la dessine d'apres son age ; aucun paquet ensuite. */
+    public static final DeferredHolder<EntityType<?>, EntityType<com.emerald.jak.gun.GunShockwaveEntity>> GUN_SHOCKWAVE =
+            ENTITIES.register("gun_shockwave", () ->
+                    EntityType.Builder.<com.emerald.jak.gun.GunShockwaveEntity>of(
+                                    com.emerald.jak.gun.GunShockwaveEntity::new, MobCategory.MISC)
+                            .noSave()
+                            .sized(0.5f, 0.5f)
+                            .fireImmune()
+                            .clientTrackingRange(10)
+                            .updateInterval(Integer.MAX_VALUE)
+                            .build("gun_shockwave"));
+
+    /** Grenade du Plasmite RPG : 3,25 blocs par tique au plus, sous le plafond des paquets ; suivie a chaque tique. */
+    public static final DeferredHolder<EntityType<?>, EntityType<com.emerald.jak.gun.GunGrenadeEntity>> GUN_GRENADE =
+            ENTITIES.register("gun_grenade", () ->
+                    EntityType.Builder.<com.emerald.jak.gun.GunGrenadeEntity>of(
+                                    com.emerald.jak.gun.GunGrenadeEntity::new, MobCategory.MISC)
+                            .noSave()
+                            .sized(0.35f, 0.35f)
+                            .fireImmune()
+                            .clientTrackingRange(8)
+                            .updateInterval(1)
+                            .build("gun_grenade"));
+
+    /** Soucoupe du Gyro Burster : une tique rapide, puis une derive lente ; suivie a chaque tique. */
+    public static final DeferredHolder<EntityType<?>, EntityType<com.emerald.jak.gun.GunSaucerEntity>> GUN_SAUCER =
+            ENTITIES.register("gun_saucer", () ->
+                    EntityType.Builder.<com.emerald.jak.gun.GunSaucerEntity>of(
+                                    com.emerald.jak.gun.GunSaucerEntity::new, MobCategory.MISC)
+                            .noSave()
+                            .sized(0.9f, 0.3f)
+                            .fireImmune()
+                            .clientTrackingRange(8)
+                            .updateInterval(1)
+                            .build("gun_saucer"));
+
     // -------------------------------------------------------------------------
     // Structure types
     // -------------------------------------------------------------------------

@@ -166,6 +166,8 @@ LEVEL = "common"
 GUN = ("morph_gun", "gun-lod0")
 AMMO = [("gun_ammo_red", "gun-ammo-red-lod0"), ("gun_ammo_yellow", "gun-ammo-yellow-lod0"),
         ("gun_ammo_blue", "gun-ammo-blue-lod0"), ("gun_ammo_dark", "gun-ammo-dark-lod0")]
+# les projectiles a modele des armes ameliorees (jalon B) : la grenade du Plasmite RPG, la soucoupe du Gyro Burster
+SHOTS = [("gun_grenade", "gun-grenade-lod0"), ("gun_saucer", "gun-saucer-lod0")]
 
 # (pickup-type de Jak, nom de forme, pose, nom de l'arme)
 FORMS = [(26, "gun-red-1", "gun-idle-red", "Scatter Gun"),
@@ -876,7 +878,7 @@ def main():
     os.makedirs(args.out, exist_ok=True)
 
     gun_glb = Glb(GUN[1])
-    models = [read_model(gun_glb, GUN[0])] + [read_model(Glb(name), model) for model, name in AMMO]
+    models = [read_model(gun_glb, GUN[0])] + [read_model(Glb(name), model) for model, name in AMMO + SHOTS]
     atlas, tiles = build_atlas(models)
     atlas_path = os.path.join(args.out, "morph_gun.png")
     atlas.save(atlas_path)

@@ -5972,3 +5972,106 @@ impacts, frappe de zone -- a BORNER a la distance de simulation plutot qu'a
 serveur et du reseau : plafonner les trainees visibles) ; le Mass Inverter n'a
 de valeur que si le x2 differe est vraiment porte ; la Super Nova coute 10
 sombres sur 15.
+
+## 71. Jalon B, premiere moitie : les armes rouges et jaunes ameliorees, et le plan des quetes *(19 sept. 2026)*
+
+### 71.1 Ce que le joueur a decide le 19 sept.
+
+Ordre confirme : **les huit armes d'abord, les quetes ensuite** (« des quetes
+plus tard avec des PNJ »). Tant que les quetes n'existent pas, tout ce qui est
+code est DONNE A L'ARRIVEE pour etre essaye (`GunForm.ARRIVAL_MASK`) ; le jour
+des quetes, on n'arrivera plus qu'avec le Scatter Gun.
+
+**Le plan des PNJ, valide** -- quatre mentors, un par couleur d'eco, plus le
+commandant :
+
+| PNJ | Ou | Quetes | Armes gagnees |
+|---|---|---|---|
+| **Torn**, le commandant | comptoir du Hip Hog | accueil, patrouille des 12 points d'eco, puis CONTRATS REPETABLES (defense du port, tenir une minute) qui paient en bonus pour le Defi | -- |
+| **Sig**, le chasseur | place du bras ouest | chasses : 25 monstres au Scatter Gun ; 3 brutes en armure | Wave Concussor, Plasmite RPG |
+| **Tess**, l'armuriere | stand de tir | epreuves de tir : cibles chronometrees ; tirs a plus de 20 blocs ; phantoms en vol | Blaster, Beam Reflexor, Gyro Burster |
+| **Keira**, la mecano | cour du bras central | courses aux anneaux : rase-sol, voie haute par-dessus le pont des tours, moto | Vulcan Fury, Arc Wielder, Needle Lazer |
+| **Samos**, le sage | plate-forme de la tour ouest | recolte d'eco des quatre couleurs sans mourir ; tenir la plate-forme 60 s ; trois vagues et une elite | Peace Maker, Mass Inverter, Super Nova |
+
+- PNJ : **les heros de Jak 3 sur un corps de villageois** (choix du joueur parmi
+  trois : heros de Jak 3, habitants anonymes, attendre les vrais modeles 3D). Une
+  entite a nous, que les zombies n'attaquent pas ; les vrais modeles pourront
+  venir plus tard, rendus montres d'abord.
+- **Bonus pour le Defi retenus** : sceaux de reussite garantie (amelioration,
+  rarete, Specialisation -- l'idee du §66 B), provisions de depart (Pierres de
+  Forge, lingots d'Arcencium, Eclats), rune garantie. **Refuse** : le « second
+  souffle » (une resurrection gratuite).
+- Une quete d'arme est unique et donne l'arme PLUS un bonus ; progression par
+  joueur, gardee d'une partie a l'autre (modele : SpecializationStore) ; lignes
+  independantes, armes de rang 3 apres six quetes faites ; dialogue par carte
+  cliquable dans le chat (comme le choix du regime, §41), suivi de quete a l'ecran.
+
+### 71.2 Les quatre armes, et les choix de portage
+
+Chiffres : §70 et `GunSpec`. Ce qui n'allait pas de soi :
+
+- **Deux chiffres pour le cout** : `cost` est le SEUIL du jeu (ammo-required),
+  `debit` ce que le tir preleve aussitot. Le Wave Concussor (paliers de charge),
+  le Beam Reflexor (un de plus au 2e et au 3e monstre) et le Gyro Burster (50 sur
+  la rafale) prelevent le reste eux-memes, par entiers : les paliers du jeu
+  tombent juste (0,625 par tique = 5/8), aucun accumulateur a virgule sur la pile.
+- **La gachette CHARGE** (Wave Concussor). Un MAINTIEN dans le jeu, mais le tir
+  part au relachement : la charge vit dans `GunFire.State`, paie ses paliers
+  (`GunSpec.waveCost`), gele sa force a reserve vide. **Une gachette perdue vaut un
+  relachement et TIRE** -- le delai de dix tiques qui annulait prudemment les
+  autres armes aurait mange la charge payee. L'arme quitte la main : charge
+  eteinte, eco rendu (la regle de la boule du Peace Maker). Verrou de changement
+  d'arme etendu (`GunFire.isCharging`). Les tiques de gachette de la pile servent
+  au HUD : la case rouge se remplit d'orange pendant la charge.
+- **L'onde est une entite immobile** (`GunShockwaveEntity`) : un seul paquet, le
+  client dessine l'anneau d'apres son age (`GunRenderers.Shockwave`, couronne et
+  rideau en RenderType.lightning) et seme les braises. Boite de culling elargie au
+  rayon final, sinon l'anneau disparait des que son centre sort de l'ecran. Elle
+  court AU SOL (tranche de 4 blocs) et ne casse rien.
+- **La grenade** (`GunGrenadeEntity`) reste sous le plafond de 3,9 blocs par tique
+  des paquets : suivi vanilla, pas de calcul cote client. Visee balistique du jeu
+  portee telle quelle (mesuree : y de 0,1344 pour une cible a 25 blocs). Ecart
+  assume : le souffle CASSE le decor (48 blocs dans 3,5) -- le plan disait « sans
+  casse », mais une roquette qui ne casse rien dans une ville ou le Blaster casse
+  aurait detonne ; la ville se reconstruit en 10 a 15 s.
+- **Le Beam Reflexor n'est PAS une entite** (`GunReflexor`) : dix blocs par tique
+  et un chemin que seul le serveur connait (hasard de la re-visee). Il vit en
+  memoire du serveur et envoie chaque tique SA LIGNE BRISEE
+  (`GunTracePayload.REFLEXOR`). Garde-fou : il s'eteint au bord des troncons
+  charges -- un rayon dans un troncon absent le ferait charger. Ecart : la
+  re-visee exige une ligne de vue (le jeu non), pour ne pas mitrailler un mur.
+- **La soucoupe** (`GunSaucerEntity`) tire des RAYONS, pas des projectiles :
+  quarante entites par seconde et par soucoupe pour deux tiques de vol, non. Poids
+  du tirage simplifies (devant le tireur x3) : les autres poids du jeu visent des
+  especes absentes de Haven. Un mur pendant le lancer la renvoie (le jeu la fait
+  exploser). Sous 10 eco jaunes, le jeu bascule sur le Blaster : on fait de meme.
+- **Modeles** : `gun-grenade` et `gun-saucer` cuits par `tools/jak_gun.py` (liste
+  SHOTS) dans l'atlas commun, qui garde sa taille (256 x 512).
+- **Armes deja donnees** : une arme d'un lobby en cours recoit les formes neuves A
+  LA CONNEXION (`MorphGunKeeper.upgrade`), pas dans le gardien, qui repasserait
+  toutes les secondes sur une arme dont on a retire des formes expres.
+
+### 71.3 Ce que les verifications ont appris
+
+- Banc `armes` : 150 OK. Wave : paliers 99 puis 95, onde de 18 blocs, trois
+  monstres frappes une fois (PV 3,2 / 12,3 / 16,3 a 5, 12 et 17,5 blocs), intacts
+  hors tranche et derriere un mur, pousses (1,0 bloc par tique), gachette perdue
+  qui tire (16 tiques, 4 eco), eco rendu. Plasmite : 90, y de 0,2873, second tir
+  refuse, visee 0,1344, monstre vise tue, rebond. Reflexor : 199, rebond a 6,67,
+  sol a 40 degres -> 0,236 au lieu de 0,64, quatre monstres et 197, reserve vide au
+  2e. Gyro : 160 tirs, 50 eco, trois monstres tues, fin de vie, reserve de 20.
+- **Un banc peut salir le monde** : un tir casse une pierre d'un mur d'essai,
+  `HavenDestruction` la repose 10 a 15 s plus tard -- APRES le retrait du mur, et
+  pour de bon. Le passage suivant trouvait deux pierres dans son ciel. `unslab`
+  reconstruit d'abord, et `prepare` balaie les pierres d'un passage interrompu.
+- **La planche a servi** (`tools/gun_particles.py --planche-b`) : les traits de la
+  soucoupe etaient presque INVISIBLES (points de 0,1 tous les 0,75 bloc) et celui
+  du Reflexor trop fin ; grossis (0,16 tous les 0,5 bloc ; 0,22) avant tout essai
+  en jeu. Les chiffres du banc ne pouvaient pas le dire.
+
+Les six bancs apres ce lot : armes 150, haven 11, salles 26, vote 36, vehicules 129,
+invasion 47, aucun KO.
+
+**Reste du jalon B** : Arc Wielder, Needle Lazer, Mass Inverter, Super Nova
+(modeles `gun-dark-2-ring`, `gun-nuke`, `gun-nuke-sphere` deja extraits), puis
+les quetes.

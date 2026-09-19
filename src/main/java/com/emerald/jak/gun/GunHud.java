@@ -19,7 +19,8 @@ import net.minecraft.world.item.ItemStack;
  * tenue est encadree. Une reserve vide clignote en rouge -- le chargeur disparait
  * du modele en meme temps (MorphGunItemRenderer) : sans cette explication, on
  * croirait a un bogue. Au-dessus, le nom de l'arme tenue ; « a sec » quand sa
- * reserve est vide.
+ * reserve est vide. Pendant la charge du Wave Concussor, la case rouge se remplit
+ * d'orange : pleine, l'onde partira a sa plus grande portee.
  *
  * VISIBLE SEULEMENT arme en main dans Haven, hors vehicule (voitures et motos ont
  * leur rappel), ni spectateur, ni HUD cache (F1). Place au-dessus des coeurs, de
@@ -75,15 +76,32 @@ public final class GunHud {
         return below + 2 + CELL_H + NAME_H + LINE_H;
     }
 
+    /**
+     * La charge du Wave Concussor, de 0 a 1, lue sur la pile : GunFire y note la tique du
+     * debut de charge (triggerStart) et celle de l'onde (triggerEnd) ; tant que la fin
+     * precede le debut, l'arme charge. Zero pour toute autre arme.
+     */
+    static double waveCharge(MorphGunData data, long time) {
+        if (data.form() != GunForm.RED_2 || data.triggerStart() <= 0L || data.triggerEnd() >= data.triggerStart()) {
+            return 0.0;
+        }
+        return Math.max(0.0, Math.min(1.0, (time - data.triggerStart()) / (double) GunSpec.WAVE_CHARGE_FULL));
+    }
+
     /** Le HUD, coin gauche en `left`, bas des jauges en `bottom`. */
     static void draw(GuiGraphics graphics, Font font, int left, int bottom, MorphGunData data, long time) {
         int top = bottom - CELL_H;
         GunForm.Family held = data.form().family;
+        double charge = waveCharge(data, time);
         for (GunForm.Family family : GunForm.Family.values()) {
             int x = left + family.ordinal() * (CELL_W + GAP);
             int eco = data.eco(family);
             int text = 0xFF000000 | MorphGunItem.textColor(family);
             graphics.fill(x, top, x + CELL_W, bottom, 0xB0101014);
+            if (family == held && charge > 0.0) {
+                // la charge du Wave Concussor : la case se remplit, pleine a 1 s
+                graphics.fill(x, top, x + (int) Math.round(CELL_W * charge), bottom, 0x80FF7A20);
+            }
             if (family == held) {
                 graphics.fill(x - 1, top - 1, x + CELL_W + 1, top, text);
                 graphics.fill(x - 1, bottom, x + CELL_W + 1, bottom + 1, text);

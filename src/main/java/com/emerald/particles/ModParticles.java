@@ -115,4 +115,30 @@ public class ModParticles {
 
     public static final DeferredHolder<ParticleType<?>, SimpleParticleType> GUN_ECO_GLINT =
             PARTICLES.register("gun_eco_glint", () -> new SimpleParticleType(true));
+
+    // Les ameliorations rouges et jaunes (jalon B) : huit types de plus, toujours un par usage.
+
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> GUN_WAVE_CHARGE =
+            PARTICLES.register("gun_wave_charge", () -> new SimpleParticleType(true));
+
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> GUN_WAVE_DUST =
+            PARTICLES.register("gun_wave_dust", () -> new SimpleParticleType(true));
+
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> GUN_PLASMITE_TRAIL =
+            PARTICLES.register("gun_plasmite_trail", () -> new SimpleParticleType(true));
+
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> GUN_PLASMITE_BLAST =
+            PARTICLES.register("gun_plasmite_blast", () -> new SimpleParticleType(true));
+
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> GUN_REFLEXOR_BOLT =
+            PARTICLES.register("gun_reflexor_bolt", () -> new SimpleParticleType(true));
+
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> GUN_REFLEXOR_SPARK =
+            PARTICLES.register("gun_reflexor_spark", () -> new SimpleParticleType(true));
+
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> GUN_GYRO_TRACER =
+            PARTICLES.register("gun_gyro_tracer", () -> new SimpleParticleType(true));
+
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> GUN_GYRO_SPARK =
+            PARTICLES.register("gun_gyro_spark", () -> new SimpleParticleType(true));
 }

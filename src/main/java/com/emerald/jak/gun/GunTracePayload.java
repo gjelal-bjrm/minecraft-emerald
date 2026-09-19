@@ -8,11 +8,16 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 
 /**
- * Les traces des tirs instantanes (sondes du Scatter Gun, balle de la Vulcan
- * Fury), UN paquet par salve : le client dessine les trainees et les eclats.
+ * Les traces des tirs que le client ne peut pas deviner, UN paquet par salve : il
+ * dessine les trainees et les eclats.
  *
- * @param shooter l'identifiant d'entite du tireur (la bouche du canon se calcule chez le client)
- * @param weapon  {@link #SCATTER} ou {@link #VULCAN}
+ *  - {@link #SCATTER}, {@link #VULCAN}, {@link #GYRO} : des traces EN EVENTAIL, chacune de l'origine a sa fin ;
+ *  - {@link #REFLEXOR} : UNE LIGNE BRISEE, le chemin du tir pendant la tique, de
+ *    l'origine au premier point, puis de point en point (rebonds).
+ *
+ * @param shooter l'identifiant d'entite du tireur, dont le client calcule la bouche du canon ; -1 quand la
+ *                trace part de l'origine donnee (soucoupe du Gyro Burster, tir du Beam Reflexor deja en vol)
+ * @param weapon  {@link #SCATTER}, {@link #VULCAN}, {@link #REFLEXOR} ou {@link #GYRO}
  * @param ends    quatre flottants par trace : x, y, z de la fin, puis {@link #MISS}, {@link #BLOCK} ou {@link #TARGET}
  */
 public record GunTracePayload(int shooter, int weapon, double ox, double oy, double oz, float[] ends)
@@ -20,6 +25,8 @@ public record GunTracePayload(int shooter, int weapon, double ox, double oy, dou
 
     public static final int SCATTER = 0;
     public static final int VULCAN = 1;
+    public static final int REFLEXOR = 2;
+    public static final int GYRO = 3;
 
     public static final int MISS = 0;
     public static final int BLOCK = 1;

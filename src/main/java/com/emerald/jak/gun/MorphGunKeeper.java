@@ -347,7 +347,7 @@ public final class MorphGunKeeper {
         boolean created = false;
         if (keep == null) {
             MorphGunData last = LAST.get(id);
-            MorphGunData data = last != null && last.lobby() == lobby ? last : MorphGunData.fresh(lobby, GunForm.BASE_MASK);
+            MorphGunData data = last != null && last.lobby() == lobby ? last : MorphGunData.fresh(lobby, GunForm.ARRIVAL_MASK);
             gun = new ItemStack(ModItems.MORPH_GUN.get());
             MorphGunData.write(gun, data);
             created = true;
@@ -595,9 +595,23 @@ public final class MorphGunKeeper {
     static void login(ServerPlayer player) {
         if (allowed(player)) {
             ensure(player);
+            upgrade(player);
         } else {
             strip(player, true);
             forget(player.getUUID());
+        }
+    }
+
+    /**
+     * Une arme donnee par une version precedente du mod, dans ce meme lobby, recoit A LA
+     * CONNEXION les formes ajoutees depuis (GunForm.ARRIVAL_MASK). Pas dans le gardien :
+     * il repasserait toutes les secondes sur une arme dont on a retire des formes expres.
+     */
+    private static void upgrade(ServerPlayer player) {
+        ItemStack gun = find(player);
+        MorphGunData held = gun == null ? null : MorphGunData.of(gun);
+        if (held != null && (held.owned() & GunForm.ARRIVAL_MASK) != GunForm.ARRIVAL_MASK) {
+            MorphGunData.write(gun, held.withOwned(held.owned() | GunForm.ARRIVAL_MASK));
         }
     }
 
