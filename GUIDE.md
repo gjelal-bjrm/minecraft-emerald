@@ -87,6 +87,10 @@ trois blocs du sol. Les voitures disparaissent au départ vers le village.
     de la carte de trafic du port : neuf blocs au-dessus de la rue (hors de la
     ville, neuf blocs au-dessus du sol). Si quelque chose bloque la montée plus
     de deux secondes, elle redescend.
+  - **La voie haute monte d'elle-même au-dessus du pont entre les deux tours.**
+    Comme dans Jak 3, elle s'élève là de dix blocs, puis revient à sa hauteur
+    habituelle : on traverse à pleine vitesse sans rien toucher, par n'importe
+    quel côté. Partout ailleurs, elle garde la même hauteur qu'avant.
   - Un nouvel appui sur Espace la fait redescendre jusqu'au sol.
 - Un rappel s'affiche à l'écran pendant qu'on conduit. En vue à la troisième
   personne, la caméra recule pour montrer toute la voiture.

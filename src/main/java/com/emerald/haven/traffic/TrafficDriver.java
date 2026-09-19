@@ -205,8 +205,8 @@ public final class TrafficDriver {
         double vx = v.x + (desiredX - v.x) * SPEED_GAIN * TICK;
         double vz = v.z + (desiredZ - v.z) * SPEED_GAIN * TICK;
 
-        // l'altitude de la voie entre les deux noeuds, en m et m/s comme dans le jeu
-        double laneY = Mth.lerp(Mth.clamp(s / length, 0.0, 1.0), start.y, end.y) + HavenTraffic.LANE_HANG;
+        // l'altitude de la voie a l'aplomb du vehicule (la carte de hauteur), en m et m/s comme dans le jeu
+        double laneY = HavenTraffic.laneY(origin, pos.x, pos.z);
         double vyMs = v.y * 20.0;
         vyMs += (VERTICAL_GAIN * (laneY - pos.y) - vyMs) * TICK;
         double vy = vyMs / 20.0;

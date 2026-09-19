@@ -5809,3 +5809,166 @@ tous avec pilote ; 8 sur 8 suivis deux secondes ont parcouru plus de 10 blocs,
 14 sur 14 entre 5 et 22 m/s ; tique 16,0 ms a 522 habitants et 14 vehicules,
 sur une reference de 4,7 ms. En jeu, autour d'un joueur, la zone qui tique
 fait 300 blocs de cote et les voies s'y remplissent a leur quota.
+
+## 69. La voie haute passe au-dessus du pont entre les tours *(19 sept. 2026)*
+
+**Le retour du joueur** : « la hauteur max n'est pas assez haute vers les ponts
+entre les deux tours dans la ville, il faudrait adapter la hauteur max seulement
+quand ce n'est pas assez haut ».
+
+**La cause.** La voie haute du joueur etait PLATE : cellule 75,0 partout
+(`VehiclePhysics.HAVEN_TRAFFIC_CELL`), parce que la carte de trafic de Jak 3 vaut
+17,5 m « presque partout » sur le port. Presque : le tablier du pont entre les
+deux tours monte en arc de la cellule 66 aux cellules 74 et 75 (dessus en 76,0),
+sur 28 blocs de large. Une voiture pilotee en voie haute a ses propulseurs en
+75,0 et le dessous de ses boites vers 73 : elle heurtait le tablier DE COTE. Les
+sondes ne regardent que vers le bas, rien ne la faisait monter.
+
+**Ce que fait le jeu.** `*traffic-height-map*` a une BOSSE a cet endroit : +10 m
+au-dessus du pont (cellule 85), sur une emprise d'environ 170 x 100 blocs, en
+pente douce (0,29 au plus). Et le jeu relit cette carte a chaque image pour la
+voiture du joueur comme pour le trafic (`hvehicle.gc:726-728` ; `:619` pour le
+trafic) : le niveau de vol n'est pas une constante. Le cable tendu entre les
+tours passe a la cellule 106, vingt blocs au-dessus de la bosse.
+
+**« Seulement quand ce n'est pas assez haut ».** La carte du jeu a cinq bosses
+sur le port, et des creux de 1 a 4 blocs (bras du nord, bras de l'est). L'outil
+mesure ce que chaque bosse DEGAGE dans notre volume : les colonnes ou un bloc
+plein coupe la bande d'une voiture a plat (un bloc sous l'origine, trois
+au-dessus) et ne la coupe plus a la hauteur de la carte.
+
+| Bosse | Hauteur | Colonnes degagees | Voie du joueur |
+|---|---|---|---|
+| pont entre les tours | +10 | **1 728** | gardee |
+| carrefour du bras est | +6 | 6 | trafic seulement |
+| bout de la jetee ouest | +7 | 5 | trafic seulement |
+| bout de la jetee est | +7 | 5 | trafic seulement |
+| carrefour du bras ouest | +8 | 1 | trafic seulement |
+
+Les quatre dernieres ne degagent que des cretes de mur : dans notre ville elles
+ne servent a rien, et la voiture du joueur y serait montee sans raison visible.
+Une bosse est gardee pour le joueur des 50 colonnes degagees (`USEFUL_BUMP`).
+Ailleurs sur le port, la voie plate ne percute rien que la carte du jeu evite
+(rendu `build/jak/traffic/voie_haute.png`).
+
+**Le changement.**
+- `tools/jak_navgraph.py --mod` ecrit aussi `haven_lane_map.json` : la carte
+  decoupee sur l'emprise du port (55 x 33 points, pas de 24 blocs), en cellules,
+  en deux grilles -- `rise`, la carte du jeu, et `player_rise`, les bosses
+  gardees pour le joueur. L'outil refuse une decoupe dont le tour n'est pas nul :
+  hors de la decoupe les coordonnees sont bornees, la voie reste plate au large.
+- `haven/traffic/HavenLaneMap` la lit DANS LE JAR, des deux cotes : c'est le
+  client du conducteur qui simule sa voiture, il lui faut le meme plancher qu'au
+  serveur (le gestionnaire de ressources du serveur ne suffit pas). Bilineaire,
+  comme `get-height-at-point`. Sans fichier, voie plate et une erreur au journal.
+- `VehiclePhysics.trafficY` = base 75,0 + `HavenLaneMap.playerRise`, a l'aplomb
+  de la voiture. La fin de montee et la bascule se jugent a cette altitude.
+- Le trafic des habitants suit la carte entiere, creux compris
+  (`HavenTraffic.laneY`), au lieu d'une droite entre les altitudes de ses deux
+  noeuds : c'est a la carte que l'outil avait verifie les voies contre le volume.
+
+**Mesures.** Banc hors jeu (`simu_voie.py` du scratchpad : la loi verticale du
+mod le long de la carte, a 2 blocs par tick) : la voiture traine au plus 1,5
+bloc sous la carte dans les pentes et passe au moins 4,7 blocs au-dessus du
+tablier sur toutes les approches (nord, sud, le long du pont, en diagonale ;
+cara, carc, moto). En jeu (banc vehicules, `planBridge`, trois traversees a
+x 620, gaz a fond) : montee finie au tick 16 ; jamais sous 2,000 blocs par tick ;
+aucune boite dans un bloc ; 5,01 a 5,30 blocs entre les boites et le tablier ;
+propulseurs jusqu'en cellule 85,7 ; passe le pont, retour a la cellule 75,000.
+Hors du pont, la voie du joueur vaut 75,0 la ou le trafic monte de 8 (controle).
+Les six bancs : vehicules 129, invasion 47 (trafic a 0,3 bloc de la carte), haven 11,
+salles 26, vote 36, armes 122, aucun KO.
+Coupe du pont, avant et apres : `rendu_pont.py` du scratchpad, montree au joueur.
+
+**Ce que le joueur verra.** En voie haute, la voiture s'eleve toute seule a
+l'approche du pont entre les tours et redescend apres, comme le trafic. Rien ne
+change ailleurs.
+
+## 70. Les huit armes ameliorees : ce que dit le source de Jak 3 *(etude du 19 sept. 2026)*
+
+Reference du jalon B du Morph Gun. Lu dans `goal_src/jak3/engine/target/gun/`
+(`gun-red-shot.gc`, `gun-yellow-shot.gc`, `gun-blue-shot.gc`, `gun-dark-shot.gc`,
+`gun-util.gc`) et `engine/target/target-gun.gc`. Conversions : 4096 unites = 1 m
+= 1 bloc ; (seconds 1) = 300 tiques GOAL = 20 tiques du jeu ; vitesse en blocs
+par tique = m/s / 20. Tout est LU dans le code, sauf mention « deduit ».
+
+### 70.1 Le socle commun
+
+- **Table maitresse** `target-gun-type-set!` (`target-gun.gc:633-897`) : gachette,
+  delai, portee par arme. Rouge 1 et 3 : appui, 330 tiques GOAL (1,1 s), 180 avec
+  le secret. Rouge 2 : maintien, 240 (0,8 s). Jaune 1 et 2 : appui, 96 (0,32 s).
+  Jaune 3 : appui, delai 0. Bleu 1, 2, 3 : canon tournant (delai 120 -> 30 selon
+  la rotation), mais `target-gun-check` force le delai de bleu 2 a 0
+  (`:3353-3361`) : faisceau continu. Sombre 1, 2, 3 : maintien, 255 (0,85 s).
+- **Le cout se paie de deux facons** : `ammo-required` n'est qu'un SEUIL ; le
+  debit a lieu dans `target-gun-fire` pour une liste fermee (`:2899-2916` : les
+  quatre armes de base, rouge 3, jaune 2, sombre 2, sombre 3). Rouge 2, jaune 3,
+  bleu 2 et bleu 3 se debitent eux-memes, par paliers ou par seconde : il faut un
+  ACCUMULATEUR FRACTIONNAIRE cote serveur (MorphGunData compte en entiers).
+- **Plafonds** (`fact-h.gc:169-172`, `game-info.gc:72-146`) : jaune 100, rouge 50,
+  bleu 100, sombre 5 ; chaque amelioration de capacite ajoute la moitie de la base
+  (la base entiere pour le sombre) : 200 / 100 / 200 / 15 avec les deux, ce que
+  `GunForm.Family.capacity` porte deja.
+- **Changement d'arme** (`target-gun-marking-menu`, `:1324-1574`) : nouvel appui
+  sur la meme direction = arme possedee suivante, en boucle -- `GunForm.select`
+  le fait deja. REFUSE pendant une charge (`charge-active?`) : Peace Maker ET
+  Wave Concussor.
+- **Delais propres** (`gun-util.gc:1121-1141`, `target-gun-can-fire-dark?`) :
+  2 s entre deux Mass Inverter, 9 s entre deux Super Nova, en plus du delai de
+  gachette : un tableau de dernier tir par forme et par joueur.
+- **Une cible ne prend pas deux fois le meme tir** : le jeu s'appuie sur ses
+  `attack-id`. Wave Concussor (liste de 64 cibles deja frappees), Beam Reflexor
+  (6 ignores pendant 0,15 s), Arc Wielder (id renouvele toutes les 0,4 s). Chez
+  nous `GunImpacts.hurt` remet l'invulnerabilite a zero : l'anti-doublon doit
+  vivre dans le tir.
+
+### 70.2 Les huit armes
+
+| Arme | Gachette et cadence | Degats | Cout | Portee et effet |
+|---|---|---|---|---|
+| **Wave Concussor** (rouge 2) | maintien = charge 0,1 a 1 s, tir au RELACHEMENT ; 16 tiques entre deux charges | max(1 ; 5 x intensite) : 5 au centre a pleine charge, 1 au bord | 1 a 5 rouges, par paliers de charge (0,1 / 0,25 / 0,5 / 0,75 / 1 s) | onde au sol autour du tireur, rayon final 3 a 18 blocs selon la charge, etendue en 14 tiques ; une touche par cible ; poussee radiale ; a moins de 6 blocs touche toujours, au-dela ligne de vue |
+| **Plasmite RPG** (rouge 3) | appui ; 22 tiques (12 avec le secret) | 12 dans 20 blocs ; 2 au contact | 10 rouges (8) | grenade a 3,25 blocs/tique, toujours lancee vers le haut (y >= 0,3), gravite 45 m/s2 (0,1125 bloc/tique2), rebonds x0,6, vie 3 s ; visee balistique automatique (cible dans 35 blocs, cone 45 degres, denivele < 7) ; meche de proximite : 13,3 blocs, 0,5 s au plus, immediate a 2 blocs |
+| **Beam Reflexor** (jaune 2) | appui ; 6,4 tiques, comme le Blaster | 1,5 (2 avec le secret), puis 1 des la 2e touche | 1 jaune, +1 au 2e et au 3e ennemi | tir a 10 blocs/tique, 6,67 apres un rebond ; rebonds ILLIMITES sur le decor (le y reflechi plafonne a 0,2 : jamais vers le ciel), 4 ennemis au plus (7) ; apres un rebond, 75 % de chances de se reviser vers un ennemi (sphere de 100 blocs centree 50 devant) ; vie 3 s (5) |
+| **Gyro Burster** (jaune 3) | appui = lance la soucoupe ; 2e appui = l'active sur place ; une seule a la fois | 2 par tir | seuil 10, puis 50 jaunes draines sur la rafale (12,5 par seconde) | soucoupe lancee a 5 blocs/tique vers le haut (31 degres), freinee a 0,5 en 2 tiques, rebondit sur les murs ; tire apres 1 s : 2 tirs par tique pendant 4 s (6 avec le secret), cibles a 35 blocs tirees au sort (ennemi x28, a l'ecran +2), tirs perdus vers le bas faute de cible ; puis tombe et s'eteint |
+| **Arc Wielder** (bleu 2) | canon tournant, faisceau CONTINU tant que la gachette est tenue | 2,5 par cible et par 0,4 s (6,25 par seconde) | 1 bleu a l'amorce, puis 7,5 par seconde | corde de 12 noeuds espaces de 6 blocs (66 au plus) ; chaque noeud s'accroche a l'ennemi le plus proche dans 4 blocs et dans un cone de 53 degres, un ennemi par chaine ; le premier mur coupe l'arc |
+| **Needle Lazer** (bleu 3) | canon tournant (8 -> 2 tiques), TROIS aiguilles par salve | 1 par aiguille | 2 bleus par salve (1,5) | cible tiree au sort dans 40 blocs (ennemi x28, proche +4, a l'ecran +2, jamais a plus de 30 degres au-dessus) ; l'aiguille part EXPRES de travers (15 degres du cote oppose, +-15 au hasard), vole libre 3 a 10 blocs, puis vire a 360 -> 720 degres/s (double apres 1 s) ; 1,5 a 5 blocs/tique selon l'alignement ; AUCUN rebond, vie 3 s |
+| **Mass Inverter** (sombre 2) | maintien ; 2 s entre deux tirs | presque aucun degat direct : a la retombee, 2 x les degats pris en l'air + max(1 ; hauteur / 2) | 1 sombre | champ au sol ne sur le tireur, 0 -> 30 blocs en 1 s (1,5), tenu 6,75 s ; les ennemis levitent 7 a 9 s entre 1 et 3,5 blocs du sol, tournent, et se jettent les uns sur les autres (billard : un autre ennemi dans 25 blocs, cone 45 degres, ligne de vue) |
+| **Super Nova** (sombre 3) | maintien ; 9 s entre deux tirs | 32 par cible | 10 sombres (8) | missile en quatre phases (0,4 bloc/tique 0,2 s ; 0,75 -> 2,5 en 0,4 s ; 2,5 -> 6,75 en 0,5 s avec un arc de 8,5 blocs ; ligne droite 4 s) ; plante dans un mur : deux bips puis detonation apres 1,4 s ; frappe 64 cibles dans 300 m, 0,3 s apres la detonation ; flash 2 s, flou 5 s, champignon |
+
+Sons du jeu (pour choisir des equivalents Minecraft) : `red2-charge`,
+`red2-shot` ; `red3-fire`, `red3-bounce`, `red3-blast` ; `yellow2-shot`,
+`yellow2-ricco` ; `yellow3-shot`, `yellow3-fire`, `yellow3-zap` ;
+`blue-gun2-loop`, `blue-gun2-spin` ; `blue-gun3-shot`, `blue-gun3-trace` ;
+`grav-gun` ; `purple-3-shot`, `purple-3-trail`, `pg3nxplo`.
+
+### 70.3 Ce que notre code porte deja, et ce qui manque
+
+**Deja la** : `GunForm.select` (le cycle de la croix), les capacites,
+`GunFire.tick` et `GunTriggerPayload` (serveur autoritaire), les gachettes
+`PRESS` et `SPIN`, `GunImpacts` (degats, sondes, casse du decor, cibles autour),
+`GunArcEntity` (segment de foudre), `GunBlasterShotEntity` (tir rectiligne
+extrapole par le client), `GunPeaceBallEntity` (charge, lancer, explosion en
+liste de cibles), `GunHud`, le repli a reserve vide.
+
+**Manques communs**, a faire avant les armes : l'accumulateur fractionnaire
+d'eco ; deux gachettes nouvelles, `CHARGE` (tir au relachement : le delai de
+gachette perdue doit TIRER le Wave Concussor, pas l'annuler) et `CONTINUOUS` ;
+le verrou de changement d'arme pendant la charge du Wave Concussor ; les delais
+propres par forme ; l'anti-doublon par tir ; une POLYLIGNE dans
+`GunTracePayload` (Arc Wielder, rebonds du Beam Reflexor).
+
+**Par arme** : Wave Concussor = entite d'onde qui s'etend, intensite
+decroissante, poussee, jauge de charge. Plasmite RPG = grenade a gravite et
+rebonds, visee balistique, meche de proximite. Beam Reflexor = reflexion sur les
+blocs, compteur d'ennemis, re-visee. Gyro Burster = entite tourelle complete,
+tirage pondere, drain par seconde, 2e appui. Arc Wielder = corde a noeuds et
+chainage. Needle Lazer = 3 projectiles, depart de travers, guidage (reprendre
+`ArcenciumBowEvents.steerHoming`). Mass Inverter = champ, etat de levitation par
+monstre, degats differes x2, billard. Super Nova = vol par phases, trois
+impacts, frappe de zone -- a BORNER a la distance de simulation plutot qu'a
+300 blocs --, flash et flou cote client.
+
+**Points d'attention** : le Gyro Burster tire 40 fois par seconde (charge du
+serveur et du reseau : plafonner les trainees visibles) ; le Mass Inverter n'a
+de valeur que si le x2 differe est vraiment porte ; la Super Nova coute 10
+sombres sur 15.

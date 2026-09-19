@@ -34,7 +34,12 @@ Sorties, dans build/jak/traffic :
                             hauteur, en metres du jeu ET en cellules du volume du port ;
     <niveau>_navgraph.png   les voies posees sur la vue de dessus du volume.
 
-    python tools/jak_navgraph.py ctyport
+Avec --mod, dans src/main/resources/data/emeraldweapons/jak :
+    haven_traffic.json      les noeuds et branches vehicule, en cellules ;
+    haven_lane_map.json     la carte de hauteur sur l'emprise du port : la voie haute
+                            du joueur et le trafic la suivent (HavenLaneMap).
+
+    python tools/jak_navgraph.py ctyport [--mod]
 """
 
 import json
@@ -396,6 +401,147 @@ def write_mod(graph, height_map, path):
     print("  mod       %s : %d noeuds, %d branches (%d sorties)" % (
         path, len(nodes), len(branches), sum(1 for b in branches if b["dest"] is None)))
 
+
+USEFUL_BUMP = 50
+
+
+def useful_bumps(rows, x0, z0, spacing):
+    """Les bosses de la carte qui degagent vraiment quelque chose dans le volume du port.
+
+    Le joueur a demande que sa voie haute ne monte « que quand ce n'est pas assez
+    haut ». Une bosse est un groupe de points positifs voisins (8 voisins) de la
+    decoupe. Pour chaque colonne du volume sous une bosse, on compare la bande
+    d'une voiture (un bloc sous l'origine, trois au-dessus) a la base 75 et a la
+    hauteur de la carte : la colonne est DEGAGEE si un bloc plein coupe la voie
+    plate et plus la voie de la carte. Une bosse est gardee des USEFUL_BUMP
+    colonnes degagees. Mesure sur ctyport : le pont entre les tours en degage
+    1728, les quatre autres bosses 1 a 6 chacune (des cretes de mur).
+
+    Rend (rangees pour le joueur, liste des bosses : points, maximum, degagees, gardee).
+    """
+    from jak_preview import dense
+    from jak_voxelize import GRID_DIMS
+    zd, xd = len(rows), len(rows[0])
+    label = [[-1] * xd for _ in range(zd)]
+    bumps = []
+    for iz in range(zd):
+        for ix in range(xd):
+            if rows[iz][ix] <= 0 or label[iz][ix] >= 0:
+                continue
+            index = len(bumps)
+            stack, points = [(ix, iz)], []
+            label[iz][ix] = index
+            while stack:
+                cx, cz = stack.pop()
+                points.append((cx, cz))
+                for nx in (cx - 1, cx, cx + 1):
+                    for nz in (cz - 1, cz, cz + 1):
+                        if 0 <= nx < xd and 0 <= nz < zd and rows[nz][nx] > 0 and label[nz][nx] < 0:
+                            label[nz][nx] = index
+                            stack.append((nx, nz))
+            bumps.append({"points": points, "max": max(rows[z][x] for x, z in points), "freed": 0})
+
+    volume = read_volume("ctyport")
+    w, h, d = GRID_DIMS
+    solid = {i for i, name in enumerate(volume["palette"])
+             if name in ("minecraft:polished_andesite", "minecraft:deepslate_bricks", "minecraft:deepslate_tiles")}
+    cells_b, bw, bd = dense(volume["dims"], volume["runs"], (0, w - 1, 0, d - 1))
+
+    def blocked(x, z, y):
+        return any(0 <= yy < h and cells_b[(yy * bd + z) * bw + x] in solid for yy in range(int(y) - 1, int(y) + 4))
+
+    base = 75.0
+    for z in range(d):
+        fz = (z + 0.5 - z0) / spacing
+        iz = int(fz)
+        if not 0 <= iz < zd - 1:
+            continue
+        tz = fz - iz
+        for x in range(w):
+            fx = (x + 0.5 - x0) / spacing
+            ix = int(fx)
+            if not 0 <= ix < xd - 1:
+                continue
+            corners = [(ix, iz), (ix + 1, iz), (ix, iz + 1), (ix + 1, iz + 1)]
+            owner = next((label[cz][cx] for cx, cz in corners if label[cz][cx] >= 0), -1)
+            if owner < 0:
+                continue
+            tx = fx - ix
+            top = rows[iz][ix] * (1 - tx) + rows[iz][ix + 1] * tx
+            bottom = rows[iz + 1][ix] * (1 - tx) + rows[iz + 1][ix + 1] * tx
+            rise = top * (1 - tz) + bottom * tz
+            if rise > 0.0 and blocked(x, z, base) and not blocked(x, z, base + rise):
+                bumps[owner]["freed"] += 1
+    player = [[0] * xd for _ in range(zd)]
+    for bump in bumps:
+        bump["kept"] = bump["freed"] >= USEFUL_BUMP
+        if bump["kept"]:
+            for x, z in bump["points"]:
+                player[z][x] = rows[z][x]
+    return player, bumps
+
+
+def write_lane_map(height_map, path):
+    """La carte de hauteur sur l'emprise du port, en cellules du volume, pour le mod.
+
+    La voie haute du joueur et le trafic PNJ la suivent en jeu (HavenLaneMap).
+    On garde les points qui couvrent le volume, plus un de marge ; hors de la
+    decoupe, le mod borne les coordonnees comme get-height-at-point : le tour de
+    la decoupe doit donc valoir zero, pour que la voie reste plate au large.
+    """
+    from jak_voxelize import GRID_DIMS
+    w, _, d = GRID_DIMS
+    ox, oy, oz = height_map["offset_m"]
+    xs, zs = height_map["x_spacing_m"], height_map["z_spacing_m"]
+    xd, zd = height_map["x_dim"], height_map["z_dim"]
+    ix0 = max(0, int((GRID_ORIGIN[0] - ox) // xs) - 1)
+    ix1 = min(xd - 1, int((GRID_ORIGIN[0] + w - ox) // xs) + 2)
+    iz0 = max(0, int((GRID_ORIGIN[2] - oz) // zs) - 1)
+    iz1 = min(zd - 1, int((GRID_ORIGIN[2] + d - oz) // zs) + 2)
+    rows = [[height_map["data"][iz * xd + ix] for ix in range(ix0, ix1 + 1)] for iz in range(iz0, iz1 + 1)]
+    ring = rows[0] + rows[-1] + [row[0] for row in rows] + [row[-1] for row in rows]
+    if any(ring):
+        sys.exit("carte de hauteur : le tour de la decoupe n'est pas nul, la voie ne serait pas plate au large")
+    out = {
+        "_format": [
+            "La carte de hauteur de la voie haute de Jak 3 (*traffic-height-map*) sur l'emprise du port, ecrite par",
+            "tools/jak_navgraph.py. UNITES : cellules du volume ctyport (1 cellule = 1 m du jeu = 1 bloc).",
+            "rise[iz][ix] : hauteur de la voie au-dessus de sa base, en blocs, au point (x0 + ix * spacing, z0 + iz * spacing) ;",
+            "  interpolation bilineaire entre les points, coordonnees bornees a la decoupe (tour nul : plat au large).",
+            "  C'est la carte du jeu, bosses et creux : celle du trafic des habitants.",
+            "player_rise : la meme grille pour la voie haute du JOUEUR, qui ne monte que la ou il le faut : seules restent les",
+            "  bosses qui degagent un obstacle du volume (le pont entre les tours) ; les autres bosses et les creux valent zero.",
+            "base : la cellule de la base, 17,5 m du jeu. Le mod garde sa constante 75,0 (VehiclePhysics.HAVEN_TRAFFIC_CELL).",
+            "LU DANS LE JAR PAR LES DEUX COTES : le client du conducteur simule sa voiture.",
+        ],
+        "volume": "ctyport",
+        "base": round(oy - GRID_ORIGIN[1], 3),
+        "spacing": round(xs, 6),
+        "x0": round(ox + ix0 * xs - GRID_ORIGIN[0], 3),
+        "z0": round(oz + iz0 * zs - GRID_ORIGIN[2], 3),
+        "x_dim": ix1 - ix0 + 1, "z_dim": iz1 - iz0 + 1,
+        "rise": rows,
+    }
+    player, bumps = useful_bumps(rows, out["x0"], out["z0"], out["spacing"])
+    out["player_rise"] = player
+    for bump in sorted(bumps, key=lambda b: -b["freed"]):
+        xs_, zs_ = [p[0] for p in bump["points"]], [p[1] for p in bump["points"]]
+        print("  bosse     +%d, %d points, cellules x %.0f..%.0f z %.0f..%.0f : %d colonnes degagees -> %s" % (
+            bump["max"], len(bump["points"]), out["x0"] + min(xs_) * out["spacing"], out["x0"] + max(xs_) * out["spacing"],
+            out["z0"] + min(zs_) * out["spacing"], out["z0"] + max(zs_) * out["spacing"], bump["freed"],
+            "gardee pour le joueur" if bump["kept"] else "trafic seulement"))
+    if abs(xs - zs) > 1e-6 or abs(height_map["y_scale_m"] - 1.0) > 1e-6:
+        sys.exit("carte de hauteur : pas inegaux ou echelle verticale differente de 1, le mod ne les lit pas")
+    text = json.dumps(out, indent=1)
+    # une ligne par rangee de la carte : le fichier se relit comme la carte
+    text = re.sub(r"\[\s+((?:-?\d+,\s+)*-?\d+)\s+\]", lambda m: "[" + re.sub(r"\s+", " ", m.group(1)) + "]", text)
+    with open(path, "w", encoding="utf-8") as handle:
+        handle.write(text)
+    bumps = sum(1 for row in rows for v in row if v > 0)
+    print("  mod       %s : %d x %d points depuis la cellule (%.1f ; %.1f), %d bosses, maximum +%d" % (
+        path, out["x_dim"], out["z_dim"], out["x0"], out["z0"], bumps, max(max(row) for row in rows)))
+
+
 def main():
     level = sys.argv[1] if len(sys.argv) > 1 else "ctyport"
     graph = read_graph(level)
@@ -415,8 +561,9 @@ def main():
         for index, worst, where, a, b in sorted(hits, key=lambda h: -h[1])[:20]:
             print("            segment %3d : %3d blocs pleins au pire, en cellule %s ; de %s a %s" % (index, worst, where, a, b))
         if "--mod" in sys.argv:
-            write_mod(graph, height_map, os.path.join(ROOT, "src", "main", "resources", "data", "emeraldweapons",
-                                                      "jak", "haven_traffic.json"))
+            data = os.path.join(ROOT, "src", "main", "resources", "data", "emeraldweapons", "jak")
+            write_mod(graph, height_map, os.path.join(data, "haven_traffic.json"))
+            write_lane_map(height_map, os.path.join(data, "haven_lane_map.json"))
 
 
 if __name__ == "__main__":

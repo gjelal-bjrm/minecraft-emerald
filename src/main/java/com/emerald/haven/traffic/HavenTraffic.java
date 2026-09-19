@@ -7,6 +7,7 @@ import com.emerald.haven.invasion.HavenSpawner;
 import com.emerald.init.Jak3Registry;
 import com.emerald.jak.vehicle.JakVehicleEntity;
 import com.emerald.jak.vehicle.VehicleDynamics;
+import com.emerald.jak.vehicle.VehiclePhysics;
 import com.emerald.jak.vehicle.VehicleSpec;
 import com.emerald.main.EmeraldWeaponsMod;
 import net.minecraft.core.BlockPos;
@@ -103,6 +104,17 @@ public final class HavenTraffic {
      * pres au meme endroit (propulseurs sur la carte). Zero.
      */
     public static final double LANE_HANG = 0.0;
+
+    /**
+     * L'altitude de la voie a l'aplomb de (x, z), en Y du monde : la carte de hauteur
+     * de Jak 3, bosses et creux (HavenLaneMap.rise), comme le jeu y pose son trafic
+     * (hvehicle.gc:623-627). Une droite entre les altitudes des deux noeuds coupait les
+     * bosses : c'est a la carte que l'outil a verifie les voies contre le volume.
+     */
+    public static double laneY(BlockPos origin, double x, double z) {
+        return origin.getY() + VehiclePhysics.HAVEN_TRAFFIC_CELL
+                + HavenLaneMap.rise(x - origin.getX(), z - origin.getZ()) + LANE_HANG;
+    }
     /** Essais de place par branche et par seconde. */
     private static final int TRIES = 6;
 
@@ -299,7 +311,7 @@ public final class HavenTraffic {
             double side = (random.nextDouble() - 0.5) * Math.min(branch.width(), 3.0);
             double x = start.x + dx * along - dz * side;
             double z = start.z + dz * along + dx * side;
-            double y = lerp(start.y, end.y, along / length) + LANE_HANG;
+            double y = laneY(origin, x, z);
             if (HavenInvasion.nearestDistance(anchors, x, z) < SPAWN_MIN) {
                 continue;
             }
@@ -355,10 +367,6 @@ public final class HavenTraffic {
             return car;
         }
         return null;
-    }
-
-    private static double lerp(double a, double b, double t) {
-        return a + (b - a) * Math.max(0.0, Math.min(1.0, t));
     }
 
     /** L'ecart de vitesse de Jak 3 : car-a/b +0..3 m/s, car-c -2..0, motos +0..4 (car.gc:132, bike.gc:146). */

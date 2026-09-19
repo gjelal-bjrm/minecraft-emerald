@@ -1,6 +1,7 @@
 package com.emerald.jak.vehicle;
 
 import com.emerald.haven.Haven;
+import com.emerald.haven.traffic.HavenLaneMap;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.level.ClipContext;
@@ -40,6 +41,11 @@ public final class VehiclePhysics {
      * (cellule 66). C'est la que roule le trafic (hvehicle.gc:623-627), et c'est a
      * cette altitude que le jeu compare la voiture pour finir sa montee
      * (hvehicle.gc:579) et pour savoir s'il faut monter (hvehicle-util.gc:294).
+     *
+     * C'EST LA BASE, PAS TOUTE LA CARTE : le jeu la releve par endroits, de 10 blocs
+     * au-dessus du pont entre les deux tours, dont le tablier monte jusqu'ici. La
+     * voie du joueur suit ces bosses, et elles seules (HavenLaneMap.playerRise) :
+     * plate, elle butait de cote contre le pont.
      */
     public static final double HAVEN_TRAFFIC_CELL = 75.0;
     /**
@@ -216,14 +222,14 @@ public final class VehiclePhysics {
     /**
      * L'altitude de la carte de trafic sous la voiture, ou NaN.
      *
-     * Dans la ville, celle de Jak 3 : origine de pose + 75,0. Ailleurs, le sol
-     * sous la voiture + 9, suivi en continu ; sans sol trouve, la derniere
-     * altitude connue.
+     * Dans la ville, celle de Jak 3 : origine de pose + 75,0, plus la bosse de la
+     * carte a l'aplomb de la voiture. Ailleurs, le sol sous la voiture + 9, suivi
+     * en continu ; sans sol trouve, la derniere altitude connue.
      */
     public static double trafficY(JakVehicleEntity car) {
         Level level = car.level();
         if (Haven.is(level)) {
-            return Haven.ORIGIN.getY() + HAVEN_TRAFFIC_CELL;
+            return havenTrafficY(car.getX(), car.getZ());
         }
         VehicleSpec spec = car.spec();
         double y = car.getY() + spec.thrusterY;
@@ -232,6 +238,12 @@ public final class VehiclePhysics {
             car.setLastFloor(y - ground + TRAFFIC_ABOVE_GROUND);
         }
         return car.lastFloor();
+    }
+
+    /** La carte de trafic de la ville a l'aplomb de (x, z), en Y du monde : la base, plus la bosse de Jak 3. */
+    public static double havenTrafficY(double x, double z) {
+        return Haven.ORIGIN.getY() + HAVEN_TRAFFIC_CELL
+                + HavenLaneMap.playerRise(x - Haven.ORIGIN.getX(), z - Haven.ORIGIN.getZ());
     }
 
     /** Le plancher de la voie haute pour les propulseurs, 1,5 bloc au-dessus de la carte, ou NaN. */

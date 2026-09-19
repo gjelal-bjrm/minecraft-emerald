@@ -1232,7 +1232,7 @@ public final class HavenInvasionAutotest {
             if (lateral <= branch.width() + 4.0 && s >= -8.0 && s <= length + 8.0) {
                 onLane++;
             }
-            double laneY = a.y + (e.y - a.y) * Math.max(0.0, Math.min(1.0, s / length));
+            double laneY = HavenTraffic.laneY(o, car.getX(), car.getZ());
             worstHeight = Math.max(worstHeight, Math.abs(car.getY() - laneY));
             if (Math.abs(car.getY() - laneY) <= 3.0) {
                 atHeight++;

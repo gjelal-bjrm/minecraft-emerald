@@ -4,6 +4,7 @@ import com.emerald.haven.Haven;
 import com.emerald.haven.HavenRooms;
 import com.emerald.haven.HavenSite;
 import com.emerald.haven.HavenState;
+import com.emerald.haven.traffic.HavenLaneMap;
 import com.emerald.init.Jak3Registry;
 import com.emerald.main.EmeraldWeaponsMod;
 import net.minecraft.core.BlockPos;
@@ -194,6 +195,27 @@ public final class VehicleAutotest {
     /** Les blocs poses par l'essai, rendus au generateur apres chaque obstacle et a la fin. */
     private static final List<BlockPos> PLACED = new ArrayList<>();
 
+    /**
+     * Le couloir de l'essai du pont entre les deux tours, en cellules : a x constant,
+     * du bassin au nord du pont a la mer au sud, de l'eau partout sauf le tablier, qui
+     * le traverse de z 608 a 636 et monte aux cellules 74 et 75 (dessus en 76,0 au
+     * plus). La voie haute plate, cellule 75,0, y butait de cote ; la carte de hauteur
+     * de Jak 3 la releve de 10 blocs au-dessus du pont (HavenLaneMap).
+     */
+    private static final double BRIDGE_X = 620.5;
+    private static final double BRIDGE_NORTH_Z = 330.5;
+    private static final double BRIDGE_SOUTH_Z = 680.5;
+    private static final double BRIDGE_DECK_NORTH_Z = 608.0;
+    private static final double BRIDGE_DECK_SOUTH_Z = 637.0;
+    private static final double BRIDGE_DECK_TOP = 76.0;
+    /** Au nord, la carte est revenue a sa base bien avant cette cellule : on y juge le retour a 75,0. */
+    private static final double BRIDGE_BACK_Z = 470.5;
+    private static double bridgeClearance;
+    private static double bridgeSlowest;
+    private static double bridgePeakCell;
+    private static boolean bridgeInside;
+    private static boolean bridgeHigh;
+
     private VehicleAutotest() {
     }
 
@@ -275,7 +297,11 @@ public final class VehicleAutotest {
                 hold(level, new ChunkPos(BlockPos.containing(x, 64, z)));
             }
         }
-        line("tickets poses sur " + HELD.size() + " troncons (rue du bar, places, zone en mer de 648 x 192 blocs)");
+        // le couloir du pont entre les tours, du bassin a la mer
+        for (double z = BRIDGE_NORTH_Z - 32; z <= BRIDGE_SOUTH_Z + 16; z += 32) {
+            hold(level, new ChunkPos(BlockPos.containing(o.getX() + BRIDGE_X, 64, o.getZ() + z)));
+        }
+        line("tickets poses sur " + HELD.size() + " troncons (rue du bar, places, couloir du pont, zone en mer de 648 x 192 blocs)");
 
         // 1. attendre que les troncons soient la, entites comprises
         STEPS.add((s, l, t) -> {
@@ -298,6 +324,22 @@ public final class VehicleAutotest {
         planStreet(state, street);
         planSea(state);
         planDriverSync();
+        STEPS.add((s, l, t) -> {
+            // hors du pont, rien ne change : la bosse du carrefour ouest (+8 dans la carte du jeu) ne degage rien
+            // dans notre ville, seul le trafic la suit
+            BlockPos at = HavenState.get(s).origin();
+            double player = VehiclePhysics.havenTrafficY(at.getX() + 271.0, at.getZ() + 318.0) - at.getY();
+            double traffic = HavenLaneMap.rise(271.0, 318.0);
+            check("voie haute : hors du pont, la voie du joueur reste a la cellule 75,0 (seul le trafic suit les autres bosses)",
+                    Math.abs(player - VehiclePhysics.HAVEN_TRAFFIC_CELL) < 1.0E-9 && traffic > 5.0
+                            && Math.abs(HavenLaneMap.playerHighest() - 10.0) < 1.0E-9,
+                    String.format(Locale.ROOT, "carrefour ouest, cellule (271 ; 318) : voie du joueur %.3f, trafic +%.2f ;"
+                            + " plus haute bosse du joueur +%.1f (le pont)", player, traffic, HavenLaneMap.playerHighest()));
+            return true;
+        });
+        planBridge("cara", true);
+        planBridge("cara", false);
+        planBridge("bikea", true);
         for (String model : JakVehicleEntity.BIKES) {
             planBike(state, street, model);
         }
@@ -938,6 +980,162 @@ public final class VehicleAutotest {
         STEPS.add((s, l, t) -> {
             if (car != null) {
                 car.setAutotestInput(null);
+                car.discard();
+                car = null;
+            }
+            return true;
+        });
+    }
+
+    // ------------------------------------------------------------- le pont entre les tours
+
+    /**
+     * La voie haute au-dessus du pont entre les deux tours, gaz a fond.
+     *
+     * Le joueur : « la hauteur max n'est pas assez haute vers les ponts entre les deux
+     * tours ». La voie plate tenait la voiture pilotee propulseurs a la cellule 75,0,
+     * dessous vers 73 : le tablier du pont, qui monte a 75, l'arretait de cote. Le jeu
+     * releve sa carte de trafic a cet endroit, de 10 blocs, et la voie du joueur la suit.
+     *
+     * Le vehicule part sur l'eau, monte en voie haute, puis traverse le couloir a
+     * pleine vitesse : jamais ralenti, jamais dans un bloc, toujours en voie haute, et
+     * deux blocs au moins entre ses boites et le tablier. Du sud au nord, il finit au
+     * large du bassin, ou la voie doit etre revenue a la cellule 75,0.
+     */
+    private static void planBridge(String model, boolean southward) {
+        String run = model + (southward ? ", du nord au sud" : ", du sud au nord");
+        STEPS.add((s, l, t) -> {
+            BlockPos o = HavenState.get(s).origin();
+            JakVehicleEntity c = Jak3Registry.JAK_VEHICLE.get().create(l);
+            if (c == null) {
+                check("pont (" + run + ") : creation du vehicule", false, "EntityType.create a rendu null");
+                return true;
+            }
+            c.setModel(model);
+            VehicleSpec spec = c.spec();
+            double x = o.getX() + BRIDGE_X;
+            double z = o.getZ() + (southward ? BRIDGE_NORTH_Z : BRIDGE_SOUTH_Z);
+            double water = groundBelow(l, x, o.getY() + 72.0, z, 30.0);
+            double y = (Double.isNaN(water) ? o.getY() + 58.0 : water) + spec.equilibriumDistance(true) - spec.thrusterY;
+            // lacet 0 : l'avant regarde +Z, vers le sud
+            c.moveTo(x, y, z, southward ? 0.0F : 180.0F, 0.0F);
+            l.addFreshEntity(c);
+            SPAWNED.add(c);
+            c.setAutotestDriver(true);
+            car = c;
+            line(String.format(Locale.ROOT, "pont (%s) : pose en cellule (%.1f ; %.2f ; %.1f), eau en Y %.2f ; carte de trafic"
+                            + " ici en cellule %.2f, au-dessus du tablier %.2f", run, BRIDGE_X, y - o.getY(), z - o.getZ(), water,
+                    VehiclePhysics.havenTrafficY(x, z) - o.getY(),
+                    VehiclePhysics.havenTrafficY(x, o.getZ() + 0.5 * (BRIDGE_DECK_NORTH_Z + BRIDGE_DECK_SOUTH_Z)) - o.getY()));
+            return true;
+        });
+        // la montee, puis les gaz
+        STEPS.add((s, l, t) -> {
+            if (car == null) {
+                return true;
+            }
+            if (t < 40) {
+                return false;
+            }
+            if (t == 40) {
+                car.toggleMode();
+                marker = -1;
+                return false;
+            }
+            if (marker < 0 && car.mode() == VehicleDynamics.MODE_HAUT) {
+                marker = t - 40;
+            }
+            if (t < 140) {
+                return false;
+            }
+            check("pont (" + run + ") : montee finie en voie haute avant 2 s",
+                    car.mode() == VehicleDynamics.MODE_HAUT && marker > 0 && marker <= VehicleDynamics.TRANSITION_TICKS,
+                    "voie haute au tick " + marker + ", mode " + car.mode());
+            bridgeClearance = Double.MAX_VALUE;
+            bridgeSlowest = Double.MAX_VALUE;
+            bridgePeakCell = -Double.MAX_VALUE;
+            bridgeInside = false;
+            bridgeHigh = true;
+            reach95 = -1;
+            car.setAutotestInput(new VehicleDynamics.Input(true, false, 0));
+            return true;
+        });
+        // la traversee
+        STEPS.add((s, l, t) -> {
+            if (car == null) {
+                return true;
+            }
+            BlockPos o = HavenState.get(s).origin();
+            VehicleSpec spec = car.spec();
+            double cz = car.getZ() - o.getZ();
+            double speed = horizontalSpeed(car);
+            if (reach95 < 0) {
+                if (speed >= 0.95 * spec.maxSpeed) {
+                    reach95 = t;
+                }
+            } else {
+                bridgeSlowest = Math.min(bridgeSlowest, speed);
+            }
+            bridgeInside |= insideBlocks(car);
+            bridgeHigh &= car.mode() == VehicleDynamics.MODE_HAUT;
+            for (AABB box : car.collisionBoxes()) {
+                if (box.maxZ - o.getZ() >= BRIDGE_DECK_NORTH_Z && box.minZ - o.getZ() <= BRIDGE_DECK_SOUTH_Z) {
+                    bridgeClearance = Math.min(bridgeClearance, box.minY - (o.getY() + BRIDGE_DECK_TOP));
+                    bridgePeakCell = Math.max(bridgePeakCell, car.getY() + spec.thrusterY - o.getY());
+                }
+            }
+            if (t % 20 == 0) {
+                line(String.format(Locale.ROOT, "  pont t=%d : cellule z %.1f, propulseurs en cellule %.2f, carte %.2f, %.2f bloc/tick",
+                        t, cz, car.getY() + spec.thrusterY - o.getY(),
+                        VehiclePhysics.trafficY(car) - o.getY(), speed));
+            }
+            boolean across = southward ? cz >= BRIDGE_SOUTH_Z - 8.0 : cz <= BRIDGE_BACK_Z;
+            if (!across && t < 600) {
+                return false;
+            }
+            check("pont (" + run + ") : franchi en voie haute a pleine vitesse, sans ralentir ni toucher",
+                    across && bridgeHigh && !bridgeInside && reach95 >= 0 && bridgeSlowest >= 0.95 * spec.maxSpeed,
+                    String.format(Locale.ROOT, "arrive en cellule z %.1f au tick %d ; 95 %% de la vitesse au tick %d, puis jamais"
+                                    + " sous %.3f bloc/tick (reglee %.2f) ; toujours en voie haute %b ; boite dans un bloc %b",
+                            cz, t, reach95, bridgeSlowest, spec.maxSpeed, bridgeHigh, bridgeInside));
+            check("pont (" + run + ") : deux blocs au moins entre le vehicule et le tablier",
+                    bridgeClearance >= 2.0 && bridgeClearance < Double.MAX_VALUE,
+                    String.format(Locale.ROOT, "au plus pres, %.2f blocs entre le dessous des boites et le dessus du tablier"
+                                    + " (cellule %.1f) ; propulseurs jusqu'en cellule %.2f au-dessus du pont, carte a %.2f",
+                            bridgeClearance, BRIDGE_DECK_TOP, bridgePeakCell,
+                            VehiclePhysics.havenTrafficY(o.getX() + BRIDGE_X,
+                                    o.getZ() + 0.5 * (BRIDGE_DECK_NORTH_Z + BRIDGE_DECK_SOUTH_Z)) - o.getY()));
+            car.setAutotestInput(VehicleDynamics.Input.NONE);
+            return true;
+        });
+        if (!southward) {
+            // au large du bassin, la carte est a sa base : la voie est revenue a la cellule 75,0
+            STEPS.add((s, l, t) -> {
+                if (car == null) {
+                    return true;
+                }
+                if (t < 120) {
+                    return false;
+                }
+                BlockPos o = HavenState.get(s).origin();
+                VehicleSpec spec = car.spec();
+                double cell = car.getY() + spec.thrusterY - o.getY();
+                double hang = VehiclePhysics.floorY(car) - (car.getY() + spec.thrusterY);
+                double wanted = VehiclePhysics.HAVEN_TRAFFIC_CELL + VehiclePhysics.FLOOR_ABOVE_TRAFFIC
+                        - VehicleDynamics.highHang(spec, true);
+                check("pont (" + run + ") : passe le pont, la voie haute revient a sa hauteur d'avant (cellule 75,0)",
+                        car.mode() == VehicleDynamics.MODE_HAUT && Math.abs(cell - wanted) <= 0.5
+                                && Math.abs(VehiclePhysics.trafficY(car) - o.getY() - VehiclePhysics.HAVEN_TRAFFIC_CELL) < 1.0E-6,
+                        String.format(Locale.ROOT, "en cellule z %.1f : propulseurs a la cellule %.3f pour %.3f calcules (pilote),"
+                                        + " %.3f sous le plancher, carte a %.3f, mode %d", car.getZ() - o.getZ(), cell, wanted, hang,
+                                VehiclePhysics.trafficY(car) - o.getY(), car.mode()));
+                return true;
+            });
+        }
+        STEPS.add((s, l, t) -> {
+            if (car != null) {
+                car.setAutotestInput(null);
+                car.setAutotestDriver(false);
                 car.discard();
                 car = null;
             }
