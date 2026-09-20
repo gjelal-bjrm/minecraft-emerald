@@ -133,6 +133,11 @@ public final class JakVehicleClient {
         }
 
         @SubscribeEvent
+        public static void onParticles(net.neoforged.neoforge.client.event.RegisterParticleProvidersEvent event) {
+            VehicleParticles.register(event);
+        }
+
+        @SubscribeEvent
         public static void onRegisterLayers(RegisterGuiLayersEvent event) {
             event.registerAbove(VanillaGuiLayers.HOTBAR,
                     ResourceLocation.fromNamespaceAndPath(EmeraldWeaponsMod.MODID, "vehicle_hint"),

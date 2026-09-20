@@ -96,6 +96,26 @@ trois blocs du sol. Les voitures disparaissent au départ vers le village.
   personne, la caméra recule pour montrer toute la voiture.
 - Les voitures sont **indestructibles et solides** : on s'y cogne, et elles
   écartent ceux qu'elles recouvrent.
+- **Les chocs entre véhicules.** Celui qui percute donne son élan à l'autre :
+  c'est la masse et la vitesse qui décident, comme dans Jak 3. À égalité (deux
+  voitures), le percuté part avec les sept dixièmes de la vitesse d'approche et
+  le percuteur garde le reste. Une **moto** (la plus légère des six) rebondit sur
+  une voiture qui, elle, bouge à peine ; une **car-c lancée** (la plus lourde)
+  balaie tout. Un véhicule du trafic qu'on percute **perd le volant** une seconde
+  ou deux : il dérive, puis reprend sa route.
+- **Renverser.** À pleine vitesse, une voiture **tue au passage** ce qu'elle
+  percute et le projette devant elle ; les dégâts suivent la masse et la vitesse
+  (une voiture lancée : 40 PV, deux zombies ; une moto : 10 PV). Cela vaut pour
+  les monstres **comme pour les habitants** de la ville paisible, comme dans
+  Jak 3 — roulez doucement si vous tenez à eux. **Aucun joueur** n'est jamais
+  touché, ni personne à bord d'un autre véhicule : on heurte la voiture, pas son
+  pilote.
+- **Les murs se sentent.** Toute vitesse perdue d'un coup — un mur, un véhicule,
+  une pile de monstres — fait un fracas de tôle et des éclats, d'autant plus forts
+  que le choc est violent.
+- **Vous êtes plus rapide qu'eux.** Votre véhicule monte à 40 m/s ; le trafic de la
+  ville croise entre 15 et 19 m/s, comme dans Jak 3. Vous doublez donc tout le
+  monde — et à pleine vitesse, c'est vous qui avez l'avantage dans un choc.
 - Une voiture **tombée à l'eau** ou **sortie de la ville** revient toute seule
   sur sa place. Garée ailleurs, elle reste là où vous l'avez laissée.
 - Si vous vous déconnectez dans une voiture, vous êtes d'abord posé à côté :

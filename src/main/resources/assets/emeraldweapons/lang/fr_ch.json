@@ -719,6 +719,8 @@
   "hud.emeraldweapons.morph_gun.empty": "%s — à sec",
   "death.attack.emeraldweapons.morph_gun": "%1$s a été abattu au Morph Gun",
   "death.attack.emeraldweapons.morph_gun.player": "%1$s a été abattu au Morph Gun par %2$s",
+  "death.attack.emeraldweapons.jak_vehicle": "%1$s a été renversé par un véhicule",
+  "death.attack.emeraldweapons.jak_vehicle.player": "%1$s a été renversé par %2$s",
   "entity.emeraldweapons.gun_blaster_shot": "Tir de Blaster",
   "entity.emeraldweapons.gun_peace_ball": "Boule du Pacificateur",
   "entity.emeraldweapons.gun_arc": "Foudre du Pacificateur",

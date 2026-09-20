@@ -200,6 +200,13 @@ public enum GunSpec {
     public static final double PLASMITE_FUSE_RADIUS = 20.0 * 2.0 / 3.0;
     public static final int PLASMITE_FUSE_MAX = 10;
     public static final double PLASMITE_FUSE_NOW = 2.0;
+    /**
+     * L'ecart au plus pres, en blocs, sous lequel la meche s'arme : la grenade doit
+     * VRAIMENT passer pres du monstre. Le jeu s'en remet a ses spheres de collision,
+     * bien plus grosses qu'une boite de zombie ; sans ce garde-fou, un monstre devant
+     * mais loin de la trajectoire faisait exploser la grenade en plein ciel.
+     */
+    public static final double PLASMITE_FUSE_MISS = 3.0;
     /** Le souffle : 12 points dans 20 m (:133, 237). */
     public static final double PLASMITE_BLAST = 20.0;
     public static final float PLASMITE_DAMAGE = 12.0F;

@@ -4,6 +4,8 @@ import com.emerald.haven.Haven;
 import com.emerald.haven.HavenRooms;
 import com.emerald.haven.HavenSite;
 import com.emerald.haven.HavenState;
+import com.emerald.haven.invasion.HavenInvasion;
+import com.emerald.haven.invasion.HavenSpawner;
 import com.emerald.haven.traffic.HavenLaneMap;
 import com.emerald.init.Jak3Registry;
 import com.emerald.main.EmeraldWeaponsMod;
@@ -16,10 +18,15 @@ import net.minecraft.server.level.TicketType;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.npc.Villager;
+import net.minecraft.world.entity.npc.VillagerType;
 import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.Block;
+import net.neoforged.neoforge.server.ServerLifecycleHooks;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
@@ -148,6 +155,28 @@ public final class VehicleAutotest {
     private static int ceilingY;
     private static double sumYaw;
     private static double sumForward;
+
+    // les chocs (planCollisions)
+    @Nullable
+    private static JakVehicleEntity second;
+    @Nullable
+    private static Mob rammed;
+    @Nullable
+    private static Villager bystander;
+    private static float rammedHealth;
+    private static double rammedLaunch;
+    private static boolean rammedHurt;
+    private static float bystanderHealth;
+    private static double hitSpeed;
+    private static int crashesBefore;
+    /**
+     * Le couloir du renversement, en cellules : la voie haute au-dessus de l'eau du nord de
+     * la grille. DANS LA VILLE, et non en mer : hors de la grille, le balayage de l'invasion
+     * retire monstres et habitants avant meme que la voiture n'arrive (banc du 20 sept.).
+     */
+    private static final double RAM_CELL_X = 560.0;
+    private static final double RAM_CELL_Z = 40.0;
+    private static int ramsBefore;
 
     // conduite par un client (planDriverSync)
     @Nullable
@@ -301,7 +330,12 @@ public final class VehicleAutotest {
         for (double z = BRIDGE_NORTH_Z - 32; z <= BRIDGE_SOUTH_Z + 16; z += 32) {
             hold(level, new ChunkPos(BlockPos.containing(o.getX() + BRIDGE_X, 64, o.getZ() + z)));
         }
-        line("tickets poses sur " + HELD.size() + " troncons (rue du bar, places, couloir du pont, zone en mer de 648 x 192 blocs)");
+        // le couloir du renversement : la voie haute au-dessus de l'eau du nord, dans la grille
+        for (double x = RAM_CELL_X - 16; x <= RAM_CELL_X + 80; x += 16) {
+            hold(level, new ChunkPos(BlockPos.containing(o.getX() + x, 80, o.getZ() + RAM_CELL_Z)));
+        }
+        line("tickets poses sur " + HELD.size() + " troncons (rue du bar, places, couloir du pont, couloir du"
+                + " renversement, zone en mer de 648 x 192 blocs)");
 
         // 1. attendre que les troncons soient la, entites comprises
         STEPS.add((s, l, t) -> {
@@ -324,6 +358,7 @@ public final class VehicleAutotest {
         planStreet(state, street);
         planSea(state);
         planDriverSync();
+        planCollisions();
         STEPS.add((s, l, t) -> {
             // hors du pont, rien ne change : la bosse du carrefour ouest (+8 dans la carte du jeu) ne degage rien
             // dans notre ville, seul le trafic la suit
@@ -1139,6 +1174,238 @@ public final class VehicleAutotest {
                 car.discard();
                 car = null;
             }
+            return true;
+        });
+    }
+
+    // ------------------------------------------------------------- les chocs
+
+    /**
+     * Les chocs, en pleine mer : vehicule contre vehicule, le poids qui decide, un
+     * monstre renverse, un habitant seulement bouscule, et le mur qui s'entend.
+     *
+     * Les deux vehicules sont simules par le serveur (aucun conducteur) : chacun
+     * calcule sa part du choc dans sa propre tique, comme le client du conducteur et
+     * le serveur le font en jeu.
+     */
+    private static void planCollisions() {
+        // 1. une voiture lancee dans une voiture a l'arret
+        planPair("cara", "cara", 40.0);
+        STEPS.add((s, l, t) -> chase(l, t, "cara contre cara",
+                (fast, slow) -> {
+                    check("choc : la voiture percutee est poussee dans le sens du choc, celle qui percute est freinee",
+                            slow.getDeltaMovement().x > 0.15 && fast.getDeltaMovement().x < hitSpeed * 0.85,
+                            String.format(Locale.ROOT, "avant le choc %.3f ; apres : percutante %.3f, percutee %.3f bloc/tick",
+                                    hitSpeed, fast.getDeltaMovement().x, slow.getDeltaMovement().x));
+                    check("choc : masses egales, restitution 0,4 -- la percutee prend a peu pres 0,7 de la vitesse d'approche",
+                            Math.abs(slow.getDeltaMovement().x - 0.7 * hitSpeed) < 0.25 * hitSpeed,
+                            String.format(Locale.ROOT, "percutee %.3f pour %.3f attendus", slow.getDeltaMovement().x,
+                                    0.7 * hitSpeed));
+                }));
+        planCollisionCleanup();
+
+        // 2. une moto lancee dans une voiture : le leger part, le lourd bouge a peine
+        planPair("bikea", "carc", 40.0);
+        STEPS.add((s, l, t) -> chase(l, t, "bikea contre carc",
+                (fast, slow) -> {
+                    double mine = fast.getDeltaMovement().x;
+                    double theirs = slow.getDeltaMovement().x;
+                    check("choc : la moto (masse 2) contre la car-c (masse 9) -- la moto est renvoyee, la voiture bouge a peine",
+                            mine < 0.0 && theirs > 0.05 && theirs < 0.45 * hitSpeed,
+                            String.format(Locale.ROOT, "approche %.3f ; moto %.3f (renvoyee), voiture %.3f bloc/tick",
+                                    hitSpeed, mine, theirs));
+                }));
+        planCollisionCleanup();
+
+        // 3. renverser : un monstre prend le choc, un habitant est seulement bouscule
+        STEPS.add((s, l, t) -> {
+            BlockPos o = HavenState.get(s).origin();
+            JakVehicleEntity c = Jak3Registry.JAK_VEHICLE.get().create(l);
+            if (c == null) {
+                return true;
+            }
+            c.setModel("cara");
+            VehicleSpec spec = c.spec();
+            double x = o.getX() + RAM_CELL_X;
+            double z = o.getZ() + RAM_CELL_Z + 0.5;
+            double y = VehiclePhysics.havenTrafficY(x, z) + VehiclePhysics.FLOOR_ABOVE_TRAFFIC
+                    - VehicleDynamics.highHang(spec, false) - spec.thrusterY;
+            c.moveTo(x, y, z, -90.0F, 0.0F);    // lacet -90 : l'avant regarde +X
+            c.setMode(VehicleDynamics.MODE_HAUT);
+            l.addFreshEntity(c);
+            SPAWNED.add(c);
+            car = c;
+            // le monstre juge les degats ; l'habitant, plus loin sur la meme ligne, juge la
+            // projection : il survit au choc et garde donc la vitesse recue (un monstre mort
+            // la perd dans la tique meme, avant que le banc ne regarde)
+            Vec3 ahead = new Vec3(c.getX() + 20.0, c.getY(), c.getZ());
+            Mob zombie = HavenSpawner.spawnMonster(l, HavenInvasion.Kind.ZOMBIE, ahead, true);
+            Villager villager = HavenSpawner.spawnVillager(l, VillagerType.PLAINS,
+                    new Vec3(c.getX() + 34.0, c.getY(), c.getZ()));
+            for (Mob mob : new Mob[]{zombie, villager}) {
+                if (mob != null) {
+                    mob.setNoAi(true);
+                    mob.setNoGravity(true);
+                    mob.setDeltaMovement(Vec3.ZERO);
+                    SPAWNED.add(mob);
+                }
+            }
+            rammed = zombie;
+            bystander = villager;
+            rammedHealth = zombie == null ? -1.0F : zombie.getHealth();
+            bystanderHealth = villager == null ? -1.0F : villager.getHealth();
+            rammedLaunch = 0.0;
+            rammedHurt = false;
+            ramsBefore = VehicleImpacts.rams();
+            c.setAutotestInput(new VehicleDynamics.Input(true, false, 0));
+            return true;
+        });
+        STEPS.add((s, l, t) -> {
+            if (car == null || rammed == null) {
+                return true;
+            }
+            // la vitesse donnee au monstre se releve a la tique du choc : mort, il la perd aussitot
+            rammedHurt |= !rammed.isAlive() || rammed.getHealth() < rammedHealth;
+            if (bystander != null) {
+                rammedLaunch = Math.max(rammedLaunch, bystander.getDeltaMovement().x);
+            }
+            if (t < 90 && (bystander == null || car.getX() < bystander.getX() + 3.0)) {
+                return false;
+            }
+            check("renversement : le monstre prend le choc (masse x vitesse) et perd sa vie",
+                    rammedHurt && !rammed.isRemoved(), String.format(Locale.ROOT, "PV %.1f -> %.1f, retire %b",
+                            rammedHealth, rammed.isAlive() ? rammed.getHealth() : 0.0F, rammed.isRemoved()));
+            check("renversement : l'habitant de la ville paisible est renverse lui aussi, comme dans Jak 3 : projete"
+                            + " devant le vehicule, et il y laisse sa vie",
+                    VehicleImpacts.rams() >= ramsBefore + 2 && VehicleImpacts.lastLaunch() > 0.3 && bystander != null
+                            && (!bystander.isAlive() || bystander.getHealth() < bystanderHealth),
+                    String.format(Locale.ROOT, "%d renverse(s), derniere projection %.2f bloc/tick ; habitant vu a %.2f,"
+                                    + " PV %.1f -> %.1f", VehicleImpacts.rams() - ramsBefore, VehicleImpacts.lastLaunch(),
+                            rammedLaunch, bystanderHealth,
+                            bystander != null && bystander.isAlive() ? bystander.getHealth() : 0.0F));
+            car.setAutotestInput(null);
+            return true;
+        });
+        planCollisionCleanup();
+
+        // 4. le mur : la vitesse perdue d'un coup s'entend
+        STEPS.add((s, l, t) -> {
+            JakVehicleEntity c = spawnSea("cara", 0.0);
+            if (c == null) {
+                return true;
+            }
+            car = c;
+            crashesBefore = VehicleImpacts.crashes();
+            for (int dy = -2; dy <= 3; dy++) {
+                for (int dz = -3; dz <= 3; dz++) {
+                    BlockPos p = BlockPos.containing(c.getX() + 30.0, c.getY() + dy, c.getZ() + dz);
+                    l.setBlock(p, Blocks.STONE.defaultBlockState(), Block.UPDATE_CLIENTS);
+                    PLACED.add(p);
+                }
+            }
+            c.setAutotestInput(new VehicleDynamics.Input(true, false, 0));
+            return true;
+        });
+        STEPS.add((s, l, t) -> {
+            if (car == null) {
+                return true;
+            }
+            if (t < 80) {
+                return false;
+            }
+            check("choc contre un mur : la vitesse perdue d'un coup est reconnue comme un choc (son et eclats)",
+                    VehicleImpacts.crashes() > crashesBefore,
+                    "chocs comptes " + crashesBefore + " -> " + VehicleImpacts.crashes());
+            car.setAutotestInput(null);
+            return true;
+        });
+        STEPS.add((s, l, t) -> {
+            for (BlockPos p : PLACED) {
+                l.setBlock(p, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS);
+            }
+            PLACED.clear();
+            return true;
+        });
+        planCollisionCleanup();
+    }
+
+    /** Pose deux vehicules en mer : {@code chaser} lance vers {@code target}, arrete, a {@code gap} blocs. */
+    private static void planPair(String chaser, String target, double gap) {
+        STEPS.add((s, l, t) -> {
+            JakVehicleEntity a = spawnSea(chaser, 0.0);
+            JakVehicleEntity b = spawnSea(target, gap);
+            if (a == null || b == null) {
+                return true;
+            }
+            car = a;
+            second = b;
+            a.setAutotestInput(new VehicleDynamics.Input(true, false, 0));
+            return true;
+        });
+    }
+
+    /**
+     * Attend le choc entre {@code car} et {@code second}, puis juge.
+     *
+     * Le choc se voit a la vitesse du vehicule percute : tant qu'il n'a pas bouge,
+     * rien n'est arrive. La vitesse d'approche est relevee la tique d'avant.
+     */
+    private static boolean chase(ServerLevel level, int t, String where, java.util.function.BiConsumer<JakVehicleEntity,
+            JakVehicleEntity> judge) {
+        if (car == null || second == null) {
+            return true;
+        }
+        if (t == 0) {
+            hitSpeed = 0.0;
+        }
+        if (second.getDeltaMovement().x <= 0.02 && t < 160) {
+            hitSpeed = car.getDeltaMovement().x;
+            return false;
+        }
+        line(String.format(Locale.ROOT, "choc (%s) au tick %d : approche %.3f bloc/tick, ecart %.2f blocs", where, t,
+                hitSpeed, second.getX() - car.getX()));
+        judge.accept(car, second);
+        car.setAutotestInput(null);
+        return true;
+    }
+
+    /** Pose un vehicule en mer a {@code offsetX} blocs a l'est du point de depart. */
+    private static JakVehicleEntity spawnSea(String model, double offsetX) {
+        ServerLevel level = Haven.level(ServerLifecycleHooks.getCurrentServer());
+        if (level == null) {
+            return null;
+        }
+        JakVehicleEntity c = Jak3Registry.JAK_VEHICLE.get().create(level);
+        if (c == null) {
+            return null;
+        }
+        c.setModel(model);
+        double water = groundBelow(level, sea0X + offsetX, 90.0, sea0Z, 40.0);
+        double y = (Double.isNaN(water) ? 63.0 : water) + c.spec().equilibriumDistance(false) - c.spec().thrusterY;
+        // lacet -90 : l'avant regarde +X
+        c.moveTo(sea0X + offsetX, y, sea0Z, -90.0F, 0.0F);
+        level.addFreshEntity(c);
+        SPAWNED.add(c);
+        return c;
+    }
+
+    private static void planCollisionCleanup() {
+        STEPS.add((s, l, t) -> {
+            for (JakVehicleEntity c : new JakVehicleEntity[]{car, second}) {
+                if (c != null) {
+                    c.setAutotestInput(null);
+                    c.discard();
+                }
+            }
+            car = null;
+            second = null;
+            for (Entity e : SPAWNED) {
+                if (e instanceof Mob mob && !mob.isRemoved()) {
+                    mob.discard();
+                }
+            }
+            rammed = null;
+            bystander = null;
             return true;
         });
     }

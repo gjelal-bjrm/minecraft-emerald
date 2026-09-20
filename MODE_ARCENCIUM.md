@@ -6157,3 +6157,112 @@ Les douze formes du Morph Gun tirent. Toutes donnees a l'arrivee
   0,19) et densifiees (14 par tique) avant livraison.
 - Non vu sans le jeu : les anneaux (onde, champ), les modeles en mouvement,
   l'eclair et la secousse. C'est la premiere chose a regarder en jeu.
+
+## 73. Quatre retours du joueur : la vague, la grenade, les chocs, la vitesse *(20 sept. 2026)*
+
+Premier essai en jeu des douze armes et de la voie haute. Quatre remarques.
+
+### 73.1 « Tous les monstres disparaissent, une nouvelle vague les remplace »
+
+Le plus gros defaut, et le plus difficile a nommer : « parfois, je suis en train
+de taper des monstres et d'un coup, ils disparaissent ».
+
+**Ce que la relecture a elimine.** La generation sauvegardee du monde du joueur
+vaut 0 : `HavenInvasion.removeAll` -- le seul retrait en masse de notre code --
+n'a JAMAIS ete appelee. Le journal de sa partie ne montre qu'un seul changement
+de mode, celui qu'il a demande au bouton. Minecraft, lui, ne retire pas une
+entite persistante.
+
+**Ce qui a ete trouve, et corrige : LE SOLEIL.** La ville vit sous un midi fige.
+Les monstres au sol portent un casque de fer incassable, qui les protege ; LES
+PHANTOMS VOLENT TETE NUE. `Phantom.aiStep` les enflamme des qu'ils voient le
+ciel : ils brulaient, mouraient en une quinzaine de secondes, et le peuplement
+en remettait quatre par joueur aussitot. Des monstres qui disparaissent en
+plein combat et sont remplaces : c'est exactement ce que le joueur decrit.
+Desormais le feu ne mord pas sur l'invasion (`HavenInvasion.onBurn`, et le
+balayage eteint ce qui brule).
+
+**Ce qui a ete pose pour la suite : une surveillance qui nommera le coupable.**
+Si une autre cause existe, il faut la voir. `HavenPopulationWatch` compte, par
+seconde, les monstres perdus AVEC LEUR RAISON -- Minecraft la donne : KILLED
+(mort), DISCARDED (quelqu'un a appele discard), UNLOADED_TO_CHUNK (troncon
+deconnecte, normal). Des huit perdus en une seconde autrement que par un
+dechargement, une ligne du journal donne le compte, l'etat de la ville, ET LA
+PILE D'APPEL du premier retrait : elle nomme la methode fautive, la notre ou
+celle d'un autre mod. Trois releves par demarrage, rien tant que tout va bien.
+
+### 73.2 La grenade du Plasmite RPG qui explose en plein ciel
+
+La meche de proximite du jeu (`check-should-explode`, gun-red-shot.gc:293-400)
+s'arme sur un monstre DEVANT la grenade a moins de 13,33 m, et la fait exploser
+au passage au plus pres : delai = (distance / vitesse) x cosinus. Chez Jak 3
+les ennemis ont de grosses spheres de collision et la grenade vole vers l'un
+d'eux. Chez nous, n'importe quel monstre devant armait la meche, MEME A DIX
+BLOCS DE LA TRAJECTOIRE : la grenade, toujours lobee vers le haut (le jeu releve
+le tir a y >= 0,3), explosait une tique plus tard en l'air, loin de tout.
+
+Il manquait une seule question : VA-T-ELLE PASSER PRES DE LUI ? L'ecart au plus
+pres doit maintenant rester sous 3 blocs (`PLASMITE_FUSE_MISS`). Sinon la
+grenade poursuit sa route et tombe sur le sol, comme le joueur l'attend.
+
+### 73.3 Les chocs des vehicules
+
+« S'il y a une collision, rien ne se passe. » C'etait vrai : une voiture
+s'arretait contre une autre comme contre un mur, et ne faisait rien a personne.
+
+`VehicleImpacts` porte la regle de Jak 3 : TOUT SE DECIDE PAR LA QUANTITE DE
+MOUVEMENT, masse x vitesse. Impulsion d'un choc a restitution 0,4 (celle du
+jeu) : j = 1,4 u mA mB / (mA + mB), chacun en recoit j / sa masse.
+
+| Choc | Mesure du banc |
+|---|---|
+| car-a contre car-a a l'arret, 2 blocs/tique | percutee 1,362 (0,7 u), percuteuse 0,672 |
+| moto (masse 2) contre car-c (masse 9) a 2 blocs/tique | moto renvoyee a -0,233, voiture 0,495 |
+| renverser | monstre et habitant tues (40 PV pour une voiture lancee), projetes a 1,28 bloc/tique |
+| mur | la vitesse perdue d'un coup fait le fracas et les eclats |
+
+Trois choix a retenir :
+
+- **Chacun calcule sa part.** Le client du conducteur simule SA voiture, le
+  serveur le trafic : chacun applique son impulsion avec la vitesse de l'autre
+  telle qu'il la connait. Aucun paquet, et la voiture du conducteur ne subit
+  jamais une vitesse venue du serveur (qui la figeait, §64).
+- **Quand le meme cote simule les deux, il regle les deux en une fois.** Sinon le
+  percuteur voyait l'approche et rebondissait AVANT que le percute ne tique :
+  celui-ci ne voyait plus personne et ne bougeait pas. La moto ping-pongait
+  contre une car-c immobile (banc du 20 sept.).
+- **La recherche porte a huit blocs.** `getEntitiesOfClass` regarde la boite
+  d'entite de l'autre, 3 blocs de cote, alors que les vraies boites d'un vehicule
+  font huit blocs de long : cherchee sur sa boite d'entite, une voiture pile
+  devant restait introuvable.
+
+Renverser : tout ce qui marche dans la rue prend 2,5 PV de Jak par unite de
+quantite de mouvement et part devant le vehicule. MONSTRES COMME HABITANTS : le
+joueur a tranche le 20 sept. pour la fidelite a Jak 3, ou l'on renverse les
+civils. Les habitants naissent invulnerables (aucune arme, aucune chute ne les
+touche) : le type de degat des vehicules est donc le seul de la balise
+bypasses_invulnerability. Aucun joueur n'est jamais touche, ni personne a bord
+d'un autre vehicule -- on heurte la voiture, pas son pilote. L'invulnerabilite
+vanilla de dix tiques n'est pas remise a zero : un vehicule qui traine un corps
+ne le frappe que deux fois par seconde. La vitesse donnee est POSEE et non
+ajoutee : sous le vehicule, le corps etait repris a chaque tique et partait a
+130 m/s au bout de six.
+
+Le bruit du choc se decide sur LA VITESSE PERDUE DANS LA TIQUE (`watch`), quelle
+qu'en soit la cause : le freinage le plus dur ne retire que 0,14 bloc par tique,
+tres loin du demi-bloc d'un choc. Une particule neuve, `jak_vehicle_spark`
+(tools/vehicle_particles.py), et un type de degat dedie, avec ses messages de
+mort dans les quatre langues.
+
+### 73.4 « J'ai l'impression d'aller a la meme vitesse que les PNJ »
+
+Mesure : le joueur monte a **40 m/s** (banc vehicules, 40,00 m/s mesures), le
+trafic croise entre **15 et 19 m/s** (branches du nav-graph a 15 m/s, cinq a 10,
+plus l'ecart de Jak 3 : +0..3 pour les voitures, +0..4 pour les motos ; banc
+invasion : 16 vehicules entre 5 et 22 m/s). Le joueur va donc DEUX FOIS ET DEMIE
+plus vite, exactement comme dans Jak 3 -- et depuis les chocs, cette vitesse lui
+donne l'avantage qu'il attendait. Si l'impression persiste en jeu, c'est la ville
+(virages, rues etroites) qui empeche d'atteindre 40, pas le reglage.
+
+Les six bancs apres ce lot : vehicules 135 (les chocs), invasion 47, armes 174,
+haven 11, salles 26, vote 36, aucun KO.

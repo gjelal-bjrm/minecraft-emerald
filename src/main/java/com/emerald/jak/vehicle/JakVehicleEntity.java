@@ -122,6 +122,14 @@ public class JakVehicleEntity extends Entity {
     private boolean serverKnown;
     /** Le deplacement recu du client du conducteur au dernier tick, cote serveur (voir tick). */
     private Vec3 drivenMotion = Vec3.ZERO;
+    /** Vitesse a plat de la tique precedente, vue du serveur : un choc la fait chuter d'un coup. */
+    private double lastFlatSpeed;
+    /** Tiques d'etourdissement apres un choc : le trafic ne pilote plus, il derive. */
+    private int stun;
+    /** La vitesse du debut de la tique : celle que l'autre lit dans un choc (VehicleImpacts). */
+    private Vec3 impactBase = Vec3.ZERO;
+    /** Tique ou un autre vehicule a deja regle notre choc pour nous (VehicleImpacts). */
+    private long impactHandled = Long.MIN_VALUE;
     /** Le siege que vient de quitter le passager en train de descendre. */
     private int leavingSeat = EMPTY;
 
@@ -218,6 +226,60 @@ public class JakVehicleEntity extends Entity {
 
     public VehicleDynamics.Controls controls() {
         return this.controls;
+    }
+
+    /**
+     * La vitesse a prendre pour un choc : celle que connait le cote qui simule.
+     *
+     * Le client du conducteur a la sienne dans getDeltaMovement ; le serveur, pour une
+     * voiture conduite par un client, n'a que le deplacement recu (drivenMotion).
+     */
+    public Vec3 impactVelocity() {
+        return this.level().isClientSide || this.isControlledByLocalInstance()
+                ? this.getDeltaMovement() : this.drivenMotion;
+    }
+
+    /**
+     * La vitesse d'AVANT les chocs de la tique, celle que l'autre vehicule doit lire.
+     *
+     * Les deux vehicules calculent le meme choc, chacun de son cote, mais l'un tique
+     * avant l'autre : si le second lisait la vitesse deja renvoyee du premier, il ne
+     * verrait plus d'approche et ne partirait pas. Chacun fige donc la sienne au debut
+     * de sa tique.
+     */
+    public Vec3 impactBase() {
+        return this.impactBase;
+    }
+
+    /** Le choc de cette tique a deja ete regle par l'autre vehicule : ne pas le refaire. */
+    public boolean impactHandled(long tick) {
+        return this.impactHandled == tick;
+    }
+
+    public void setImpactHandled(long tick) {
+        this.impactHandled = tick;
+    }
+
+    public double lastFlatSpeed() {
+        return this.lastFlatSpeed;
+    }
+
+    void setLastFlatSpeed(double speed) {
+        this.lastFlatSpeed = speed;
+    }
+
+    /** Etourdit le vehicule : le trafic lache son volant et derive (VehicleImpacts). */
+    public void stun(int ticks) {
+        this.stun = Math.max(this.stun, ticks);
+    }
+
+    public boolean stunned() {
+        return this.stun > 0;
+    }
+
+    /** Une tique d'etourdissement passee ; vrai s'il en reste. */
+    public boolean tickStun() {
+        return this.stun > 0 && this.stun-- > 0;
     }
 
     public double lastFloor() {
@@ -690,6 +752,7 @@ public class JakVehicleEntity extends Entity {
     @Override
     public void tick() {
         super.tick();
+        this.impactBase = this.impactVelocity();
         boolean client = this.level().isClientSide;
         if (!client) {
             this.serverTick();
@@ -731,6 +794,9 @@ public class JakVehicleEntity extends Entity {
             this.serverZ = this.getZ();
             this.serverKnown = true;
             this.pushAside();
+            // les chocs : ce qu'on renverse, puis la vitesse perdue d'un coup (VehicleImpacts)
+            VehicleImpacts.ram(this);
+            VehicleImpacts.watch(this);
         }
     }
 

@@ -719,6 +719,8 @@
   "hud.emeraldweapons.morph_gun.empty": "%s — empty",
   "death.attack.emeraldweapons.morph_gun": "%1$s was shot down by a Morph Gun",
   "death.attack.emeraldweapons.morph_gun.player": "%1$s was shot down by %2$s's Morph Gun",
+  "death.attack.emeraldweapons.jak_vehicle": "%1$s was run over by a vehicle",
+  "death.attack.emeraldweapons.jak_vehicle.player": "%1$s was run over by %2$s",
   "entity.emeraldweapons.gun_blaster_shot": "Blaster Shot",
   "entity.emeraldweapons.gun_peace_ball": "Peace Maker Orb",
   "entity.emeraldweapons.gun_arc": "Peace Maker Lightning",

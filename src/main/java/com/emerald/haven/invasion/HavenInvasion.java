@@ -15,6 +15,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
+import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.entity.Entity;
@@ -39,6 +40,7 @@ import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
 import net.neoforged.neoforge.event.entity.living.LivingChangeTargetEvent;
 import net.neoforged.neoforge.event.entity.living.LivingConversionEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
+import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDropsEvent;
 import net.neoforged.neoforge.event.entity.living.LivingExperienceDropEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
@@ -618,6 +620,13 @@ public final class HavenInvasion {
                 continue;
             }
             seen.add(mob.getUUID());
+            // LE SOLEIL FIXE DE MIDI NE BRULE PAS L'INVASION. Les monstres au sol portent un
+            // casque incassable, mais les phantoms volent tete nue : ils s'enflammaient
+            // (Phantom.aiStep) et mouraient en vingt secondes, remplaces aussitot -- c'etait
+            // une des disparitions que le joueur voyait (19 sept.).
+            if (mob.isOnFire()) {
+                mob.clearFire();
+            }
             keepOutOfSafeZones(server, mob);
             if (mob.getTarget() instanceof Player target
                     && HavenProtection.inSafeZone(server, target.getX(), target.getY(), target.getZ())) {
@@ -842,6 +851,18 @@ public final class HavenInvasion {
     public static void onJoin(EntityJoinLevelEvent event) {
         if (event.loadedFromDisk() && !event.getLevel().isClientSide() && event.getLevel() instanceof ServerLevel level
                 && Haven.is(level) && !welcome(level, event.getEntity())) {
+            event.setCanceled(true);
+        }
+    }
+
+/**
+     * Le feu ne mord pas sur l'invasion : la ville vit sous un soleil de midi fige, et
+     * rien n'y allume de feu. Sans cela, les phantoms brulaient sans fin (voir sweep).
+     */
+    @SubscribeEvent
+    public static void onBurn(LivingIncomingDamageEvent event) {
+        if (isHavenMonster(event.getEntity()) && event.getSource().is(DamageTypeTags.IS_FIRE)) {
+            event.getEntity().clearFire();
             event.setCanceled(true);
         }
     }

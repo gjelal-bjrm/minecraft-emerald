@@ -1,6 +1,7 @@
 package com.emerald.haven.traffic;
 
 import com.emerald.jak.vehicle.JakVehicleEntity;
+import com.emerald.jak.vehicle.VehicleImpacts;
 import com.emerald.jak.vehicle.VehiclePhysics;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
@@ -67,6 +68,8 @@ public final class TrafficDriver {
     static final double TURN_COS45 = Math.cos(Math.toRadians(45.0));
     /** Le point vise est au moins a tant de blocs devant, a l'arret. */
     static final double LOOKAHEAD_MIN = 4.0;
+    /** Ce qu'un vehicule etourdi garde de sa vitesse a chaque tique : il finit par s'arreter. */
+    static final double STUN_DRAG = 0.96;
     private static final double TICK = 0.05;
 
     private static final String TAG_BRANCH = "Branche";
@@ -120,6 +123,22 @@ public final class TrafficDriver {
                          RandomSource random) {
         if (this.branch < 0 || this.branch >= data.branches().size()) {
             return false;
+        }
+        double shock = VehicleImpacts.vehicles(car);
+        if (shock > 0.0) {
+            car.stun(VehicleImpacts.stunTicks(shock));
+        }
+        if (car.tickStun()) {
+            // etourdi par un choc : plus de volant, on derive et on retombe sur la voie
+            Vec3 drift = car.getDeltaMovement();
+            double laneY = HavenTraffic.laneY(origin, car.getX(), car.getZ());
+            double vy = drift.y + (laneY - car.position().y) * 0.02;
+            Vec3 asked = new Vec3(drift.x * STUN_DRAG, Math.max(-0.5, Math.min(0.5, vy)), drift.z * STUN_DRAG);
+            Vec3 allowed = VehiclePhysics.move(car, asked);
+            car.setDeltaMovement(blocked(asked.x, allowed.x) ? 0.0 : asked.x, asked.y,
+                    blocked(asked.z, allowed.z) ? 0.0 : asked.z);
+            car.syncParts();
+            return true;
         }
         HavenTrafficData.Branch current = data.branch(this.branch);
         Vec3 start = data.start(current, origin);

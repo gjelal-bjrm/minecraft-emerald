@@ -167,4 +167,12 @@ public class ModParticles {
 
     public static final DeferredHolder<ParticleType<?>, SimpleParticleType> GUN_NOVA_BLAST =
             PARTICLES.register("gun_nova_blast", () -> new SimpleParticleType(true));
+
+    // ------------------------------------------------- les chocs des vehicules de Jak 3
+    //
+    // Un seul type, a ce seul usage : tools/vehicle_particles.py pour la texture,
+    // jak/vehicle/VehicleParticles pour le comportement.
+
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> JAK_VEHICLE_SPARK =
+            PARTICLES.register("jak_vehicle_spark", () -> new SimpleParticleType(true));
 }

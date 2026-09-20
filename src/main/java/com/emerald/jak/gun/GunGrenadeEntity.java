@@ -40,10 +40,11 @@ import java.util.List;
  * {@value GunSpec#PLASMITE_MAX_SPEED} blocs par tique au plus ; un bloc la fait
  * REBONDIR en gardant 60 % de sa vitesse ; elle vit {@value GunSpec#PLASMITE_LIFE}
  * tiques, puis explose. LA MECHE DE PROXIMITE (:293-400) : des qu'un monstre est
- * devant elle a moins de {@value GunSpec#PLASMITE_FUSE_RADIUS} blocs, elle explose
- * quand elle passe au plus pres de lui, dans {@value GunSpec#PLASMITE_FUSE_MAX}
- * tiques au plus ; tout de suite a moins de {@value GunSpec#PLASMITE_FUSE_NOW}
- * blocs ou au contact.
+ * devant elle a moins de {@value GunSpec#PLASMITE_FUSE_RADIUS} blocs ET QU'ELLE VA
+ * PASSER A MOINS DE {@value GunSpec#PLASMITE_FUSE_MISS} BLOCS DE LUI, elle explose au
+ * passage au plus pres, dans {@value GunSpec#PLASMITE_FUSE_MAX} tiques au plus ; tout
+ * de suite a moins de {@value GunSpec#PLASMITE_FUSE_NOW} blocs ou au contact. Sinon
+ * elle poursuit sa route et tombe sur le sol.
  *
  * LE SOUFFLE : {@value GunSpec#PLASMITE_DAMAGE} points de Jak a tous les monstres de
  * Haven a moins de {@value GunSpec#PLASMITE_BLAST} blocs -- le Plasmite RPG vide une
@@ -189,28 +190,42 @@ public class GunGrenadeEntity extends Projectile {
     }
 
     /**
-     * La meche : -1 sans monstre devant, 0 pour exploser tout de suite, sinon les
-     * tiques jusqu'au passage au plus pres (distance x cosinus / vitesse), bornees.
+     * La meche : -1 sans monstre a portee, 0 pour exploser tout de suite, sinon les
+     * tiques jusqu'au passage au plus pres du monstre, bornees.
+     *
+     * LE JEU N'ARME QUE SUR UN MONSTRE DEVANT (:333-339) et fait exploser au passage au
+     * plus pres : delai = (distance / vitesse) x cosinus, une demi-seconde au plus. Chez
+     * lui les ennemis ont de grosses spheres de collision et la grenade vole vers l'un
+     * d'eux ; chez nous, N'IMPORTE QUEL monstre devant, meme a dix blocs de la
+     * trajectoire, armait la meche -- et la grenade lobee explosait en l'air, loin de
+     * tout (« ça explose souvent dans le ciel », 19 sept.). On ajoute donc la seule
+     * question qui manquait : VA-T-ELLE PASSER PRES DE LUI ? L'ecart au plus pres doit
+     * rester sous {@value GunSpec#PLASMITE_FUSE_MISS} blocs, sinon elle continue sa
+     * route et va tomber sur le sol.
      */
     private int proximity(ServerLevel level) {
         Vec3 velocity = this.getDeltaMovement();
         double speed = velocity.length();
-        List<Mob> near = GunImpacts.targetsAround(level, this.position(), GunSpec.PLASMITE_FUSE_RADIUS, 16);
+        if (speed < 1.0e-3) {
+            return -1;
+        }
+        Vec3 heading = velocity.scale(1.0 / speed);
         int best = -1;
-        for (Mob mob : near) {
+        for (Mob mob : GunImpacts.targetsAround(level, this.position(), GunSpec.PLASMITE_FUSE_RADIUS, 16)) {
             Vec3 to = GunImpacts.center(mob).subtract(this.position());
             double distance = to.length();
             if (distance < GunSpec.PLASMITE_FUSE_NOW) {
                 return 0;
             }
-            if (speed < 1.0e-3) {
-                continue;
+            double along = to.dot(heading);
+            if (along <= 0.0) {
+                continue;                   // derriere la grenade : elle s'en eloigne
             }
-            double dot = to.dot(velocity) / (distance * speed);
-            if (dot <= 0.0) {
-                continue;
+            double miss = Math.sqrt(Math.max(0.0, distance * distance - along * along));
+            if (miss > GunSpec.PLASMITE_FUSE_MISS) {
+                continue;                   // elle passera trop loin de lui
             }
-            int ticks = (int) Math.max(1L, Math.min(GunSpec.PLASMITE_FUSE_MAX, Math.round(distance * dot / speed)));
+            int ticks = (int) Math.max(1L, Math.min(GunSpec.PLASMITE_FUSE_MAX, Math.round(along / speed)));
             best = best < 0 ? ticks : Math.min(best, ticks);
         }
         return best;

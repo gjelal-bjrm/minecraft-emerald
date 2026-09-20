@@ -93,6 +93,9 @@ public final class VehiclePhysics {
 
     /** Un tick de vol. A appeler par l'instance qui simule la voiture. */
     public static void tick(JakVehicleEntity car, VehicleDynamics.Input input) {
+        // le choc contre un autre vehicule, avant tout le reste : la vitesse qui en sort
+        // est celle que le vol de la tique va suivre (VehicleImpacts)
+        VehicleImpacts.vehicles(car);
         VehicleSpec spec = car.spec();
         double front = probe(car, spec.thrusterFrontZ);
         double rear = probe(car, spec.thrusterRearZ);
