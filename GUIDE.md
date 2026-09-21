@@ -650,6 +650,14 @@ Pour regarder un terrain (arbres, biomes) sans jouer : le run `photos` entre dan
 jetable `run/saves/photos` ; avec `EMERALDWEAPONS_PHOTOS="nom@biome;nom@biome@hauteur"` (et
 `EMERALDWEAPONS_PHOTOS_ORIGINE="x,z"` pour chercher loin de ce qui est exploré), il se place
 dans chaque biome, à midi et par beau temps, prend les captures dans `run/screenshots/` et se ferme.
+Pour photographier des animaux ou des blocs, un datapack jetable dans `run/saves/photos/datapacks/`
+peut les poser devant la caméra : l'automate place le joueur 200 tiques après son arrivée, une
+fonction de tique qui compte les tiques du joueur agit juste après (vitrine d'Alex's Mobs, cahier §78.5).
+
+Living Things n'accepte que des noms de biomes : après une mise à jour d'Oh The Biomes We've Gone
+ou de Regions Unexplored, relancer `python tools/livingthings_biomes.py`, jeu fermé, pour que ses
+animaux suivent les biomes des deux mods (`--a-blanc` montre sans écrire, `--retirer` rend la
+config d'origine ; cahier §78.6).
 
 Les chiffres de tir des armes sont dans `jak/gun/GunSpec.java` ; les textures des particules
 et la planche de contrôle (`build/jak/gun/planche-tir.png`) sortent de `python tools/gun_particles.py`.

@@ -6611,9 +6611,14 @@ Telecharges de Modrinth avec l'accord du joueur, sha512 verifies ; licences libr
 (MIT, MPL, LGPL) : l'export du modpack peut les embarquer.
 
 **LES EXTENSIONS DE DYNAMIC TREES POUR NOS DEUX MODS DE BIOMES NE PASSENT PAS.**
-`dtbwg` (Oh The Biomes We've Gone) veut NeoForge 21.1.208 et OTBWG 2.5.0 -- or la
-2.5.0 a RENOMME tous ses blocs (« Breaking Changes », 31 oct. 2025) : la mettre a jour
-casserait les mondes du profil. `dtru` (Regions Unexplored) veut NeoForge 21.1.187 et RU
+`dtbwg` (Oh The Biomes We've Gone) veut NeoForge 21.1.208 et OTBWG 2.5.0 -- une version
+« Breaking Changes » (31 oct. 2025) : le biome `skyrise_vale` devient `skyris_vale`
+(dans les troncons deja generes, F3 l'appelle « plaines » et `/locate` ne le trouve
+plus), la commande de mise a niveau des villageois disparait, et la 2.4.0 avait refait
+biomes et villages (coutures au bord des anciens troncons). *Correction du 21 sept. au
+soir : j'avais d'abord ecrit que la 2.5.0 renommait tous ses blocs et casserait les
+mondes -- c'est faux, relu dans son journal (Modrinth, 2.5.0-NeoForge).* `dtru`
+(Regions Unexplored) veut NeoForge 21.1.187 et RU
 0.6.2, la refonte « The Next Chapter ». Le profil a NeoForge 21.1.174, OTBWG 2.3.13, RU
 0.5.6.1. On s'en passe : DYNAMIC TREES NE TOUCHE QU'AUX BIOMES DU JEU DE BASE (ses
 regles choisissent `minecraft:.*`, ses annulations aussi) -- les forets des deux mods
@@ -6662,3 +6667,202 @@ selon la prise.
 Poses dans le profil « Mode Arcencium » et en dev (sans les mods de biomes, que le dev
 n'a pas) ; notre jar porte la rarete des fruitiers. Banc haven 11 OK sans Pam's Trees :
 aucune erreur de donnees, les conditions tiennent.
+
+## 78. Des animaux partout, et des meubles pour Haven *(demandes du joueur, 21 sept. 2026)*
+
+> « Le fameux mod qui permet d'ajouter plein de nouveaux animaux, car actuellement il
+> n'y en a pas assez. [...] Il y avait beaucoup d'animaux dans l'eau, dans les airs,
+> dans les differents biomes. » -- « Des mobiliers : des canapes, des televisions, des
+> bureaux, des lumieres qui ne soient pas des torches, mais des vraies lumieres de
+> differentes sortes. »
+
+### 78.1 Ce que le joueur veut
+
+1. **PLUS D'ANIMAUX DANS LE MONDE** : dans l'eau, dans les airs, dans chaque biome. Il
+   pense au « fameux mod » d'un jeu recent, dont il a oublie le nom (un mod, ou un
+   modpack).
+2. **DES MEUBLES** : canapes, televisions, bureaux, et de vraies lumieres de plusieurs
+   sortes, pas des torches -- pour meubler Haven dans l'atelier (§75).
+3. **DES ANIMAUX DANS HAVEN AUSSI** -- « il faudra qu'on decide lesquels » :
+   - des chats et des chiens, « sans trop en abuser » ;
+   - des oiseaux dans le ciel ;
+   - dans l'eau, differentes sortes de poissons, et d'autres animaux marins ;
+   - des QUETES qui demandent d'aller prendre des poissons dans l'eau ;
+   - des DANGERS dans l'eau : des requins, ou d'autres choses de ce genre.
+
+   A reprendre avec le parcours du §76 : les quetes des PNJ peuvent porter la peche.
+
+### 78.2 Ce que le profil a deja (inventaire du 21 sept.)
+
+**Les animaux.**
+
+- `livingthings` 2.2.0 (Living Things, venu d'ATM10) : elephants, girafes, lions,
+  koalas, singes, autruches, flamants, paons, pingouins, ratons laveurs, chouettes (qui
+  volent), escargots, crabes, hippocampes, raies mantas et REQUINS (ils attaquent, 6 de
+  degats), plus trois creatures du Nether et de l'End.
+- `Aquaculture` 2.7.14 : 29 poissons qui nagent vraiment (thon, piranha, arapaima,
+  poisson-chat, truites...), des meduses et trois tortues. Ils apparaissent par
+  etiquettes de biomes (`#c:is_ocean`...), donc aussi dans les biomes des mods.
+- ceux du jeu de base : chats, loups aux neuf robes de la 1.21, perroquets...
+
+**POURQUOI ON EN CROISE SI PEU.** La config de Living Things (`config/livingthings/
+*.json`) n'accepte que des NOMS de biomes -- pas d'etiquettes (`SpawnData` : « Ignoring
+invalid biome ») -- et ses 89 entrees ne citent que des biomes du jeu de base. Or les
+regions d'Oh The Biomes We've Gone et de Regions Unexplored pesent 44 contre 10 pour
+celles du jeu de base (TerraBlender : 3 x 8, et 11 + 8 + 1) : dans leurs biomes a eux,
+aucun animal de Living Things n'apparait. Et le biome de Haven n'a aucune apparition
+(`haven.json` : `spawners` vides).
+
+**Les meubles et les lumieres : DEJA LA, venus d'ATM10.**
+
+| Mod | Ce qu'il apporte |
+|---|---|
+| `refurbished_furniture` 1.0.12 (MrCrayfish) | canapes, TELEVISION, ordinateur, bureaux, chaises, tables, tabourets ; cuisine (frigo, four, micro-ondes, grille-pain, hotte, evier) ; salle de bain (baignoire, toilettes, lavabo) ; plafonniers, lampes, ventilateurs de plafond, interrupteurs -- 448 blocs |
+| `handcrafted` 4.0.3 | canapes, fauteuils, bureaux, etageres, lits, coussins |
+| `mcw-furniture` 3.3.0 (Macaw's) | bureaux et chaises modernes, tables basses et en verre, cuisines, bibliotheques -- 600 blocs |
+| `mcw-lights` 1.1.2 (Macaw's) | 37 sortes : plafonniers, lustres, lampadaires de rue, appliques, lampes a lave, lampions, lumieres de jardin |
+| `simplylight` 1.5.3 | panneaux, barres, colonnes et bandeaux lumineux en 16 couleurs -- les plus proches de Haven |
+| `luminax`, `additional_lights`, `bibliocraft` | blocs lumineux, lampes de pierre, lampes et horloges anciennes |
+
+MAIS LE DEV N'EN A AUCUN : `run/mods` n'a ni ces meubles, ni Living Things, ni
+Aquaculture -- et l'atelier de Haven tourne en dev. Les plafonniers, les lampes et la
+television de Refurbished veulent de l'electricite (un generateur relie par des cables),
+sauf avec l'option `everythingIsPowered` de `refurbished_furniture.server.toml`. Un bloc
+de meuble releve dans l'atelier puis rejoue la ou le mod manque est journalise et saute
+(`JakOverlay`, « etat illisible ») : Haven se charge, sans ce meuble.
+
+### 78.3 Pistes pour les animaux de Haven (a trancher avec le joueur)
+
+- **Chats et chiens** : ceux du jeu de base (onze robes de chats, neuf de loups depuis
+  la 1.21), en PETIT NOMBRE FIXE, poses par le mod a des endroits choisis (pres des
+  appartements, du marche) plutot que par le biome -- « sans trop en abuser ».
+- **Oiseaux** : Jak 3 en a deja -- des mouettes tournent autour du palais
+  (`levels/palace/cable/palcab-part.gc`, `group-palcab-birds`, texture `seagull-wing`).
+  Les chouettes de Living Things volent ; le mod d'animaux retenu peut en apporter
+  d'autres.
+- **L'eau du port** : les poissons d'Aquaculture et du jeu de base, ajoutes au biome de
+  Haven par un modificateur conditionnel, comme les fruitiers de Pam (§77.3).
+- **La peche en quete** : Aquaculture sait donner un POIDS a chaque poisson
+  (`aquaculture-common.toml`, « Enable weight for fish », eteint aujourd'hui). Une quete
+  a la maniere du pecheur de Jak 1 (« 200 livres de poisson ») devient possible, dans
+  le Carnet FTB ou chez un PNJ du §76.
+- **Les dangers** : les requins de Living Things mordent (6 de degats) et suivent les
+  bateaux ; Jak 1 avait son requin Lurker, qui avalait Jak s'il nageait trop loin.
+
+### 78.4 Les meubles, en dev aussi *(accord du joueur, 21 sept.)*
+
+« Oui, copie les meubles dans le jeu de dev. » Copies du profil dans `run/mods`, memes
+jars (sha1 identiques), sans rien telecharger :
+
+| Jar | Pour |
+|---|---|
+| `refurbished_furniture` 1.0.12 + `framework` 0.9.6 | MrCrayfish : television, canapes, cuisine, salle de bain, plafonniers |
+| `handcrafted` 4.0.3 + `resourcefullib` 3.0.12 | canapes, fauteuils, bureaux, etageres |
+| `mcw-furniture` 3.3.0, `mcw-lights` 1.1.2 | Macaw's : meubles modernes, 37 sortes de lumieres |
+| `simplylight` 1.5.3 | panneaux et bandeaux lumineux |
+
+La config serveur de Refurbished vient aussi du profil : ATM10 l'a retouchee (16
+d'electricite par tique de combustible, 8 par defaut), le dev se comporte donc comme
+le profil. `run-server/mods` reste vide : le jour ou le releve de la ville
+portera des meubles, le serveur des bancs les sautera (« etat illisible ») -- il
+faudra alors lui donner les memes jars (ils tournent aussi cote serveur).
+
+**L'ELECTRICITE DE REFURBISHED.** Plafonniers, lampes, television, ventilateurs ne
+s'allument qu'alimentes : un generateur (combustible) relie par des cables a la cle.
+L'option `everythingIsPowered` de `refurbished_furniture.server.toml` alimente tout, sans
+generateur. **CHOIX DU JOUEUR : TOUT ALIMENTE** (« Oui, active l'option qui alimente
+tout ») -- mise a `true` dans `run/config` et dans le `config` du profil, qui part avec
+l'export du modpack (`tools/export_modpack.py` copie tout `config`). Le fichier est
+global (type SERVER de Framework), aucun monde n'en a de copie. Le generateur ne sert
+plus a rien ailleurs : c'est le prix, accepte, d'une Haven eclairee sans cables.
+Verifie en dev : un datapack jetable (monde « photos ») pose un plafonnier
+`light_ceiling_light[powered=false]` sans generateur ; trois secondes plus tard il est
+`powered=true` (« VERIF_REFURBISHED ALIMENTE » au journal), et le fichier garde `true`
+apres le passage du jeu. Datapack retire ensuite.
+
+Verifie le jour meme : le client de dev (run `photos`, une seule prise) charge les
+sept jars, entre dans un monde, prend la photo et se ferme (code 0). Aucune erreur ni
+aucun avertissement de ces mods au journal ; les seuls viennent d'autres mods, deja
+la avant, et du verificateur de mises a jour de Refurbished, qui recoit une page web
+au lieu de sa reponse.
+
+### 78.5 Alex's Mobs, par son portage « Continued » *(accord du joueur, 21 sept.)*
+
+Le « fameux mod » etait bien **Alex's Mobs** (« oui c'est lui »). L'officiel s'arrete a
+la 1.20.1 (1.22.9, sept. 2024) ; deux portages non officiels existent en 1.21.1 :
+
+| Portage | Etat |
+|---|---|
+| **Alex's Mobs Continued** (Lynk / CodxIO) | les 89 animaux, 38 versions depuis juillet 2026, corrections presque chaque jour ; GPL/LGPL ; demande CodxLib ; compile sur NeoForge 21.1.216 mais sans minimum (`[1,)`) |
+| Alex's Mobs (Unofficial Port), Raguto | celui de Better MC 5 ; ABANDONNE depuis janvier 2026, 46 problemes ouverts (plantages, potions, IA) : ecarte |
+
+Pose, depuis Modrinth, sha512 verifies : `alexsmobs-2.2.2-neoforge+1.21.1.jar` (27,5 Mo)
+et `codxlib-1.6.1-neoforge+1.21.1.jar` (0,19 Mo, CC-BY-NC-ND : redistribuable tel quel,
+sans usage commercial), en dev et dans le profil. Ses apparitions passent par des
+ETIQUETTES de biomes, et ce portage traduit les anciennes `forge:` en `c:`
+(`SpawnBiomeData`) : ses animaux vivent aussi dans les biomes d'OTBWG et de RU.
+
+VERIFIE EN DEV : chargement sans erreur (seulement des avertissements du mod lui-meme :
+une table de butin du phoque, des categories d'apparition), et une VITRINE -- un
+datapack jetable pose 19 animaux immobiles devant la camera (monde « photos ») -- :
+elephant, gorille, tigre, kangourou, elan, rhinoceros, raton laveur, gazelle, emeu...
+et, en l'air, pygargue, toucan, corbeau, geai bleu, colibri, mouette. Modeles et
+textures justes sous Sodium + Iris + Complementary (`run/screenshots/alexsmobs_vitrine.png`).
+Pour Haven : les MOUETTES (Jak 3 en a autour du palais) et le COLIBRI (la tente d'Onin
+en a un, `onintent-part.gc`).
+
+### 78.6 Living Things dans les biomes des mods *(accord du joueur, 21 sept.)*
+
+`tools/livingthings_biomes.py` : chaque entree d'apparition gagne les biomes d'OTBWG et
+de RU de la meme famille que ses biomes du jeu de base (foret, taiga, savane, jungle,
+plage, riviere, ocean, marais, neige, plaine, champignons), familles lues dans les
+etiquettes des jars ; un biome ne rejoint qu'une entree par animal (pas de double
+poids), souterrains ecartes, poids et groupes inchanges. Relancer ne double rien ;
+`--retirer` rend la config d'origine ; ancienne config sauvee dans
+`<profil>/sauvegardes_arcencium/` (hors de l'export). A relancer si les mods de biomes
+changent de version (noms de biomes).
+
+Resultat : 97 biomes de surface sur 114 ont au moins un animal ; elephants, girafes,
+lions et autruches passent de 3 a 9 biomes, chouettes de 10 a 48, ratons laveurs de
+8 a 56, escargots de 9 a 70. Tous les noms verifies dans les jars.
+
+VERIFIE EN DEV (les jars du profil -- OTBWG, RU, Living Things et leurs bibliotheques
+-- copies le temps de l'essai, config etendue) : dans une savane de baobabs d'OTBWG
+generee loin de tout (13 x 13 troncons charges de force), 3 lions et 3 koalas de Living
+Things, TOUS hors des biomes du jeu de base (comptage `execute ... unless biome
+minecraft:...`) ; 4 girafes nees dans une savane du jeu de base voisine montrent que le
+comptage distingue bien. Aucun « Ignoring invalid biome » au journal. Jars et datapack
+retires ensuite ; la config etendue reste en dev, identique au profil.
+
+### 78.7 NeoForge : faut-il monter ? (proposition du 21 sept.)
+
+La recherche (21 sept.) : ce n'est PAS NECESSAIRE -- tous les mods du profil tournent
+sur 21.1.174 -- mais c'est UTILE.
+
+- Derniere version pour la 1.21.1 : **21.1.251** (18 sept. 2026). ATM10 8.1 est en
+  21.1.249 ; notre base est ATM10 3.2 (juin 2025, 21.1.174). La ligne 21.1 reste
+  compatible pour les mods : ATM10 est passe de 174 a 249 avec quelque 500 mods.
+- Ce que ca apporte ici : la sauvegarde automatique ne fige plus le serveur sur les
+  gros modpacks (189) ; moins de lag aux sauvegardes de troncons (227) ; les routes de
+  village ne sont plus posees sur les arbres et les maisons apres rechargement
+  (MC-308222, 231 -- nos villages) ; une faille reseau fermee (229) ; des plantages
+  corriges. Le profil et le dev enfin alignes (le mod est compile en 193 et joue en
+  174) ; Alex's Mobs Continued est compile en 216 ; Naturalist (>= 21.1.234) deviendrait
+  possible.
+- LE RENDU : le profil fait tourner Embeddium 1.0.15 (abandonne depuis janvier 2025)
+  avec Iris 1.8.8, qui le declare incompatible (« Please use Sodium 0.6 instead »). Ca
+  passe aujourd'hui (journal du 12 sept. : shader actif une heure et demie), mais
+  Sodium 0.6.13 -- celui du dev, deja la -- est le couple sur ; a faire en meme temps.
+- LES EXTENSIONS DE DYNAMIC TREES demanderaient en plus OTBWG 2.6 et RU 0.6.2 (avec
+  Lithostitched 1.7.9) : coutures entre anciens et nouveaux troncons, Skyris Vale en
+  « plaines » dans les vieux troncons, biomes de RU retires ou renommes (relancer
+  `livingthings_biomes.py`), `dtbwg` seulement en beta et `dtru` qui cite encore
+  d'anciens noms de RU. A part, plus tard, si le joueur le veut.
+- Quitter la 1.21.1 (NeoForge 26.x, Minecraft 26.3) : All the Mods 11 en beta, OTBWG
+  pas porte, notre mod a porter sur deux ans d'API : non.
+
+PROPOSITION : NeoForge 21.1.251 dans le profil (le joueur change la version dans
+l'application CurseForge) et en dev (`neo_version`, Gradle retelecharge NeoForge),
+Sodium 0.6.13 a la place d'Embeddium dans le profil, essai sur une copie du monde,
+bancs en dev. **DECISION DU JOUEUR : « Pas maintenant »** -- on reste en 21.1.174 ; a
+reproposer si un mod voulu exige plus recent (Naturalist, extensions de Dynamic Trees).
