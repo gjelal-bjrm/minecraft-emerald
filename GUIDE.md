@@ -555,6 +555,9 @@ Toutes commencent par `/arcencium` et demandent le niveau opérateur.
 | `haven salle <n> capture` | Relève votre aménagement de l'appartement n (voir plus bas) |
 | `haven salle <n> show` | Résume le relevé (cellules, décors, date, auteur) et dit si un aménagement de cette salle est déjà dans le mod |
 | `haven salle <n> reset` | Remet l'appartement tel que la ville le pose, retire ses décors et efface le relevé. L'aménagement déjà dans le mod revient à la prochaine pose |
+| `haven atelier` | Dit si ce monde est l'atelier de la ville, et la date du dernier relevé |
+| `haven atelier on` / `off` | Fait de ce monde l'atelier de la ville (voir plus bas), ou le lui retire |
+| `haven atelier releve` | Relève **toute la ville** : tout ce qui y a changé, où que ce soit (voir plus bas) |
 | `vehicule cara` (ou `carb`, `carc`, et les motos `bikea`, `bikeb`, `bikec`) | Pose une voiture ou une moto volante de Haven devant vous. Elle se monte et se conduit comme celles des appartements (voir la partie 1) |
 | `haven invasion etat` | Dit le mode de la ville, le nombre de monstres et d'habitants, et les blocs cassés qui attendent leur retour |
 | `haven invasion invasion` (ou `paisible`) | Passe toute la ville en invasion ou en paisible, comme le bouton du QG |
@@ -593,12 +596,52 @@ La ville rejoue votre aménagement à chaque pose, comme pour les sanctuaires.
   sont refusées, avec un message aux opérateurs : il faut les relever à nouveau.
 - Il faut être près de la salle pour la relever ou la remettre à zéro.
 
+### Retoucher toute la ville : l'atelier
+
+Pour meubler la ville, boucher ses trous, retoucher ses détails **n'importe où**, et que
+tout cela entre dans le mod pour tous les joueurs.
+
+1. **Le monde d'atelier** : `run/saves/haven_atelier` (« Haven - atelier » dans la liste
+   des mondes du client de dev), ou directement `./gradlew runAtelier` (la configuration
+   « atelier » dans IntelliJ). La ville y est déjà posée. Vous arrivez devant le bar du
+   Hip Hog, **en créatif**, protections levées ; la ville est **vide** — ni monstres, ni
+   habitants, ni trafic — et vous pouvez en sortir, voler, tout casser et tout poser.
+2. **Retouchez** : meubles (n'importe quel bloc, y compris ceux des autres mods du
+   modpack), trous bouchés, murs, sols, escaliers, portes, lits, lanternes, coffres
+   remplis, panneaux écrits, cadres, tableaux, porte-armures. Les appartements aussi.
+3. **Relevez** : `/arcencium haven atelier releve` (cliquable dans le message d'arrivée).
+   Toute la ville se charge puis se lit, en quelques secondes. Le relevé ne garde que ce
+   qui diffère de la ville posée, et il est écrit dans `run/arcencium_jak/ville.nbt`,
+   avec une version lisible `ville.txt` (les blocs par nombre, puis chaque cellule).
+   Chaque relevé est **complet** et remplace le précédent : relevez à la fin de chaque
+   séance, ou quand vous voulez.
+   Sans relever vous-même : quittez le jeu et dites-le à Claude. Il lance
+   `EMERALDWEAPONS_ATELIER=releve ./gradlew runAtelier`, qui ouvre le monde, relève la
+   ville et referme le jeu tout seul.
+4. **Dans le mod** : `python tools/jak_zone_apply.py ville` (`--dry-run` pour vérifier),
+   puis relancez le jeu et `/arcencium haven rebuild` : la ville reposée porte vos
+   retouches, partout où elle est posée.
+
+À savoir :
+- Le relevé de la ville entière **remplace** les relevés d'appartements faits à part : la
+  ville les contient déjà.
+- Ce qui n'est pas relevé : les monstres, les habitants et les véhicules, la borne du QG
+  et le bouton de l'invasion (le mod les pose lui-même), et tout ce qui sort de la grille
+  de la ville (1227 × 158 × 695 blocs à partir de 0, 5, 0).
+- Les règles des salles valent ici aussi : portes refermées, redstone éteinte, eau qui
+  coule écartée ; leviers, trappes, bougies et feux de camp gardés tels quels.
+- Un bloc d'un autre mod doit exister dans le modpack du joueur : le script signale ceux
+  qui manquent en dev.
+- `/arcencium haven atelier on` fait de n'importe quel monde un atelier (et `off` le
+  rend normal).
+
 ### Essais automatiques
 
 Sur un serveur d'essai (`run-server`), chacun écrit son rapport puis arrête le serveur :
 
 - `EMERALDWEAPONS_AUTOTEST=vote ./gradlew runServer` : appartements et vote, rapport `run-server/vote_autotest.txt` ;
 - `EMERALDWEAPONS_AUTOTEST=salles ./gradlew runServer` : relevé et rejeu des salles, rapport `run-server/salles_autotest.txt` ;
+- `EMERALDWEAPONS_AUTOTEST=atelier ./gradlew runServer` : l'atelier et le relevé de la ville entière (ville nue relevée vide, retouches relevées puis rejouées par deux poses), rapport `run-server/atelier_autotest.txt` ;
 - `EMERALDWEAPONS_AUTOTEST=vehicules ./gradlew runServer` : voitures et motos, rapport `run-server/vehicules_autotest.txt` ;
 - `EMERALDWEAPONS_AUTOTEST=invasion ./gradlew runServer` : invasion, décor destructible, bouton du QG et MSPT, rapport `run-server/invasion_autotest.txt` ;
 - `EMERALDWEAPONS_AUTOTEST=armes ./gradlew runServer` : Morph Gun (poses, confinement, tir des douze armes, munitions, décor, MSPT avec quatre tireurs), rapport `run-server/armes_autotest.txt`.

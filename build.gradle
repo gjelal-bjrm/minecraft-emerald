@@ -71,6 +71,16 @@ neoForge {
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
         }
 
+        // L'ATELIER DE LA VILLE (HavenAtelier) : entre directement dans le monde
+        // haven_atelier, ou l'on retouche Haven en creatif. Lance avec la variable
+        // EMERALDWEAPONS_ATELIER=releve, il releve la ville et se ferme tout seul.
+        atelier {
+            client()
+            programArgument '--quickPlaySingleplayer'
+            programArgument 'haven_atelier'
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        }
+
         server {
             server()
 

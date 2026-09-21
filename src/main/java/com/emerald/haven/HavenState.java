@@ -55,6 +55,13 @@ public final class HavenState extends SavedData {
     private int height = Haven.GRID_HEIGHT;
     private int depth = Haven.GRID_DEPTH;
     /**
+     * L'ATELIER (HavenAtelier) : le monde ou le joueur retouche la ville. Les
+     * operateurs y batissent librement, la ville y est vide, et son releve
+     * (JakCityCapture) repart dans le mod. Faux partout ailleurs, et dans tous les
+     * mondes existants : la cle manque, getBoolean rend faux.
+     */
+    private boolean atelier;
+    /**
      * LE MODE DE JEU D'ORIGINE, PAR JOUEUR.
      *
      * Sauvegarde, parce qu'un joueur deconnecte dans la ville, un serveur qui
@@ -92,6 +99,7 @@ public final class HavenState extends SavedData {
         state.wanted = tag.getBoolean("Wanted");
         state.built = tag.getBoolean("Built");
         state.resetPending = tag.getBoolean("ResetPending");
+        state.atelier = tag.getBoolean("Atelier");
         state.sha1 = tag.getString("Sha1");
         if (tag.contains("Origin")) {
             state.origin = BlockPos.of(tag.getLong("Origin"));
@@ -134,6 +142,7 @@ public final class HavenState extends SavedData {
         tag.putBoolean("Wanted", this.wanted);
         tag.putBoolean("Built", this.built);
         tag.putBoolean("ResetPending", this.resetPending);
+        tag.putBoolean("Atelier", this.atelier);
         tag.putString("Sha1", this.sha1);
         tag.putLong("Origin", this.origin.asLong());
         tag.putInt("Width", this.width);
@@ -179,6 +188,18 @@ public final class HavenState extends SavedData {
 
     public boolean built() {
         return this.built;
+    }
+
+    /** Ce monde est-il l'atelier de la ville ? */
+    public boolean atelier() {
+        return this.atelier;
+    }
+
+    public void setAtelier(boolean atelier) {
+        if (this.atelier != atelier) {
+            this.atelier = atelier;
+            this.setDirty();
+        }
     }
 
     public boolean resetPending() {

@@ -199,6 +199,41 @@ public final class JakVolume {
         return this.runs[lo * 2];
     }
 
+    /**
+     * Les entrees de palette d'une rangee : les cellules x0 .. x0 + count - 1 de la
+     * rangee (y, z), dans {@code out}.
+     *
+     * Une seule recherche, puis on suit les plages : le releve de la ville entiere
+     * (JakCityCapture) lit ses cent trente-cinq millions de cellules ainsi, au lieu
+     * d'une recherche dichotomique par cellule.
+     */
+    public void row(int y, int z, int x0, int count, int[] out) {
+        if (count <= 0) {
+            return;
+        }
+        blockAt(x0, y, z);                           // controle des bornes du debut
+        blockAt(x0 + count - 1, y, z);               // et de la fin
+        long index = ((long) y * this.depth + z) * this.width + x0;
+        int lo = 0;
+        int hi = this.starts.length - 1;
+        while (lo < hi) {
+            int mid = (lo + hi + 1) >>> 1;
+            if (this.starts[mid] <= index) {
+                lo = mid;
+            } else {
+                hi = mid - 1;
+            }
+        }
+        int run = lo;
+        for (int i = 0; i < count; i++) {
+            long cell = index + i;
+            while (run + 1 < this.starts.length && this.starts[run + 1] <= cell) {
+                run++;
+            }
+            out[i] = this.runs[run * 2];
+        }
+    }
+
     // ------------------------------------------------------------- lecture
 
     /**

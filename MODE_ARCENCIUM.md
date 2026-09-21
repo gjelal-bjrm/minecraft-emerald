@@ -6451,3 +6451,135 @@ non recopies. `SHADERPACK` pointe sur le nouveau pack.
 Les six bancs apres ce lot : vehicules 149 (l'equilibre, 14 controles neufs),
 armes 178 (la meche, 4 neufs), invasion 47 (le trafic qui penche), haven 11,
 salles 26, vote 36, aucun KO.
+
+## 75. L'atelier de la ville : retoucher Haven partout, et le rendre au mod *(21 sept. 2026)*
+
+> « Il faut qu'on trouve un moyen que je te fasse des ameliorations dans Haven City.
+> Je vais mettre des meubles, corriger des petits details. Il y a encore quelques
+> trous dans les murs. Donc je vais faire des changements un peu dans toute la map.
+> [...] Peut-etre tu pourrais me creer un monde qui contient uniquement Haven City,
+> dans lequel je peux me connecter en mode dev pour le corriger, et ensuite tu le
+> recuperes tel quel. »
+
+### 75.1 Ce qui existait, et ce qui manquait
+
+Le releve des SALLES (§ amenagement des appartements) faisait deja le plus dur :
+`JakDiff` compare chaque cellule d'une salle au VOLUME du port (ctyport.jakv, relu a
+la demande), garde l'etat complet des cellules changees -- une fois normalise --, le
+NBT de leurs entites de bloc et les decors-entites (cadres, tableaux,
+porte-armures) ; `tools/jak_zone_apply.py` copie le releve dans
+`data/emeraldweapons/jak/zones/ctyport/`, et `JakOverlay` le rejoue a chaque pose de la
+ville. Aucune salle n'avait encore ete relevee.
+
+Il manquait : la ville ENTIERE (le joueur retouche partout), un monde ou retoucher sans
+l'invasion dans les jambes, et un releve qui ne depende pas d'une salle choisie.
+
+### 75.2 L'atelier (`HavenAtelier`)
+
+Un drapeau du monde, sauvegarde avec lui (`HavenState.atelier`) :
+- tout OPERATEUR y est en chantier d'office (`HavenRules.chantier`) : creatif,
+  protections levees, libre de sortir de la grille, sans Morph Gun, sans vote ;
+- la ville y est VIDE : `HavenInvasion.cityOpen` est faux, donc ni monstres, ni
+  habitants, ni trafic, ni eco, et rien ne se casse aux armes ;
+- on y arrive DEVANT LE BAR, pas dans un appartement (`HavenArrival.arrive`) ;
+- a la connexion, un message dit comment rendre son travail, commande cliquable.
+
+`/arcencium haven atelier [on | off | releve]`.
+
+LE MONDE (`run/saves/haven_atelier`, « Haven - atelier ») est cree par un serveur
+d'essai lance avec `EMERALDWEAPONS_ATELIER=creer` sur un monde neuf : la ville s'y pose
+comme dans tout monde neuf (HavenSite), le monde passe en atelier, le serveur s'arrete.
+Le dossier est deplace dans run/saves, et son level.dat recoit un nom, les commandes
+(le joueur y est donc operateur, donc batisseur) et le mode creatif. La configuration
+`atelier` de build.gradle l'ouvre directement (`--quickPlaySingleplayer haven_atelier`).
+
+### 75.3 Le releve de la ville entiere (`JakCityCapture`)
+
+Meme regle que les salles, sur toute la grille (1227 x 158 x 695, 135 millions de
+cellules), appartements compris. Le fichier a le format d'une salle, sous le nom
+« ville » et la grille entiere pour boite : `JakOverlay` le rejoue sans rien de neuf.
+
+- ETALE COMME LA POSE : les 3 388 troncons de la grille sont tenus par un ticket
+  (etat FINI, sans tiquer), on attend leurs entites, puis on lit 25 ms par tique.
+- RAPIDE : la reference se lit par RANGEE (`JakVolume.row` : une recherche, puis les
+  plages) et le monde par SECTION ; une cellule egale a sa reference -- la quasi-totalite
+  -- ne coute qu'une comparaison, la normalisation n'est faite que sur les autres.
+- JAMAIS RELEVES : la borne du QG et le bouton de l'invasion, que le mod pose et retire
+  lui-meme ; les figer les ressusciterait a leur ancienne place.
+- LA VILLE REMPLACE LES SALLES : si `ville.nbt` est dans le mod, les salles relevees a
+  part ne sont plus rejouees (plus anciennes ou redondantes, elles defairaient ce que la
+  ville a de plus recent).
+- LE RELEVE AUTOMATIQUE : `EMERALDWEAPONS_ATELIER=releve ./gradlew runAtelier` ouvre le
+  monde, releve, et ferme le client (`HavenAtelierClient`) : je recupere le travail du
+  joueur « tel quel », sans qu'il ait a taper la commande.
+
+### 75.4 Verifications
+
+Banc `EMERALDWEAPONS_AUTOTEST=atelier` (`HavenAtelierAutotest`) :
+
+| Essai | Mesure |
+|---|---|
+| la ville reposee sans aucun amenagement, relevee entiere | 0 cellule, 0 decor (3 cellules de la borne et du bouton ignorees) : la reference et la normalisation tiennent sur toute la grille |
+| la duree d'un releve complet | 3 388 troncons en 4,5 s (103 tiques) ; 5,3 s avec des retouches |
+| l'atelier ouvert | ville fermee a l'invasion, 0 monstre, 0 habitant ; un faux joueur n'y batit pas |
+| retouches : coffre garni, escalier retourne, trou bouche, bloc du mod, mur perce (rue du bar), appartement 1, cadre garni et tableau | le releve porte les 6 cellules et elles seules, avec leur etat complet, le coffre a 2 piles, les 2 decors |
+| deux poses qui rejouent le releve, avec une salle relevee a part | seule la ville est rejouee ; les 6 cellules retrouvees, le coffre garni, cadre et tableau a leur place, pas un decor de plus |
+
+En fin de banc, la ville du serveur d'essai est rendue au volume : ses retouches sont
+dans la rue du bar, ou roulent les voitures des autres bancs.
+
+`tools/jak_zone_apply.py ville` controle et copie le releve (sha1 du port, origine,
+boite egale a la grille, blocs d'autres mods absents du dev signales).
+
+## 76. A definir ensemble : le parcours du joueur dans Haven *(idees du joueur, 21 sept. 2026)*
+
+Note pour plus tard, telle que le joueur l'a dictee ; rien n'est code. « Il faudra
+qu'on discute de tout ça pour definir clairement le systeme. » Elle rejoint le plan des
+quetes du 19 sept. (§71 : Torn, Sig, Tess, Keira, Samos ; bonus du Defi) et les idees
+du §66 (Defi plus dur, vendeurs payes en quetes).
+
+### 76.1 Ce que le joueur veut
+
+1. **PREMIERE ARRIVEE : UNE VILLE PAISIBLE.** Haven est en mode passif, avec ses
+   villageois. Les joueurs n'ont PAS le Morph Gun.
+2. **LE BOUTON DU QG EST VERROUILLE.** Passer la ville en invasion ou en paisible
+   demande un droit : avoir termine toutes les quetes et debloque toutes les armes.
+   Sans ce droit, le bouton ne repond pas.
+3. **LE DEFI RAMENE A HAVEN.** A la fin du Defi -- reussi ou mort --, les joueurs
+   reapparaissent dans Haven. Reussi : un PORTAIL apparait, qui les mene a la ville.
+4. **DEUXIEME ARRIVEE : LA VILLE A ETE ENVAHIE.** Un message les envoie au QG, ou un
+   COFFRE aux objets individuels leur donne la premiere arme rouge, niveau 1 (le
+   Scatter Gun).
+5. **LES QUETES.** Un ou plusieurs PNJ (a definir) proposent des quetes. CHOISIR une
+   quete fait passer la ville en invasion, pour qu'on puisse la remplir ; la quete
+   finie, la ville repasse en paisible, avec ses villageois.
+6. **GUIDER LE JOUEUR, TOUJOURS.**
+   - premiere arrivee : un livre (« Vous aviez rendez-vous au quartier general »), ou
+     un message en haut au centre de l'ecran ;
+   - deuxieme arrivee : un message qui dit que la ville a ete envahie et qu'il faut
+     aller chercher une arme au QG ;
+   - un message quand des PNJ apparaissent avec des quetes.
+7. **LE MODE LIBRE** : un moyen de FABRIQUER le portail de retour a Haven, pour qui le
+   souhaite.
+
+### 76.2 Questions a trancher avec le joueur
+
+- L'ordre des premiers pas : la premiere arrivee (paisible, sans arme) est-elle le
+  lobby actuel, ou le vote du regime se fait-il ailleurs ? Le depart vers le Defi part
+  toujours du QG ?
+- Mort pendant le Defi : que garde-t-on (inventaire, experience, progression) en
+  revenant a Haven ? Le Defi est-il alors perdu ?
+- Le portail de fin de Defi : ou apparait-il, combien de temps, pour qui (chaque joueur,
+  ou l'equipe) ?
+- Le coffre du QG : un par joueur (a la maniere de Lootr, deja dans le modpack), une
+  seule fois par joueur, ou a chaque retour ?
+- Les quetes en multijoueur : si un joueur choisit une quete, toute la ville passe-t-elle
+  en invasion pour tous ? Que se passe-t-il si deux joueurs ont des quetes differentes ?
+- Le droit du bouton : par joueur ; toutes les quetes ET les douze armes ? Et les
+  joueurs qui ne l'ont pas voient-ils pourquoi le bouton refuse ?
+- Les PNJ : un par couleur d'eco (le plan du 19 sept.) ou moins au debut ? Ou
+  apparaissent-ils, et comment le joueur l'apprend-il (message, carte, livre FTB) ?
+- Le guidage : livre, titre a l'ecran, ou les deux ? Le Carnet (livre FTB Quests d'ATM10)
+  peut-il porter les etapes ?
+- Le portail du mode libre : sa recette, ses materiaux, et ou il mene (devant le bar, a
+  l'appartement) ?

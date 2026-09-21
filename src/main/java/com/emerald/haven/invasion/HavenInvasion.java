@@ -218,10 +218,14 @@ public final class HavenInvasion {
         return state == null ? Mode.INVASION : state.mode();
     }
 
-    /** La ville recoit : lobby ouvert, ville posee, aucune pose en cours. */
+    /**
+     * La ville recoit : lobby ouvert, ville posee, aucune pose en cours -- et ce
+     * n'est pas l'atelier (HavenAtelier), ou la ville reste vide pendant qu'on la
+     * retouche : ni monstres, ni habitants, ni trafic, ni eco.
+     */
     public static boolean cityOpen(MinecraftServer server) {
         return Haven.level(server) != null && HavenArrival.lobbyOpen(server)
-                && HavenState.get(server).built() && !HavenSite.busy();
+                && HavenState.get(server).built() && !HavenSite.busy() && !HavenState.get(server).atelier();
     }
 
     /** Ville ouverte et en invasion. */

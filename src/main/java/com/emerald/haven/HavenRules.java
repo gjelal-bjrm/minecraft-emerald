@@ -98,8 +98,25 @@ public final class HavenRules {
     private HavenRules() {
     }
 
+    /**
+     * L'operateur est-il en chantier ? Ouvert a la commande (volatil), ou d'office
+     * pour tout operateur d'un monde en ATELIER (HavenAtelier) : la, on retouche la
+     * ville a chaque session, et un chantier qu'il faudrait rouvrir a chaque
+     * connexion serait un piege.
+     */
     public static boolean chantier(@Nullable Player player) {
-        return player != null && CHANTIER.contains(player.getUUID());
+        if (player == null) {
+            return false;
+        }
+        return CHANTIER.contains(player.getUUID())
+                || (player instanceof ServerPlayer server && HavenAtelier.builder(server));
+    }
+
+    /** Remet le mode de jeu d'un joueur de la ville d'accord avec son chantier (l'atelier vient de changer). */
+    public static void refresh(ServerPlayer player) {
+        if (Haven.is(player.level())) {
+            enter(player);
+        }
     }
 
     /** Vrai si l'acteur n'est pas un operateur en chantier : la regle s'applique a lui. */

@@ -38,10 +38,15 @@ le type d'apres la valeur Python, si bien qu'un flottant y redevient un double
 et un tableau d'entiers une liste -- la rotation d'un porte-armure ne se
 relirait plus. Quand rien n'est ecarte, le fichier est copie octet pour octet.
 
+LA VILLE ENTIERE (atelier, 21 sept.) : « ville » designe le releve de toute la
+grille, pris dans le monde d'atelier (« /arcencium haven atelier releve », ou le
+run « atelier » avec EMERALDWEAPONS_ATELIER=releve). Meme format, memes controles ;
+sa boite est la grille entiere. Rejoue, il REMPLACE les salles relevees a part.
+
 Usage :
     python tools/jak_zone_apply.py <salle> [--from DOSSIER] [--dest DOSSIER] [--dry-run]
 
-    <salle>   1, 2, 3, l'identifiant (appartement_1), ou le chemin d'un .nbt
+    <salle>   1, 2, 3, l'identifiant (appartement_1), « ville », ou le chemin d'un .nbt
     --from    dossier des releves (defaut : run/arcencium_jak)
     --dest    dossier de sortie (defaut : src/main/resources/.../jak/zones/<volume>)
     --dry-run controles et resume, sans rien ecrire
@@ -250,6 +255,8 @@ def resolve_source(arg, source_dir):
     if arg.endswith(".nbt") and os.path.exists(arg):
         return arg
     room = arg
+    if arg == "ville":
+        return os.path.join(source_dir, "ville.nbt")
     if arg.isdigit():
         listed = rooms().get("rooms", [])
         number = int(arg)
@@ -273,11 +280,12 @@ def main():
 
     path = resolve_source(args.salle, args.source)
     if not os.path.exists(path):
-        sys.exit("Releve introuvable : %s\nReleve la salle en jeu (Sonde, ou /arcencium haven salle <n> capture)."
-                 % path)
+        sys.exit("Releve introuvable : %s\nReleve la salle en jeu (Sonde, ou /arcencium haven salle <n> capture),"
+                 " ou la ville dans l'atelier (/arcencium haven atelier releve)." % path)
     root_name, root = read_nbt(path)
-    if field(root, "format") != FORMAT or field(root, "kind") != "salle":
-        sys.exit("%s n'est pas un releve de salle au format %d." % (path, FORMAT))
+    kind = field(root, "kind")
+    if field(root, "format") != FORMAT or kind not in ("salle", "ville"):
+        sys.exit("%s n'est pas un releve de salle ou de la ville au format %d." % (path, FORMAT))
     room = field(root, "room", "")
     volume = field(root, "volume", "ctyport")
     refusals = []
@@ -301,15 +309,21 @@ def main():
     if listed.get("sha1") != repo_sha1:
         alerts.append("haven_rooms.json porte le sha1 %s, le volume %s" % (listed.get("sha1"), repo_sha1))
     box_min, box_max = ints(root, "box_min"), ints(root, "box_max")
-    for entry in listed.get("rooms", []):
-        if entry["id"] == room:
-            envelope = ([v - 1 for v in entry["box"]["min"]], [v + 1 for v in entry["box"]["max"]])
-            if (box_min, box_max) != envelope:
-                alerts.append("la boite du releve %s -> %s n'est plus la coque de %s dans haven_rooms.json (%s -> %s)"
-                              % (box_min, box_max, room, envelope[0], envelope[1]))
-            break
+    if kind == "ville":
+        dims = listed.get("dims")
+        if box_min != [0, 0, 0] or (dims and box_max != [d - 1 for d in dims]):
+            refusals.append("la boite du releve de la ville %s -> %s n'est pas la grille entiere (%s)"
+                            % (box_min, box_max, dims))
     else:
-        alerts.append("salle %s absente de haven_rooms.json" % room)
+        for entry in listed.get("rooms", []):
+            if entry["id"] == room:
+                envelope = ([v - 1 for v in entry["box"]["min"]], [v + 1 for v in entry["box"]["max"]])
+                if (box_min, box_max) != envelope:
+                    alerts.append("la boite du releve %s -> %s n'est plus la coque de %s dans haven_rooms.json"
+                                  " (%s -> %s)" % (box_min, box_max, room, envelope[0], envelope[1]))
+                break
+        else:
+            alerts.append("salle %s absente de haven_rooms.json" % room)
 
     # --- la palette
     palette = [tag.value for tag in items(root, "palette")]
@@ -378,8 +392,12 @@ def main():
     dest_dir = args.dest or os.path.join(DATA_JAK, "zones", volume)
     dest = os.path.join(dest_dir, room + ".nbt")
     print("Releve   : %s" % path)
-    print("Salle    : %s (salle %s), releve le %s par %s"
-          % (room, field(root, "number", "?"), field(root, "captured", "?"), field(root, "author", "?")))
+    if kind == "ville":
+        print("Ville    : releve de la ville entiere le %s par %s (remplace les salles relevees a part)"
+              % (field(root, "captured", "?"), field(root, "author", "?")))
+    else:
+        print("Salle    : %s (salle %s), releve le %s par %s"
+              % (room, field(root, "number", "?"), field(root, "captured", "?"), field(root, "author", "?")))
     print("Volume   : %s, sha1 %s (identique au depot)" % (volume, sha1))
     print("Origine  : %s ; coque %s -> %s" % (origin, box_min, box_max))
     print("Cellules : %d gardee(s) sur %d, dont %d retrait(s) (air)" % (len(kept_cells), len(cells), removed))

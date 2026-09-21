@@ -215,6 +215,15 @@ public final class JakOverlay {
     public static void replayAll(MinecraftServer server, ServerLevel level, JakVolume volume, BlockPos origin,
                                  String sha1, @Nullable ServerPlayer watcher) {
         Map<String, CompoundTag> zones = zones(server, Haven.VOLUME);
+        CompoundTag city = zones.get(JakCityCapture.NAME);
+        if (city != null && zones.size() > 1) {
+            // LA VILLE ENTIERE REMPLACE LES SALLES : son releve (JakCityCapture) couvre toute la
+            // grille, appartements compris, et il est complet. Une salle relevee a part serait plus
+            // ancienne ou redondante ; rejouee apres, elle defairait ce que la ville a de plus recent.
+            LOGGER.info("amenagements : le releve de la ville entiere remplace {} salle(s) : {}",
+                    zones.size() - 1, zones.keySet());
+            zones = new TreeMap<>(Map.of(JakCityCapture.NAME, city));
+        }
         List<Result> results = new ArrayList<>();
         int placed = 0;
         int entities = 0;

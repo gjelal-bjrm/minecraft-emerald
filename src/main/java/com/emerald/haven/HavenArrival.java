@@ -396,6 +396,12 @@ public final class HavenArrival {
     public static void arrive(ServerPlayer player, boolean force) {
         MinecraftServer server = player.server;
         if (HavenRules.chantier(player)) {
+            if (HavenAtelier.on(server) && !Haven.is(player.level())) {
+                // l'atelier : on arrive devant le bar, pour retoucher la ville, pas dans un appartement
+                HavenAtelier.toBarFront(player);
+                LOGGER.info("ville de Haven : {} arrive dans l'atelier, devant le bar", player.getGameProfile().getName());
+                return;
+            }
             LOGGER.info("ville de Haven : {} est en chantier, ni appartement ni teleportation",
                     player.getGameProfile().getName());
             return;
