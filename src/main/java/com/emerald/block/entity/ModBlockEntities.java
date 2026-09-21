@@ -23,6 +23,16 @@ public class ModBlockEntities {
                     () -> BlockEntityType.Builder.of(OathBladeBlockEntity::new,
                             ModBlocks.OATH_BLADE.get()).build(null));
 
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<HavenGunRackBlockEntity>>
+            HAVEN_GUN_RACK = BLOCK_ENTITIES.register("haven_gun_rack",
+                    () -> BlockEntityType.Builder.of(HavenGunRackBlockEntity::new,
+                            ModBlocks.HAVEN_GUN_RACK.get()).build(null));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<HavenGateBlockEntity>>
+            HAVEN_GATE = BLOCK_ENTITIES.register("haven_gate",
+                    () -> BlockEntityType.Builder.of(HavenGateBlockEntity::new,
+                            ModBlocks.HAVEN_GATE.get()).build(null));
+
     public static void register(IEventBus eventBus) {
         BLOCK_ENTITIES.register(eventBus);
     }

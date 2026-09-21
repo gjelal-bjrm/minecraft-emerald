@@ -28,7 +28,11 @@
 	quest.2C29095DC701E91E.title: "Le quartier général"
 	quest.2C29095DC701E91E.quest_desc: ["Le bar du Hip Hog. Au bout du comptoir, la &cborne&r lance la partie : la vitre rouge pour le Défi, la bleue pour le Monde ouvert.", "", "Le bouton, près de la borne, fait passer toute la ville de paisible à envahie. Il n'obéit qu'à ceux qui ont débloqué les douze armes du Morph Gun.", "", "&7Se coche au premier pas dans le bar."]
 	quest.54E77607CCDEAB01.title: "Le départ"
-	quest.54E77607CCDEAB01.quest_desc: ["Votez à la borne : quand tout le monde a voté, la partie part au village. Les armes de Jak restent dans Haven.", "", "&7Se coche au premier départ."]
+	quest.54E77607CCDEAB01.quest_desc: ["Votez à la borne : quand tout le monde a voté, la partie part au village. Les armes de Jak restent dans Haven.", "", "La fin du &cDéfi&r ramène à Haven : après une défaite, tout le monde rentre ; après une victoire, une &bporte précurseur&r s'ouvre là où le boss est tombé.", "", "&7Se coche au premier départ."]
+	quest.68FB1573204FE751.title: "Ton arme au QG"
+	quest.68FB1573204FE751.quest_desc: ["Au retour du Défi, &cHaven a été envahie&r. Au QG, sur le râtelier derrière le comptoir, le Morph Gun vous attend avec sa première forme : le &cScatter Gun&r.", "", "Le râtelier ne donne l'arme qu'une fois : elle reste ensuite à vous, de partie en partie.", "", "&7Se coche quand vous prenez l'arme."]
+	quest.5203F0EEE2EA3BEF.title: "Reprendre les rues"
+	quest.5203F0EEE2EA3BEF.quest_desc: ["Tant que la ville est envahie, chaque monstre abattu compte, pour toute l'équipe. À &c25&r, les rues sont à vous : la ville redevient paisible, et ses habitants reviennent.", "", "La barre en haut de l'écran tient le compte.", "", "&7Se coche quand les rues sont reprises."]
 	quest.6021D93700B93DB2.title: "Les gemmes d'Apothéose"
 	quest.6021D93700B93DB2.quest_desc: ["Nos armes et armures acceptent les &dgemmes&r et les affixes d'Apothéose comme n'importe quelle pièce.", "", "Dans l'atelier du village, à côté de la Forge : la &6Table de taille&r pour sertir une gemme, la &6Table de récupération&r pour la reprendre, la &6Table de reforge&r pour retirer les affixes.", "", "Les chapitres &eArtefacts&r, &eReliques&r et &eEnchantement d'Apothéose&r du livre d'ATM10 sont gardés plus bas.", "", "&7Cochez quand c'est lu."]
 }

@@ -39,6 +39,10 @@ import java.util.UUID;
  * a ce joueur. Les quetes n'existent pas encore (lot 3 du §79.5) : tant que
  * {@link #REQUIRED_QUESTS} est vide, la maitrise, ce sont les douze armes.
  *
+ * LE RETOUR DU DEFI (lot 2, cahier §81) ajoute deux etapes : la DEUXIEME ARRIVEE,
+ * dans la ville envahie (« envahie » : son titre a ete joue), et LES RUES REPRISES
+ * (« reprise » : l'equipe a abattu les monstres qu'il fallait pendant qu'il etait la).
+ *
  * LES COBAYES DES BANCS ont une fiche TEMPORAIRE, jamais ecrite : un joueur factice
  * n'a rien a faire dans la sauvegarde d'un monde.
  */
@@ -66,13 +70,18 @@ public final class HavenProgress {
         public boolean hq;
         /** Ses departs de la ville vers une partie. */
         public int departures;
+        /** La deuxieme arrivee, dans la ville envahie, a eu lieu : titre joue (lot 2). */
+        public boolean invaded;
+        /** Il a repris les rues avec l'equipe : la ville envahie ne l'attend plus (lot 2). */
+        public boolean reprise;
         /** Les quetes des heros faites (lot 3). */
         public final Set<String> quests = new LinkedHashSet<>();
         /** Fiche d'un cobaye de banc : jamais ecrite. */
         boolean temporary;
 
         boolean blank() {
-            return this.forms == 0 && !this.welcomed && !this.hq && this.departures == 0 && this.quests.isEmpty();
+            return this.forms == 0 && !this.welcomed && !this.hq && this.departures == 0 && !this.invaded
+                    && !this.reprise && this.quests.isEmpty();
         }
     }
 
@@ -124,6 +133,15 @@ public final class HavenProgress {
         return missingWeapons(id) == 0 && missingQuests(id) == 0;
     }
 
+    /**
+     * Revenu d'un Defi sans avoir repris les rues : a la reouverture du lobby, la ville
+     * l'attend envahie (HavenJourney.reopenMode).
+     */
+    public static boolean awaitsReprise(UUID id) {
+        Entry entry = ENTRIES.get(id);
+        return entry != null && entry.departures > 0 && !entry.reprise;
+    }
+
     // ================================================================ ecriture
 
     /** Remplace ses formes, et ecrit. */
@@ -139,11 +157,32 @@ public final class HavenProgress {
         save();
     }
 
-    /** La maitrise d'un coup : les douze armes et toutes les quetes demandees. Pour l'operateur. */
+    /**
+     * La maitrise d'un coup : les douze armes et toutes les quetes demandees -- les rues
+     * reprises comprises, la premiere d'entre elles. Pour l'operateur.
+     */
     public static void grantMastery(UUID id) {
         Entry entry = get(id);
         entry.forms = ALL_FORMS;
         entry.quests.addAll(REQUIRED_QUESTS);
+        entry.invaded = true;
+        entry.reprise = true;
+        save();
+    }
+
+    /**
+     * Le joueur tel qu'il revient de son premier Defi : accueilli, QG vu, un depart, AUCUNE
+     * arme, ni deuxieme arrivee ni rues reprises. Pour l'operateur : essayer le lot 2
+     * sans jouer un Defi entier (puis /arcencium haven ouvrir).
+     */
+    public static void markReturned(UUID id) {
+        Entry entry = get(id);
+        entry.forms = 0;
+        entry.welcomed = true;
+        entry.hq = true;
+        entry.departures = Math.max(1, entry.departures);
+        entry.invaded = false;
+        entry.reprise = false;
         save();
     }
 
@@ -211,6 +250,8 @@ public final class HavenProgress {
                 entry.welcomed = o.has("accueilli") && o.get("accueilli").getAsBoolean();
                 entry.hq = o.has("qg") && o.get("qg").getAsBoolean();
                 entry.departures = o.has("departs") ? o.get("departs").getAsInt() : 0;
+                entry.invaded = o.has("envahie") && o.get("envahie").getAsBoolean();
+                entry.reprise = o.has("reprise") && o.get("reprise").getAsBoolean();
                 if (o.has("quetes")) {
                     for (JsonElement quest : o.getAsJsonArray("quetes")) {
                         entry.quests.add(quest.getAsString());
@@ -239,6 +280,8 @@ public final class HavenProgress {
             o.addProperty("accueilli", entry.welcomed);
             o.addProperty("qg", entry.hq);
             o.addProperty("departs", entry.departures);
+            o.addProperty("envahie", entry.invaded);
+            o.addProperty("reprise", entry.reprise);
             JsonArray quests = new JsonArray();
             for (String quest : entry.quests) {
                 quests.add(quest);

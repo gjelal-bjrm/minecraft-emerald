@@ -38,6 +38,11 @@ import java.util.Map;
  * premiere arrivee se fait dans une ville calme, sans arme. Un monde d'avant (sans
  * la marque « Parcours ») passe une fois en paisible a sa lecture : on n'y
  * reviendrait pas, sans arme, au milieu d'une invasion.
+ *
+ * LA REPRISE DES RUES (parcours, lot 2, cahier §81) : les monstres abattus par l'equipe
+ * pendant l'invasion de la deuxieme arrivee. Garde d'une partie a l'autre -- une equipe
+ * qui repart au Defi a mi-chemin retrouve son compte --, remis a zero quand les rues
+ * sont reprises (HavenJourney).
  */
 public final class HavenInvasionState extends SavedData {
 
@@ -77,6 +82,8 @@ public final class HavenInvasionState extends SavedData {
 
     private HavenInvasion.Mode mode = HavenInvasion.Mode.PAISIBLE;
     private long generation;
+    /** Les monstres abattus vers la reprise des rues. */
+    private int reprise;
     final Map<Long, Pending> pending = new LinkedHashMap<>();
     /** L'echeance la plus proche du registre (volatile) ; MIN_VALUE force un parcours. */
     long earliest = Long.MIN_VALUE;
@@ -117,6 +124,7 @@ public final class HavenInvasionState extends SavedData {
             this.mode = HavenInvasion.Mode.PAISIBLE;
         }
         this.generation = tag.getLong("Generation");
+        this.reprise = tag.getInt("Reprise");
         this.pending.clear();
         this.earliest = Long.MIN_VALUE;
         var blocks = registries.lookupOrThrow(Registries.BLOCK);
@@ -137,6 +145,7 @@ public final class HavenInvasionState extends SavedData {
         tag.putString("Mode", this.mode.name());
         tag.putInt("Parcours", PARCOURS);
         tag.putLong("Generation", this.generation);
+        tag.putInt("Reprise", this.reprise);
         ListTag list = new ListTag();
         for (Map.Entry<Long, Pending> entry : this.pending.entrySet()) {
             CompoundTag block = new CompoundTag();
@@ -181,6 +190,18 @@ public final class HavenInvasionState extends SavedData {
 
     public long generation() {
         return this.generation;
+    }
+
+    /** Les monstres abattus vers la reprise des rues. */
+    public int reprise() {
+        return this.reprise;
+    }
+
+    public void setReprise(int count) {
+        if (this.reprise != count) {
+            this.reprise = Math.max(0, count);
+            setDirty();
+        }
     }
 
     void bumpGeneration() {

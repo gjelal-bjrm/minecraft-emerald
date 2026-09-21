@@ -75,7 +75,9 @@ import java.util.UUID;
  * - {@link #loadedMonsters} et {@link #loadedVillagers} : ce qui est charge en ce moment.
  *
  * LE MODE est sauvegarde (HavenInvasionState). On arrive en PAISIBLE (parcours de
- * Haven, cahier §79) : chaque reouverture du lobby le remet. Le bouton du QG le
+ * Haven, cahier §79) : chaque reouverture du lobby le remet -- sauf au retour d'un
+ * Defi, ou la ville attend ENVAHIE ceux qui n'ont pas encore repris les rues
+ * (HavenJourney.reopenMode, lot 2 du parcours, §81). Le bouton du QG le
  * bascule pour toute la ville, mais n'obeit qu'a qui a la MAITRISE (les douze armes
  * et les quetes des heros, HavenProgress) ; l'operateur en chantier passe outre.
  *
@@ -493,6 +495,15 @@ public final class HavenInvasion {
         }
     }
 
+    /**
+     * La reouverture du lobby (HavenArrival.reopen) : le mode du parcours, TOUT DE SUITE --
+     * avant que la tique suivante ne place les joueurs, dont l'arrivee lit le mode pour
+     * choisir son titre. La tique qui voit la phase changer redemande le meme mode : sans effet.
+     */
+    public static void reopened(MinecraftServer server) {
+        setMode(server, HavenJourney.reopenMode(server), null);
+    }
+
     // ================================================================ tique
 
     @SubscribeEvent
@@ -507,7 +518,8 @@ public final class HavenInvasion {
      *   entier (un redemarrage ne laisse pas de trou) ; la population sauvegardee
      *   reste si la ville est ouverte, sinon tout ce qui est charge est retire ;
      * - une pose commence : les trous encore vides sont rebouches, tout est retire ;
-     * - le lobby se rouvre (phase PARTI ou ABSENTE vers ACCUEIL) : retour en PAISIBLE ;
+     * - le lobby se rouvre (phase PARTI ou ABSENTE vers ACCUEIL) : le mode du parcours
+     *   (HavenJourney.reopenMode : PAISIBLE, ou ENVAHIE au retour d'un Defi) ;
      * - la ville se ferme (depart vers la partie) : tout est retire, tout est reconstruit.
      */
     public static void update(MinecraftServer server) {
@@ -539,7 +551,7 @@ public final class HavenInvasion {
         boolean lobbyPhase = phase == HavenState.Phase.ACCUEIL || phase == HavenState.Phase.CHANTIER;
         if (lastPhase != null && lastPhase != HavenState.Phase.ACCUEIL && lastPhase != HavenState.Phase.CHANTIER
                 && lobbyPhase) {
-            setMode(server, Mode.PAISIBLE, null);
+            setMode(server, HavenJourney.reopenMode(server), null);
         }
         lastPhase = phase;
 

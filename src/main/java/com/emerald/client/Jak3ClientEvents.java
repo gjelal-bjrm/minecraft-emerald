@@ -46,6 +46,16 @@ public class Jak3ClientEvents {
                 com.emerald.block.entity.ModBlockEntities.OATH_BLADE.get(),
                 OathBladeRenderer::new);
 
+        // le ratelier du QG de Haven : le Morph Gun pose dessus
+        event.registerBlockEntityRenderer(
+                com.emerald.block.entity.ModBlockEntities.HAVEN_GUN_RACK.get(),
+                HavenGunRackRenderer::new);
+
+        // la porte precurseur de la victoire du Defi
+        event.registerBlockEntityRenderer(
+                com.emerald.block.entity.ModBlockEntities.HAVEN_GATE.get(),
+                HavenGateRenderer::new);
+
         event.registerEntityRenderer(Jak3Registry.ARCENCIUM_BOLT.get(),
                 ArcenciumBoltRenderer::new);
 

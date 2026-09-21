@@ -41,6 +41,8 @@ public final class MorphGunItemRenderer extends BlockEntityWithoutLevelRenderer 
     private int cylinders = -1;
     /** Le cadrage d'inventaire de chaque forme, calcule une fois (GunHold.fit). */
     private final Map<GunForm, Matrix4f> fits = new EnumMap<>(GunForm.class);
+    /** La boite de chaque forme posee (min x, y, z, max x, y, z), pour la centrer hors de la main. */
+    private final Map<GunForm, float[]> boxes = new EnumMap<>(GunForm.class);
     private final Matrix4f hold = new Matrix4f();
     private final double[] point = new double[3];
     private final double[] normal = new double[3];
@@ -56,14 +58,7 @@ public final class MorphGunItemRenderer extends BlockEntityWithoutLevelRenderer 
         if (model == null) {
             return;
         }
-        if (this.pose == null) {
-            this.pose = new GunPose(model);
-            GunForm.Family[] families = GunForm.Family.values();
-            for (int i = 0; i < families.length; i++) {
-                this.magazines[i] = model.boneIndex(GunPose.MAGAZINES[i]);
-            }
-            this.cylinders = model.boneIndex("cylinders");
-        }
+        ensurePose(model);
         MorphGunData data = MorphGunData.of(stack);
         GunForm form = data == null ? GunForm.RED_1 : data.form();
         GunForm previous = data == null ? form : data.previous();
@@ -101,6 +96,64 @@ public final class MorphGunItemRenderer extends BlockEntityWithoutLevelRenderer 
             emit(model, last, buffers.getBuffer(RenderType.entityTranslucent(ATLAS)), light, overlay, true);
         }
         poseStack.popPose();
+    }
+
+    private void ensurePose(JakGunModel model) {
+        if (this.pose == null) {
+            this.pose = new GunPose(model);
+            GunForm.Family[] families = GunForm.Family.values();
+            for (int i = 0; i < families.length; i++) {
+                this.magazines[i] = model.boneIndex(GunPose.MAGAZINES[i]);
+            }
+            this.cylinders = model.boneIndex("cylinders");
+        }
+    }
+
+    /**
+     * L'arme POSEE hors de toute main -- le ratelier du QG : une forme au repos, sans
+     * transformation ni chargeur cache, CENTREE sur l'origine et mise a la longueur
+     * donnee (en blocs) selon son axe le plus long, le canon (+z du modele de Jak).
+     */
+    public void renderPlaced(GunForm form, float length, PoseStack poseStack, MultiBufferSource buffers,
+                             int light, int overlay) {
+        JakGunModel model = JakGunModel.gun();
+        if (model == null) {
+            return;
+        }
+        ensurePose(model);
+        this.pose.show(form, form, Double.MAX_VALUE);
+        this.pose.tweak(0L, this.cylinders, 0.0);
+        float[] box = this.boxes.computeIfAbsent(form, f -> bounds(model));
+        float longest = Math.max(box[3] - box[0], Math.max(box[4] - box[1], box[5] - box[2]));
+        float scale = longest > 0.0F ? length / longest : 1.0F;
+        poseStack.pushPose();
+        poseStack.scale(scale, scale, scale);
+        poseStack.translate(-(box[0] + box[3]) / 2.0F, -(box[1] + box[4]) / 2.0F, -(box[2] + box[5]) / 2.0F);
+        PoseStack.Pose last = poseStack.last();
+        emit(model, last, buffers.getBuffer(RenderType.entityCutoutNoCull(ATLAS)), light, overlay, false);
+        if (model.hasBlend) {
+            emit(model, last, buffers.getBuffer(RenderType.entityTranslucent(ATLAS)), light, overlay, true);
+        }
+        poseStack.popPose();
+    }
+
+    /** La boite des sommets visibles de la pose courante. */
+    private float[] bounds(JakGunModel model) {
+        float[] box = {Float.MAX_VALUE, Float.MAX_VALUE, Float.MAX_VALUE, -Float.MAX_VALUE, -Float.MAX_VALUE, -Float.MAX_VALUE};
+        double[] p = this.point;
+        for (int t = 0; t < model.triangles; t++) {
+            if (!this.pose.visible(t)) {
+                continue;
+            }
+            for (int k = 0; k < 3; k++) {
+                this.pose.vertex(t * 3 + k, p);
+                for (int a = 0; a < 3; a++) {
+                    box[a] = Math.min(box[a], (float) p[a]);
+                    box[a + 3] = Math.max(box[a + 3], (float) p[a]);
+                }
+            }
+        }
+        return box;
     }
 
     private void emit(JakGunModel model, PoseStack.Pose last, VertexConsumer out, int light, int overlay,

@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "emeraldweapons:block/haven_gun_rack"
+    },
+    "facing=east": {
+      "model": "emeraldweapons:block/haven_gun_rack",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "emeraldweapons:block/haven_gun_rack",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "emeraldweapons:block/haven_gun_rack",
+      "y": 270
+    }
+  }
+}

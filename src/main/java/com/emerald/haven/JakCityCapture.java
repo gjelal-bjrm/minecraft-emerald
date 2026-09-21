@@ -181,7 +181,8 @@ public final class JakCityCapture {
 
     /** Les blocs que le mod pose et retire lui-meme dans la ville : jamais releves. */
     public static boolean managed(BlockState state) {
-        return state.is(ModBlocks.HAVEN_VOTE.get()) || state.is(ModBlocks.HAVEN_INVASION_BUTTON.get());
+        return state.is(ModBlocks.HAVEN_VOTE.get()) || state.is(ModBlocks.HAVEN_INVASION_BUTTON.get())
+                || state.is(ModBlocks.HAVEN_GUN_RACK.get());
     }
 
     // ================================================================ le travail

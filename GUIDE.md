@@ -31,9 +31,25 @@ touché. Votre mode de jeu habituel vous est rendu au village.
   étapes tout seul.
 - **Vos armes vous suivent de partie en partie** : ce que vous avez débloqué du
   Morph Gun est gardé par le monde, par joueur. Un nouveau venu n'en a aucune.
-  Le Scatter Gun se gagnera au coffre du QG, les autres par les quêtes (à venir).
+  Le Scatter Gun se prend au râtelier du QG, les autres par les quêtes (à venir).
 - **Le bouton du QG n'obéit qu'à la maîtrise** : avoir débloqué les douze armes
   (puis, plus tard, fini les quêtes des héros). Sinon, il dit ce qui vous manque.
+- **La fin du Défi ramène à Haven.** Après une **défaite**, tout le monde rentre
+  une fois le titre lu. Après une **victoire**, une **porte précurseur** s'ouvre là
+  où le boss est tombé : qui la traverse rentre dans son appartement et attend
+  l'équipe ; quand tout le monde est rentré, ou au bout de cinq minutes, la ville
+  rouvre et chacun retrouve son appartement. Mourir pendant le Défi ne change rien
+  (la tombe, le village). Le Monde ouvert ne change pas non plus.
+- **La deuxième arrivée : Haven a été envahie.** Au premier retour du Défi, la
+  ville est en invasion : « Haven a été envahie — Une arme t'attend au QG ».
+  L'objectif en haut mène au **râtelier d'armes**, derrière le comptoir du bar :
+  un clic droit donne le Morph Gun et sa première forme, le **Scatter Gun** — une
+  seule fois, ensuite l'arme est à vous. Avant votre premier départ, le râtelier
+  reste verrouillé.
+- **Reprendre les rues** : ensuite, l'objectif compte les monstres abattus **en
+  équipe** ; à **25**, la ville redevient paisible et ses habitants reviennent
+  (« Les rues sont à vous »). Tant que ce n'est pas fait, la ville vous attend
+  envahie à chaque retour.
 
 ### Les appartements
 
@@ -580,9 +596,10 @@ Toutes commencent par `/arcencium` et demandent le niveau opérateur.
 | `haven invasion etat` | Dit le mode de la ville, le nombre de monstres et d'habitants, et les blocs cassés qui attendent leur retour |
 | `haven invasion invasion` (ou `paisible`) | Passe toute la ville en invasion ou en paisible, comme le bouton du QG |
 | `haven invasion reconstruire` | Repose tout de suite le décor cassé par les armes |
-| `haven parcours [joueur]` | La fiche de parcours d'un joueur : ses armes débloquées, sa première arrivée, le QG, ses départs, sa maîtrise |
+| `haven parcours [joueur]` | La fiche de parcours d'un joueur : ses armes débloquées, sa première arrivée, le QG, ses départs, sa maîtrise, les rues reprises |
 | `haven parcours armes <joueur> toutes` (ou `aucune`, `scatter`) | Lui donne ou retire des armes du Morph Gun ; l'arme suit dans la seconde |
 | `haven parcours maitrise <joueur>` | Les douze armes, et le bouton du QG lui obéit : pour essayer l'invasion et les armes |
+| `haven parcours retour <joueur>` | Le met au retour de son premier Défi : sans arme, rues à reprendre. Puis `haven ouvrir` : la ville rouvre envahie, pour essayer la deuxième arrivée sans jouer un Défi |
 | `haven parcours remise <joueur>` | Le remet à zéro : il arrivera comme un nouveau venu, sans arme, avec le titre d'accueil |
 
 Dans Haven : mode aventure, rien ne se casse ni ne se pose à la main, pas de faim ni de
@@ -667,7 +684,7 @@ Sur un serveur d'essai (`run-server`), chacun écrit son rapport puis arrête le
 - `EMERALDWEAPONS_AUTOTEST=vehicules ./gradlew runServer` : voitures et motos, rapport `run-server/vehicules_autotest.txt` ;
 - `EMERALDWEAPONS_AUTOTEST=invasion ./gradlew runServer` : invasion, décor destructible, bouton du QG et MSPT, rapport `run-server/invasion_autotest.txt` ;
 - `EMERALDWEAPONS_AUTOTEST=armes ./gradlew runServer` : Morph Gun (poses, confinement, tir des douze armes, munitions, décor, MSPT avec quatre tireurs), rapport `run-server/armes_autotest.txt` ;
-- `EMERALDWEAPONS_AUTOTEST=parcours ./gradlew runServer` : le parcours (fiche sur disque, arme qui suit les formes du joueur, ville paisible, bouton verrouillé, titre et objectifs du guide), rapport `run-server/parcours_autotest.txt`.
+- `EMERALDWEAPONS_AUTOTEST=parcours ./gradlew runServer` : le parcours (fiche sur disque, arme qui suit les formes du joueur, ville paisible, bouton verrouillé, titre et objectifs du guide ; puis le lot 2 : râtelier du QG, deuxième arrivée envahie, reprise des rues, retour après la défaite, porte de la victoire), rapport `run-server/parcours_autotest.txt`.
 
 Pour regarder un terrain (arbres, biomes) sans jouer : le run `photos` entre dans le monde
 jetable `run/saves/photos` ; avec `EMERALDWEAPONS_PHOTOS="nom@biome;nom@biome@hauteur"` (et
@@ -675,7 +692,15 @@ jetable `run/saves/photos` ; avec `EMERALDWEAPONS_PHOTOS="nom@biome;nom@biome@ha
 dans chaque biome, à midi et par beau temps, prend les captures dans `run/screenshots/` et se ferme.
 Les prises `nom@haven:accueil` et `nom@haven:qg` regardent le parcours de Haven, interface visible
 (titre d'arrivée, barre d'objectif) : copier le monde du serveur d'essai dans `run/saves/haven_photos`
-et lancer avec `EMERALDWEAPONS_PHOTOS_MONDE=haven_photos`.
+et lancer avec `EMERALDWEAPONS_PHOTOS_MONDE=haven_photos`. Pour le retour du Défi : `haven:envahie`
+(le joueur revient de son premier Défi, la ville rouvre envahie : titre et barre), `haven:ratelier`
+(devant le comptoir, face au râtelier), `haven:reprise` (il prend l'arme : barre de la reprise) et
+`haven:victoire` (une vraie victoire dans l'overworld pose la porte, la caméra se met en face).
+La vitrine (`nom@vitrine:face`, `biais`, `proche0`...) montre les blocs de
+`EMERALDWEAPONS_PHOTOS_VITRINE` sur une estrade dans le ciel ; pour de grands objets,
+`EMERALDWEAPONS_PHOTOS_VITRINE_PAS` (écart), `_RECUL` et `_HAUTEUR` ; `nom@vitrine:face@18000` la
+prend de nuit. Toujours une `EMERALDWEAPONS_PHOTOS_ORIGINE` neuve (le monde garde les estrades
+d'avant), et une première prise de rodage : juste après le téléport, le terrain n'est pas encore là.
 Pour photographier des animaux ou des blocs, un datapack jetable dans `run/saves/photos/datapacks/`
 peut les poser devant la caméra : l'automate place le joueur 200 tiques après son arrivée, une
 fonction de tique qui compte les tiques du joueur agit juste après (vitrine d'Alex's Mobs, cahier §78.5).

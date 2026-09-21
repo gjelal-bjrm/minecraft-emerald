@@ -277,6 +277,10 @@ public final class HavenArrival {
     public static boolean claimLogin(ServerPlayer player) {
         MinecraftServer server = player.server;
         closeIfStarted(server);
+        if (com.emerald.haven.journey.HavenReturn.holding(player)) {
+            // passe par la porte de victoire, il attend l'equipe dans son appartement
+            return true;
+        }
         boolean claim = lobbyOpen(server)
                 || (HavenState.get(server).phase() == HavenState.Phase.PARTI && Haven.is(player.level()));
         if (claim) {
@@ -300,15 +304,29 @@ public final class HavenArrival {
      * chantier : il ne vote pas, il ne prend donc pas la place d'un joueur dans
      * un appartement, et on ne l'arrache pas a ce qu'il construit.
      *
+     * Le mode de la ville est applique AVANT le placement (HavenInvasion.reopened) :
+     * l'arrivee de chacun le lit pour choisir son titre.
+     *
      * @return le nombre de joueurs ramenes
      */
     public static int reopen(MinecraftServer server) {
+        return reopen(server, false);
+    }
+
+    /**
+     * La meme, en gardant les appartements : le retour du Defi (HavenReturn), ou « chacun
+     * retrouve son appartement » -- celui ou la porte de victoire l'a deja mene.
+     */
+    public static int reopen(MinecraftServer server, boolean keepApartments) {
         HavenState state = HavenState.get(server);
         GameState.get(server.overworld()).forgetModeChoice();
         state.clearVotes();
-        state.clearApartments();
+        if (!keepApartments) {
+            state.clearApartments();
+        }
         state.setPhase(HavenSite.busy() ? HavenState.Phase.CHANTIER : HavenState.Phase.ACCUEIL);
         HavenVote.reset();
+        com.emerald.haven.invasion.HavenInvasion.reopened(server);
         int moved = 0;
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             if (!HavenRules.chantier(player)) {
@@ -360,7 +378,7 @@ public final class HavenArrival {
                 }
                 case PARTI -> {
                     it.remove();
-                    if (Haven.is(player.level())) {
+                    if (Haven.is(player.level()) && !com.emerald.haven.journey.HavenReturn.holding(player)) {
                         // la partie a commence sans lui : le village, et le kit si la Lame est encore la
                         GameState.Status status = GameState.get(server.overworld()).status();
                         toVillage(player, status == GameState.Status.LOBBY || status == GameState.Status.PROLOGUE);

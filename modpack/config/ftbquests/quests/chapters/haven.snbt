@@ -68,6 +68,8 @@
 			description: [
 				"Votez à la borne : quand tout le monde a voté, la partie part au village. Les armes de Jak restent dans Haven."
 				""
+				"La fin du &cDéfi&r ramène à Haven : après une défaite, tout le monde rentre ; après une victoire, une &bporte précurseur&r s'ouvre là où le boss est tombé."
+				""
 				"&7Se coche au premier départ."
 			]
 			icon: {
@@ -85,6 +87,58 @@
 			}]
 			title: "Le départ"
 			x: 4.0d
+			y: 0.0d
+		}
+		{
+			dependencies: ["54E77607CCDEAB01"]
+			description: [
+				"Au retour du Défi, &cHaven a été envahie&r. Au QG, sur le râtelier derrière le comptoir, le Morph Gun vous attend avec sa première forme : le &cScatter Gun&r."
+				""
+				"Le râtelier ne donne l'arme qu'une fois : elle reste ensuite à vous, de partie en partie."
+				""
+				"&7Se coche quand vous prenez l'arme."
+			]
+			icon: {
+				id: "emeraldweapons:morph_gun"
+			}
+			id: "68FB1573204FE751"
+			rewards: [
+			]
+			size: 1.25d
+			tasks: [{
+				advancement: "emeraldweapons:carnet/haven_arme"
+				criterion: ""
+				id: "79A017C18746E070"
+				type: "advancement"
+			}]
+			title: "Ton arme au QG"
+			x: 6.0d
+			y: 0.0d
+		}
+		{
+			dependencies: ["68FB1573204FE751"]
+			description: [
+				"Tant que la ville est envahie, chaque monstre abattu compte, pour toute l'équipe. À &c25&r, les rues sont à vous : la ville redevient paisible, et ses habitants reviennent."
+				""
+				"La barre en haut de l'écran tient le compte."
+				""
+				"&7Se coche quand les rues sont reprises."
+			]
+			icon: {
+				id: "minecraft:iron_sword"
+			}
+			id: "5203F0EEE2EA3BEF"
+			rewards: [
+			]
+			size: 1.25d
+			tasks: [{
+				advancement: "emeraldweapons:carnet/haven_reprise"
+				criterion: ""
+				id: "270BAF38108E9401"
+				type: "advancement"
+			}]
+			title: "Reprendre les rues"
+			x: 8.0d
 			y: 0.0d
 		}
 	]

@@ -7156,3 +7156,102 @@ nouveau venu.
    chevauche -- titre et sous-titre au centre, chat en bas a gauche, barre en haut,
    minicarte a droite. Le Hip Hog est tres sombre : les lumieres de l'atelier (§78.4)
    le changeront.
+
+## 81. Lot 2 du parcours : le retour du Defi, la ville envahie, le ratelier du QG *(plan du 21 sept. au soir)*
+
+Le lot 2 du §79.5, choisi par le joueur juste apres l'installation du lot 1 (« Lot 2
+d'abord »). Ce qu'il fait :
+
+1. **LE RETOUR DU DEFI.** Aujourd'hui, une partie finie ne ramene nulle part : il faut
+   `/arcencium haven ouvrir`. Desormais, en mode Defi :
+   - DEFAITE (le chrono a zero) : apres le titre, tout le monde revient a Haven ;
+   - VICTOIRE (le boss tombe) : une PORTE s'ouvre au centre de l'arene pour toute
+     l'equipe ; qui y entre rentre a Haven ; quand tous sont rentres, ou au bout de
+     cinq minutes, le lobby se rouvre et chacun retrouve son appartement.
+   La mort pendant le Defi reste comme aujourd'hui (§79.6). Le Monde ouvert ne change
+   pas : sa victoire relance un cycle, et sa porte de retour est le lot 6.
+2. **LA DEUXIEME ARRIVEE.** Au premier retour d'un joueur, la ville est ENVAHIE. Titre
+   « Haven a ete envahie », sous-titre « Une arme t'attend au QG » (joue par le client,
+   comme celui du lot 1) ; objectif en haut : le QG.
+3. **LE RATELIER D'ARMES DU QG** (choix du joueur : pas un coffre de Minecraft) : aux
+   textures du Hip Hog -- celles du socle de la borne --, le Morph Gun pose dessus.
+   Un clic donne le Scatter Gun, une seule fois par joueur (sa fiche de parcours) ;
+   avant le premier depart, il reste ferme. Place : DERRIERE LE COMPTOIR, pres de la
+   borne et du bouton (le joueur pourra le deplacer dans l'atelier). RENDU MONTRE AU
+   JOUEUR AVANT LA POSE.
+4. **REPRENDRE LES RUES** (choix du joueur) : objectif en haut, 25 monstres a tuer EN
+   EQUIPE ; atteint, la ville redevient paisible, et le titre annonce la suite (les PNJ
+   du lot 3). Au lot 3, Torn le donnera comme premiere quete.
+
+A regler en chemin : l'allure de la porte de victoire (rendu a montrer aussi) ; le kit
+de depart qui REMPLACE l'inventaire au depart suivant (contraire au « on garde tout »
+du §66) reste pour la refonte du Defi.
+
+### 81.1 Ce qui est fait *(21 sept., nuit)*
+
+- **LE RATELIER** (`HavenGunRackBlock`, `HavenRack`, rendu `HavenGunRackRenderer`) : le
+  modele « sur pied » choisi par le joueur sur photos, pose par le mod comme la borne et
+  le bouton (ville finie, phase ACCUEIL) en cellule (331, 69, 166), sur le socle
+  d'andesite colle derriere le comptoir, deux cellules a l'ouest du bouton, tourne vers
+  les clients -- place lue sur une vue du dessus du Hip Hog. Clic droit : ferme avant
+  le premier depart (« il s'ouvrira a ton retour du Defi »), puis le Scatter Gun une
+  fois (fiche de parcours), puis « deja avec toi ». Etape du Carnet `haven_arme`.
+  ECART : sa place est FIXE, comme la borne ; le releve de l'atelier l'ignore
+  (`JakCityCapture.managed`). Le deplacer demande de changer `HavenRack.CELL`.
+- **LE RETOUR** (`HavenReturn`, branche dans `Finale.defeat` et `Finale.victory`), pour
+  un Defi parti de la ville (phase PARTI) : defaite -> 130 tiques (le titre de fin se
+  lit), puis la reouverture du lobby -- celle de `/arcencium haven ouvrir`, EN GARDANT
+  les appartements. Victoire -> la PORTE PRECURSEUR (`HavenGateBlock`) la ou le boss
+  est tombe (sol libre a 8 blocs au plus ; un boss mort en l'air : pres du joueur le
+  plus proche), tournee vers ce joueur ; qui
+  s'en approche a 1,4 bloc rentre dans son appartement et attend ; le dernier a entrer,
+  ou les cinq minutes, rouvrent le lobby. Rappel de la porte (distance, direction,
+  temps restant) dans la barre d'action. ECART : « au centre de l'arene » est devenu
+  « la ou le boss est tombe » -- au coeur du combat, la ou l'equipe se tient. Rien
+  n'est sauvegarde : au demarrage, un Defi fini dans un monde parti de la ville rouvre
+  le lobby, et une porte orpheline s'efface d'elle-meme.
+- **LA DEUXIEME ARRIVEE** (`HavenJourney.reopenMode`, `HavenInvasion.reopened`) : a toute
+  reouverture du lobby, la ville est ENVAHIE si un joueur present revient d'un Defi
+  sans avoir repris les rues, PAISIBLE sinon -- applique AVANT le placement, puisque
+  l'arrivee lit le mode pour son titre. Titre « Haven a ete envahie » / « Une arme
+  t'attend au QG » (clairon), une fois (fiche : `envahie`).
+- **LES OBJECTIFS** : « Ton arme, au QG : N blocs vers X » (barre rose ; dans le bar :
+  « Ton arme : le ratelier, derriere le comptoir »), puis « Reprendre les rues : n / 25
+  monstres » (barre rouge). Les monstres de Haven tues par un joueur comptent tant
+  qu'un joueur present attend la reprise (compte de la ville, `HavenInvasionState`,
+  garde d'une partie a l'autre). A 25 : chaque joueur present a repris les rues (fiche
+  `reprise`, Carnet `haven_reprise`), titre « Les rues sont a vous » / « Des habitants
+  ont besoin de toi », la ville redevient paisible. Ensuite, les objectifs du lot 1.
+- **LA MAITRISE A LA COMMANDE** comprend desormais les rues reprises : un joueur a qui
+  l'operateur l'a donnee ne voit pas la ville envahie. Nouvelle commande
+  `/arcencium haven parcours retour <joueur>` : le joueur tel qu'il revient de son
+  premier Defi (puis `haven ouvrir`), pour essayer le lot 2 sans jouer un Defi.
+- **BANC** `parcours` : 40 OK (23 du lot 1, 17 du lot 2 : ratelier, mode a la
+  reouverture, titre une fois, objectifs, 25 monstres, invasion au bouton qui ne compte
+  pas, maitrise, defaite, porte -- attente, dernier entre, cinq minutes --, Monde ouvert).
+
+### 81.2 La porte choisie, et deux transports pour plus tard *(21 sept., nuit)*
+
+Trois modeles montres en photos (de biais le jour et la nuit, puis chacun de pres,
+shaders actifs) : l'anneau, le portail du warp gate, l'arche. Le joueur :
+
+> « L'anneau, mais il est un peu petit, il faudrait l'agrandir de 20 %. Garde les deux
+> autres modeles de portes. L'arche permettrait par exemple de passer d'un bout de la
+> ville a l'autre (avec un cooldown pour eviter les spams abuse) et le portail
+> permettrait de monter aux etages superieurs des deux tours de la ville. »
+
+- **L'ANNEAU est la porte de la victoire**, agrandi de 20 % (`RING_SCALE` : 3,7 blocs de
+  haut et de large ; on la passe a 1,4 bloc de son centre ; sa place demande quatre
+  cellules d'air).
+- **L'ARCHE et le PORTAIL restent** dans le bloc (`STYLE`), pour deux transports a
+  faire plus tard dans Haven : l'arche relie les deux bouts de la ville, avec un delai
+  par joueur contre les abus ; le portail monte aux tours et en redescend.
+- **Les « etages » des tours**, mesures dans le volume de la ville (`ctyport.jakv`,
+  coupes verticales du 21 sept.) : les deux tours du large, reliees par le pont, sont des
+  COQUES CREUSES de Jak 3 -- aucun etage a l'interieur, le jeu ne les faisait pas
+  visiter. On peut s'y tenir a quatre hauteurs (cellules du volume ; monde = + 5) : le
+  quai au pied (65), une corniche etroite a mi-hauteur (101, deux a trois blocs), la
+  grande terrasse en croix (122, quatre bras d'une vingtaine de blocs -- la plate-forme
+  de Samos du §71) et le rebord du sommet (155). Les deux fleches hautes du nord, pres du
+  bras central, sont des aiguilles decoratives, sans palier. Un portail-ascenseur aurait
+  donc trois arrets utiles par tour : le pied, la terrasse, le sommet.

@@ -1,6 +1,11 @@
 package com.emerald.haven.journey;
 
+import com.emerald.block.HavenGunRackBlock;
+import com.emerald.block.ModBlocks;
+import com.emerald.block.entity.HavenGateBlockEntity;
+import com.emerald.game.Finale;
 import com.emerald.game.GameState;
+import com.emerald.game.WorldSetup;
 import com.emerald.haven.Haven;
 import com.emerald.haven.HavenArrival;
 import com.emerald.haven.HavenAutotest;
@@ -46,7 +51,7 @@ import java.util.Objects;
 import java.util.UUID;
 
 /**
- * Le banc d'essai du parcours de Haven, lot 1 (cahier §79), INERTE sans
+ * Le banc d'essai du parcours de Haven, lots 1 et 2 (cahier §79 et §81), INERTE sans
  * EMERALDWEAPONS_AUTOTEST=parcours.
  *
  * Sur la ville du serveur d'essai (posee si elle ne l'est pas), avec des joueurs
@@ -59,7 +64,13 @@ import java.util.UUID;
  *   4. le bouton du QG : le refus dit ce qui manque (12 armes sur 12) ;
  *   5. le guide : titre de premiere arrivee une seule fois, objectif QG avec distance et
  *      barre qui se remplit, puis la borne dans le Hip Hog, puis l'attente apres un vote ;
- *      rien en chantier ; plus rien apres le depart.
+ *      rien en chantier ; plus rien apres le depart ;
+ *   7. le ratelier du QG : pose sur son socle, ferme avant le premier depart, le Scatter
+ *      Gun une seule fois ;
+ *   8. la deuxieme arrivee : ville envahie a la reouverture, titre une fois, objectifs
+ *      « ton arme » puis « reprendre les rues », 25 monstres en equipe, ville paisible ;
+ *   9. le retour du Defi : defaite (apres le titre), porte de victoire (attente de
+ *      l'equipe, dernier entre, cinq minutes), rien en Monde ouvert.
  * Rapport dans parcours_autotest.txt, puis arret.
  */
 @EventBusSubscriber(modid = EmeraldWeaponsMod.MODID)
@@ -107,7 +118,7 @@ public final class HavenJourneyAutotest {
                 if (++waited < START_DELAY) {
                     return;
                 }
-                line("autotest du parcours de Haven (lot 1), " + LocalDateTime.now().withNano(0));
+                line("autotest du parcours de Haven (lots 1 et 2), " + LocalDateTime.now().withNano(0));
                 if (Haven.level(server) == null) {
                     check("dimension de la ville", false, "absente");
                     end(server);
@@ -162,6 +173,10 @@ public final class HavenJourneyAutotest {
         gun(server, level);
         button();
         guide(server, level);
+        rack(server, level);
+        secondArrival(server, level);
+        returnDefeat(server);
+        returnVictory(server);
         isolation(server);
     }
 
@@ -180,6 +195,8 @@ public final class HavenJourneyAutotest {
         ea.welcomed = true;
         ea.hq = true;
         ea.departures = 3;
+        ea.invaded = true;
+        ea.reprise = true;
         ea.quests.add("sig_chasse");
         HavenProgress.Entry eb = new HavenProgress.Entry();
         eb.welcomed = true;
@@ -195,9 +212,11 @@ public final class HavenJourneyAutotest {
         int read = HavenProgress.read(path, in);
         HavenProgress.Entry ra = in.get(a);
         HavenProgress.Entry rb = in.get(b);
-        check("aller-retour : formes, arrivee, QG, departs et quetes relus a l'identique",
+        check("aller-retour : formes, arrivee, QG, departs, deuxieme arrivee, rues reprises et quetes relus a l'identique",
                 read == 2 && ra != null && ra.forms == ea.forms && ra.welcomed && ra.hq && ra.departures == 3
-                        && ra.quests.contains("sig_chasse") && rb != null && rb.welcomed && rb.forms == 0,
+                        && ra.invaded && ra.reprise
+                        && ra.quests.contains("sig_chasse") && rb != null && rb.welcomed && rb.forms == 0
+                        && !rb.invaded && !rb.reprise,
                 read + " fiche(s) lue(s)" + (ra == null ? "" : ", A : formes " + Integer.toBinaryString(ra.forms)
                         + ", departs " + ra.departures + ", quetes " + ra.quests));
         check("ni la fiche temporaire (cobaye) ni la fiche vide ne sont ecrites",
@@ -416,6 +435,295 @@ public final class HavenJourneyAutotest {
                 "departs " + departures + " -> " + HavenProgress.get(fake.getUUID()).departures);
         HavenJourney.removeSubject(fake.getUUID());
         HavenProgress.dropTemporary(fake.getUUID());
+    }
+
+    // ================================================================ 7. lot 2 : le ratelier du QG
+
+    private static void rack(MinecraftServer server, ServerLevel level) {
+        line("--- lot 2 : le ratelier du QG");
+        HavenState state = HavenState.get(server);
+        HavenArrival.Layout rooms = HavenArrival.layout(server);
+        BlockPos pos = HavenRack.keep(server, true);
+        net.minecraft.world.level.block.state.BlockState placed = pos == null ? null : level.getBlockState(pos);
+        boolean inHq = pos != null && rooms != null
+                && rooms.inHq(state.origin(), pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5);
+        check("pose : le ratelier sur le socle derriere le comptoir, tourne vers les clients, dans la boite du Hip Hog",
+                placed != null && placed.is(ModBlocks.HAVEN_GUN_RACK.get())
+                        && placed.getValue(HavenGunRackBlock.FACING) == HavenRack.FACING && inHq,
+                placed + (pos == null ? "" : " en " + pos.toShortString()) + ", dans le QG " + inHq);
+        if (pos == null) {
+            return;
+        }
+        FakePlayer fake = subject(level, "ratelier", pos.south(2));
+        UUID id = fake.getUUID();
+        HavenProgress.temporary(id, 0);
+        HavenRack.Take locked = HavenRack.take(fake, pos);
+        HavenProgress.get(id).departures = 1;
+        HavenRack.Take taken = HavenRack.take(fake, pos);
+        int forms = HavenProgress.forms(id);
+        HavenRack.Take again = HavenRack.take(fake, pos);
+        check("avant le premier depart : ferme ; au retour du Defi : le Scatter Gun, une seule fois ; ensuite : deja pris",
+                locked == HavenRack.Take.LOCKED && taken == HavenRack.Take.TAKEN && forms == GunForm.RED_1.bit()
+                        && again == HavenRack.Take.ALREADY,
+                locked + ", " + taken + " (formes " + Integer.toBinaryString(forms) + "), " + again);
+        HavenProgress.dropTemporary(id);
+    }
+
+    // ================================================================ 8. lot 2 : la deuxieme arrivee, la reprise
+
+    private static void secondArrival(MinecraftServer server, ServerLevel level) {
+        line("--- lot 2 : la deuxieme arrivee, la ville envahie, les rues reprises");
+        HavenState state = HavenState.get(server);
+        HavenArrival.Layout rooms = HavenArrival.layout(server);
+        if (rooms == null || rooms.rooms().isEmpty()) {
+            check("salles de la ville lues", false, "haven_rooms.json absent");
+            return;
+        }
+        BlockPos origin = state.origin();
+        BlockPos far = HavenArrival.standIn(level, origin, rooms.rooms().get(0), 0);
+        FakePlayer fake = subject(level, "retour", far);
+        UUID id = fake.getUUID();
+        HavenJourney.addSubject(fake);
+        HavenProgress.Entry entry = HavenProgress.temporary(id, 0);
+        entry.welcomed = true;
+        entry.hq = true;
+        entry.departures = 1;
+        HavenInvasion.Mode before = HavenInvasion.mode(server);
+        HavenInvasionState city = HavenInvasionState.get(server);
+        int savedCount = city == null ? 0 : city.reprise();
+        HavenState.Phase phase = state.phase();
+        try {
+            HavenInvasion.Mode back = HavenJourney.reopenMode(server);
+            entry.reprise = true;
+            HavenInvasion.Mode done = HavenJourney.reopenMode(server);
+            entry.reprise = false;
+            HavenRules.setChantier(fake, true);
+            HavenInvasion.Mode chantier = HavenJourney.reopenMode(server);
+            HavenRules.setChantier(fake, false);
+            state.forgetMode(id);
+            check("mode a la reouverture : ENVAHIE pour un joueur revenu du Defi sans les rues reprises ;"
+                            + " PAISIBLE une fois reprises ; l'operateur en chantier ne compte pas",
+                    back == HavenInvasion.Mode.INVASION && done == HavenInvasion.Mode.PAISIBLE
+                            && chantier == HavenInvasion.Mode.PAISIBLE,
+                    back + " / " + done + " / " + chantier);
+
+            HavenInvasion.setMode(server, HavenInvasion.Mode.PAISIBLE, null);
+            state.setPhase(HavenState.Phase.PARTI);
+            HavenInvasion.update(server);
+            state.setPhase(phase);
+            HavenInvasion.update(server);
+            check("reouverture du lobby avec lui : la ville passe ENVAHIE",
+                    HavenInvasion.mode(server) == HavenInvasion.Mode.INVASION, "mode " + HavenInvasion.mode(server));
+
+            HavenJourney.onArrive(fake);
+            int kind = HavenJourney.titleKind(id);
+            boolean invaded = entry.invaded;
+            HavenJourney.forgetLobby(id);
+            HavenJourney.onArrive(fake);
+            check("son arrivee joue « Haven a ete envahie », une seule fois",
+                    kind == HavenTitlePayload.ENVAHIE && invaded && HavenJourney.titleKind(id) == -1,
+                    "titre " + kind + ", envahie " + invaded + ", puis " + HavenJourney.titleKind(id));
+
+            long now = level.getGameTime();
+            HavenJourney.update(fake, now);
+            ServerBossEvent bar = HavenJourney.bar(id);
+            TranslatableContents farText = bar != null && bar.getName().getContents() instanceof TranslatableContents t ? t : null;
+            check("sans arme, loin du QG : objectif « ton arme, au QG », distance et direction, barre rose",
+                    HavenJourney.shown(id) == HavenJourney.Objective.ARME && bar != null
+                            && bar.getColor() == BossEvent.BossBarColor.PINK && farText != null
+                            && farText.getKey().endsWith("objectif.arme") && farText.getArgs().length == 2,
+                    "objectif " + HavenJourney.shown(id) + ", texte " + (farText == null ? "?" : farText.getKey()));
+
+            BlockPos hq = rooms.hqCenter(origin);
+            fake.moveTo(hq.getX() + 0.5, hq.getY(), hq.getZ() + 0.5, 0.0F, 0.0F);
+            HavenJourney.update(fake, now + 1);
+            TranslatableContents nearText = bar != null && bar.getName().getContents() instanceof TranslatableContents t ? t : null;
+            check("dans le Hip Hog : « ton arme : le ratelier, derriere le comptoir »",
+                    HavenJourney.shown(id) == HavenJourney.Objective.ARME && nearText != null
+                            && nearText.getKey().endsWith("objectif.arme.qg"),
+                    "texte " + (nearText == null ? "?" : nearText.getKey()));
+
+            HavenProgress.grantForms(id, GunForm.RED_1.bit());
+            HavenJourney.update(fake, now + 2);
+            ServerBossEvent red = HavenJourney.bar(id);
+            Object[] args = red != null && red.getName().getContents() instanceof TranslatableContents t ? t.getArgs() : new Object[0];
+            check("l'arme prise : objectif « reprendre les rues », compte et but (" + HavenJourney.REPRISE_GOAL + "), barre rouge",
+                    HavenJourney.shown(id) == HavenJourney.Objective.REPRISE && red != null
+                            && red.getColor() == BossEvent.BossBarColor.RED && args.length == 2
+                            && Integer.valueOf(HavenJourney.REPRISE_GOAL).equals(args[1]),
+                    "objectif " + HavenJourney.shown(id) + ", arguments " + Arrays.toString(args));
+
+            if (city != null) {
+                city.setReprise(0);
+            }
+            boolean counted = true;
+            for (int i = 0; i < HavenJourney.REPRISE_GOAL - 1; i++) {
+                counted &= HavenJourney.countKill(server);
+            }
+            int almost = HavenJourney.repriseCount(server);
+            HavenInvasion.Mode stillInvaded = HavenInvasion.mode(server);
+            boolean last = HavenJourney.countKill(server);
+            check("24 monstres : le compte avance, la ville reste envahie ; le 25e : rues reprises (fiche, titre),"
+                            + " ville paisible, compte remis a zero",
+                    counted && almost == HavenJourney.REPRISE_GOAL - 1 && stillInvaded == HavenInvasion.Mode.INVASION
+                            && last && entry.reprise && HavenInvasion.mode(server) == HavenInvasion.Mode.PAISIBLE
+                            && HavenJourney.repriseCount(server) == 0 && HavenJourney.titleKind(id) == HavenTitlePayload.REPRISE,
+                    "a 24 : " + almost + " " + stillInvaded + " ; puis reprise " + entry.reprise + ", mode "
+                            + HavenInvasion.mode(server) + ", compte " + HavenJourney.repriseCount(server)
+                            + ", titre " + HavenJourney.titleKind(id));
+
+            HavenJourney.update(fake, now + 3);
+            check("les rues reprises : retour aux objectifs du lot 1 (la borne, le QG deja rejoint)",
+                    HavenJourney.shown(id) == HavenJourney.Objective.BORNE, "objectif " + HavenJourney.shown(id));
+
+            HavenInvasion.setMode(server, HavenInvasion.Mode.INVASION, null);
+            boolean extra = HavenJourney.countKill(server);
+            check("une invasion lancee au bouton, personne n'attend la reprise : rien ne compte",
+                    !extra && HavenJourney.repriseCount(server) == 0, "compte " + HavenJourney.repriseCount(server));
+
+            UUID master = uuid("maitrise");
+            HavenProgress.temporary(master, 0);
+            HavenProgress.grantMastery(master);
+            HavenProgress.Entry m = HavenProgress.get(master);
+            check("la maitrise a la commande comprend les rues reprises : pas de ville envahie pour lui",
+                    m.reprise && m.invaded && !HavenProgress.awaitsReprise(master),
+                    "reprise " + m.reprise + ", envahie " + m.invaded);
+            HavenProgress.dropTemporary(master);
+        } finally {
+            state.setPhase(phase);
+            HavenInvasion.setMode(server, before, null);
+            if (city != null) {
+                city.setReprise(savedCount);
+            }
+            HavenJourney.removeSubject(id);
+            HavenProgress.dropTemporary(id);
+        }
+    }
+
+    // ================================================================ 9. lot 2 : le retour du Defi
+
+    private static void returnDefeat(MinecraftServer server) {
+        line("--- lot 2 : le retour du Defi apres une defaite");
+        ServerLevel overworld = server.overworld();
+        GameState game = GameState.get(overworld);
+        HavenState state = HavenState.get(server);
+        GameState.Mode saved = game.mode();
+        UUID keeper = uuid("appartement-garde");
+        state.assignApartment(keeper, 0, 7);
+        try {
+            game.chooseMode(GameState.Mode.DEFI);
+            game.begin(overworld);
+            state.setPhase(HavenState.Phase.PARTI);
+            boolean applies = HavenReturn.applies(server);
+            long now = overworld.getGameTime();
+            Finale.defeat(overworld);
+            HavenReturn.Stage first = HavenReturn.stage();
+            long due = HavenReturn.due();
+            HavenReturn.tick(server);
+            HavenReturn.Stage waiting = HavenReturn.stage();
+            HavenReturn.expireForTest();
+            HavenReturn.tick(server);
+            int[] kept = state.apartment(keeper);
+            check("defaite : retour prevu " + HavenReturn.DEFEAT_DELAY + " tiques apres (le titre de fin), pas avant ;"
+                            + " puis lobby rouvert, Lame replantee, appartements gardes",
+                    applies && first == HavenReturn.Stage.DEFAITE && due == now + HavenReturn.DEFEAT_DELAY
+                            && waiting == HavenReturn.Stage.DEFAITE && HavenReturn.stage() == HavenReturn.Stage.AUCUN
+                            && HavenArrival.lobbyOpen(server) && game.status() == GameState.Status.LOBBY
+                            && kept != null && kept[1] == 7,
+                    "s'applique " + applies + ", " + first + " a +" + (due - now) + ", puis " + waiting + " -> "
+                            + HavenReturn.stage() + ", phase " + state.phase() + ", partie " + game.status()
+                            + ", appartement " + Arrays.toString(kept));
+        } finally {
+            state.removeApartment(keeper);
+            restore(server, saved);
+        }
+    }
+
+    private static void returnVictory(MinecraftServer server) {
+        line("--- lot 2 : la porte de la victoire");
+        ServerLevel overworld = server.overworld();
+        GameState game = GameState.get(overworld);
+        HavenState state = HavenState.get(server);
+        GameState.Mode saved = game.mode();
+        try {
+            BlockPos where = WorldSetup.findOpenGround(overworld, overworld.getSharedSpawnPos().offset(48, 0, 0), 12);
+            FakePlayer a = new FakePlayer(overworld, new GameProfile(uuid("porte-a"), "[Parcours]"));
+            FakePlayer b = new FakePlayer(overworld, new GameProfile(uuid("porte-b"), "[Parcours]"));
+            SUBJECTS.add(a.getUUID());
+            SUBJECTS.add(b.getUUID());
+            a.moveTo(where.getX() + 6.5, where.getY(), where.getZ() + 0.5, 0.0F, 0.0F);
+            b.moveTo(where.getX() - 5.5, where.getY(), where.getZ() + 0.5, 0.0F, 0.0F);
+            HavenReturn.addSubject(a);
+            HavenReturn.addSubject(b);
+
+            game.chooseMode(GameState.Mode.DEFI);
+            game.begin(overworld);
+            state.setPhase(HavenState.Phase.PARTI);
+            Finale.victory(overworld, where);
+            BlockPos door = HavenReturn.door();
+            boolean placed = door != null && overworld.getBlockState(door).is(ModBlocks.HAVEN_GATE.get())
+                    && overworld.getBlockEntity(door) instanceof HavenGateBlockEntity gate && gate.temporary();
+            check("victoire : la porte s'ouvre pres de la ou le boss est tombe (8 blocs au plus), porte temporaire",
+                    HavenReturn.stage() == HavenReturn.Stage.PORTE && placed
+                            && door.distManhattan(where) <= 16 && Math.abs(door.getX() - where.getX()) <= 8
+                            && Math.abs(door.getZ() - where.getZ()) <= 8,
+                    "etape " + HavenReturn.stage() + ", porte " + (door == null ? "aucune" : door.toShortString())
+                            + " pour " + where.toShortString() + ", posee " + placed);
+            if (door == null) {
+                return;
+            }
+            HavenReturn.tick(server);
+            boolean nobody = HavenReturn.stage() == HavenReturn.Stage.PORTE && !HavenReturn.holding(a);
+            a.moveTo(door.getX() + 0.5, door.getY(), door.getZ() + 0.5, 0.0F, 0.0F);
+            HavenReturn.tick(server);
+            boolean holdA = HavenReturn.holding(a) && HavenReturn.stage() == HavenReturn.Stage.PORTE;
+            b.moveTo(door.getX() + 0.8, door.getY(), door.getZ() + 0.3, 0.0F, 0.0F);
+            HavenReturn.tick(server);
+            boolean gone = !overworld.getBlockState(door).is(ModBlocks.HAVEN_GATE.get());
+            check("personne dans la porte : elle attend ; A la passe : il attend l'equipe ; B, le dernier, la passe :"
+                            + " porte retiree, lobby rouvert",
+                    nobody && holdA && HavenReturn.stage() == HavenReturn.Stage.AUCUN && gone
+                            && HavenArrival.lobbyOpen(server) && game.status() == GameState.Status.LOBBY,
+                    "attend " + nobody + ", A " + holdA + ", puis " + HavenReturn.stage() + ", porte retiree " + gone
+                            + ", phase " + state.phase() + ", partie " + game.status());
+
+            a.moveTo(where.getX() + 6.5, where.getY(), where.getZ() + 0.5, 0.0F, 0.0F);
+            b.moveTo(where.getX() - 5.5, where.getY(), where.getZ() + 0.5, 0.0F, 0.0F);
+            game.chooseMode(GameState.Mode.DEFI);
+            game.begin(overworld);
+            state.setPhase(HavenState.Phase.PARTI);
+            Finale.victory(overworld, where);
+            BlockPos second = HavenReturn.door();
+            HavenReturn.expireForTest();
+            HavenReturn.tick(server);
+            boolean closed = second != null && !overworld.getBlockState(second).is(ModBlocks.HAVEN_GATE.get());
+            check("personne ne la passe : au bout de cinq minutes, retour quand meme, porte retiree",
+                    HavenReturn.stage() == HavenReturn.Stage.AUCUN && closed && HavenArrival.lobbyOpen(server),
+                    HavenReturn.stage() + ", porte retiree " + closed + ", phase " + state.phase());
+
+            game.chooseMode(GameState.Mode.LIBRE);
+            game.begin(overworld);
+            state.setPhase(HavenState.Phase.PARTI);
+            Finale.victory(overworld, where);
+            check("en Monde ouvert, la victoire relance un cycle : ni porte ni retour",
+                    HavenReturn.stage() == HavenReturn.Stage.AUCUN && HavenReturn.door() == null,
+                    "etape " + HavenReturn.stage());
+        } finally {
+            HavenReturn.resetForTest(server);
+            HavenReturn.clearSubjects();
+            restore(server, saved);
+        }
+    }
+
+    /** Remet le lobby comme au debut : Lame replantee, ville rouverte, regime d'avant. */
+    private static void restore(MinecraftServer server, GameState.Mode saved) {
+        ServerLevel overworld = server.overworld();
+        GameState game = GameState.get(overworld);
+        com.emerald.game.GameManager.clear();
+        com.emerald.game.GameManager.setup(overworld, overworld.getSharedSpawnPos(), false);
+        HavenArrival.reopen(server);
+        game.chooseMode(saved);
+        game.forgetModeChoice();
     }
 
     // ================================================================ 6. le vrai fichier

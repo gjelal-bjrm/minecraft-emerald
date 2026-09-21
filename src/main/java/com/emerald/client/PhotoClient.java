@@ -55,7 +55,7 @@ public final class PhotoClient {
                 return;
             }
             int age = HavenJourneyClient.titleAge();
-            if (wanted.contains("accueil") && (age < 25 || age > 100)) {
+            if ((wanted.contains("accueil") || wanted.contains("envahie")) && (age < 25 || age > 100)) {
                 return;
             }
         }

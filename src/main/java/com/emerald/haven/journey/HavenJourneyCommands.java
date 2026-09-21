@@ -18,10 +18,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * /arcencium haven parcours [joueur] | armes <joueur> toutes|aucune|scatter | maitrise <joueur> | remise <joueur>
+ * /arcencium haven parcours [joueur] | armes <joueur> toutes|aucune|scatter | maitrise <joueur>
+ *                            | retour <joueur> | remise <joueur>
  *
  * Pour l'operateur : lire la fiche de parcours d'un joueur, lui donner ou retirer des
- * armes, la maitrise (le bouton du QG), ou le remettre a zero comme un nouveau venu.
+ * armes, la maitrise (le bouton du QG), le mettre au retour de son premier Defi (essayer
+ * le lot 2 sans jouer un Defi : puis /arcencium haven ouvrir), ou le remettre a zero
+ * comme un nouveau venu.
  * L'arme suit au passage suivant du gardien (une seconde). Brigadier fusionne ces
  * litteraux avec ceux de HavenCommands.
  */
@@ -48,6 +51,8 @@ public final class HavenJourneyCommands {
                                 EntityArgument.getPlayer(ctx, "joueur"), GunForm.RED_1.bit())))))
                 .then(Commands.literal("maitrise").then(Commands.argument("joueur", EntityArgument.player())
                         .executes(ctx -> mastery(ctx.getSource(), EntityArgument.getPlayer(ctx, "joueur")))))
+                .then(Commands.literal("retour").then(Commands.argument("joueur", EntityArgument.player())
+                        .executes(ctx -> returned(ctx.getSource(), EntityArgument.getPlayer(ctx, "joueur")))))
                 .then(Commands.literal("remise").then(Commands.argument("joueur", EntityArgument.player())
                         .executes(ctx -> reset(ctx.getSource(), EntityArgument.getPlayer(ctx, "joueur")))))));
         event.getDispatcher().register(root);
@@ -69,7 +74,8 @@ public final class HavenJourneyCommands {
         source.sendSuccess(() -> Component.translatable("command.emeraldweapons.haven.parcours.etat",
                 player.getDisplayName(), Integer.bitCount(forms), weapons,
                 yesNo(entry != null && entry.welcomed), yesNo(entry != null && entry.hq),
-                entry == null ? 0 : entry.departures, yesNo(mastery)), false);
+                entry == null ? 0 : entry.departures, yesNo(mastery),
+                yesNo(entry != null && entry.reprise)), false);
         return 1;
     }
 
@@ -90,6 +96,15 @@ public final class HavenJourneyCommands {
         HavenProgress.grantMastery(player.getUUID());
         MorphGunKeeper.guard(player);
         source.sendSuccess(() -> Component.translatable("command.emeraldweapons.haven.parcours.maitrise",
+                player.getDisplayName()), true);
+        return 1;
+    }
+
+    private static int returned(CommandSourceStack source, ServerPlayer player) {
+        HavenProgress.markReturned(player.getUUID());
+        HavenJourney.forgetLobby(player.getUUID());
+        MorphGunKeeper.guard(player);
+        source.sendSuccess(() -> Component.translatable("command.emeraldweapons.haven.parcours.retour",
                 player.getDisplayName()), true);
         return 1;
     }

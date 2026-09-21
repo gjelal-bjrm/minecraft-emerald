@@ -1,0 +1,40 @@
+{
+  "variants": {
+    "facing=north,style=anneau": {
+      "model": "emeraldweapons:block/haven_gate"
+    },
+    "facing=east,style=anneau": {
+      "model": "emeraldweapons:block/haven_gate"
+    },
+    "facing=south,style=anneau": {
+      "model": "emeraldweapons:block/haven_gate"
+    },
+    "facing=west,style=anneau": {
+      "model": "emeraldweapons:block/haven_gate"
+    },
+    "facing=north,style=portail": {
+      "model": "emeraldweapons:block/haven_gate"
+    },
+    "facing=east,style=portail": {
+      "model": "emeraldweapons:block/haven_gate"
+    },
+    "facing=south,style=portail": {
+      "model": "emeraldweapons:block/haven_gate"
+    },
+    "facing=west,style=portail": {
+      "model": "emeraldweapons:block/haven_gate"
+    },
+    "facing=north,style=arche": {
+      "model": "emeraldweapons:block/haven_gate"
+    },
+    "facing=east,style=arche": {
+      "model": "emeraldweapons:block/haven_gate"
+    },
+    "facing=south,style=arche": {
+      "model": "emeraldweapons:block/haven_gate"
+    },
+    "facing=west,style=arche": {
+      "model": "emeraldweapons:block/haven_gate"
+    }
+  }
+}

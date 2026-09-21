@@ -9,9 +9,11 @@ taille le livre du profil : tout ce qui n'est pas Artefacts, Reliques ou
 Enchantement d'Apotheose disparait, avec une sauvegarde zip dans dist/.
 
 Un second chapitre, « Haven », suit le parcours du joueur dans la ville (cahier
-§79) : trois etapes, cochees par les succes caches carnet/haven_* que le mod
-accorde (haven/journey/HavenJourney). Sa premiere page est le livre que le
-joueur voulait : « Vous aviez rendez-vous au quartier general ».
+§79) : cinq etapes, cochees par les succes caches carnet/haven_* que le mod
+accorde (haven/journey/HavenJourney et HavenRack) -- les trois du lot 1, puis
+l'arme du QG et la reprise des rues au retour du Defi (lot 2, §81). Sa premiere
+page est le livre que le joueur voulait : « Vous aviez rendez-vous au quartier
+general ».
 
 Le texte est ecrit EN LIGNE dans le chapitre et dans les tables de langue
 (fr_fr, en_us) : FTB Quests 2101 lit d'abord les tables, mais le joueur joue
@@ -161,7 +163,23 @@ HAVEN_QUESTS = [
     ("haven_depart", "Le départ", "emeraldweapons:emerald_sword", [
         "Votez à la borne : quand tout le monde a voté, la partie part au village. Les armes de Jak restent dans Haven.",
         "",
+        "La fin du &cDéfi&r ramène à Haven : après une défaite, tout le monde rentre ; après une victoire, une &bporte précurseur&r s'ouvre là où le boss est tombé.",
+        "",
         "&7Se coche au premier départ.",
+    ], []),
+    ("haven_arme", "Ton arme au QG", "emeraldweapons:morph_gun", [
+        "Au retour du Défi, &cHaven a été envahie&r. Au QG, sur le râtelier derrière le comptoir, le Morph Gun vous attend avec sa première forme : le &cScatter Gun&r.",
+        "",
+        "Le râtelier ne donne l'arme qu'une fois : elle reste ensuite à vous, de partie en partie.",
+        "",
+        "&7Se coche quand vous prenez l'arme.",
+    ], []),
+    ("haven_reprise", "Reprendre les rues", "minecraft:iron_sword", [
+        "Tant que la ville est envahie, chaque monstre abattu compte, pour toute l'équipe. À &c25&r, les rues sont à vous : la ville redevient paisible, et ses habitants reviennent.",
+        "",
+        "La barre en haut de l'écran tient le compte.",
+        "",
+        "&7Se coche quand les rues sont reprises.",
     ], []),
 ]
 

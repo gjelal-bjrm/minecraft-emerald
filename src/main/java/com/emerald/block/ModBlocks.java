@@ -272,6 +272,30 @@ public class ModBlocks {
                     .mapColor(MapColor.COLOR_RED)
                     .sound(SoundType.METAL)));
 
+    /**
+     * Le ratelier d'armes du QG de Haven (voir HavenGunRackBlock) : le Morph Gun pose
+     * dessus, un clic donne le Scatter Gun a la deuxieme arrivee. Sans objet : HavenRack
+     * le pose et le retire. Incassable, sans butin, non poussable.
+     */
+    public static final DeferredBlock<HavenGunRackBlock> HAVEN_GUN_RACK = registerBlockOnly("haven_gun_rack",
+            () -> new HavenGunRackBlock(BlockBehaviour.Properties.of()
+                    .strength(-1.0F, 3600000.0F).noLootTable()
+                    .pushReaction(net.minecraft.world.level.material.PushReaction.BLOCK)
+                    .mapColor(MapColor.METAL)
+                    .sound(SoundType.METAL)));
+
+    /**
+     * La porte precurseur de la victoire (voir HavenGateBlock) : elle s'ouvre la ou le
+     * boss du Defi tombe et ramene chacun a Haven. Sans objet : HavenReturn la pose et
+     * la retire. Incassable, sans butin, non poussable, traversable.
+     */
+    public static final DeferredBlock<HavenGateBlock> HAVEN_GATE = registerBlockOnly("haven_gate",
+            () -> new HavenGateBlock(BlockBehaviour.Properties.of()
+                    .strength(-1.0F, 3600000.0F).noLootTable()
+                    .pushReaction(net.minecraft.world.level.material.PushReaction.BLOCK)
+                    .mapColor(MapColor.COLOR_LIGHT_BLUE)
+                    .sound(SoundType.AMETHYST)));
+
     private static <T extends Block> DeferredBlock<T> registerBlockOnly(String name, Supplier<T> block) {
         return BLOCKS.register(name, block);
     }

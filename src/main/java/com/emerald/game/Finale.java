@@ -62,6 +62,11 @@ import java.util.Locale;
  *
  * Victoire : le boss meurt. Defaite : le temps s'ecoule, la Maree a tout
  * recouvert (GameTicker). Les deux se disent en plein ecran, une fois.
+ *
+ * UN DEFI PARTI DE LA VILLE REVIENT A HAVEN (parcours, lot 2, HavenReturn) : la
+ * defaite ramene tout le monde apres le titre ; la victoire ouvre une porte
+ * precurseur la ou le boss est tombe. Le rappel « /arcencium stop » ne sert
+ * alors plus : il n'est dit qu'aux mondes sans ville.
  */
 @EventBusSubscriber(modid = EmeraldWeaponsMod.MODID)
 public final class Finale {
@@ -450,11 +455,20 @@ public final class Finale {
                 || !event.getEntity().getTags().contains(TAG_BOSS)) {
             return;
         }
-        victory(level);
+        victory(level, event.getEntity().blockPosition());
     }
 
-    /** Le boss est tombe : titre, feux d'artifice, les gardes se dissipent. */
+    /** La victoire a la commande : sans boss, la porte de retour se cherche une place. */
     public static void victory(ServerLevel level) {
+        victory(level, null);
+    }
+
+    /**
+     * Le boss est tombe : titre, feux d'artifice, les gardes se dissipent.
+     *
+     * @param where la ou il est tombe : la porte de retour a Haven s'y ouvre ; null a la commande
+     */
+    public static void victory(ServerLevel level, @Nullable BlockPos where) {
         GameState state = GameState.get(level);
         String time = clock(state.elapsed(level));
         // EN MONDE OUVERT, LA VICTOIRE N'EST PAS UNE FIN.
@@ -484,7 +498,8 @@ public final class Finale {
         }
         awardAstralWings(level);
         dissolveGuards(level);
-        hintAt = endless ? -1L : level.getGameTime() + 100L;
+        boolean haven = !endless && com.emerald.haven.journey.HavenReturn.onVictory(level, where);
+        hintAt = endless || haven ? -1L : level.getGameTime() + 100L;
         cycleAt = endless ? level.getGameTime() + CYCLE_DELAY : -1L;
     }
 
@@ -529,7 +544,8 @@ public final class Finale {
             player.sendSystemMessage(Component.translatable("game.emeraldweapons.lost.chat")
                     .withStyle(ChatFormatting.DARK_PURPLE));
         }
-        hintAt = level.getGameTime() + 100L;
+        boolean haven = com.emerald.haven.journey.HavenReturn.onDefeat(level);
+        hintAt = haven ? -1L : level.getGameTime() + 100L;
     }
 
     /** Un arret de partie abandonne l'arene en cours de pose. */

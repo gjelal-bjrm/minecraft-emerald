@@ -1,0 +1,428 @@
+{
+  "parent": "minecraft:block/block",
+  "render_type": "minecraft:cutout",
+  "textures": {
+    "panneau": "emeraldweapons:block/haven_ratelier/panneau",
+    "rail": "emeraldweapons:block/haven_ratelier/rail",
+    "pied": "emeraldweapons:block/haven_ratelier/pied",
+    "crochet": "emeraldweapons:block/haven_ratelier/crochet",
+    "voyant": "emeraldweapons:block/haven_ratelier/voyant",
+    "particle": "emeraldweapons:block/haven_ratelier/panneau"
+  },
+  "elements": [
+    {
+      "name": "socle",
+      "from": [
+        3,
+        0,
+        3
+      ],
+      "to": [
+        13,
+        1,
+        13
+      ],
+      "faces": {
+        "north": {
+          "texture": "#rail",
+          "uv": [
+            3,
+            15,
+            13,
+            16
+          ]
+        },
+        "south": {
+          "texture": "#rail",
+          "uv": [
+            3,
+            15,
+            13,
+            16
+          ]
+        },
+        "east": {
+          "texture": "#rail",
+          "uv": [
+            3,
+            15,
+            13,
+            16
+          ]
+        },
+        "west": {
+          "texture": "#rail",
+          "uv": [
+            3,
+            15,
+            13,
+            16
+          ]
+        },
+        "up": {
+          "texture": "#panneau",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "down": {
+          "texture": "#panneau",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        }
+      }
+    },
+    {
+      "name": "pied",
+      "from": [
+        7,
+        1,
+        7
+      ],
+      "to": [
+        9,
+        11,
+        9
+      ],
+      "faces": {
+        "north": {
+          "texture": "#pied",
+          "uv": [
+            7,
+            5,
+            9,
+            15
+          ]
+        },
+        "south": {
+          "texture": "#pied",
+          "uv": [
+            7,
+            5,
+            9,
+            15
+          ]
+        },
+        "east": {
+          "texture": "#pied",
+          "uv": [
+            7,
+            5,
+            9,
+            15
+          ]
+        },
+        "west": {
+          "texture": "#pied",
+          "uv": [
+            7,
+            5,
+            9,
+            15
+          ]
+        },
+        "up": {
+          "texture": "#pied",
+          "uv": [
+            7,
+            7,
+            9,
+            9
+          ]
+        },
+        "down": {
+          "texture": "#pied",
+          "uv": [
+            7,
+            7,
+            9,
+            9
+          ]
+        }
+      }
+    },
+    {
+      "name": "berceau",
+      "from": [
+        2,
+        11,
+        6
+      ],
+      "to": [
+        14,
+        12,
+        10
+      ],
+      "faces": {
+        "north": {
+          "texture": "#rail",
+          "uv": [
+            2,
+            4,
+            14,
+            5
+          ]
+        },
+        "south": {
+          "texture": "#rail",
+          "uv": [
+            2,
+            4,
+            14,
+            5
+          ]
+        },
+        "east": {
+          "texture": "#rail",
+          "uv": [
+            6,
+            4,
+            10,
+            5
+          ]
+        },
+        "west": {
+          "texture": "#rail",
+          "uv": [
+            6,
+            4,
+            10,
+            5
+          ]
+        },
+        "up": {
+          "texture": "#rail",
+          "uv": [
+            2,
+            6,
+            14,
+            10
+          ]
+        },
+        "down": {
+          "texture": "#rail",
+          "uv": [
+            2,
+            6,
+            14,
+            10
+          ]
+        }
+      }
+    },
+    {
+      "name": "montant_gauche",
+      "from": [
+        2,
+        12,
+        6
+      ],
+      "to": [
+        3,
+        14,
+        10
+      ],
+      "faces": {
+        "north": {
+          "texture": "#crochet",
+          "uv": [
+            13,
+            2,
+            14,
+            4
+          ]
+        },
+        "south": {
+          "texture": "#crochet",
+          "uv": [
+            2,
+            2,
+            3,
+            4
+          ]
+        },
+        "east": {
+          "texture": "#crochet",
+          "uv": [
+            6,
+            2,
+            10,
+            4
+          ]
+        },
+        "west": {
+          "texture": "#crochet",
+          "uv": [
+            6,
+            2,
+            10,
+            4
+          ]
+        },
+        "up": {
+          "texture": "#crochet",
+          "uv": [
+            2,
+            6,
+            3,
+            10
+          ]
+        },
+        "down": {
+          "texture": "#crochet",
+          "uv": [
+            2,
+            6,
+            3,
+            10
+          ]
+        }
+      }
+    },
+    {
+      "name": "montant_droit",
+      "from": [
+        13,
+        12,
+        6
+      ],
+      "to": [
+        14,
+        14,
+        10
+      ],
+      "faces": {
+        "north": {
+          "texture": "#crochet",
+          "uv": [
+            2,
+            2,
+            3,
+            4
+          ]
+        },
+        "south": {
+          "texture": "#crochet",
+          "uv": [
+            13,
+            2,
+            14,
+            4
+          ]
+        },
+        "east": {
+          "texture": "#crochet",
+          "uv": [
+            6,
+            2,
+            10,
+            4
+          ]
+        },
+        "west": {
+          "texture": "#crochet",
+          "uv": [
+            6,
+            2,
+            10,
+            4
+          ]
+        },
+        "up": {
+          "texture": "#crochet",
+          "uv": [
+            13,
+            6,
+            14,
+            10
+          ]
+        },
+        "down": {
+          "texture": "#crochet",
+          "uv": [
+            13,
+            6,
+            14,
+            10
+          ]
+        }
+      }
+    },
+    {
+      "name": "voyant",
+      "from": [
+        7,
+        9,
+        6.5
+      ],
+      "to": [
+        9,
+        10,
+        7
+      ],
+      "faces": {
+        "north": {
+          "texture": "#voyant",
+          "uv": [
+            7,
+            6,
+            9,
+            7
+          ]
+        },
+        "south": {
+          "texture": "#voyant",
+          "uv": [
+            7,
+            6,
+            9,
+            7
+          ]
+        },
+        "east": {
+          "texture": "#voyant",
+          "uv": [
+            9,
+            6,
+            9.5,
+            7
+          ]
+        },
+        "west": {
+          "texture": "#voyant",
+          "uv": [
+            6.5,
+            6,
+            7,
+            7
+          ]
+        },
+        "up": {
+          "texture": "#voyant",
+          "uv": [
+            7,
+            6.5,
+            9,
+            7
+          ]
+        },
+        "down": {
+          "texture": "#voyant",
+          "uv": [
+            7,
+            9,
+            9,
+            9.5
+          ]
+        }
+      }
+    }
+  ]
+}
