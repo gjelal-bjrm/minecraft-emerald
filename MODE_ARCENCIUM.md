@@ -6583,3 +6583,82 @@ du §66 (Defi plus dur, vendeurs payes en quetes).
   peut-il porter les etapes ?
 - Le portail du mode libre : sa recette, ses materiaux, et ou il mene (devant le bar, a
   l'appartement) ?
+
+## 77. Des forets plus vraies : Dynamic Trees, feuilles, sons, et moins d'arbres fruitiers *(21 sept. 2026)*
+
+> « Je me retrouve avec des arbres parfois tres petits, ça bloque les chemins et les
+> forets ne sont pas du tout immersives. [...] Des arbres de differentes tailles, des
+> forets beaucoup plus immersives, et eventuellement des petits effets realistes. »
+
+### 77.1 D'ou viennent les petits arbres
+
+- les CHENES DU JEU DE BASE : tronc de 4 a 6 blocs, feuilles a hauteur de tete ;
+- les CINQUANTE ARBRES FRUITIERS de Pam's HarvestCraft 2 - Trees : tous
+  `straight_trunk_placer` 4 + 1..2, une chance sur 90 par troncon chacun, dans les
+  forets de leur climat ;
+- Productive Trees n'en seme aucun dans la nature (aucun modificateur de biome).
+
+### 77.2 Les choix du joueur
+
+| Choix | Ce qui est pose |
+|---|---|
+| les arbres : Dynamic Trees | `dynamictrees` 1.7.2 et `dynamictreesplus` 1.3.2 : arbres vivants de toutes tailles, qui poussent, se ressement et tombent d'un bloc |
+| les feuilles qui tombent | `fallingleavesplus` 21.1.2 (+ Puzzles Lib 21.1.60) : feuilles propres a chaque arbre, glands, pommes de pin |
+| les sons de la nature | `ambientsounds` 6.3.8 (+ CreativeCore 2.13.46) : oiseaux, vent, insectes la nuit |
+| les fruitiers de Pam : les rarefier | `tools/pam_trees_rarity.py` : trois fois plus rares, memes forets |
+
+Telecharges de Modrinth avec l'accord du joueur, sha512 verifies ; licences libres
+(MIT, MPL, LGPL) : l'export du modpack peut les embarquer.
+
+**LES EXTENSIONS DE DYNAMIC TREES POUR NOS DEUX MODS DE BIOMES NE PASSENT PAS.**
+`dtbwg` (Oh The Biomes We've Gone) veut NeoForge 21.1.208 et OTBWG 2.5.0 -- or la
+2.5.0 a RENOMME tous ses blocs (« Breaking Changes », 31 oct. 2025) : la mettre a jour
+casserait les mondes du profil. `dtru` (Regions Unexplored) veut NeoForge 21.1.187 et RU
+0.6.2, la refonte « The Next Chapter ». Le profil a NeoForge 21.1.174, OTBWG 2.3.13, RU
+0.5.6.1. On s'en passe : DYNAMIC TREES NE TOUCHE QU'AUX BIOMES DU JEU DE BASE (ses
+regles choisissent `minecraft:.*`, ses annulations aussi) -- les forets des deux mods
+gardent leurs propres arbres, ni vides ni doublees. A revoir si le profil passe un jour
+a ces versions.
+
+### 77.3 Les fruitiers de Pam, trois fois plus rares
+
+Sans toucher aux fichiers de Pam : un modificateur de biome RETIRE ses cinquante
+elements places ; pour chaque arbre, un element place a nous (sa copie, rarete 90 ->
+270) et un modificateur qui l'ajoute aux MEMES biomes (`data/emeraldweapons/.../
+pam_rarete/`). Tout porte `neoforge:mod_loaded pamhc2trees` : sans Pam (le dev, le
+serveur d'essai), rien ne se charge. Le script relit le jar de Pam a chaque passage.
+
+### 77.4 L'automate de photos (`util/PhotoAutomaton`)
+
+Pour REGARDER un terrain avant de le livrer : le run `photos` entre dans le monde
+jetable « photos » ; avec `EMERALDWEAPONS_PHOTOS="nom@biome[@hauteur];..."` (et
+`EMERALDWEAPONS_PHOTOS_ORIGINE="x,z"`, loin de l'explore), il met le mode Arcencium en
+pause, fige midi et le beau temps, place le joueur en spectateur dans chaque biome --
+au sol, ou en hauteur le regard plonge --, laisse le monde se generer et se dessiner,
+et le client prend la capture dans `run/screenshots/`, sans interface. Puis il ferme le
+jeu.
+
+LES PHOTOS (dev, avec Oh The Biomes We've Gone, Regions Unexplored et Pam's Trees
+copies du profil le temps de l'essai, shader Complementary + Euphoria), a 50 000 blocs
+de tout ce qui etait explore :
+
+| Prise | Ce qu'on voit |
+|---|---|
+| foret, au sol | des chenes aux troncs epais, des bouleaux ramifies, des arbres de toutes les tailles, et un sous-bois ou l'on passe |
+| foret, d'en haut | des couronnes de tailles variees, plus de mur de feuilles uniforme |
+| foret de bouleaux | des troncs blancs aux vraies branches |
+| foret sombre | de grands troncs, une canopee haute, un sous-bois degage |
+| taiga geante, d'en haut | coniferes et bouleaux de toutes tailles le long d'un ruisseau |
+| foret fleurie | un chene au tronc epais et ramifie au bord de l'eau |
+| coniferes d'OTBWG, erables de RU | intacts : leurs propres arbres, ni vides ni doubles |
+
+Les premieres series n'avaient montre que le ciel, des brins d'herbe flottants et un
+talus : l'automate prenait les branches pour le sol et n'attendait pas le dessin des
+troncons neufs. Il cherche desormais le vrai sol sous les arbres, une place hors des
+troncs et la direction la plus degagee, et attend que le client ait tout dessine
+(`LevelRenderer.hasRenderedAllSections`, que Sodium tient aussi) -- deux a neuf secondes
+selon la prise.
+
+Poses dans le profil « Mode Arcencium » et en dev (sans les mods de biomes, que le dev
+n'a pas) ; notre jar porte la rarete des fruitiers. Banc haven 11 OK sans Pam's Trees :
+aucune erreur de donnees, les conditions tiennent.

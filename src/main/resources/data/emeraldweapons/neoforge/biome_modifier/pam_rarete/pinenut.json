@@ -1,0 +1,12 @@
+{
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "pamhc2trees"
+    }
+  ],
+  "type": "neoforge:add_features",
+  "biomes": "#c:is_tree/coniferous",
+  "features": "emeraldweapons:pam_rarete/pinenut",
+  "step": "vegetal_decoration"
+}

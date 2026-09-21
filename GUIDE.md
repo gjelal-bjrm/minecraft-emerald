@@ -646,6 +646,11 @@ Sur un serveur d'essai (`run-server`), chacun écrit son rapport puis arrête le
 - `EMERALDWEAPONS_AUTOTEST=invasion ./gradlew runServer` : invasion, décor destructible, bouton du QG et MSPT, rapport `run-server/invasion_autotest.txt` ;
 - `EMERALDWEAPONS_AUTOTEST=armes ./gradlew runServer` : Morph Gun (poses, confinement, tir des douze armes, munitions, décor, MSPT avec quatre tireurs), rapport `run-server/armes_autotest.txt`.
 
+Pour regarder un terrain (arbres, biomes) sans jouer : le run `photos` entre dans le monde
+jetable `run/saves/photos` ; avec `EMERALDWEAPONS_PHOTOS="nom@biome;nom@biome@hauteur"` (et
+`EMERALDWEAPONS_PHOTOS_ORIGINE="x,z"` pour chercher loin de ce qui est exploré), il se place
+dans chaque biome, à midi et par beau temps, prend les captures dans `run/screenshots/` et se ferme.
+
 Les chiffres de tir des armes sont dans `jak/gun/GunSpec.java` ; les textures des particules
 et la planche de contrôle (`build/jak/gun/planche-tir.png`) sortent de `python tools/gun_particles.py`.
 

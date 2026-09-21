@@ -71,6 +71,16 @@ neoForge {
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
         }
 
+        // L'AUTOMATE DE PHOTOS (util/PhotoAutomaton) : entre dans le monde jetable
+        // « photos » ; avec EMERALDWEAPONS_PHOTOS, il photographie les biomes demandes
+        // dans run/screenshots/ et se ferme. Pour regarder un terrain avant de le livrer.
+        photos {
+            client()
+            programArgument '--quickPlaySingleplayer'
+            programArgument 'photos'
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        }
+
         // L'ATELIER DE LA VILLE (HavenAtelier) : entre directement dans le monde
         // haven_atelier, ou l'on retouche Haven en creatif. Lance avec la variable
         // EMERALDWEAPONS_ATELIER=releve, il releve la ville et se ferme tout seul.
