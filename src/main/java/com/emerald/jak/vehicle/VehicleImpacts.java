@@ -5,6 +5,7 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -15,7 +16,9 @@ import net.minecraft.world.entity.Mob;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.network.PacketDistributor;
 
+import javax.annotation.Nullable;
 import java.util.List;
 
 /**
@@ -40,6 +43,13 @@ import java.util.List;
  * CE QUI EST SUR LE SERVEUR SEUL : renverser quelqu'un ({@link #ram}, les degats et
  * les vies n'existent que la) et le bruit du choc ({@link #watch}, qui regarde la
  * vitesse perdue dans la tique -- un mur, un vehicule, peu importe).
+ *
+ * L'EQUILIBRE (retour du joueur du 21 sept., VehicleAttitude) : chaque choc porte en un
+ * point, et ce point decide de la suite. Contre un vehicule, au centre de la zone ou leurs
+ * boites se recoupent ; contre le decor, sur la face de la boite qui a bute
+ * ({@link #wall}) ; une explosion, au point du vehicule le plus proche d'elle
+ * ({@link #blast}). Heurte sous son centre de masse, le vehicule gite ; de face, il pique
+ * du nez ; de biais, il vrille -- puis ses propulseurs le remettent d'aplomb.
  */
 public final class VehicleImpacts {
 
@@ -68,6 +78,25 @@ public final class VehicleImpacts {
     public static final double RAM_LAUNCH_MAX = 1.6;
     /** Ce que le vehicule perd a renverser quelqu'un, par renversement. */
     public static final double RAM_DRAG = 0.04;
+
+    /** Sous ce changement de vitesse, en blocs par tique, un appui contre le decor n'incline rien. */
+    public static final double WALL_MIN = 0.05;
+
+    /**
+     * Le souffle des explosions sur les vehicules : l'impulsion au centre, en masse x
+     * blocs par tique, qui decroit jusqu'a zero au rayon. Le Plasmite RPG pousse une car-a
+     * de 0,5 bloc par tique a bout portant ; la Super Nova balaie une place entiere.
+     */
+    public static final double BLAST_PLASMITE = 4.0;
+    public static final double BLAST_PLASMITE_RADIUS = 10.0;
+    public static final double BLAST_PEACE = 3.0;
+    public static final double BLAST_PEACE_RADIUS = 8.0;
+    public static final double BLAST_NOVA = 12.0;
+    public static final double BLAST_NOVA_RADIUS = 40.0;
+    /** Le souffle souleve : la part verticale ajoutee a sa direction, avant normalisation. */
+    public static final double BLAST_LIFT = 0.6;
+    /** Aucun vehicule ne part a plus de 0,8 bloc par tique (16 m/s) : une moto pese quatre fois moins qu'une voiture. */
+    public static final double BLAST_MAX_SPEED = 0.8;
 
     /** Perte de vitesse a plat, en blocs par tique, a partir de laquelle c'est un choc et non un freinage. */
     public static final double CRASH_DROP = 0.5;
@@ -120,26 +149,39 @@ public final class VehicleImpacts {
         double worst = 0.0;
         for (JakVehicleEntity other : level.getEntitiesOfClass(JakVehicleEntity.class, reach.inflate(SEARCH),
                 o -> o != car && !o.isRemoved())) {
-            if (!touching(car, other, motion)) {
+            Vec3 at = contact(car, other, motion);
+            if (at == null) {
                 continue;
             }
-            worst = Math.max(worst, resolve(car, other));
+            worst = Math.max(worst, resolve(car, other, at));
             motion = car.impactVelocity();
         }
         return worst;
     }
 
-    /** Vrai si une boite de l'un recoupe une boite de l'autre, le deplacement de la tique compris. */
-    private static boolean touching(JakVehicleEntity car, JakVehicleEntity other, Vec3 motion) {
+    /**
+     * Le point du choc : le centre de la plus grande zone ou une boite de l'un, deplacement
+     * de la tique compris, recoupe une boite de l'autre ; null s'ils ne se touchent pas.
+     */
+    @Nullable
+    private static Vec3 contact(JakVehicleEntity car, JakVehicleEntity other, Vec3 motion) {
+        Vec3 best = null;
+        double bestVolume = -1.0;
         for (AABB mine : car.collisionBoxes()) {
             AABB swept = mine.expandTowards(motion.x, motion.y, motion.z).inflate(0.05);
             for (AABB theirs : other.collisionBoxes()) {
-                if (swept.intersects(theirs)) {
-                    return true;
+                if (!swept.intersects(theirs)) {
+                    continue;
+                }
+                AABB overlap = swept.intersect(theirs);
+                double volume = overlap.getXsize() * overlap.getYsize() * overlap.getZsize();
+                if (volume > bestVolume) {
+                    bestVolume = volume;
+                    best = overlap.getCenter();
                 }
             }
         }
-        return false;
+        return best;
     }
 
     /**
@@ -154,6 +196,12 @@ public final class VehicleImpacts {
      * @return la quantite de mouvement du choc, 0 s'ils ne se rapprochaient pas
      */
     public static double resolve(JakVehicleEntity car, JakVehicleEntity other) {
+        Vec3 at = contact(car, other, car.impactVelocity());
+        return resolve(car, other, at != null ? at : car.position().add(other.position()).scale(0.5));
+    }
+
+    /** Comme {@link #resolve(JakVehicleEntity, JakVehicleEntity)}, le choc portant au point {@code at} (equilibre). */
+    public static double resolve(JakVehicleEntity car, JakVehicleEntity other, Vec3 at) {
         Vec3 mine = car.impactVelocity();
         Vec3 theirs = other.impactBase();
         double nx = car.getX() - other.getX();
@@ -179,6 +227,7 @@ public final class VehicleImpacts {
         double impulse = (1.0 + RESTITUTION) * approach * mB / (mA + mB);
         car.setDeltaMovement(mine.x + nx * impulse, mine.y, mine.z + nz * impulse);
         car.hasImpulse = true;
+        car.tilt(new Vec3(nx * impulse * mA, 0.0, nz * impulse * mA), at);
         // LES DEUX PARTENT DANS LA MEME TIQUE, quand le meme cote les simule tous les deux.
         // Chacun de son cote, le percuteur voyait l'approche et rebondissait AVANT que le
         // percute ne tique : celui-ci ne voyait plus personne s'approcher et ne bougeait pas
@@ -188,6 +237,7 @@ public final class VehicleImpacts {
             double back = (1.0 + RESTITUTION) * approach * mA / (mA + mB);
             other.setDeltaMovement(theirs.x - nx * back, theirs.y, theirs.z - nz * back);
             other.hasImpulse = true;
+            other.tilt(new Vec3(-nx * back * mB, 0.0, -nz * back * mB), at);
             other.setImpactHandled(other.level().getGameTime());
             other.stun(stunTicks(approach * mA * mB / (mA + mB)));
         }
@@ -269,6 +319,113 @@ public final class VehicleImpacts {
         return new DamageSource(level.registryAccess().registryOrThrow(Registries.DAMAGE_TYPE)
                 .getHolderOrThrow(DAMAGE_TYPE), null, null, car.position());
     }
+
+    // ================================================================ l'equilibre : le decor, le souffle
+
+    /**
+     * Le choc contre le decor, pour l'equilibre : la vitesse perdue sur un axe bloque,
+     * appliquee sur la face de la boite qui a bute la premiere (VehiclePhysics.move).
+     *
+     * Le mur de face arrete la boite avant, sous le centre de masse : le nez pique. Le mur
+     * aborde de biais arrete l'avant et pas l'arriere : la voiture vrille et repart dans
+     * l'angle du rebond. La vitesse elle-meme est deja reglee (VehiclePhysics.bounce).
+     *
+     * @param wanted   le deplacement demande dans la tique
+     * @param after    la vitesse d'apres le choc
+     * @param stoppers par axe, l'indice de la boite qui a bute, ou -1
+     */
+    public static void wall(JakVehicleEntity car, Vec3 wanted, Vec3 after, int[] stoppers) {
+        List<AABB> boxes = car.collisionBoxes();
+        double mass = car.spec().mass;
+        for (int axis = 0; axis < 3; axis++) {
+            int index = stoppers[axis];
+            if (index < 0 || index >= boxes.size()) {
+                continue;
+            }
+            double change = component(after, axis) - component(wanted, axis);
+            if (Math.abs(change) < WALL_MIN) {
+                continue;
+            }
+            AABB box = boxes.get(index);
+            Vec3 c = box.getCenter();
+            boolean positive = component(wanted, axis) > 0.0;
+            Vec3 at = switch (axis) {
+                case 0 -> new Vec3(positive ? box.maxX : box.minX, c.y, c.z);
+                case 1 -> new Vec3(c.x, positive ? box.maxY : box.minY, c.z);
+                default -> new Vec3(c.x, c.y, positive ? box.maxZ : box.minZ);
+            };
+            double j = change * mass;
+            car.tilt(axis == 0 ? new Vec3(j, 0.0, 0.0) : axis == 1 ? new Vec3(0.0, j, 0.0) : new Vec3(0.0, 0.0, j), at);
+            walls++;
+        }
+    }
+
+    private static double component(Vec3 v, int axis) {
+        return axis == 0 ? v.x : axis == 1 ? v.y : v.z;
+    }
+
+    /**
+     * Le souffle d'une explosion sur les vehicules, cote serveur : chacun est pousse,
+     * souleve et incline depuis son point le plus proche d'elle, d'autant plus qu'il en est
+     * pres ; le trafic touche perd le volant.
+     *
+     * La voiture d'un joueur, c'est SON client qui la simule : il recoit le choc
+     * (VehicleImpulsePayload) et l'applique lui-meme.
+     *
+     * @param strength l'impulsion au centre, en masse x blocs par tique
+     * @return le nombre de vehicules touches
+     */
+    public static int blast(ServerLevel level, Vec3 center, double radius, double strength) {
+        int touched = 0;
+        for (JakVehicleEntity car : level.getEntitiesOfClass(JakVehicleEntity.class,
+                new AABB(center, center).inflate(radius + SEARCH), c -> !c.isRemoved())) {
+            Vec3 near = null;
+            double best = Double.MAX_VALUE;
+            for (AABB box : car.collisionBoxes()) {
+                Vec3 p = new Vec3(Math.max(box.minX, Math.min(box.maxX, center.x)),
+                        Math.max(box.minY, Math.min(box.maxY, center.y)),
+                        Math.max(box.minZ, Math.min(box.maxZ, center.z)));
+                double d = p.distanceToSqr(center);
+                if (d < best) {
+                    best = d;
+                    near = p;
+                }
+            }
+            double distance = Math.sqrt(best);
+            if (near == null || distance > radius) {
+                continue;
+            }
+            Vec3 away = car.position().subtract(center);
+            Vec3 flat = new Vec3(away.x, 0.0, away.z);
+            flat = flat.lengthSqr() < 1.0E-6 ? Vec3.ZERO : flat.normalize();
+            Vec3 direction = flat.add(0.0, BLAST_LIFT, 0.0).normalize();
+            double force = Math.min(strength * (1.0 - distance / radius), BLAST_MAX_SPEED * car.spec().mass);
+            Vec3 impulse = direction.scale(force);
+            if (car.isControlledByLocalInstance()) {
+                car.applyImpulse(impulse, near);
+                if (car.traffic() != null) {
+                    car.stun(stunTicks(force));
+                }
+            } else if (car.getControllingPassenger() instanceof ServerPlayer driver) {
+                PacketDistributor.sendToPlayer(driver, new VehicleImpulsePayload(car.getId(), impulse, near));
+            }
+            touched++;
+        }
+        blasts += touched;
+        return touched;
+    }
+
+    /** Chocs contre le decor qui ont incline un vehicule, et vehicules souffles, depuis le demarrage (banc d'essai). */
+    public static int walls() {
+        return walls;
+    }
+
+    public static int blasts() {
+        return blasts;
+    }
+
+    private static int walls;
+    private static int blasts;
 
     // ================================================================ le bruit du choc
 

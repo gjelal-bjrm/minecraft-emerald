@@ -1,6 +1,8 @@
 package com.emerald.jak.gun;
 
 import com.emerald.init.Jak3Registry;
+import com.emerald.jak.vehicle.JakVehicleEntity;
+import com.emerald.jak.vehicle.VehicleImpacts;
 import com.emerald.particles.ModParticles;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
@@ -9,15 +11,15 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.projectile.Projectile;
-import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
-import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
@@ -38,19 +40,25 @@ import java.util.List;
  *
  * LE VOL : gravite de {@value GunSpec#PLASMITE_GRAVITY} bloc par tique2 (45 m/s2),
  * {@value GunSpec#PLASMITE_MAX_SPEED} blocs par tique au plus ; un bloc la fait
- * REBONDIR en gardant 60 % de sa vitesse ; elle vit {@value GunSpec#PLASMITE_LIFE}
- * tiques, puis explose. LA MECHE DE PROXIMITE (:293-400) : des qu'un monstre est
- * devant elle a moins de {@value GunSpec#PLASMITE_FUSE_RADIUS} blocs ET QU'ELLE VA
- * PASSER A MOINS DE {@value GunSpec#PLASMITE_FUSE_MISS} BLOCS DE LUI, elle explose au
- * passage au plus pres, dans {@value GunSpec#PLASMITE_FUSE_MAX} tiques au plus ; tout
- * de suite a moins de {@value GunSpec#PLASMITE_FUSE_NOW} blocs ou au contact. Sinon
- * elle poursuit sa route et tombe sur le sol.
+ * REBONDIR en gardant 60 % de sa vitesse, et un petit rebond sur le sol la pose.
+ *
+ * LA MECHE, telle que le joueur la decrit (21 sept.) : « la grenade explose des
+ * qu'elle touche quelqu'un. Et si ça ne touche personne, il y a une espece de
+ * compte a rebours sonore et la grenade finit par exploser. »
+ * - AU CONTACT : une creature -- monstre, habitant, animal -- ou un vehicule,
+ *   sur son chemin de la tique OU contre elle quand elle est posee (un monstre
+ *   qui marche dessus la fait sauter). Jamais un joueur.
+ * - LE COMPTE A REBOURS : des le premier contact avec le decor (au plus tard a
+ *   {@value GunSpec#PLASMITE_LIFE} - {@value GunSpec#PLASMITE_COUNTDOWN} tiques de
+ *   vol), {@value GunSpec#PLASMITE_COUNTDOWN} tiques de bips de plus en plus serres
+ *   et aigus, puis l'explosion.
  *
  * LE SOUFFLE : {@value GunSpec#PLASMITE_DAMAGE} points de Jak a tous les monstres de
  * Haven a moins de {@value GunSpec#PLASMITE_BLAST} blocs -- le Plasmite RPG vide une
  * place, il coute 10 eco rouges. Le decor : les blocs a moins de
  * {@value GunSpec#PLASMITE_BREAK_RADIUS} du centre, {@value GunSpec#PLASMITE_BLOCKS}
- * au plus. Aucune explosion vanilla : ni joueur pousse, ni joueur blesse.
+ * au plus. Les vehicules proches sont souffles et desequilibres
+ * (VehicleImpacts.blast). Aucune explosion vanilla : ni joueur pousse, ni joueur blesse.
  *
  * Sa vitesse reste sous le plafond de 3,9 blocs par tique des paquets de
  * Minecraft : le suivi vanilla suffit (une position par tique), sans le calcul du
@@ -59,8 +67,13 @@ import java.util.List;
  */
 public class GunGrenadeEntity extends Projectile {
 
-    private int fuse = -1;
+    /** La tique ou le compte a rebours a commence, -1 avant. */
+    private int countdown = -1;
+    /** Le bip suivant, en tiques depuis le debut du compte a rebours. */
+    private int nextBeep;
+    private int beeps;
     private int bounces;
+    private int lastBounceSound = -100;
 
     public GunGrenadeEntity(EntityType<? extends GunGrenadeEntity> type, Level level) {
         super(type, level);
@@ -78,6 +91,16 @@ public class GunGrenadeEntity extends Projectile {
     /** Rebonds faits (banc d'essai). */
     public int bounces() {
         return this.bounces;
+    }
+
+    /** Bips du compte a rebours joues (banc d'essai). */
+    public int beeps() {
+        return this.beeps;
+    }
+
+    /** La tique du debut du compte a rebours, -1 s'il n'a pas commence (banc d'essai). */
+    public int countdownStart() {
+        return this.countdown;
     }
 
     /**
@@ -138,10 +161,6 @@ public class GunGrenadeEntity extends Projectile {
             this.discard();
             return;
         }
-        if (this.tickCount > GunSpec.PLASMITE_LIFE || (this.fuse >= 0 && --this.fuse <= 0)) {
-            explode(server, owner, this.position());
-            return;
-        }
         Vec3 velocity = this.getDeltaMovement().add(0.0, -GunSpec.PLASMITE_GRAVITY, 0.0);
         double speed = velocity.length();
         if (speed > GunSpec.PLASMITE_MAX_SPEED) {
@@ -151,33 +170,69 @@ public class GunGrenadeEntity extends Projectile {
         Vec3 to = from.add(velocity);
         BlockHitResult block = server.clip(new ClipContext(from, to, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, this));
         Vec3 stop = block.getType() == HitResult.Type.MISS ? to : block.getLocation();
-        EntityHitResult hit = ProjectileUtil.getEntityHitResult(server, this, from, stop,
-                this.getBoundingBox().expandTowards(velocity).inflate(1.0), GunImpacts::isTarget, 0.4F);
-        if (hit != null) {
-            explode(server, owner, hit.getEntity().getBoundingBox().inflate(0.4).clip(from, stop).orElse(GunImpacts.center(hit.getEntity())));
+        Vec3 touched = touched(server, from, stop);
+        if (touched != null) {
+            explode(server, owner, touched);
             return;
         }
         if (block.getType() == HitResult.Type.BLOCK) {
-            Vec3 back = velocity.normalize().scale(0.05);
-            this.setPos(stop.x - back.x, stop.y - back.y, stop.z - back.z);
-            this.setDeltaMovement(reflect(velocity, block.getDirection()).scale(GunSpec.PLASMITE_BOUNCE));
-            this.hasImpulse = true;
-            this.bounces++;
-            server.playSound(null, stop.x, stop.y, stop.z, SoundEvents.ANVIL_LAND, SoundSource.PLAYERS, 0.25F, 1.7F);
-            // une grenade posee qui ne bouge plus n'attend pas sa vie entiere
-            if (this.getDeltaMovement().lengthSqr() < 0.02 * 0.02 && this.fuse < 0) {
-                this.fuse = GunSpec.PLASMITE_FUSE_MAX;
-            }
+            bounce(server, velocity, block, stop);
         } else {
             this.setPos(to.x, to.y, to.z);
             this.setDeltaMovement(velocity);
         }
-        if (this.fuse < 0 && this.tickCount > 1) {
-            this.fuse = proximity(server);
-            if (this.fuse == 0) {
+        if (this.countdown < 0 && this.tickCount >= GunSpec.PLASMITE_LIFE - GunSpec.PLASMITE_COUNTDOWN) {
+            this.countdown = this.tickCount;       // toujours en vol : le compte a rebours part quand meme
+        }
+        if (this.countdown >= 0) {
+            int elapsed = this.tickCount - this.countdown;
+            if (elapsed >= GunSpec.PLASMITE_COUNTDOWN) {
                 explode(server, owner, this.position());
+                return;
+            }
+            if (elapsed >= this.nextBeep) {
+                beep(server, elapsed);
+                // de plus en plus serre : le quart de ce qui reste, deux tiques au moins
+                this.nextBeep = elapsed + Math.max(2, (GunSpec.PLASMITE_COUNTDOWN - elapsed) / 4);
             }
         }
+    }
+
+    /**
+     * Le rebond sur un bloc. Il garde 60 % de la vitesse, reflechie sur la face ;
+     * sur le sol, un rebond trop faible pose la grenade, qui glisse et s'arrete.
+     * Le premier contact avec le decor lance le compte a rebours.
+     */
+    private void bounce(ServerLevel level, Vec3 velocity, BlockHitResult block, Vec3 stop) {
+        Direction face = block.getDirection();
+        Vec3 back = velocity.normalize().scale(0.05);
+        this.setPos(stop.x - back.x, stop.y - back.y, stop.z - back.z);
+        Vec3 reflected = reflect(velocity, face).scale(GunSpec.PLASMITE_BOUNCE);
+        double normal = Math.abs(face.getAxis().choose(velocity.x, velocity.y, velocity.z));
+        if (face == Direction.UP && reflected.y < GunSpec.PLASMITE_REST) {
+            reflected = new Vec3(reflected.x, 0.0, reflected.z);       // posee : elle ne sautille plus
+        } else {
+            this.bounces++;
+        }
+        this.setDeltaMovement(reflected);
+        this.hasImpulse = true;
+        if (normal > GunSpec.PLASMITE_BOUNCE_SOUND && this.tickCount - this.lastBounceSound >= GunSpec.PLASMITE_BOUNCE_GAP) {
+            this.lastBounceSound = this.tickCount;
+            level.playSound(null, stop.x, stop.y, stop.z, SoundEvents.ANVIL_LAND, SoundSource.PLAYERS, 0.25F, 1.7F);
+        }
+        if (this.countdown < 0) {
+            this.countdown = this.tickCount;
+        }
+    }
+
+    /** Un bip du compte a rebours, de plus en plus aigu, et un eclat qui montre ou est la grenade. */
+    private void beep(ServerLevel level, int elapsed) {
+        this.beeps++;
+        float pitch = 1.0F + (float) elapsed / GunSpec.PLASMITE_COUNTDOWN;
+        level.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.NOTE_BLOCK_BIT.value(),
+                SoundSource.PLAYERS, 0.9F, pitch);
+        level.sendParticles(ModParticles.GUN_PLASMITE_TRAIL.get(), this.getX(), this.getY() + 0.2, this.getZ(),
+                3, 0.05, 0.05, 0.05, 0.02);
     }
 
     /** La vitesse reflechie sur la face touchee. */
@@ -190,45 +245,36 @@ public class GunGrenadeEntity extends Projectile {
     }
 
     /**
-     * La meche : -1 sans monstre a portee, 0 pour exploser tout de suite, sinon les
-     * tiques jusqu'au passage au plus pres du monstre, bornees.
+     * Le point ou la grenade touche quelqu'un sur son chemin de la tique, ou null.
      *
-     * LE JEU N'ARME QUE SUR UN MONSTRE DEVANT (:333-339) et fait exploser au passage au
-     * plus pres : delai = (distance / vitesse) x cosinus, une demi-seconde au plus. Chez
-     * lui les ennemis ont de grosses spheres de collision et la grenade vole vers l'un
-     * d'eux ; chez nous, N'IMPORTE QUEL monstre devant, meme a dix blocs de la
-     * trajectoire, armait la meche -- et la grenade lobee explosait en l'air, loin de
-     * tout (« ça explose souvent dans le ciel », 19 sept.). On ajoute donc la seule
-     * question qui manquait : VA-T-ELLE PASSER PRES DE LUI ? L'ecart au plus pres doit
-     * rester sous {@value GunSpec#PLASMITE_FUSE_MISS} blocs, sinon elle continue sa
-     * route et va tomber sur le sol.
+     * Une boite qui CONTIENT deja la grenade compte aussi : posee, elle ne bouge plus,
+     * et c'est le monstre qui vient a elle. AABB.clip ne voit pas un depart dedans.
      */
-    private int proximity(ServerLevel level) {
-        Vec3 velocity = this.getDeltaMovement();
-        double speed = velocity.length();
-        if (speed < 1.0e-3) {
-            return -1;
-        }
-        Vec3 heading = velocity.scale(1.0 / speed);
-        int best = -1;
-        for (Mob mob : GunImpacts.targetsAround(level, this.position(), GunSpec.PLASMITE_FUSE_RADIUS, 16)) {
-            Vec3 to = GunImpacts.center(mob).subtract(this.position());
-            double distance = to.length();
-            if (distance < GunSpec.PLASMITE_FUSE_NOW) {
-                return 0;
+    @Nullable
+    private Vec3 touched(ServerLevel level, Vec3 from, Vec3 to) {
+        AABB path = new AABB(from, to).inflate(GunSpec.PLASMITE_TOUCH + 0.5);
+        Vec3 best = null;
+        double bestDistance = Double.MAX_VALUE;
+        for (Entity entity : level.getEntities(this, path.inflate(VehicleImpacts.SEARCH), GunGrenadeEntity::someone)) {
+            List<AABB> boxes = entity instanceof JakVehicleEntity car ? car.collisionBoxes() : List.of(entity.getBoundingBox());
+            for (AABB box : boxes) {
+                AABB grown = box.inflate(GunSpec.PLASMITE_TOUCH);
+                Vec3 at = grown.contains(from) ? from : grown.clip(from, to).orElse(null);
+                if (at != null && from.distanceToSqr(at) < bestDistance) {
+                    bestDistance = from.distanceToSqr(at);
+                    best = at;
+                }
             }
-            double along = to.dot(heading);
-            if (along <= 0.0) {
-                continue;                   // derriere la grenade : elle s'en eloigne
-            }
-            double miss = Math.sqrt(Math.max(0.0, distance * distance - along * along));
-            if (miss > GunSpec.PLASMITE_FUSE_MISS) {
-                continue;                   // elle passera trop loin de lui
-            }
-            int ticks = (int) Math.max(1L, Math.min(GunSpec.PLASMITE_FUSE_MAX, Math.round(along / speed)));
-            best = best < 0 ? ticks : Math.min(best, ticks);
         }
         return best;
+    }
+
+    /** Ce qui fait exploser la grenade au contact : une creature vivante ou un vehicule, jamais un joueur. */
+    private static boolean someone(Entity entity) {
+        if (entity instanceof JakVehicleEntity) {
+            return !entity.isRemoved();
+        }
+        return entity instanceof Mob mob && mob.isAlive() && !mob.isRemoved() && !(mob.getVehicle() instanceof JakVehicleEntity);
     }
 
     private void explode(ServerLevel level, ServerPlayer owner, Vec3 at) {
@@ -237,6 +283,7 @@ public class GunGrenadeEntity extends Projectile {
         for (Mob mob : targets) {
             GunImpacts.hurt(owner, this, mob, GunSpec.PLASMITE_DAMAGE);
         }
+        VehicleImpacts.blast(level, at, VehicleImpacts.BLAST_PLASMITE_RADIUS, VehicleImpacts.BLAST_PLASMITE);
         level.sendParticles(ModParticles.GUN_PLASMITE_BLAST.get(), at.x, at.y, at.z, 1, 0.0, 0.0, 0.0, 0.0);
         level.sendParticles(ModParticles.GUN_PLASMITE_TRAIL.get(), at.x, at.y, at.z, 60, 1.2, 1.2, 1.2, 0.45);
         level.playSound(null, at.x, at.y, at.z, SoundEvents.GENERIC_EXPLODE.value(), SoundSource.PLAYERS, 1.6F, 0.7F);

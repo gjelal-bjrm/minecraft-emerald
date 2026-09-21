@@ -12,6 +12,7 @@ import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
+import javax.annotation.Nullable;
 import java.util.List;
 
 /**
@@ -28,6 +29,11 @@ import java.util.List;
  * dans un bloc. Entity.move fait ensuite le mouvement lui-meme -- chute,
  * blocs traverses, evenements --, deja degage. A deux blocs par tick, le tick
  * est decoupe en sous-pas pour ne pas couper les coins (voir MAX_CORNER_CUT).
+ *
+ * L'EQUILIBRE (VehicleAttitude) se simule ici aussi, a chaque tick : les sondes
+ * nourrissent le tangage, le volant et le poids du pilote le roulis, et la vrille
+ * d'un choc s'ajoute au lacet. Le deplacement note la boite qui a bute sur chaque
+ * axe : c'est la que le choc contre le decor porte (VehicleImpacts.wall).
  */
 public final class VehiclePhysics {
 
@@ -120,12 +126,19 @@ public final class VehiclePhysics {
                 v.x * Math.cos(yaw) + v.z * Math.sin(yaw)};
         double vy = VehicleDynamics.verticalVelocity(spec, v.y, front, rear, mode, probeY, floorY, driver);
         double yawDelta = VehicleDynamics.horizontal(spec, car.controls(), input, motion, grounded || onFlightLevel);
+        // l'equilibre : tangage, roulis, et la vrille d'un choc, qui s'ajoute au volant (VehicleAttitude)
+        double spin = VehicleAttitude.step(spec, car.attitude(), new VehicleAttitude.Inputs(front, rear, mode,
+                VehicleDynamics.isHigh(mode) ? probeY - floorY : Double.NaN, v.y, driver, car.controls().steer,
+                !grounded && !onFlightLevel));
+        double turn = yawDelta + spin;
 
-        if (yawDelta != 0.0) {
-            float turned = car.getYRot() + (float) yawDelta;
+        if (turn != 0.0) {
+            float turned = car.getYRot() + (float) turn;
             if (canTurn(car, turned)) {
                 car.setYRot(turned);
                 yaw = Math.toRadians(turned);
+            } else {
+                car.attitude().yawRate = 0.0;         // la vrille bute contre le decor
             }
         }
 
@@ -133,12 +146,16 @@ public final class VehiclePhysics {
                 -Math.sin(yaw) * motion[0] + Math.cos(yaw) * motion[1],
                 vy,
                 Math.cos(yaw) * motion[0] + Math.sin(yaw) * motion[1]);
-        Vec3 allowed = move(car, wanted);
+        int[] stoppers = {-1, -1, -1};
+        Vec3 allowed = move(car, wanted, stoppers);
 
-        car.setDeltaMovement(
+        Vec3 after = new Vec3(
                 bounce(wanted.x, allowed.x),
                 bounce(wanted.y, allowed.y),
                 bounce(wanted.z, allowed.z));
+        car.setDeltaMovement(after);
+        // le choc contre le decor incline et fait tourner la voiture, la ou il a porte
+        VehicleImpacts.wall(car, wanted, after, stoppers);
         car.syncParts();
     }
 
@@ -156,6 +173,15 @@ public final class VehiclePhysics {
      * le serveur renvoie la voiture a sa position precedente pour ce tick.
      */
     public static Vec3 move(JakVehicleEntity car, Vec3 wanted) {
+        return move(car, wanted, null);
+    }
+
+    /**
+     * Comme {@link #move(JakVehicleEntity, Vec3)}, et note dans {@code stoppers}, axe par
+     * axe (x, y, z), l'indice de la boite ({@link JakVehicleEntity#collisionBoxes()}) qui a
+     * bute la premiere, ou -1 : c'est la que le choc porte.
+     */
+    public static Vec3 move(JakVehicleEntity car, Vec3 wanted, @Nullable int[] stoppers) {
         int steps = substeps ? substepCount(wanted) : 1;
         Vec3 step = wanted.scale(1.0 / steps);
         double startX = car.getX();
@@ -169,7 +195,7 @@ public final class VehiclePhysics {
             if (part.lengthSqr() == 0.0) {
                 break;
             }
-            Vec3 allowed = collide(car, part);
+            Vec3 allowed = collide(car, part, stoppers);
             car.move(MoverType.SELF, allowed);
             freeX &= Math.abs(allowed.x - part.x) <= 1.0E-7;
             freeY &= Math.abs(allowed.y - part.y) <= 1.0E-7;
@@ -255,7 +281,7 @@ public final class VehiclePhysics {
     }
 
     /** Le lacet peut changer si aucune partie n'entre dans un obstacle ou elle n'etait pas deja. */
-    private static boolean canTurn(JakVehicleEntity car, float yaw) {
+    public static boolean canTurn(JakVehicleEntity car, float yaw) {
         Level level = car.level();
         for (int i = 0; i < car.spec().partCount(); i++) {
             AABB now = car.partBox(i, car.getX(), car.getY(), car.getZ(), car.getYRot());
@@ -274,6 +300,10 @@ public final class VehiclePhysics {
      * horizontaux, puis l'autre (Entity.collideWithShapes).
      */
     public static Vec3 collide(JakVehicleEntity car, Vec3 wanted) {
+        return collide(car, wanted, null);
+    }
+
+    private static Vec3 collide(JakVehicleEntity car, Vec3 wanted, @Nullable int[] stoppers) {
         if (wanted.lengthSqr() == 0.0) {
             return wanted;
         }
@@ -286,31 +316,36 @@ public final class VehiclePhysics {
         List<VoxelShape> entities = level.getEntityCollisions(car, sweep.expandTowards(wanted));
 
         double dx = 0.0;
-        double dy = axis(car, boxes, entities, 0.0, 0.0, 0.0, 1, wanted.y);
+        double dy = axis(car, boxes, entities, 0.0, 0.0, 0.0, 1, wanted.y, stoppers);
         double dz = 0.0;
         if (Math.abs(wanted.x) >= Math.abs(wanted.z)) {
-            dx = axis(car, boxes, entities, dx, dy, dz, 0, wanted.x);
-            dz = axis(car, boxes, entities, dx, dy, dz, 2, wanted.z);
+            dx = axis(car, boxes, entities, dx, dy, dz, 0, wanted.x, stoppers);
+            dz = axis(car, boxes, entities, dx, dy, dz, 2, wanted.z, stoppers);
         } else {
-            dz = axis(car, boxes, entities, dx, dy, dz, 2, wanted.z);
-            dx = axis(car, boxes, entities, dx, dy, dz, 0, wanted.x);
+            dz = axis(car, boxes, entities, dx, dy, dz, 2, wanted.z, stoppers);
+            dx = axis(car, boxes, entities, dx, dy, dz, 0, wanted.x, stoppers);
         }
         return new Vec3(dx, dy, dz);
     }
 
     private static double axis(JakVehicleEntity car, List<AABB> boxes, List<VoxelShape> entities,
-                               double dx, double dy, double dz, int axis, double amount) {
+                               double dx, double dy, double dz, int axis, double amount, @Nullable int[] stoppers) {
         if (amount == 0.0) {
             return 0.0;
         }
         Vec3 step = axis == 0 ? new Vec3(amount, 0, 0) : axis == 1 ? new Vec3(0, amount, 0) : new Vec3(0, 0, amount);
         double allowed = amount;
-        for (AABB box : boxes) {
-            Vec3 result = Entity.collideBoundingBox(car, step, box.move(dx, dy, dz), car.level(), entities);
+        int stopper = -1;
+        for (int i = 0; i < boxes.size(); i++) {
+            Vec3 result = Entity.collideBoundingBox(car, step, boxes.get(i).move(dx, dy, dz), car.level(), entities);
             double got = axis == 0 ? result.x : axis == 1 ? result.y : result.z;
             if (Math.abs(got) < Math.abs(allowed)) {
                 allowed = got;
+                stopper = i;
             }
+        }
+        if (stoppers != null && stopper >= 0 && stoppers[axis] < 0) {
+            stoppers[axis] = stopper;
         }
         return allowed;
     }

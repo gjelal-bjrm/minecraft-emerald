@@ -46,7 +46,9 @@ DEFAULT_INSTANCE = Path(os.environ.get("USERPROFILE", "")) / "curseforge" / "min
 NAME = "Mode Arcencium"
 AUTHOR = "Gjelal"
 # Le shader retenu au cahier (§27) ; les autres packs de l'instance ne suivent pas.
-SHADERPACK = "ComplementaryUnbound_r5.5.1 + EuphoriaPatches_1.6.4"
+# Mis a jour le 21 sept. 2026 (r5.9.3 + 1.10.5) : le patcher d'Euphoria fabrique ce dossier au
+# premier lancement a partir de ComplementaryUnbound_r5.9.3.zip.
+SHADERPACK = "ComplementaryUnbound_r5.9.3 + EuphoriaPatches_1.10.5"
 # Ce qu'on recopie tel quel dans overrides/.
 # `packmenu` porte le menu principal (fond, logo, boutons) : il voyage aussi.
 FOLDERS = ["config", "defaultconfigs", "kubejs", "resourcepacks", "datapacks", "packmenu"]

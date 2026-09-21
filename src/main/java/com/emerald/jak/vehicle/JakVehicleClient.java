@@ -3,6 +3,8 @@ package com.emerald.jak.vehicle;
 import com.emerald.main.EmeraldWeaponsMod;
 import com.emerald.network.VehicleModePayload;
 import com.mojang.blaze3d.platform.InputConstants;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.math.Axis;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
@@ -11,18 +13,25 @@ import net.minecraft.client.gui.LayeredDraw;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.CalculateDetachedCameraDistanceEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
+import net.neoforged.neoforge.client.event.RenderLivingEvent;
 import net.neoforged.neoforge.client.gui.VanillaGuiLayers;
 import net.neoforged.neoforge.client.settings.IKeyConflictContext;
 import net.neoforged.neoforge.client.settings.KeyConflictContext;
 import net.neoforged.neoforge.network.PacketDistributor;
 import org.lwjgl.glfw.GLFW;
+
+import java.util.ArrayDeque;
+import java.util.Deque;
 
 /**
  * Le cote client des voitures : la touche de zone de survol, son indice a
@@ -47,6 +56,11 @@ import org.lwjgl.glfw.GLFW;
  *
  * LA CAMERA recule a neuf blocs en vue a la troisieme personne : a quatre, la
  * distance ordinaire, elle se retrouvait dans une voiture de huit.
+ *
+ * L'EQUILIBRE (VehicleAttitude) : ce client publie celui de la voiture qu'il conduit
+ * ({@link #sendAttitude}), recoit le souffle des explosions qui la touchent
+ * ({@link #acceptImpulse}), et dessine les passagers penches avec leur vehicule -- une
+ * moto couchee a 40 degres sous un pilote reste droit, sinon.
  */
 public final class JakVehicleClient {
 
@@ -73,6 +87,20 @@ public final class JakVehicleClient {
     public static final float CAMERA_DISTANCE = 9.0F;
 
     private JakVehicleClient() {
+    }
+
+    /** Envoie au serveur l'equilibre de la voiture que ce client conduit (JakVehicleEntity.publishAttitude). */
+    static void sendAttitude(float pitch, float roll) {
+        PacketDistributor.sendToServer(new VehicleAttitudePayload(pitch, roll));
+    }
+
+    /** Le souffle d'une explosion sur la voiture que ce client conduit : il l'applique lui-meme. */
+    public static void acceptImpulse(VehicleImpulsePayload payload) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level != null && mc.level.getEntity(payload.vehicle()) instanceof JakVehicleEntity car
+                && car.isControlledByLocalInstance()) {
+            car.applyImpulse(payload.impulse(), payload.at());
+        }
     }
 
     private static boolean driving(Minecraft mc) {
@@ -109,6 +137,55 @@ public final class JakVehicleClient {
                 if (mc.screen == null && driving(mc)) {
                     PacketDistributor.sendToServer(VehicleModePayload.INSTANCE);
                 }
+            }
+        }
+
+        /**
+         * Les passagers dessines penches, par identifiant : une pile, car un dessin peut en
+         * contenir un autre. Seuls ceux-la sont empiles, et Post ne depile que le sien : un
+         * dessin annule apres nous (sans Post) ne desaccorde rien.
+         */
+        private static final Deque<Integer> TILTED = new ArrayDeque<>();
+
+        /**
+         * Le passager penche avec son vehicule : la meme inclinaison que la carrosserie
+         * (JakVehicleRenderer), autour du meme centre de masse, conjuguee par le lacet du
+         * vehicule. Priorite la plus basse : si un autre mod annule le dessin, nous ne
+         * poussons rien que Post ne defasse.
+         */
+        @SubscribeEvent(priority = EventPriority.LOWEST)
+        public static void onRiderPre(RenderLivingEvent.Pre<?, ?> event) {
+            LivingEntity rider = event.getEntity();
+            if (!(rider.getVehicle() instanceof JakVehicleEntity car)) {
+                return;
+            }
+            float partial = event.getPartialTick();
+            float pitch = car.pitch(partial);
+            float roll = car.roll(partial);
+            if (Math.abs(pitch) < 0.05F && Math.abs(roll) < 0.05F) {
+                return;
+            }
+            float yaw = car.getViewYRot(partial);
+            double yawRad = Math.toRadians(yaw);
+            double cmZ = car.spec().balance.cmZ();
+            Vec3 pivot = car.getPosition(partial).add(-Math.sin(yawRad) * cmZ, 0.0, Math.cos(yawRad) * cmZ)
+                    .subtract(rider.getPosition(partial));
+            PoseStack pose = event.getPoseStack();
+            pose.pushPose();
+            pose.translate(pivot.x, pivot.y, pivot.z);
+            pose.mulPose(Axis.YP.rotationDegrees(-yaw));
+            JakVehicleRenderer.PivotTilt.apply(pose, 0.0, pitch, roll);
+            pose.mulPose(Axis.YP.rotationDegrees(yaw));
+            pose.translate(-pivot.x, -pivot.y, -pivot.z);
+            TILTED.push(rider.getId());
+        }
+
+        @SubscribeEvent(priority = EventPriority.LOWEST)
+        public static void onRiderPost(RenderLivingEvent.Post<?, ?> event) {
+            Integer top = TILTED.peek();
+            if (top != null && top == event.getEntity().getId()) {
+                TILTED.pop();
+                event.getPoseStack().popPose();
             }
         }
 

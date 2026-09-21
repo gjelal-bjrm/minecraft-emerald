@@ -45,15 +45,19 @@ public class JakVehicleRenderer extends EntityRenderer<JakVehicleEntity> {
             // il faut donc a = -y. Le vanilla fait 180 - y pour le bateau, dont le
             // modele regarde -z ; le notre regarde +z.
             poseStack.mulPose(Axis.YP.rotationDegrees(-entity.getViewYRot(partialTick)));
-            // Roulis leger dans les virages, autour de l'axe avant du modele (+z),
-            // APRES le lacet : la voiture penche sur son propre axe. Un roulis
-            // negatif (virage a gauche) abaisse la gauche du modele, +x.
-            poseStack.mulPose(Axis.ZP.rotationDegrees(entity.roll(partialTick)));
+            // L'equilibre (VehicleAttitude), APRES le lacet et autour du centre de masse du
+            // jeu (cm-offset-joint, sur l'axe du modele) : la voiture penche sur ses propres
+            // axes. XP d'un angle a plonge le nez (+z vers -y) : le tangage, nez en haut
+            // positif, passe donc en -a. ZP leve la gauche (+x) : un roulis negatif (virage
+            // a gauche) abaisse la gauche du modele.
+            poseStack.pushPose();
+            PivotTilt.apply(poseStack, entity.spec().balance.cmZ(), entity.pitch(partialTick), entity.roll(partialTick));
             PoseStack.Pose pose = poseStack.last();
             emit(model, pose, buffers.getBuffer(RenderType.entityCutoutNoCull(ATLAS)), packedLight, false);
             if (model.hasBlend) {
                 emit(model, pose, buffers.getBuffer(RenderType.entityTranslucent(ATLAS)), packedLight, true);
             }
+            poseStack.popPose();
             poseStack.popPose();
         }
         super.render(entity, entityYaw, partialTick, poseStack, buffers, packedLight);
@@ -80,6 +84,19 @@ public class JakVehicleRenderer extends EntityRenderer<JakVehicleEntity> {
                         .setLight(light)
                         .setNormal(pose, n[i3], n[i3 + 1], n[i3 + 2]);
             }
+        }
+    }
+
+    /** L'inclinaison d'un vehicule autour de son centre de masse, repere deja tourne du lacet. */
+    static final class PivotTilt {
+        private PivotTilt() {
+        }
+
+        static void apply(PoseStack poseStack, double cmZ, float pitchDegrees, float rollDegrees) {
+            poseStack.translate(0.0, 0.0, cmZ);
+            poseStack.mulPose(Axis.XP.rotationDegrees(-pitchDegrees));
+            poseStack.mulPose(Axis.ZP.rotationDegrees(rollDegrees));
+            poseStack.translate(0.0, 0.0, -cmZ);
         }
     }
 

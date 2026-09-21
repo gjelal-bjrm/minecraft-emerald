@@ -6266,3 +6266,188 @@ donne l'avantage qu'il attendait. Si l'impression persiste en jeu, c'est la vill
 
 Les six bancs apres ce lot : vehicules 135 (les chocs), invasion 47, armes 174,
 haven 11, salles 26, vote 36, aucun KO.
+
+## 74. Trois retours du joueur : l'equilibre des vehicules, la meche de la grenade, des mods *(21 sept. 2026)*
+
+Second essai en jeu, trois demandes :
+
+> « Quand j'ai parle de collision, c'etait aussi pas simplement le fait de se
+> pousser et d'avoir un choc, mais aussi qu'il y ait un systeme de gravite et
+> d'impact qui change l'equilibre du vehicule, un peu comme sur le jeu original. »
+>
+> « Normalement, la grenade explose des qu'elle touche quelqu'un. Et si ça ne
+> touche personne, il y a une espece de compte a rebours sonore et la grenade
+> finit par exploser. »
+>
+> Des mods : Grassier Grass (herbe « tapered »), la nouvelle version de Distant
+> Horizons, Wakes, Streams Reflowing, et le shader Euphoria Patches avec
+> Complementary.
+
+### 74.1 L'equilibre des vehicules
+
+Jak 3 fait de chaque vehicule un CORPS RIGIDE (rigid-body.gc) : une position,
+une orientation complete, et des propulseurs qui le tiennent. Un choc porte en un
+point, l'incline et le fait tourner ; les propulseurs le remettent d'aplomb. Nos
+vehicules ne connaissaient que leur lacet. `VehicleAttitude` ajoute le tangage,
+le roulis et la vrille, en reprenant les lois du jeu (hvehicle-physics.gc) :
+
+| Ce qui tient le vehicule | Source | Chez nous |
+|---|---|---|
+| deux propulseurs de sustentation, avant et arriere, a egale distance du centre de masse | :181-223 (ressort), :129-180 (voie haute) | chacun pousse selon SA distance au sol ou au plancher : le nez qui plonge rapproche le propulseur avant, qui le releve ; sur une pente, le vehicule epouse le relief |
+| l'amortisseur de chaque propulseur | :198-212 | retire, par pas du jeu, une part de la vitesse du point qui descend |
+| le controle du tangage | :290-321, pitch-control-factor 0,5 (voitures) et 1 (motos) | freine toute rotation de tangage, meme en l'air |
+| deux propulseurs de roulis a 1,7 m de l'axe | :330-367, car.gc:294-300 | commandes par sin(roulis)^3 + 0,075 x vitesse de roulis : mous pres de l'aplomb, fermes quand ça penche |
+| le poids du pilote, deplace de 0,6 m du cote du virage | :512-521, player-shift-x | le vehicule se couche DANS le virage |
+| les propulseurs de direction | :370-392 | ils ramenent le lacet a celui du volant : ils eteignent une vrille |
+| l'amortissement du corps rigide | car.gc:69 | 0,995 par 1/60 s |
+
+Les masses et les boites d'inertie sont celles du jeu (`VehicleSpec.Balance`) :
+car-a 4 x 3 x 6 m, les autres 3 x 4 x 6 ; le centre de masse de la car-c est 1 m
+derriere la racine, celui des motos 0,6 m devant -- leurs propulseurs en sont
+ainsi toujours a egale distance.
+
+**LA GRAVITE FAIT L'EQUILIBRE.** Le pilote pese une masse. Volant a fond, son
+poids passe de 0,6 m sur le cote, et le vehicule se couche jusqu'a ce que les
+propulseurs de roulis le retiennent : sin3 = 0,6 / (1,02 m). Une car-a se couche
+a 25 degres, une moto -- quatre fois plus legere -- a 42. C'est le « couche dans
+le virage » de Jak 3.
+
+**UN SEUL AJOUT AU JEU : un petit rappel lineaire** (`ROLL_LEVEL`, 0,05 sin dans
+la commande de roulis). Le cube du jeu est si mou pres de l'aplomb qu'un vehicule
+restait penche de 2 a 4 degres des secondes apres un virage (banc hors jeu : car-a
+encore a -2,0 degres au bout de 10 s, moto a +3,8) : en jeu, on l'aurait pris pour
+un defaut. Avec lui : a plat 1,8 s apres le volant lache ; la gite du virage passe
+a 22,3 degres (car-a) et 39,8 (moto).
+
+**LES CHOCS.** Une impulsion J au point r change la rotation de r x J / I. Tout
+tient donc au POINT du choc :
+- contre un autre vehicule, le centre de la zone ou leurs boites se recoupent
+  (`VehicleImpacts.contact`) ;
+- contre le decor, la face de la boite qui a bute la premiere
+  (`VehiclePhysics.move` le note, axe par axe ; `VehicleImpacts.wall`) ;
+- une explosion, le point du vehicule le plus proche d'elle (`VehicleImpacts.blast`).
+
+Heurte de flanc sous son centre de masse, le vehicule gite ; de face, il pique du
+nez ; de biais, il vrille et repart dans l'angle du rebond. Seule la part de
+l'impulsion qui passe vraiment compte pour la rotation : 1 / (1 + m (r x n)2 / I),
+le terme de rotation d'un choc de corps rigides -- touche au coin, un vehicule
+tourne plus qu'il ne recule.
+
+Banc hors jeu (`VehicleAttitude`, `VehicleSpec` et `VehicleDynamics` se compilent
+seuls avec le JDK, comme au §56) :
+
+| Essai | car-a | car-c | moto |
+|---|---|---|---|
+| virage a gauche pilote, roulis tenu (calcul) | -22,0 (-22,3), pic -27,3 | -21,0 (-21,2) | -39,7 (-39,8), pic -53,4 |
+| volant lache : sous 2 degres apres | 1,8 s | 1,8 s | 4 s |
+| choc de flanc a 1 bloc/tick (20 m/s), roulis extreme | 34,7 | 12,8 | 28,9 |
+| choc de flanc a 2 blocs/tick, roulis extreme | 57,2 | 22,7 | 47,7 |
+| mur de face a 2 blocs/tick, tangage extreme, retour sous 2 degres | -13,3, 0,65 s | +3,3, 0,35 s | -16,5, 2,4 s |
+| mur de biais a 45 degres, 2 blocs/tick : vrille totale | 90 | 89 | 54 |
+
+La car-c ne pique pas : sa boite de collision a son centre AU-DESSUS de son
+centre de masse (0,09 m), le choc la cabre a peine (+3,3 degres). Contre un mur
+aborde a 45 degres, la vrille totale fait 90 degres : la voiture repart a angle
+droit, dans l'angle du rebond, comme une bille.
+
+**QUI SIMULE, QUI VOIT.** L'equilibre se simule la ou se simule le vehicule : le
+client du conducteur pour sa voiture (VehiclePhysics.tick), le serveur pour le
+trafic (`stepTrafficAttitude`, en voie haute, sans pilote) et les vehicules sans
+conducteur. Il est publie dans deux donnees d'entite (tangage, roulis) : le
+serveur les pose pour ce qu'il simule, le client du conducteur les envoie
+(`VehicleAttitudePayload`, a chaque dixieme de degre) et le serveur les pose apres
+avoir verifie que l'expediteur conduit -- borne a 75 degres, NaN refuse. Quand un
+cote reprend la simulation (conducteur qui monte ou descend), il part de
+l'equilibre publie. Le souffle d'une explosion sur la voiture d'un joueur part a
+son client (`VehicleImpulsePayload`) : le serveur ne touche jamais la vitesse d'une
+voiture conduite (§64).
+
+**LE DESSIN.** JakVehicleRenderer incline le modele autour du centre de masse,
+apres le lacet : XP(-tangage), ZP(roulis) -- XP d'un angle positif fait PLONGER le
+nez chez JOML. Le trafic garde sa gite visuelle des virages (il n'a pas de pilote
+pour se coucher) ; un vehicule pilote n'a que la vraie. Les PASSAGERS sont dessines
+penches avec leur vehicule (RenderLivingEvent, meme pivot, conjugue par le lacet) :
+une moto couchee a 40 degres sous un pilote reste droit, sinon. La camera ne
+roule pas.
+
+Planche : `python tools/vehicle_attitude_plate.py` -> `build/jak/vehicles/equilibre.png`
+(les modeles cuits, inclines par les memes matrices que le rendu). Elle a confirme
+les sens avant le jeu : virage a gauche, GAUCHE en bas ; mur de face, NEZ en bas.
+
+**CE QUI NE CHANGE PAS** : la hauteur, la vitesse et la route (VehicleDynamics),
+reglees depuis des semaines. L'equilibre n'y touche que par la vrille. Les boites de
+collision restent droites -- Minecraft ne les tourne pas. Les chocs lineaires du
+§73 sont au chiffre pres les memes (percutee 1,362, percutante 0,672, moto -0,233).
+
+Banc vehicules, en jeu (`planBalance`, en mer, simule par le serveur) :
+
+| Essai | Mesure |
+|---|---|
+| virage a gauche pilote, volant a fond | car-a couchee a -22,1 degres (calcul -22,3), -27,3 au plus bas ; moto -39,8 (-39,8), -53,4 au plus bas |
+| volant lache, 5 s apres | 0,52 et 0,56 degre |
+| choc de flanc, car-a contre car-a a 2 blocs/tick | la percutee gite a 58,4 degres, a plat (0,47) 7 s apres ; la percutante pique de 6,8 degres |
+| mur de face | nez a -13,0 degres, a plat 3 s apres |
+| mur aborde a 30 degres de sa normale | vrille de 80,5 degres en 1,5 s, sans volant, loin du mur |
+| souffle du Plasmite a 3 blocs du flanc gauche | poussee a 0,30 bloc/tick, soulevee a 0,18, gite de 34,3 degres (flanc souffle en haut), a plat 7 s apres |
+| publication | le serveur publie exactement ce qu'il simule ; l'equilibre du client conducteur : NaN refuse, borne a 75 degres, jamais retouche par le serveur |
+
+### 74.2 La meche de la grenade
+
+La meche de proximite du jeu (`check-should-explode`) faisait eclater la grenade
+au passage PRES d'un monstre ; de loin, le joueur la voyait sauter dans le vide.
+Il la veut au contact, avec un compte a rebours sonore sinon. Desormais :
+
+- **AU CONTACT** : une creature -- monstre, habitant, animal -- ou un vehicule
+  (ses boites de collision), sur le chemin de la tique OU contre elle quand elle
+  est posee : un monstre qui marche dessus la fait sauter (une boite qui
+  CONTIENT deja la grenade compte ; `AABB.clip` ne voit pas un depart dedans).
+  Jamais un joueur. La meche de proximite est retiree.
+- **LE COMPTE A REBOURS** : des le premier contact avec le decor (au plus tard a
+  1,5 s de vol, pour que la vie de 3 s du jeu tienne), 1,5 s de bips (le « bit »
+  des blocs musicaux) de plus en plus serres et aigus -- l'intervalle vaut le quart
+  de ce qui reste, deux tiques au moins : dix bips --, puis l'explosion.
+- **LE SOL LA POSE** : un rebond vers le haut sous 0,15 bloc/tique la couche au
+  sol, ou elle glisse et s'arrete ; le bruit de rebond ne sonne que pour un vrai
+  choc, pas deux en 0,3 s (played-bounce-time du jeu). Avant, une grenade au sol
+  sautillait a chaque tique en tintant.
+- **LE SOUFFLE** pousse, souleve et fait giter les vehicules proches (10 blocs),
+  comme celui du Peace Maker (8) et de la Super Nova (40) ; le trafic touche perd
+  le volant.
+
+Banc armes (`plasmiteFuse`, trois grenades posees a la main sur un plancher) :
+
+| Essai | Mesure |
+|---|---|
+| grenade qui file a 2 blocs d'un monstre | continue sa route, monstre a 20 / 20 PV (l'ancienne meche l'aurait fait sauter) |
+| grenade posee, deja en compte a rebours, un monstre vient dessus | explose a la tique suivante, monstre tue |
+| grenade posee, personne a toucher | compte a rebours parti a sa 3e tique (le sol), explosion a la 33e, dix bips |
+| grenade visee sur un monstre a 25 blocs | explose au contact, 48 PV (inchange) |
+
+### 74.3 Les mods et le shader
+
+Telecharges de Modrinth avec l'accord du joueur (numero de version exact, filtre
+Minecraft 1.21.1 OBLIGATOIRE -- un meme numero existe pour Minecraft 26.x --,
+empreinte sha512 verifiee), installes en dev ET dans le profil « Mode Arcencium » :
+
+| Mod | Version | Note |
+|---|---|---|
+| Grassier Grass | 1.4.5 | herbe en brins ; style fige sur TAPERED dans `config/grassiergrass-client.toml` (c'est aussi son defaut) |
+| Wakes (Reforged) | 1.4.1 | sillages dans l'eau |
+| Streams Reflowing | 2.13.8 | rivieres qui coulent ; rien a Haven (monde plat, biome a nous, sans riviere) |
+| Distant Horizons | 3.3.1 | remplace 3.2.0-b (garde en .disabled) |
+| Euphoria Patcher | 1.10.5-r5.9.3 | remplace 1.6.4 (garde en .disabled) |
+| Complementary Unbound | r5.9.3 | le patcher en fait « ComplementaryUnbound_r5.9.3 + EuphoriaPatches_1.10.5 » au premier lancement, renomme l'ancien en « Outdated… » et repointe Iris dessus |
+
+Essai du client de dev : chargement complet jusqu'a l'ecran titre, pipeline du
+shader compile sans erreur, patch Euphoria applique, `iris.properties` repointe.
+Le profil (NeoForge 21.1.174, Embeddium) n'a pas pu etre essaye sans le joueur.
+
+POUR L'EXPORT DU MODPACK : Grassier Grass et Streams Reflowing sont « tous droits
+reserves ». `tools/export_modpack.py` embarque dans overrides/mods tout jar que
+CurseForge ne connait pas (absent de minecraftinstance.json) : il faut les ajouter
+par l'application CurseForge pour qu'ils soient references par leur identifiant, et
+non recopies. `SHADERPACK` pointe sur le nouveau pack.
+
+Les six bancs apres ce lot : vehicules 149 (l'equilibre, 14 controles neufs),
+armes 178 (la meche, 4 neufs), invasion 47 (le trafic qui penche), haven 11,
+salles 26, vote 36, aucun KO.

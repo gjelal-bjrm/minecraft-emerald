@@ -359,6 +359,7 @@ public final class VehicleAutotest {
         planSea(state);
         planDriverSync();
         planCollisions();
+        planBalance();
         STEPS.add((s, l, t) -> {
             // hors du pont, rien ne change : la bosse du carrefour ouest (+8 dans la carte du jeu) ne degage rien
             // dans notre ville, seul le trafic la suit
@@ -1327,6 +1328,317 @@ public final class VehicleAutotest {
             return true;
         });
         planCollisionCleanup();
+    }
+
+    // ------------------------------------------------------------- l'equilibre
+
+    /**
+     * L'equilibre des vehicules (VehicleAttitude, retour du joueur du 21 sept.) : le poids
+     * du pilote qui couche le vehicule dans le virage, le choc de flanc qui le fait giter,
+     * le mur de face qui le fait piquer du nez, le mur de biais qui le fait vriller, le
+     * souffle d'une explosion ; chaque fois, le retour a plat. Tout en mer, simule par le
+     * serveur ; les angles se lisent dans l'equilibre simule (car.attitude()).
+     */
+    private static void planBalance() {
+        // 1. le poids du pilote dans un virage a gauche, volant a fond, puis lache
+        for (String model : new String[]{"cara", "bikea"}) {
+            double[] bank = new double[2];            // 0 le plus bas, 1 tenu
+            STEPS.add((s, l, t) -> {
+                JakVehicleEntity c = spawnSea(model, 0.0);
+                if (c == null) {
+                    return true;
+                }
+                car = c;
+                c.setAutotestDriver(true);
+                c.setAutotestInput(new VehicleDynamics.Input(true, false, 1));
+                bank[0] = 0.0;
+                return true;
+            });
+            STEPS.add((s, l, t) -> {
+                if (car == null) {
+                    return true;
+                }
+                double roll = Math.toDegrees(car.attitude().roll);
+                bank[0] = Math.min(bank[0], roll);
+                if (t < 100) {
+                    return false;
+                }
+                bank[1] = roll;
+                car.setAutotestInput(new VehicleDynamics.Input(true, false, 0));
+                return true;
+            });
+            STEPS.add((s, l, t) -> {
+                if (car == null) {
+                    return true;
+                }
+                if (t < 100) {
+                    return false;
+                }
+                double expected = Math.toDegrees(VehicleAttitude.bankAngle(car.spec()));
+                double level = Math.toDegrees(car.attitude().roll);
+                check("equilibre (" + model + ") : volant a gauche, le poids du pilote couche le vehicule DANS le virage (gauche"
+                                + " en bas), jusqu'ou les propulseurs de roulis le retiennent",
+                        bank[1] < 0.0 && Math.abs(bank[1] + expected) < 3.0 && bank[0] > -(expected + 20.0),
+                        String.format(Locale.ROOT, "roulis tenu %.1f deg pour -%.1f calcules, le plus bas %.1f",
+                                bank[1], expected, bank[0]));
+                check("equilibre (" + model + ") : volant lache, le vehicule revient a plat en cinq secondes",
+                        Math.abs(level) < 3.0, String.format(Locale.ROOT, "roulis %.2f deg, 5 s apres", level));
+                car.setAutotestInput(null);
+                car.setAutotestDriver(false);
+                return true;
+            });
+            planCollisionCleanup();
+        }
+
+        // 2. un choc de flanc : la percutee gite puis se redresse, la percutante pique du nez
+        double[] side = new double[5];                // 0 roulis extreme, 1 tangage le plus bas, 2 tick du choc, 3 ecart publie
+        STEPS.add((s, l, t) -> {
+            JakVehicleEntity a = spawnSea("cara", 0.0);
+            JakVehicleEntity b = spawnSea("cara", 40.0);
+            if (a == null || b == null) {
+                return true;
+            }
+            // de profil : lacet 0, l'avant regarde +Z ; a arrive de l'ouest sur son flanc droit
+            b.setYRot(0.0F);
+            b.syncParts();
+            car = a;
+            second = b;
+            a.setAutotestInput(new VehicleDynamics.Input(true, false, 0));
+            side[0] = 0.0;
+            side[1] = 0.0;
+            side[2] = -1.0;
+            side[3] = 1.0;
+            return true;
+        });
+        STEPS.add((s, l, t) -> {
+            if (car == null || second == null) {
+                return true;
+            }
+            if (side[2] < 0.0) {
+                if (second.getDeltaMovement().x > 0.05) {
+                    side[2] = t;
+                    line(String.format(Locale.ROOT, "choc de flanc au tick %d : percutante a %.3f bloc/tick", t,
+                            car.getDeltaMovement().x));
+                    car.setAutotestInput(null);
+                } else if (t > 200) {
+                    check("equilibre : choc de flanc", false, "aucun choc en 10 s");
+                    return true;
+                }
+                return false;
+            }
+            double roll = Math.toDegrees(second.attitude().roll);
+            if (Math.abs(roll) > Math.abs(side[0])) {
+                side[0] = roll;
+            }
+            side[1] = Math.min(side[1], Math.toDegrees(car.attitude().pitch));
+            if (t == (int) side[2] + 3) {
+                side[3] = Math.abs(second.publishedAttitude()[1] - second.attitude().roll);
+            }
+            if (t < side[2] + 140) {
+                return false;
+            }
+            check("equilibre : heurtee de flanc, la voiture gite fort (le choc porte sous son centre de masse)",
+                    Math.abs(side[0]) > 10.0,
+                    String.format(Locale.ROOT, "roulis extreme %.1f deg (%s en haut)", side[0], side[0] > 0.0 ? "gauche" : "droite"));
+            check("equilibre : puis ses propulseurs de roulis la remettent a plat en sept secondes",
+                    Math.abs(roll) < 3.0, String.format(Locale.ROOT, "roulis %.2f deg, 7 s apres le choc", roll));
+            check("equilibre : la voiture qui percute pique du nez",
+                    side[1] < -2.0, String.format(Locale.ROOT, "tangage le plus bas %.1f deg", side[1]));
+            check("equilibre : le serveur publie celui des vehicules qu'il simule (donnee d'entite, pour les clients)",
+                    side[3] < 0.003, String.format(Locale.ROOT, "ecart publie / simule %.4f rad, 3 ticks apres le choc", side[3]));
+            return true;
+        });
+        planCollisionCleanup();
+
+        // 3. un mur de face : le nez pique, puis se releve
+        double[] front = new double[2];               // 0 tangage le plus bas, 1 tick du choc
+        STEPS.add((s, l, t) -> {
+            JakVehicleEntity c = spawnSea("cara", 0.0);
+            if (c == null) {
+                return true;
+            }
+            car = c;
+            wallAhead(l, c, 30.0, -3, 3);
+            c.setAutotestInput(new VehicleDynamics.Input(true, false, 0));
+            front[0] = 0.0;
+            front[1] = -1.0;
+            return true;
+        });
+        STEPS.add((s, l, t) -> {
+            if (car == null) {
+                return true;
+            }
+            if (front[1] < 0.0) {
+                if (car.getDeltaMovement().x < 0.0) {
+                    front[1] = t;
+                    car.setAutotestInput(null);
+                } else if (t > 200) {
+                    check("equilibre : mur de face", false, "aucun choc en 10 s");
+                    clearWall(l);
+                    return true;
+                }
+                return false;
+            }
+            front[0] = Math.min(front[0], Math.toDegrees(car.attitude().pitch));
+            if (t < front[1] + 60) {
+                return false;
+            }
+            double pitch = Math.toDegrees(car.attitude().pitch);
+            check("equilibre : contre un mur de face, la voiture pique du nez (le choc porte sur sa boite avant, sous le centre de masse)",
+                    front[0] < -3.0, String.format(Locale.ROOT, "tangage le plus bas %.1f deg", front[0]));
+            check("equilibre : puis ses propulseurs la remettent a plat en trois secondes",
+                    Math.abs(pitch) < 2.0, String.format(Locale.ROOT, "tangage %.2f deg, 3 s apres", pitch));
+            clearWall(l);
+            return true;
+        });
+        planCollisionCleanup();
+
+        // 4. un mur aborde de biais : la voiture vrille et repart dans l'angle du rebond
+        double[] glance = new double[3];              // 0 lacet au choc, 1 tick du choc, 2 vrille
+        STEPS.add((s, l, t) -> {
+            JakVehicleEntity c = spawnSea("cara", 0.0);
+            if (c == null) {
+                return true;
+            }
+            car = c;
+            // lacet -60 : l'avant regarde (0,87 ; 0,5), vers le mur a l'est, en glissant au sud
+            c.setYRot(-60.0F);
+            c.syncParts();
+            wallAhead(l, c, 20.0, -6, 40);
+            c.setAutotestInput(new VehicleDynamics.Input(true, false, 0));
+            glance[1] = -1.0;
+            return true;
+        });
+        STEPS.add((s, l, t) -> {
+            if (car == null) {
+                return true;
+            }
+            if (glance[1] < 0.0) {
+                if (car.getDeltaMovement().x < 0.0) {
+                    glance[0] = car.getYRot();
+                    glance[1] = t;
+                    car.setAutotestInput(null);
+                } else if (t > 200) {
+                    check("equilibre : mur de biais", false, "aucun choc en 10 s");
+                    clearWall(l);
+                    return true;
+                }
+                return false;
+            }
+            if (t < glance[1] + 30) {
+                return false;
+            }
+            glance[2] = Mth.wrapDegrees(car.getYRot() - (float) glance[0]);
+            check("equilibre : un mur aborde de biais fait vriller la voiture, qui se detourne du mur (lacet qui augmente :"
+                            + " vers la droite, loin du mur a l'est)",
+                    glance[2] > 8.0, String.format(Locale.ROOT, "vrille %.1f deg en 1,5 s, sans volant", glance[2]));
+            clearWall(l);
+            return true;
+        });
+        planCollisionCleanup();
+
+        // 5. le souffle d'une explosion, a trois blocs du flanc gauche
+        double[] blast = new double[5];               // 0 vitesse vers la droite, 1 vitesse verticale, 2 roulis extreme, 3 touches
+        STEPS.add((s, l, t) -> {
+            JakVehicleEntity c = spawnSea("cara", 0.0);
+            if (c == null) {
+                return true;
+            }
+            car = c;
+            blast[2] = 0.0;
+            return true;
+        });
+        STEPS.add((s, l, t) -> {
+            if (car == null) {
+                return true;
+            }
+            if (t < 20) {
+                return false;
+            }
+            // lacet -90 : la gauche est -Z
+            Vec3 at = car.position().add(0.0, 0.0, -(car.spec().boxSide / 2.0 + 3.0));
+            int before = VehicleImpacts.blasts();
+            VehicleImpacts.blast(l, at, VehicleImpacts.BLAST_PLASMITE_RADIUS, VehicleImpacts.BLAST_PLASMITE);
+            blast[3] = VehicleImpacts.blasts() - before;
+            blast[0] = car.getDeltaMovement().z;
+            blast[1] = car.getDeltaMovement().y;
+            return true;
+        });
+        STEPS.add((s, l, t) -> {
+            if (car == null) {
+                return true;
+            }
+            double roll = Math.toDegrees(car.attitude().roll);
+            if (Math.abs(roll) > Math.abs(blast[2])) {
+                blast[2] = roll;
+            }
+            if (t < 140) {
+                return false;
+            }
+            check("equilibre : le souffle d'une explosion (Plasmite RPG, a 3 blocs du flanc gauche) pousse la voiture vers sa"
+                            + " droite et la souleve",
+                    blast[3] == 1 && blast[0] > 0.2 && blast[1] > 0.0,
+                    String.format(Locale.ROOT, "%d vehicule(s) touche(s), vitesse %.3f vers la droite, %.3f vers le haut",
+                            (int) blast[3], blast[0], blast[1]));
+            check("equilibre : ... la fait giter, le flanc souffle en haut, puis elle revient a plat",
+                    blast[2] > 5.0 && Math.abs(roll) < 3.0,
+                    String.format(Locale.ROOT, "roulis extreme %.1f deg (gauche en haut positif), %.2f deg 7 s apres", blast[2], roll));
+            return true;
+        });
+        planCollisionCleanup();
+
+        // 6. l'equilibre d'un conducteur client : publie tel quel, borne, et le serveur n'y touche pas
+        float[][] remote = new float[3][];
+        STEPS.add((s, l, t) -> {
+            JakVehicleEntity c = spawnSea("cara", 0.0);
+            if (c == null) {
+                return true;
+            }
+            car = c;
+            c.setAutotestRemoteDriver(true);
+            c.acceptDriverAttitude(Float.NaN, 0.3F);
+            remote[0] = c.publishedAttitude();
+            c.acceptDriverAttitude(2.0F, -0.2F);
+            remote[1] = c.publishedAttitude();
+            return true;
+        });
+        STEPS.add((s, l, t) -> {
+            if (car == null) {
+                return true;
+            }
+            if (t < 10) {
+                return false;
+            }
+            remote[2] = car.publishedAttitude();
+            float max = (float) VehicleAttitude.MAX_TILT;
+            check("equilibre : celui qu'envoie le client du conducteur est publie tel quel -- NaN refuse, 75 degres au plus --,"
+                            + " et le serveur, qui ne simule pas sa voiture, n'y touche pas",
+                    remote[0][0] == 0.0F && remote[0][1] == 0.0F && Math.abs(remote[1][0] - max) < 1.0E-6
+                            && Math.abs(remote[1][1] + 0.2F) < 1.0E-6 && remote[2][0] == remote[1][0] && remote[2][1] == remote[1][1],
+                    String.format(Locale.ROOT, "NaN : (%.3f ; %.3f) ; (2 ; -0,2) : (%.3f ; %.3f) ; 10 ticks apres : (%.3f ; %.3f)",
+                            remote[0][0], remote[0][1], remote[1][0], remote[1][1], remote[2][0], remote[2][1]));
+            car.setAutotestRemoteDriver(false);
+            return true;
+        });
+        planCollisionCleanup();
+    }
+
+    /** Un mur de pierre en travers, {@code ahead} blocs a l'est du vehicule, de {@code z0} a {@code z1} blocs en Z. */
+    private static void wallAhead(ServerLevel level, JakVehicleEntity c, double ahead, int z0, int z1) {
+        for (int dy = -3; dy <= 3; dy++) {
+            for (int dz = z0; dz <= z1; dz++) {
+                BlockPos p = BlockPos.containing(c.getX() + ahead, c.getY() + dy, c.getZ() + dz);
+                level.setBlock(p, Blocks.STONE.defaultBlockState(), Block.UPDATE_CLIENTS);
+                PLACED.add(p);
+            }
+        }
+    }
+
+    private static void clearWall(ServerLevel level) {
+        for (BlockPos p : PLACED) {
+            level.setBlock(p, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS);
+        }
+        PLACED.clear();
     }
 
     /** Pose deux vehicules en mer : {@code chaser} lance vers {@code target}, arrete, a {@code gap} blocs. */

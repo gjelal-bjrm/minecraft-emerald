@@ -128,18 +128,32 @@ public final class TrafficDriver {
         if (shock > 0.0) {
             car.stun(VehicleImpacts.stunTicks(shock));
         }
+        // l'equilibre : le trafic penche et vrille sous les chocs, ses propulseurs le redressent
+        double spin = car.stepTrafficAttitude();
         if (car.tickStun()) {
-            // etourdi par un choc : plus de volant, on derive et on retombe sur la voie
+            // etourdi par un choc : plus de volant, on derive, on vrille, et on retombe sur la voie
+            if (spin != 0.0) {
+                float turned = car.getYRot() + (float) spin;
+                if (VehiclePhysics.canTurn(car, turned)) {
+                    car.setYRot(turned);
+                } else {
+                    car.attitude().yawRate = 0.0;
+                }
+            }
             Vec3 drift = car.getDeltaMovement();
             double laneY = HavenTraffic.laneY(origin, car.getX(), car.getZ());
             double vy = drift.y + (laneY - car.position().y) * 0.02;
             Vec3 asked = new Vec3(drift.x * STUN_DRAG, Math.max(-0.5, Math.min(0.5, vy)), drift.z * STUN_DRAG);
-            Vec3 allowed = VehiclePhysics.move(car, asked);
+            int[] stoppers = {-1, -1, -1};
+            Vec3 allowed = VehiclePhysics.move(car, asked, stoppers);
             car.setDeltaMovement(blocked(asked.x, allowed.x) ? 0.0 : asked.x, asked.y,
                     blocked(asked.z, allowed.z) ? 0.0 : asked.z);
+            VehicleImpacts.wall(car, asked, car.getDeltaMovement(), stoppers);
             car.syncParts();
             return true;
         }
+        // au volant, le trafic suit sa voie : la vrille d'un choc passe, les propulseurs l'eteignent
+        car.attitude().yawRate = 0.0;
         HavenTrafficData.Branch current = data.branch(this.branch);
         Vec3 start = data.start(current, origin);
         Vec3 end = data.end(current, origin);

@@ -190,23 +190,34 @@ public enum GunSpec {
     public static final double PLASMITE_MAX_SPEED = 4.0;
     /** Chaque rebond garde 60 % de la vitesse (:1666-1668). */
     public static final double PLASMITE_BOUNCE = 0.6;
-    /** Vie de 3 s (:135), puis elle explose. */
+    /**
+     * Vie de 3 s au plus (:135, timeout du projectile) : le compte a rebours commence
+     * au premier contact avec le decor, et au plus tard a {@code LIFE - COUNTDOWN}.
+     */
     public static final int PLASMITE_LIFE = 60;
     /** La visee balistique : une cible dans une sphere de 35 m centree 35 m devant, a 45 degres et 7 m de denivele au plus (:1551-1634). */
     public static final double PLASMITE_AIM_RADIUS = 35.0;
     public static final double PLASMITE_AIM_COS = 0.707;
     public static final double PLASMITE_AIM_DROP = 7.0;
-    /** La meche de proximite : 2/3 du souffle, 0,5 s au plus, tout de suite a 2 m (:293-400). */
-    public static final double PLASMITE_FUSE_RADIUS = 20.0 * 2.0 / 3.0;
-    public static final int PLASMITE_FUSE_MAX = 10;
-    public static final double PLASMITE_FUSE_NOW = 2.0;
     /**
-     * L'ecart au plus pres, en blocs, sous lequel la meche s'arme : la grenade doit
-     * VRAIMENT passer pres du monstre. Le jeu s'en remet a ses spheres de collision,
-     * bien plus grosses qu'une boite de zombie ; sans ce garde-fou, un monstre devant
-     * mais loin de la trajectoire faisait exploser la grenade en plein ciel.
+     * LA MECHE AU CONTACT (retour du joueur, 21 sept. : « normalement, la grenade
+     * explose des qu'elle touche quelqu'un »). La boite de ce qu'elle touche --
+     * creature ou vehicule -- est elargie de son rayon (0,175) et d'une marge. La
+     * meche de proximite du jeu (:293-400), qui la faisait eclater au passage PRES
+     * d'un monstre, est retiree : de loin, le joueur la voyait exploser dans le vide.
      */
-    public static final double PLASMITE_FUSE_MISS = 3.0;
+    public static final double PLASMITE_TOUCH = 0.4;
+    /**
+     * LE COMPTE A REBOURS SONORE, en tiques (« si ça ne touche personne, il y a une
+     * espece de compte a rebours sonore et la grenade finit par exploser ») : 1,5 s
+     * de bips de plus en plus serres et de plus en plus aigus, puis l'explosion.
+     */
+    public static final int PLASMITE_COUNTDOWN = 30;
+    /** Sous cette vitesse de rebond vers le haut, en blocs par tique, la grenade reste posee (un sautillement de 0,1 bloc). */
+    public static final double PLASMITE_REST = 0.15;
+    /** Le bruit d'un rebond : un vrai choc seulement, et pas deux en moins de 0,3 s (played-bounce-time, :1669-1673). */
+    public static final double PLASMITE_BOUNCE_SOUND = 0.08;
+    public static final int PLASMITE_BOUNCE_GAP = 6;
     /** Le souffle : 12 points dans 20 m (:133, 237). */
     public static final double PLASMITE_BLAST = 20.0;
     public static final float PLASMITE_DAMAGE = 12.0F;

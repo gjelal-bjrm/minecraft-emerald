@@ -136,6 +136,24 @@ public class ModNetwork {
                         car.toggleMode();
                     }
                 }));
+
+        // l'equilibre de la voiture d'un joueur : son client la simule, le serveur le
+        // publie a tous, seulement si l'expediteur la conduit (VehicleAttitude)
+        registrar.playToServer(com.emerald.jak.vehicle.VehicleAttitudePayload.TYPE,
+                com.emerald.jak.vehicle.VehicleAttitudePayload.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(() -> {
+                    if (context.player() instanceof ServerPlayer player
+                            && player.getVehicle() instanceof com.emerald.jak.vehicle.JakVehicleEntity car
+                            && car.getControllingPassenger() == player) {
+                        car.acceptDriverAttitude(payload.pitch(), payload.roll());
+                    }
+                }));
+
+        // le souffle d'une explosion sur la voiture d'un joueur : c'est son client qui l'applique
+        registrar.playToClient(com.emerald.jak.vehicle.VehicleImpulsePayload.TYPE,
+                com.emerald.jak.vehicle.VehicleImpulsePayload.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(
+                        () -> com.emerald.jak.vehicle.JakVehicleClient.acceptImpulse(payload)));
     }
 
     /**

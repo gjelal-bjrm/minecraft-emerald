@@ -208,6 +208,9 @@ public class GunNukeEntity extends Projectile {
         this.stateTicks = 0;
         this.setDeltaMovement(Vec3.ZERO);
         Vec3 at = this.position();
+        // les vehicules de la place sont souffles et desequilibres
+        com.emerald.jak.vehicle.VehicleImpacts.blast(level, at, com.emerald.jak.vehicle.VehicleImpacts.BLAST_NOVA_RADIUS,
+                com.emerald.jak.vehicle.VehicleImpacts.BLAST_NOVA);
         level.sendParticles(ModParticles.GUN_NOVA_BLAST.get(), at.x, at.y, at.z, 1, 0.0, 0.0, 0.0, 0.0);
         level.sendParticles(ModParticles.GUN_NOVA_MOTE.get(), at.x, at.y, at.z, 120, 2.5, 2.5, 2.5, 0.9);
         level.playSound(null, at.x, at.y, at.z, SoundEvents.GENERIC_EXPLODE.value(), SoundSource.PLAYERS, 4.0F, 0.5F);

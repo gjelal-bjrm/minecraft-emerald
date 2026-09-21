@@ -160,6 +160,7 @@ final class GunFireBench {
         }
         phase("Wave Concussor", 120, this::wave);
         phase("Plasmite RPG", 120, this::plasmite);
+        phase("Plasmite RPG, meche au contact et compte a rebours", 70, this::plasmiteFuse);
         phase("Beam Reflexor", 80, this::reflexor);
         phase("Gyro Burster", 320, this::gyro);
         phase("Arc Wielder", 90, this::arc);
@@ -1150,6 +1151,132 @@ final class GunFireBench {
         }
         GunFire.tick(f);
         return false;
+    }
+
+    /**
+     * La meche du Plasmite RPG telle que le joueur la decrit (21 sept.) : « la grenade
+     * explose des qu'elle touche quelqu'un ; si ça ne touche personne, il y a une espece
+     * de compte a rebours sonore et la grenade finit par exploser ».
+     *
+     * Trois grenades posees a la main, sans tir : A tombe sur un plancher et n'a personne a
+     * toucher (compte a rebours) ; B tombe sur le meme plancher, puis un monstre vient sur
+     * elle (contact, grenade posee) ; C file a 2 blocs d'un monstre sans le toucher (la
+     * meche de proximite, retiree, l'aurait fait sauter).
+     */
+    private boolean plasmiteFuse(int t) {
+        FakePlayer f = this.a;
+        BlockPos e = BlockPos.containing(this.site);
+        if (t == 0) {
+            purge();
+            // le plancher : dessus en Y e - 2, de e + 4 a e + 16 en X
+            this.memo.put("fuseFloor", slab(e.offset(4, -3, -3), e.offset(16, -3, 3)));
+            this.memo.put("fuseExplosions", GunEco.explosions().size());
+            GunGrenadeEntity countdown = drop(f, new Vec3(e.getX() + 6.5, e.getY() - 1.5, e.getZ() + 0.5), Vec3.ZERO);
+            GunGrenadeEntity touched = drop(f, new Vec3(e.getX() + 13.5, e.getY() - 1.5, e.getZ() + 0.5), Vec3.ZERO);
+            // C : a t = 10 elle passe en (e + 8 ; y0 - 3,1 ; e - 6), le monstre est a 2 blocs de la, en Z
+            Vec3 start = new Vec3(e.getX() + 2.0, e.getY() + 6.0, e.getZ() - 6.0);
+            GunGrenadeEntity miss = drop(f, start, new Vec3(0.6, 0.25, 0.0));
+            Vec3 passing = start.add(6.0, 0.25 * 10 - GunSpec.PLASMITE_GRAVITY * 10 * 11 / 2.0, 0.0);
+            Mob near = monster(HavenInvasion.Kind.ZOMBIE, passing.add(0.0, 0.0, 2.0));
+            if (near != null) {
+                near.setNoGravity(true);
+                near.setHealth(near.getMaxHealth());
+            }
+            this.memo.put("fuseA", countdown);
+            this.memo.put("fuseB", touched);
+            this.memo.put("fuseC", miss);
+            this.memo.put("fuseNear", near);
+            this.memo.put("fuseNearPos", passing);
+            this.memo.put("fuseAEnd", -1);
+            this.memo.put("fuseABeeps", 0);
+            this.memo.put("fuseAStart", -1);
+            this.memo.put("fuseCMiss", Double.MAX_VALUE);
+            return false;
+        }
+        GunGrenadeEntity countdown = (GunGrenadeEntity) this.memo.get("fuseA");
+        GunGrenadeEntity touched = (GunGrenadeEntity) this.memo.get("fuseB");
+        GunGrenadeEntity miss = (GunGrenadeEntity) this.memo.get("fuseC");
+        Mob near = (Mob) this.memo.get("fuseNear");
+        if (countdown != null && !countdown.isRemoved()) {
+            this.memo.put("fuseABeeps", countdown.beeps());
+            this.memo.put("fuseAStart", countdown.countdownStart());
+        } else if (countdown != null && (int) this.memo.get("fuseAEnd") < 0) {
+            this.memo.put("fuseAEnd", t);
+        }
+        if (miss != null && !miss.isRemoved() && near != null) {
+            this.memo.put("fuseCMiss", Math.min((double) this.memo.get("fuseCMiss"),
+                    miss.position().distanceTo(GunImpacts.center(near))));
+        }
+        if (t == 13) {
+            check("Plasmite RPG : une grenade qui file a 2 blocs d'un monstre sans le toucher continue sa route (meche au contact"
+                            + " seulement, plus de meche de proximite)",
+                    miss != null && !miss.isRemoved() && near != null && near.isAlive() && near.getHealth() >= near.getMaxHealth()
+                            && (double) this.memo.get("fuseCMiss") > 1.5 && (double) this.memo.get("fuseCMiss") < 3.0,
+                    String.format(Locale.ROOT, "grenade %s, plus pres du monstre %.2f blocs, monstre %.1f / %.1f PV",
+                            miss == null ? "absente" : miss.isRemoved() ? "explosee" : "en vol",
+                            (double) this.memo.get("fuseCMiss"), near == null ? -1.0F : near.getHealth(),
+                            near == null ? -1.0F : near.getMaxHealth()));
+            if (miss != null) {
+                miss.discard();
+            }
+            if (near != null) {
+                near.discard();
+            }
+            // un monstre vient sur la grenade B, posee et deja en compte a rebours
+            if (touched != null && !touched.isRemoved()) {
+                this.memo.put("fuseBWasCounting", touched.countdownStart() >= 0);
+                Mob walker = monster(HavenInvasion.Kind.ZOMBIE, touched.position().add(0.0, 0.975, 0.0));
+                if (walker != null) {
+                    walker.setNoGravity(true);
+                }
+                this.memo.put("fuseWalker", walker);
+                this.memo.put("fuseBTouchedAt", t);
+            }
+            return false;
+        }
+        if (t == 16) {
+            Mob walker = (Mob) this.memo.get("fuseWalker");
+            check("Plasmite RPG : posee sur le sol, la grenade saute des qu'un monstre la touche (pas au bout du compte a rebours)",
+                    touched != null && touched.isRemoved() && Boolean.TRUE.equals(this.memo.get("fuseBWasCounting"))
+                            && (walker == null || !walker.isAlive() || walker.getHealth() < walker.getMaxHealth()),
+                    "grenade " + (touched == null ? "absente" : touched.isRemoved() ? "explosee" : "encore posee")
+                            + ", comptait deja " + this.memo.get("fuseBWasCounting") + ", monstre "
+                            + (walker == null ? "absent" : walker.isAlive() ? walker.getHealth() + " PV" : "mort"));
+            return false;
+        }
+        if (t == 50) {
+            int end = (int) this.memo.get("fuseAEnd");
+            int start = (int) this.memo.get("fuseAStart");
+            int beeps = (int) this.memo.get("fuseABeeps");
+            check("Plasmite RPG : posee sans personne a toucher, la grenade fait son compte a rebours sonore -- dix bips de plus"
+                            + " en plus serres -- et explose 1,5 s apres avoir touche le sol",
+                    start >= 1 && start <= 6 && end >= start + GunSpec.PLASMITE_COUNTDOWN - 1
+                            && end <= start + GunSpec.PLASMITE_COUNTDOWN + 3 && beeps >= 8,
+                    "compte a rebours parti a la tique " + start + " de la grenade, explosion vue au tick " + end
+                            + " du banc, " + beeps + " bip(s)");
+            int before = (int) this.memo.get("fuseExplosions");
+            check("Plasmite RPG : les deux grenades posees ont bien explose (journal des explosions)",
+                    GunEco.explosions().size() >= before + 2, "explosions " + before + " -> " + GunEco.explosions().size());
+            for (GunGrenadeEntity g : this.level.getEntitiesOfClass(GunGrenadeEntity.class, new AABB(this.site, this.site).inflate(200.0))) {
+                g.discard();
+            }
+            for (String key : new String[]{"fuseA", "fuseB", "fuseC", "fuseNear", "fuseWalker"}) {
+                this.memo.remove(key);
+            }
+            unslab("fuseFloor");
+            purge();
+            return true;
+        }
+        return false;
+    }
+
+    /** Une grenade posee a la main, sans tir : au point {@code at}, a la vitesse {@code velocity}. */
+    private GunGrenadeEntity drop(FakePlayer owner, Vec3 at, Vec3 velocity) {
+        GunGrenadeEntity grenade = new GunGrenadeEntity(this.level, owner);
+        grenade.launch(at, new Vec3(1.0, 0.0, 0.0));
+        grenade.setDeltaMovement(velocity);
+        this.level.addFreshEntity(grenade);
+        return grenade;
     }
 
     /** Beam Reflexor : cout, rebond sur un mur, plafond du y sur un sol, quatre monstres au plus, cout des 2e et 3e, reserve vide. */

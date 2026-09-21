@@ -113,6 +113,16 @@ trois blocs du sol. Les voitures disparaissent au départ vers le village.
 - **Les murs se sentent.** Toute vitesse perdue d'un coup — un mur, un véhicule,
   une pile de monstres — fait un fracas de tôle et des éclats, d'autant plus forts
   que le choc est violent.
+- **L'équilibre, comme dans Jak 3.** Votre poids penche le véhicule : dans un
+  virage, il se couche du côté où vous tournez — une vingtaine de degrés pour une
+  voiture, une quarantaine pour une moto, plus légère — et se redresse quand vous
+  lâchez la direction. Les chocs le déséquilibrent : heurté de flanc, il gîte et se
+  balance quelques secondes avant de retrouver l'aplomb ; contre un mur de face, il
+  pique du nez ; heurté de biais, il **vrille** et repart dans l'angle du rebond.
+  Les autres joueurs voient votre véhicule pencher comme vous le voyez.
+- **Le souffle des explosions.** Le Plasmite RPG, le Peace Maker et la Super Nova
+  poussent, soulèvent et font gîter les véhicules proches ; un véhicule du trafic
+  soufflé perd le volant un moment.
 - **Vous êtes plus rapide qu'eux.** Votre véhicule monte à 40 m/s ; le trafic de la
   ville croise entre 15 et 19 m/s, comme dans Jak 3. Vous doublez donc tout le
   monde — et à pleine vitesse, c'est vous qui avez l'avantage dans un choc.
@@ -197,7 +207,7 @@ essayer ; elles se gagneront plus tard auprès des personnages de la ville) :
 | Arme | Gâchette | Cadence | Coût | Ce qu'elle fait | Décor cassé |
 |---|---|---|---|---|---|
 | Wave Concussor (« Déferlonator ») | **tenir pour charger** (1 s pour la charge pleine), **relâcher pour tirer** ; la case rouge du HUD se remplit | 0,8 s entre deux charges | 1 à 5 écos rouges selon la charge (0,1 / 0,25 / 0,5 / 0,75 / 1 s) | une **onde de choc au sol autour de vous**, de 3 blocs sans charge à 18 à pleine charge, qui s'étend en 0,7 s : chaque monstre traversé est frappé une fois (20 PV près de vous, 4 au bord) et repoussé ; au-delà de 6 blocs il faut qu'il soit en vue | rien (elle court au sol) |
-| Plasmite RPG (« RPG plasmique ») | un clic par tir | 1,1 s | 10 écos rouges | une **grenade** lancée en cloche, toujours un peu vers le haut ; s'il y a un monstre devant vous à moins de 35 blocs, **elle vise pour vous** ; elle rebondit sur les murs, explose près d'un monstre ou au bout de 3 s : **48 PV à tous les monstres dans 20 blocs** | 48 blocs au plus dans un rayon de 3,5 |
+| Plasmite RPG (« RPG plasmique ») | un clic par tir | 1,1 s | 10 écos rouges | une **grenade** lancée en cloche, toujours un peu vers le haut ; s'il y a un monstre devant vous à moins de 35 blocs, **elle vise pour vous** ; elle rebondit sur les murs et **explose dès qu'elle touche quelqu'un** (un monstre, un habitant, un véhicule — même posée au sol, si un monstre marche dessus) ; sinon, dès qu'elle touche le sol ou un mur, **un compte à rebours de bips** de plus en plus rapides, et elle explose 1,5 s plus tard : **48 PV à tous les monstres dans 20 blocs** | 48 blocs au plus dans un rayon de 3,5 |
 | Beam Reflexor (« Réflectorayon ») | un clic par tir | 0,32 s | 1 éco jaune, plus 1 au 2e et au 3e monstre | un tir qui **rebondit** sur les murs pendant 3 s et, trois fois sur quatre, **se revise vers un monstre** après chaque rebond ; il ne repart jamais vers le ciel ; **4 monstres au plus** : 6 PV au premier, 4 aux suivants | le bloc touché, 3 au plus |
 | Gyro Burster (« Tournoyeur ») | un clic **lance la soucoupe** ; un second clic avant qu'elle ne tire **la réveille sur place** ; une seule à la fois | — | il faut 10 écos jaunes ; elle en boit 50 sur sa rafale | une **tourelle volante** : elle freine, dérive en tournant, puis tire 4 s, **40 tirs par seconde**, sur les monstres qu'elle voit à 35 blocs (8 PV par tir), vers le bas faute de cible ; puis elle tombe et s'éteint. Réserve vide : elle s'arrête | un bloc par salve |
 | Arc Wielder (« Arcbuteur ») | **tenir** : l'arc agit tant que la gâchette est tenue, le canon tourne | continu | 1 éco bleue pour l'allumer, puis 7,5 par seconde | une **corde de foudre** de 66 blocs au plus qui **saute de monstre en monstre** (chacun à moins de 4 blocs du fil, un seul passage par monstre) : 10 PV par monstre toutes les 0,4 s ; le premier mur coupe l'arc | le bloc qui l'arrête, un toutes les deux tiques |

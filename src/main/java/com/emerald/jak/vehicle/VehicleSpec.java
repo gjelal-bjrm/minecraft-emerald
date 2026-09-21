@@ -109,6 +109,8 @@ public final class VehicleSpec {
     public final double thrusterFrontZ, thrusterRearZ, thrusterY;
     /** Les sieges {x, y, z} dans le repere du modele ; le premier est celui du conducteur. */
     private final double[][] seats;
+    /** Le corps rigide : sa boite d'inertie, son centre de masse et ses commandes d'equilibre (voir {@link Balance}). */
+    public final Balance balance;
 
     // ------------------------------------------------ derives, en blocs et ticks
     public final double gravity;
@@ -120,11 +122,17 @@ public final class VehicleSpec {
     public final double boxSide, boxBottom, boxTop;
     /** Centres des trois parties de collision le long de l'axe z du modele. */
     private final double[] partZ;
+    /**
+     * Les moments d'inertie du corps rigide, en masse x m2, autour de ses trois axes :
+     * tangage (x), lacet (y), roulis (z). Ceux d'une boite pleine de la boite d'inertie
+     * du jeu, m (b2 + c2) / 12 (rigid-body.gc:39-61).
+     */
+    public final double inertiaPitch, inertiaYaw, inertiaRoll;
 
     private VehicleSpec(String model, Kind kind, double[] min, double[] max, double mass, double engineThrustMs2,
                         double engineResponse, double engineIntake, double brakeFactor, double steerGain,
                         double probeDistance, double springLift, double thrusterFrontZ, double thrusterRearZ,
-                        double thrusterY, double[][] seats) {
+                        double thrusterY, double[][] seats, Balance balance) {
         this.model = model;
         this.kind = kind;
         this.minX = min[0];
@@ -145,6 +153,7 @@ public final class VehicleSpec {
         this.thrusterRearZ = thrusterRearZ;
         this.thrusterY = thrusterY;
         this.seats = seats;
+        this.balance = balance;
 
         this.gravity = GRAVITY_MS2 * TICK * TICK;
         this.maxSpeed = MAX_SPEED_MS * TICK;
@@ -160,40 +169,74 @@ public final class VehicleSpec {
         this.boxTop = Math.min(this.maxY, seats[0][1] + BOX_ABOVE_SEAT);
         double spacing = Math.max(0.0, (length - this.boxSide) / 2.0);
         this.partZ = new double[]{this.centerZ + spacing, this.centerZ, this.centerZ - spacing};
+        double bx = balance.box()[0];
+        double by = balance.box()[1];
+        double bz = balance.box()[2];
+        this.inertiaPitch = mass * (by * by + bz * bz) / 12.0;
+        this.inertiaYaw = mass * (bx * bx + bz * bz) / 12.0;
+        this.inertiaRoll = mass * (bx * bx + by * by) / 12.0;
     }
+
+    /**
+     * Ce qui tient un vehicule en equilibre, repris du jeu (VehicleAttitude).
+     *
+     * @param box            la boite d'inertie {x, y, z} en metres (inertial-tensor-box)
+     * @param cmZ            le centre de masse sur l'axe du modele, en metres (cm-offset-joint) :
+     *                       les deux propulseurs de sustentation en sont toujours a egale distance
+     * @param pitchControl   pitch-control-factor : l'amortisseur de tangage
+     * @param steerThrusters steering-thruster-factor : les propulseurs de direction, qui tuent une vrille
+     */
+    public record Balance(double[] box, double cmZ, double pitchControl, double steerThrusters) {
+    }
+
+    /**
+     * L'equilibre des trois motos : boite d'inertie 3 x 4 x 6 m, centre de masse 0,6 m
+     * devant la racine (2457,6), tangage amorti deux fois plus que les voitures,
+     * propulseurs de direction a 5 (bike.gc:80-141, identiques pour les trois).
+     */
+    private static final Balance BIKE_BALANCE = new Balance(new double[]{3.0, 4.0, 6.0}, 0.6, 1.0, 5.0);
 
     /**
      * car-a : masse 8, poussee 39, reponse 20, admission 1, frein 2,25, gain 3,5,
      * sonde 4,5, ressort 0,4 (car.gc:66-108) ; propulseurs a z = +-2 m, y = 0,2
      * (8192 et 819,2, car.gc:282-291) ; sieges car.gc:424-433 -- les deux avant
-     * peuvent conduire, on garde le gauche (+x) pour le conducteur.
+     * peuvent conduire, on garde le gauche (+x) pour le conducteur. Equilibre :
+     * boite d'inertie 4 x 3 x 6 m, centre de masse a la racine, tangage 0,5,
+     * direction 3 (car.gc:73-120).
      */
     public static final VehicleSpec CARA = new VehicleSpec("cara", Kind.CAR,
             new double[]{-2.513751, -1.799057, -4.041718}, new double[]{2.513751, 1.725123, 4.386743},
             8.0, 39.0, 20.0, 1.0, 2.25, 3.5, 4.5, 0.4, 2.0, -2.0, 0.2,
-            new double[][]{{0.996, 0.2, -0.076}, {-0.996, 0.2, -0.076}, {0.0, 0.916, -2.579}});
+            new double[][]{{0.996, 0.2, -0.076}, {-0.996, 0.2, -0.076}, {0.0, 0.916, -2.579}},
+            new Balance(new double[]{4.0, 3.0, 6.0}, 0.0, 0.5, 3.0));
 
     /**
      * car-b : masse 6, poussee 40, reponse 10, gain 3,8 (car.gc:451-493), le reste
      * comme car-a ; propulseurs a z = +-2,2 m (9011,2, car.gc:667-676) ; sieges
-     * car.gc:803-812.
+     * car.gc:803-812. Equilibre : boite 3 x 4 x 6 m, tangage 0,5, direction 3,5
+     * (car.gc:458-505).
      */
     public static final VehicleSpec CARB = new VehicleSpec("carb", Kind.CAR,
             new double[]{-2.793297, -0.791022, -3.534881}, new double[]{2.793297, 1.433728, 4.128147},
             6.0, 40.0, 10.0, 1.0, 2.25, 3.8, 4.5, 0.4, 2.2, -2.2, 0.2,
-            new double[][]{{1.03, 0.244, -0.042}, {-0.95, 0.244, -0.042}, {0.0, 0.916, -2.0}});
+            new double[][]{{1.03, 0.244, -0.042}, {-0.95, 0.244, -0.042}, {0.0, 0.916, -2.0}},
+            new Balance(new double[]{3.0, 4.0, 6.0}, 0.0, 0.5, 3.5));
 
     /**
      * car-c : masse 9, poussee 35, reponse 10, gain 3 (car.gc:830-872), le reste
      * comme car-a ; propulseurs a z = +1,2 et -3,2 m, y = 0 (4915,2 et -13107,2,
      * car.gc:1049-1058). Le jeu lui donne quatre sieges (car.gc:1213-1225),
      * conducteur au centre : le joueur a retenu trois places par voiture, on
-     * garde les trois premiers.
+     * garde les trois premiers. Equilibre : boite 3 x 4 x 6 m, CENTRE DE MASSE
+     * 1 m DERRIERE LA RACINE (cm-offset-joint -4096, car.gc:837) -- ses deux
+     * propulseurs en sont donc a 2,2 m, comme ceux des autres --, tangage 0,5,
+     * direction 3.
      */
     public static final VehicleSpec CARC = new VehicleSpec("carc", Kind.CAR,
             new double[]{-2.276151, -0.898481, -5.091391}, new double[]{2.276151, 1.407620, 2.515746},
             9.0, 35.0, 10.0, 1.0, 2.25, 3.0, 4.5, 0.4, 1.2, -3.2, 0.0,
-            new double[][]{{0.0, 0.186, 0.334}, {-0.7, 0.4, -0.7}, {0.7, 0.4, -0.7}});
+            new double[][]{{0.0, 0.186, 0.334}, {-0.7, 0.4, -0.7}, {0.7, 0.4, -0.7}},
+            new Balance(new double[]{3.0, 4.0, 6.0}, -1.0, 0.5, 3.0));
 
     /**
      * bike-a : masse 2 (bike.gc:80), poussee 50 (103), reponse 60 (105),
@@ -209,7 +252,7 @@ public final class VehicleSpec {
     public static final VehicleSpec BIKEA = new VehicleSpec("bikea", Kind.BIKE,
             new double[]{-1.044101, -1.430805, -2.629587}, new double[]{1.044101, 0.966760, 2.687593},
             2.0, 50.0, 60.0, 1.5, 3.5, 4.0, 5.0, 0.3, 1.8, -0.6, 0.2,
-            new double[][]{{0.0, 0.0, 0.0}});
+            new double[][]{{0.0, 0.0, 0.0}}, BIKE_BALANCE);
 
     /**
      * bike-b : les constantes de bike-a (bike.gc:421-462) ; propulseurs a y = 0
@@ -219,7 +262,7 @@ public final class VehicleSpec {
     public static final VehicleSpec BIKEB = new VehicleSpec("bikeb", Kind.BIKE,
             new double[]{-1.192548, -1.621120, -2.552799}, new double[]{1.192548, 1.136648, 2.850936},
             2.0, 50.0, 60.0, 1.5, 3.5, 4.0, 5.0, 0.3, 1.8, -0.6, 0.0,
-            new double[][]{{0.0, 0.185, 0.287}});
+            new double[][]{{0.0, 0.185, 0.287}}, BIKE_BALANCE);
 
     /**
      * bike-c : les constantes de bike-a (bike.gc:764-805) ; propulseurs a y = 0
@@ -229,7 +272,7 @@ public final class VehicleSpec {
     public static final VehicleSpec BIKEC = new VehicleSpec("bikec", Kind.BIKE,
             new double[]{-1.200570, -1.105287, -2.439254}, new double[]{1.200570, 0.800380, 3.373031},
             2.0, 50.0, 60.0, 1.5, 3.5, 4.0, 5.0, 0.3, 1.8, -0.6, 0.0,
-            new double[][]{{0.0, 0.196, 0.322}});
+            new double[][]{{0.0, 0.196, 0.322}}, BIKE_BALANCE);
 
     public static final List<VehicleSpec> CARS = List.of(CARA, CARB, CARC);
     public static final List<VehicleSpec> BIKES = List.of(BIKEA, BIKEB, BIKEC);

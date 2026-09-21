@@ -55,6 +55,12 @@ import java.util.List;
  *
  * L'origine de l'entite est celle du modele du jeu : sieges et propulseurs du
  * code GOAL s'y lisent tels quels.
+ *
+ * L'EQUILIBRE (VehicleAttitude : tangage, roulis, vrille) se simule du cote qui
+ * simule la voiture et se publie dans deux donnees d'entite : le serveur les pose
+ * pour le trafic et les voitures sans conducteur, le client du conducteur les envoie
+ * (VehicleAttitudePayload). Les autres clients dessinent ce qui est publie ; celui
+ * qui reprend la simulation part de la.
  */
 public class JakVehicleEntity extends Entity {
 
@@ -98,6 +104,18 @@ public class JakVehicleEntity extends Entity {
     private static final EntityDataAccessor<Integer> DATA_SEAT_2 =
             SynchedEntityData.defineId(JakVehicleEntity.class, EntityDataSerializers.INT);
     private static final List<EntityDataAccessor<Integer>> SEATS = List.of(DATA_SEAT_0, DATA_SEAT_1, DATA_SEAT_2);
+    /**
+     * L'equilibre vu de tous (VehicleAttitude), en radians : tangage (nez en haut positif)
+     * et roulis (gauche en haut positif). Le cote qui simule le vehicule le publie -- le
+     * serveur pour le trafic et les vehicules sans conducteur, le client du conducteur par
+     * VehicleAttitudePayload --, les autres clients le dessinent.
+     */
+    private static final EntityDataAccessor<Float> DATA_PITCH =
+            SynchedEntityData.defineId(JakVehicleEntity.class, EntityDataSerializers.FLOAT);
+    private static final EntityDataAccessor<Float> DATA_ROLL =
+            SynchedEntityData.defineId(JakVehicleEntity.class, EntityDataSerializers.FLOAT);
+    /** Ecart d'equilibre, en radians, sous lequel on ne republie pas (0,1 degre). */
+    private static final float ATTITUDE_EPSILON = 0.0017F;
 
     private final VehiclePart[] parts;
     private final VehicleDynamics.Controls controls = new VehicleDynamics.Controls();
@@ -108,8 +126,22 @@ public class JakVehicleEntity extends Entity {
     private double lerpZ;
     private float lerpYRot;
 
-    private float roll;
-    private float rollO;
+    /** La gite visuelle des virages du trafic, en degres, cote client (voir updateLean). */
+    private float lean;
+    private float leanO;
+
+    /** L'equilibre simule, du cote qui simule le vehicule (VehicleAttitude). */
+    private final VehicleAttitude.State attitude = new VehicleAttitude.State();
+    /** L'equilibre dessine, en degres, cote client : celui de ce tick et du precedent. */
+    private float shownPitch;
+    private float shownPitchO;
+    private float shownRoll;
+    private float shownRollO;
+    /** Ce cote simulait-il le vehicule au tick precedent ? A la reprise, il part de l'equilibre publie. */
+    private boolean simulatedHere;
+    /** Le dernier equilibre envoye au serveur par le client du conducteur. */
+    private float sentPitch;
+    private float sentRoll;
 
     /** Ticks depuis le debut de la montee (MODE_MONTEE), -1 hors montee. Serveur. */
     private int transitionTicks = -1;
@@ -316,8 +348,88 @@ public class JakVehicleEntity extends Entity {
         return this.autotestDriver || this.getControllingPassenger() != null;
     }
 
+    /** L'equilibre simule, pour le cote qui simule le vehicule. */
+    public VehicleAttitude.State attitude() {
+        return this.attitude;
+    }
+
+    /** Le tangage dessine, en degres, nez en haut positif (cote client). */
+    public float pitch(float partialTick) {
+        return Mth.lerp(partialTick, this.shownPitchO, this.shownPitch);
+    }
+
+    /**
+     * Le roulis dessine, en degres, gauche en haut positif (cote client) : l'equilibre, plus
+     * la gite visuelle des virages pour un vehicule sans pilote -- celui d'un pilote se
+     * couche de lui-meme sous son poids (VehicleAttitude).
+     */
     public float roll(float partialTick) {
-        return Mth.lerp(partialTick, this.rollO, this.roll);
+        return Mth.lerp(partialTick, this.shownRollO, this.shownRoll) + Mth.lerp(partialTick, this.leanO, this.lean);
+    }
+
+    /**
+     * Un choc sur l'equilibre seul : l'impulsion J (masse x blocs par tick, repere du monde)
+     * au point {@code at} du monde. La vitesse, l'appelant la regle.
+     *
+     * Seule la part qui passe vraiment compte (VehicleAttitude.leverShare) : touche loin de
+     * son centre, le vehicule tourne plus qu'il ne recule.
+     */
+    public void tilt(Vec3 impulse, Vec3 at) {
+        VehicleSpec spec = this.spec();
+        double yaw = Math.toRadians(this.getYRot());
+        double sin = Math.sin(yaw);
+        double cos = Math.cos(yaw);
+        // le repere du vehicule : gauche (cos, sin), avant (-sin, cos)
+        double rx = at.x - this.getX();
+        double rz = at.z - this.getZ();
+        double localX = rx * cos + rz * sin;
+        double localY = at.y - this.getY();
+        double localZ = -rx * sin + rz * cos;
+        double jx = (impulse.x * cos + impulse.z * sin) / VehicleSpec.TICK;
+        double jy = impulse.y / VehicleSpec.TICK;
+        double jz = (-impulse.x * sin + impulse.z * cos) / VehicleSpec.TICK;
+        double length = Math.sqrt(jx * jx + jy * jy + jz * jz);
+        if (length < 1.0E-9) {
+            return;
+        }
+        double share = VehicleAttitude.leverShare(spec, localX, localY, localZ, jx / length, jy / length, jz / length);
+        VehicleAttitude.impulse(spec, this.attitude, localX, localY, localZ, jx * share, jy * share, jz * share);
+    }
+
+    /**
+     * Un choc entier -- vitesse et equilibre --, pour le cote qui simule le vehicule :
+     * l'impulsion J (masse x blocs par tick, monde) au point {@code at}. Le souffle d'une
+     * explosion (VehicleImpacts.blast).
+     */
+    public void applyImpulse(Vec3 impulse, Vec3 at) {
+        this.setDeltaMovement(this.getDeltaMovement().add(impulse.scale(1.0 / this.spec().mass)));
+        this.hasImpulse = true;
+        this.tilt(impulse, at);
+    }
+
+    /**
+     * L'equilibre du trafic pour un tick : il vole en voie haute, a sa hauteur d'equilibre,
+     * sans pilote (HavenTraffic). Rend la vrille du tick, en degres de lacet.
+     */
+    public double stepTrafficAttitude() {
+        VehicleSpec spec = this.spec();
+        return VehicleAttitude.step(spec, this.attitude, new VehicleAttitude.Inputs(Double.NaN, Double.NaN,
+                VehicleDynamics.MODE_HAUT, -VehicleDynamics.highHang(spec, false), 0.0, false, 0.0, false));
+    }
+
+    /** L'equilibre publie par le client du conducteur (VehicleAttitudePayload), cote serveur. */
+    public void acceptDriverAttitude(float pitch, float roll) {
+        if (!Float.isFinite(pitch) || !Float.isFinite(roll)) {
+            return;
+        }
+        float max = (float) VehicleAttitude.MAX_TILT;
+        this.entityData.set(DATA_PITCH, Mth.clamp(pitch, -max, max));
+        this.entityData.set(DATA_ROLL, Mth.clamp(roll, -max, max));
+    }
+
+    /** L'equilibre publie, en radians : {tangage, roulis}. */
+    public float[] publishedAttitude() {
+        return new float[]{this.entityData.get(DATA_PITCH), this.entityData.get(DATA_ROLL)};
     }
 
     @Override
@@ -327,6 +439,8 @@ public class JakVehicleEntity extends Entity {
         for (EntityDataAccessor<Integer> seat : SEATS) {
             builder.define(seat, EMPTY);
         }
+        builder.define(DATA_PITCH, 0.0F);
+        builder.define(DATA_ROLL, 0.0F);
     }
 
     @Override
@@ -590,8 +704,9 @@ public class JakVehicleEntity extends Entity {
             this.entityData.set(SEATS.get(seat), EMPTY);
             this.leavingSeat = seat;
             if (seat == 0) {
-                // le serveur reprend la physique : la voiture garde son elan
+                // le serveur reprend la physique : la voiture garde son elan, et son equilibre
                 this.setDeltaMovement(this.drivenMotion);
+                this.attitude.set(this.entityData.get(DATA_PITCH), this.entityData.get(DATA_ROLL));
                 // le jeu remet la voie a zero quand on sort (hvehicle.gc:1113)
                 this.controls.reset();
                 if (this.mode() != VehicleDynamics.MODE_SOL) {
@@ -747,6 +862,11 @@ public class JakVehicleEntity extends Entity {
         this.drivenMotion = Vec3.ZERO;
         this.lerpSteps = 0;
         this.serverKnown = false;
+        this.attitude.reset();
+        if (!this.level().isClientSide) {
+            this.entityData.set(DATA_PITCH, 0.0F);
+            this.entityData.set(DATA_ROLL, 0.0F);
+        }
     }
 
     @Override
@@ -761,6 +881,12 @@ public class JakVehicleEntity extends Entity {
             }
         }
         this.tickLerp();
+        boolean simulating = this.traffic != null ? !client : this.isControlledByLocalInstance();
+        if (simulating && !this.simulatedHere) {
+            // on reprend la simulation : on part de l'equilibre que tout le monde voit
+            this.attitude.set(this.entityData.get(DATA_PITCH), this.entityData.get(DATA_ROLL));
+        }
+        this.simulatedHere = simulating;
         if (!client && this.traffic != null) {
             // le trafic : le serveur conduit sur les voies de Jak 3, a la place de la physique de vol
             HavenTraffic.drive(this);
@@ -786,8 +912,12 @@ public class JakVehicleEntity extends Entity {
             }
             this.syncParts();
         }
+        if (simulating) {
+            this.publishAttitude(client);
+        }
         if (client) {
-            this.updateRoll();
+            this.updateLean();
+            this.updateAttitudeView(simulating);
         } else {
             this.serverX = this.getX();
             this.serverY = this.getY();
@@ -899,13 +1029,53 @@ public class JakVehicleEntity extends Entity {
         }
     }
 
-    private void updateRoll() {
-        this.rollO = this.roll;
-        double dx = this.getX() - this.xo;
-        double dz = this.getZ() - this.zo;
-        double target = VehicleDynamics.rollTarget(this.spec(), Mth.wrapDegrees(this.getYRot() - this.yRotO),
-                Math.sqrt(dx * dx + dz * dz));
-        this.roll += (float) ((target - this.roll) * 0.3);
+    /**
+     * La gite visuelle des virages, sans pilote : le trafic se couche un peu quand il tourne.
+     * Un vehicule pilote n'en a pas : c'est le poids de son pilote qui le couche, pour de
+     * vrai (VehicleAttitude).
+     */
+    private void updateLean() {
+        this.leanO = this.lean;
+        double target = 0.0;
+        if (this.getControllingPassenger() == null) {
+            double dx = this.getX() - this.xo;
+            double dz = this.getZ() - this.zo;
+            target = VehicleDynamics.rollTarget(this.spec(), Mth.wrapDegrees(this.getYRot() - this.yRotO),
+                    Math.sqrt(dx * dx + dz * dz));
+        }
+        this.lean += (float) ((target - this.lean) * 0.3);
+    }
+
+    /** L'equilibre a dessiner : le sien si ce client simule le vehicule, sinon celui publie. */
+    private void updateAttitudeView(boolean simulating) {
+        this.shownPitchO = this.shownPitch;
+        this.shownRollO = this.shownRoll;
+        double pitch = simulating ? this.attitude.pitch : this.entityData.get(DATA_PITCH);
+        double roll = simulating ? this.attitude.roll : this.entityData.get(DATA_ROLL);
+        this.shownPitch = (float) Math.toDegrees(pitch);
+        this.shownRoll = (float) Math.toDegrees(roll);
+    }
+
+    /**
+     * Publie l'equilibre simule ici : le serveur dans la donnee d'entite, le client du
+     * conducteur au serveur (qui la pose a son tour). Rien tant qu'il ne bouge pas.
+     */
+    private void publishAttitude(boolean client) {
+        float pitch = (float) this.attitude.pitch;
+        float roll = (float) this.attitude.roll;
+        if (client) {
+            if (Math.abs(pitch - this.sentPitch) > ATTITUDE_EPSILON || Math.abs(roll - this.sentRoll) > ATTITUDE_EPSILON) {
+                this.sentPitch = pitch;
+                this.sentRoll = roll;
+                JakVehicleClient.sendAttitude(pitch, roll);
+            }
+            return;
+        }
+        if (Math.abs(pitch - this.entityData.get(DATA_PITCH)) > ATTITUDE_EPSILON
+                || Math.abs(roll - this.entityData.get(DATA_ROLL)) > ATTITUDE_EPSILON) {
+            this.entityData.set(DATA_PITCH, pitch);
+            this.entityData.set(DATA_ROLL, roll);
+        }
     }
 
     // ------------------------------------------------------------- interpolation (motif du bateau)
