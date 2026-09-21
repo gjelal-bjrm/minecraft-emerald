@@ -9,6 +9,7 @@ import com.emerald.game.WorldSetup;
 import com.emerald.haven.Haven;
 import com.emerald.haven.HavenArrival;
 import com.emerald.haven.HavenAutotest;
+import com.emerald.haven.HavenGates;
 import com.emerald.haven.HavenRules;
 import com.emerald.haven.HavenSite;
 import com.emerald.haven.HavenState;
@@ -70,7 +71,9 @@ import java.util.UUID;
  *   8. la deuxieme arrivee : ville envahie a la reouverture, titre une fois, objectifs
  *      « ton arme » puis « reprendre les rues », 25 monstres en equipe, ville paisible ;
  *   9. le retour du Defi : defaite (apres le titre), porte de victoire (attente de
- *      l'equipe, dernier entre, cinq minutes), rien en Monde ouvert.
+ *      l'equipe, dernier entre, cinq minutes), rien en Monde ouvert ;
+ *  10. les transports : les huit stations posees, l'arche (passage, recharge, retour) et le
+ *      portail des tours (regard tenu, desarme a l'arrivee, sommet, descente).
  * Rapport dans parcours_autotest.txt, puis arret.
  */
 @EventBusSubscriber(modid = EmeraldWeaponsMod.MODID)
@@ -177,6 +180,7 @@ public final class HavenJourneyAutotest {
         secondArrival(server, level);
         returnDefeat(server);
         returnVictory(server);
+        gates(server, level);
         isolation(server);
     }
 
@@ -724,6 +728,106 @@ public final class HavenJourneyAutotest {
         HavenArrival.reopen(server);
         game.chooseMode(saved);
         game.forgetModeChoice();
+    }
+
+    // ================================================================ 10. les transports de la ville
+
+    private static void gates(MinecraftServer server, ServerLevel level) {
+        line("--- les transports : l'arche d'un bout a l'autre, le portail des tours");
+        int placed = HavenGates.keep(server, true);
+        boolean states = true;
+        StringBuilder wrong = new StringBuilder();
+        for (HavenGates.Station station : HavenGates.STATIONS) {
+            BlockPos pos = HavenGates.position(server, station);
+            if (level.getBlockState(pos) != station.state()) {
+                states = false;
+                wrong.append(station.id()).append(' ').append(level.getBlockState(pos)).append("; ");
+            }
+        }
+        check("pose : les deux arches et les six plateaux des tours, a leur place, du bon modele",
+                placed == HavenGates.STATIONS.size() && states,
+                placed + " pose(s) sur " + HavenGates.STATIONS.size() + (wrong.length() == 0 ? "" : ", " + wrong));
+
+        HavenGates.Station west = HavenGates.station("arche_ouest");
+        HavenGates.Station east = HavenGates.station("arche_est");
+        BlockPos westPos = HavenGates.position(server, west);
+        BlockPos eastPos = HavenGates.position(server, east);
+        FakePlayer walker = subject(level, "arche", westPos.north(4));
+        HavenGates.addSubject(walker);
+        try {
+            walker.moveTo(westPos.getX() + 0.5, westPos.getY(), westPos.getZ() + 0.5, 0.0F, 0.0F);
+            HavenGates.tickForTest(server);
+            BlockPos exit = eastPos.relative(east.facing(), 2);
+            boolean crossed = walker.blockPosition().equals(exit);
+            walker.moveTo(eastPos.getX() + 0.5, eastPos.getY(), eastPos.getZ() + 0.5, 0.0F, 0.0F);
+            HavenGates.tickForTest(server);
+            boolean held = walker.blockPosition().equals(eastPos);
+            HavenGates.rechargeForTest(walker.getUUID());
+            HavenGates.tickForTest(server);
+            BlockPos back = westPos.relative(west.facing(), 2);
+            boolean returned = walker.blockPosition().equals(back);
+            check("l'arche ouest mene devant l'arche est, dos a elle ; tout de suite apres, la recharge retient ;"
+                            + " rechargee, elle ramene a l'ouest",
+                    crossed && held && returned,
+                    "passe " + crossed + ", retenu " + held + ", retour " + returned + " (en " + walker.blockPosition().toShortString() + ")");
+        } finally {
+            HavenGates.removeSubject(walker.getUUID());
+        }
+
+        HavenGates.Station foot = HavenGates.station("tour_ouest_pied");
+        HavenGates.Station terrace = HavenGates.station("tour_ouest_terrasse");
+        HavenGates.Station top = HavenGates.station("tour_ouest_sommet");
+        BlockPos footPos = HavenGates.position(server, foot);
+        BlockPos terracePos = HavenGates.position(server, terrace);
+        BlockPos topPos = HavenGates.position(server, top);
+        FakePlayer climber = subject(level, "portail", footPos);
+        HavenGates.addSubject(climber);
+        try {
+            climber.moveTo(footPos.getX() + 0.5, footPos.getY() + 0.22, footPos.getZ() + 0.5, 0.0F, -60.0F);
+            for (int i = 0; i < HavenGates.LOOK_TICKS - 1; i++) {
+                HavenGates.tickForTest(server);
+            }
+            boolean waited = climber.blockPosition().equals(footPos);
+            HavenGates.tickForTest(server);
+            boolean up = climber.blockPosition().equals(terracePos);
+            climber.setXRot(-60.0F);
+            for (int i = 0; i < HavenGates.LOOK_TICKS + 5; i++) {
+                HavenGates.tickForTest(server);
+            }
+            boolean disarmed = climber.blockPosition().equals(terracePos);
+            climber.setXRot(0.0F);
+            HavenGates.tickForTest(server);
+            climber.setXRot(-60.0F);
+            for (int i = 0; i < HavenGates.LOOK_TICKS; i++) {
+                HavenGates.tickForTest(server);
+            }
+            boolean summit = climber.blockPosition().equals(topPos);
+            climber.setXRot(0.0F);
+            HavenGates.tickForTest(server);
+            climber.setXRot(-60.0F);
+            for (int i = 0; i < HavenGates.LOOK_TICKS + 5; i++) {
+                HavenGates.tickForTest(server);
+            }
+            boolean ceiling = climber.blockPosition().equals(topPos);
+            climber.setXRot(60.0F);
+            for (int i = 0; i < 2 * HavenGates.LOOK_TICKS + 2; i++) {
+                HavenGates.tickForTest(server);
+                if (i == HavenGates.LOOK_TICKS) {
+                    climber.setXRot(0.0F);
+                    HavenGates.tickForTest(server);
+                    climber.setXRot(60.0F);
+                }
+            }
+            boolean down = climber.blockPosition().equals(footPos);
+            check("le portail : une seconde a regarder en haut monte du pied a la terrasse, pas avant ;"
+                            + " il faut detourner le regard pour repartir ; puis le sommet ; rien au-dessus du sommet ;"
+                            + " en regardant en bas, on redescend d'arret en arret jusqu'au pied",
+                    waited && up && disarmed && summit && ceiling && down,
+                    "attend " + waited + ", terrasse " + up + ", desarme " + disarmed + ", sommet " + summit
+                            + ", plafond " + ceiling + ", pied " + down + " (en " + climber.blockPosition().toShortString() + ")");
+        } finally {
+            HavenGates.removeSubject(climber.getUUID());
+        }
     }
 
     // ================================================================ 6. le vrai fichier

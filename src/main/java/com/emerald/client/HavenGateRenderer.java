@@ -60,6 +60,8 @@ public class HavenGateRenderer implements BlockEntityRenderer<HavenGateBlockEnti
      * l'agrandir de 20 % » (photos du 21 sept.) : 3,7 blocs de haut et de large.
      */
     private static final float RING_SCALE = 1.2F;
+    /** Les montants du plateau du portail : 2,3 blocs, au-dessus de la tete de qui s'y tient. */
+    private static final float POST = 2.3F;
 
     public HavenGateRenderer(BlockEntityRendererProvider.Context context) {
     }
@@ -82,7 +84,7 @@ public class HavenGateRenderer implements BlockEntityRenderer<HavenGateBlockEnti
         pose.mulPose(Axis.YP.rotationDegrees(-facing.toYRot()));
         switch (state.getValue(HavenGateBlock.STYLE)) {
             case ANNEAU -> ring(pose, buffers, light, overlay, time);
-            case PORTAIL -> pad(pose, buffers, light, overlay, time);
+            case PORTAIL -> pad(pose, buffers, light, overlay, time, cameraInBeam(gate));
             case ARCHE -> arch(pose, buffers, light, overlay, time);
         }
         pose.popPose();
@@ -179,7 +181,21 @@ public class HavenGateRenderer implements BlockEntityRenderer<HavenGateBlockEnti
 
     // ================================================================ le portail
 
-    private static void pad(PoseStack pose, MultiBufferSource buffers, int light, int overlay, float time) {
+    /**
+     * La camera est-elle dans la colonne de lumiere ? Debout sur le plateau pour regarder en
+     * haut, on la voyait de l'interieur : toute la vue teintee (photo du 21 sept., nuit).
+     */
+    private static boolean cameraInBeam(HavenGateBlockEntity gate) {
+        net.minecraft.world.phys.Vec3 eye = net.minecraft.client.Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
+        net.minecraft.core.BlockPos pos = gate.getBlockPos();
+        double dx = eye.x - (pos.getX() + 0.5);
+        double dz = eye.z - (pos.getZ() + 0.5);
+        double dy = eye.y - pos.getY();
+        return dx * dx + dz * dz < 1.2 * 1.2 && dy > -0.5 && dy < 6.0;
+    }
+
+    private static void pad(PoseStack pose, MultiBufferSource buffers, int light, int overlay, float time,
+                            boolean inBeam) {
         PoseStack.Pose p = pose.last();
         float radius = 1.5F;
         float height = 0.22F;
@@ -215,7 +231,8 @@ public class HavenGateRenderer implements BlockEntityRenderer<HavenGateBlockEnti
             float a = Mth.HALF_PI * k + Mth.PI / 4.0F;
             float x = 1.28F * Mth.cos(a);
             float z = 1.28F * Mth.sin(a);
-            box(p, pilier, overlay, light, x - 0.12F, height, z - 0.12F, x + 0.12F, height + 1.3F, z + 0.12F);
+            // des montants plus hauts qu'un joueur : leurs chapeaux lumineux ne tombent pas a hauteur d'yeux
+            box(p, pilier, overlay, light, x - 0.12F, height, z - 0.12F, x + 0.12F, height + POST, z + 0.12F);
         }
         VertexConsumer caps = buffers.getBuffer(RenderType.entityTranslucent(LUMIERE));
         for (int k = 0; k < 4; k++) {
@@ -223,12 +240,15 @@ public class HavenGateRenderer implements BlockEntityRenderer<HavenGateBlockEnti
             float x = 1.28F * Mth.cos(a);
             float z = 1.28F * Mth.sin(a);
             boxTinted(p, caps, overlay, FULL, argb(0.9F, 1.0F, 1.0F, 1.0F),
-                    x - 0.14F, height + 1.3F, z - 0.14F, x + 0.14F, height + 1.52F, z + 0.14F);
+                    x - 0.14F, height + POST, z - 0.14F, x + 0.14F, height + POST + 0.22F, z + 0.14F);
         }
         // la lueur du plateau, puis la colonne : deux cylindres a circuits qui montent et
         // s'effacent vers le haut, le coeur d'abord (il ecrit la profondeur, l'enveloppe se pose dessus)
         disc(p, buffers.getBuffer(RenderType.entityTranslucent(LUMIERE)), overlay, 0, height + 0.01F, 0, 1.2F,
                 time * 0.5F, 1.0F, argb(0.85F, 1.0F, 1.0F, 1.0F), true);
+        if (inBeam) {
+            return;
+        }
         VertexConsumer beam = buffers.getBuffer(RenderType.entityTranslucent(CIRCUIT));
         column(p, beam, overlay, 0.45F, height, 4.6F, -time * 0.9F, 0.95F);
         column(p, beam, overlay, 0.9F, height, 5.2F, time * 0.4F, 0.6F);

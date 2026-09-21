@@ -7255,3 +7255,30 @@ shaders actifs) : l'anneau, le portail du warp gate, l'arche. Le joueur :
   de Samos du §71) et le rebord du sommet (155). Les deux fleches hautes du nord, pres du
   bras central, sont des aiguilles decoratives, sans palier. Un portail-ascenseur aurait
   donc trois arrets utiles par tour : le pied, la terrasse, le sommet.
+
+## 82. Les transports de Haven : l'arche et le portail *(21 sept., nuit)*
+
+> « Fais l'arche et le portail pour que je teste le tout. »
+
+`HavenGates` pose et fait marcher les deux modeles de porte gardes au §81.2 :
+
+- **L'ARCHE**, une a chaque bout du fer a cheval : a la pointe nord du bras ouest (cellule
+  60, 62, 100, pres des appartements) et a celle du bras est (1180, 62, 100), tournees vers
+  le sud. On la traverse A PIED (en vehicule : « Descends de ton vehicule ») et l'on
+  ressort deux blocs devant l'autre, dos a elle. Recharge de VINGT SECONDES par joueur
+  (`ARCH_COOLDOWN`), dite dans la barre d'action. En s'approchant, la barre d'action dit
+  ou elle mene.
+- **LE PORTAIL**, un plateau a chaque arret des deux tours du large : quai du pied
+  (cellule y 66), terrasse en croix (123), anneau du sommet (156), tous au nord de la
+  tour, cote ville. Debout dessus, on REGARDE EN HAUT une seconde pour monter a l'arret
+  suivant, EN BAS pour descendre (la barre d'action le rappelle) ; a l'arrivee il faut
+  detourner le regard avant de repartir. La dalle du plateau porte (3,5/16) ; montants de
+  2,3 blocs, au-dessus de la tete ; la colonne de lumiere ne se dessine pas quand la
+  camera est dedans (elle teintait toute la vue). Dans Haven, seuls les monstres
+  blessent : tomber de la terrasse ne coute rien.
+- Poses et retires comme la borne et le ratelier (ville finie, phase ACCUEIL), ignores par
+  le releve de l'atelier. L'operateur en chantier ne les declenche pas.
+- Places choisies sur les cartes du volume (`ctyport.jakv`) : sol plein sous 3 x 3 (5 x 5
+  pour les arches), quatre ou cinq cellules d'air. Verifiees en jeu (photos du 21 sept. :
+  les deux arches, les plateaux du pied, de la terrasse et du sommet ; le vrai client
+  passe l'arche et monte au portail). Banc `parcours` : 43 OK.

@@ -770,5 +770,22 @@
   "game.emeraldweapons.haven.retour.porte.barre": "Haven door: %s blocks to the %s, closes in %s",
   "game.emeraldweapons.haven.retour.attente": "Here you are in Haven. The city reopens once the whole team is back (%s/%s).",
   "block.emeraldweapons.haven_gate": "Precursor door",
-  "command.emeraldweapons.haven.parcours.retour": "%s is back from their first Challenge: no weapon, streets to take back. /arcencium haven ouvrir reopens the city."
+  "command.emeraldweapons.haven.parcours.retour": "%s is back from their first Challenge: no weapon, streets to take back. /arcencium haven ouvrir reopens the city.",
+  "game.emeraldweapons.haven.arche.vehicule": "Get out of your vehicle to go through the arch",
+  "game.emeraldweapons.haven.arche.recharge": "The arch is recharging: %s s",
+  "game.emeraldweapons.haven.arche.arrivee": "Arch: %s",
+  "game.emeraldweapons.haven.arche.vers": "Arch to %s",
+  "game.emeraldweapons.haven.arche.bout.ouest": "the west end of the city",
+  "game.emeraldweapons.haven.arche.bout.est": "the east end of the city",
+  "game.emeraldweapons.haven.portail.aide": "%s: look up to go up, down to go down",
+  "game.emeraldweapons.haven.portail.aide.haut": "%s: look up to go up",
+  "game.emeraldweapons.haven.portail.aide.bas": "%s: look down to go down",
+  "game.emeraldweapons.haven.portail.monte": "Going up…",
+  "game.emeraldweapons.haven.portail.descend": "Going down…",
+  "game.emeraldweapons.haven.portail.arret": "%s, %s",
+  "game.emeraldweapons.haven.portail.tour_ouest": "West tower",
+  "game.emeraldweapons.haven.portail.tour_est": "East tower",
+  "game.emeraldweapons.haven.portail.niveau.0": "the foot",
+  "game.emeraldweapons.haven.portail.niveau.1": "the terrace",
+  "game.emeraldweapons.haven.portail.niveau.2": "the top"
 }

@@ -44,8 +44,12 @@ public final class PhotoClient {
         if (wanted == null || mc.level == null) {
             return;
         }
-        // le terrain autour est-il entierement dessine ? (Sodium repond ici aussi)
-        PhotoAutomaton.clientTerrain(mc.levelRenderer.hasRenderedAllSections());
+        // le terrain autour est-il entierement dessine ? (Sodium repond ici aussi) -- et le troncon
+        // du joueur est-il la ? Juste apres un long teleport, rien n'est encore arrive : « tout est
+        // dessine » repondait oui sous « Chargement du terrain » (photo de l'arche du 21 sept.)
+        boolean here = mc.player != null && mc.level.getChunkSource().hasChunk(mc.player.getBlockX() >> 4,
+                mc.player.getBlockZ() >> 4);
+        PhotoAutomaton.clientTerrain(here && mc.screen == null && mc.levelRenderer.hasRenderedAllSections());
         if (TAKEN.add(wanted)) {
             return;                       // premiere tique avec cette prise : on laisse le serveur la preparer
         }

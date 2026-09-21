@@ -68,7 +68,10 @@ import java.util.Objects;
  * son titre) ; « ratelier » le pose devant le comptoir, face au ratelier ; « reprise »
  * lui fait prendre l'arme, meme place (la barre de la reprise) ; « victoire » le pose
  * dans l'overworld, attend que le terrain soit dessine, puis gagne un Defi a six blocs
- * devant lui : la porte de victoire se pose EN DIRECT, comme en partie. « camera » le pose, en
+ * devant lui : la porte de victoire se pose EN DIRECT, comme en partie. Les transports :
+ * « arche » le pose dans l'arche ouest (il ressort a l'autre bout de la ville), « portail »
+ * sur le plateau du pied de la tour ouest, le regard en haut (il monte a la terrasse) --
+ * le vrai client, le vrai declenchement. « camera » le pose, en
  * spectateur et en vision nocturne, a la place et dans l'axe de
  * EMERALDWEAPONS_PHOTOS_CAMERA (« x,y,z,lacet,tangage », en cellules du volume ;
  * plusieurs places separees par « | », prises « camera0 », « camera1 »...), pour
@@ -125,9 +128,13 @@ public final class PhotoAutomaton {
             return "vitrine".equals(this.biome.getNamespace());
         }
 
-        /** Tiques d'attente d'une prise de Haven : le titre visible, ou deja parti. */
+        /** Tiques d'attente d'une prise de Haven : le titre visible, ou deja parti ; le bout de la ville, charge. */
         int havenSettle() {
-            return "accueil".equals(this.biome.getPath()) || "envahie".equals(this.biome.getPath()) ? 30 : 140;
+            String path = this.biome.getPath();
+            if ("accueil".equals(path) || "envahie".equals(path)) {
+                return 30;
+            }
+            return "arche".equals(path) ? 200 : 140;
         }
 
         /** Une prise de Haven qui montre l'interface (titre, barre) ; la camera libre la masque. */
@@ -400,7 +407,9 @@ public final class PhotoAutomaton {
         }
         ++waited;
         if (waited >= pendingSettle && taken) {
-            LOGGER.info("photos : prise {} faite apres {} tiques", shot.name(), waited);
+            LOGGER.info("photos : prise {} faite apres {} tiques, en {} {} {}, lacet {}, tangage {}", shot.name(), waited,
+                    Math.round(player.getX() * 10) / 10.0, Math.round(player.getY() * 10) / 10.0,
+                    Math.round(player.getZ() * 10) / 10.0, Math.round(player.getYRot()), Math.round(player.getXRot()));
             pending = null;
             pendingGui = false;
             pendingSettle = SETTLE;
@@ -441,6 +450,9 @@ public final class PhotoAutomaton {
             }
             return com.emerald.haven.journey.HavenProgress.get(player.getUUID()).invaded
                     && !com.emerald.haven.journey.HavenJourney.titlePending(player.getUUID());
+        }
+        if ("arche".equals(path) || "portail".equals(path)) {
+            return gateReady(server, player, shot, path);
         }
         if ("ratelier".equals(path) || "reprise".equals(path)) {
             BlockPos rack = com.emerald.haven.journey.HavenRack.position(server);
@@ -572,6 +584,32 @@ public final class PhotoAutomaton {
             return false;
         }
         return victoryDone && victoryTicks >= 140;
+    }
+
+    /**
+     * Les transports, par le vrai client : une fois pose dans l'arche ouest (ou sur le plateau
+     * du pied de la tour ouest, le regard en haut), c'est la tique de HavenGates qui le deplace ;
+     * la prise est prete quand il est arrive (devant l'arche est ; sur la terrasse).
+     */
+    private static boolean gateReady(MinecraftServer server, ServerPlayer player, Shot shot, String path) {
+        ServerLevel level = (ServerLevel) player.level();
+        boolean arch = "arche".equals(path);
+        com.emerald.haven.HavenGates.Station from = com.emerald.haven.HavenGates.station(arch ? "arche_ouest" : "tour_ouest_pied");
+        com.emerald.haven.HavenGates.Station to = com.emerald.haven.HavenGates.station(arch ? "arche_est" : "tour_ouest_terrasse");
+        if (from == null || to == null) {
+            return false;
+        }
+        if (PREPARED.add(shot.name())) {
+            BlockPos start = com.emerald.haven.HavenGates.position(server, from);
+            player.setGameMode(GameType.ADVENTURE);
+            // l'arche : dedans, face au nord ; le portail : sur le plateau, le regard en haut, face a la ville
+            player.teleportTo(level, start.getX() + 0.5, start.getY() + (arch ? 0.0 : 0.25), start.getZ() + 0.5,
+                    180.0F, arch ? 0.0F : -60.0F);
+            LOGGER.info("photos : {} pose dans {} ({})", player.getGameProfile().getName(), from.id(), start.toShortString());
+            return false;
+        }
+        BlockPos goal = com.emerald.haven.HavenGates.position(server, to);
+        return player.blockPosition().distManhattan(goal) <= (arch ? 4 : 2);
     }
 
     /** Devant le comptoir, cote clients, face au ratelier : le Morph Gun pose, a hauteur d'yeux. */

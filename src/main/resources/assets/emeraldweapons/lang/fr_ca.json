@@ -770,5 +770,22 @@
   "game.emeraldweapons.haven.retour.porte.barre": "Porte de Haven : %s blocs vers %s, fermeture dans %s",
   "game.emeraldweapons.haven.retour.attente": "Te voilà à Haven. La ville rouvre quand toute l'équipe est rentrée (%s/%s).",
   "block.emeraldweapons.haven_gate": "Porte précurseur",
-  "command.emeraldweapons.haven.parcours.retour": "%s revient de son premier Défi : sans arme, rues à reprendre. /arcencium haven ouvrir rouvre la ville."
+  "command.emeraldweapons.haven.parcours.retour": "%s revient de son premier Défi : sans arme, rues à reprendre. /arcencium haven ouvrir rouvre la ville.",
+  "game.emeraldweapons.haven.arche.vehicule": "Descends de ton véhicule pour passer l'arche",
+  "game.emeraldweapons.haven.arche.recharge": "L'arche se recharge : %s s",
+  "game.emeraldweapons.haven.arche.arrivee": "Arche : %s",
+  "game.emeraldweapons.haven.arche.vers": "Arche vers %s",
+  "game.emeraldweapons.haven.arche.bout.ouest": "le bout ouest de la ville",
+  "game.emeraldweapons.haven.arche.bout.est": "le bout est de la ville",
+  "game.emeraldweapons.haven.portail.aide": "%s : regarde en haut pour monter, en bas pour descendre",
+  "game.emeraldweapons.haven.portail.aide.haut": "%s : regarde en haut pour monter",
+  "game.emeraldweapons.haven.portail.aide.bas": "%s : regarde en bas pour descendre",
+  "game.emeraldweapons.haven.portail.monte": "Montée…",
+  "game.emeraldweapons.haven.portail.descend": "Descente…",
+  "game.emeraldweapons.haven.portail.arret": "%s, %s",
+  "game.emeraldweapons.haven.portail.tour_ouest": "Tour ouest",
+  "game.emeraldweapons.haven.portail.tour_est": "Tour est",
+  "game.emeraldweapons.haven.portail.niveau.0": "le pied",
+  "game.emeraldweapons.haven.portail.niveau.1": "la terrasse",
+  "game.emeraldweapons.haven.portail.niveau.2": "le sommet"
 }

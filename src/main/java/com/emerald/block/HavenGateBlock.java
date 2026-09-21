@@ -35,9 +35,11 @@ import java.util.Locale;
  * TROIS MODELES (STYLE), montres au joueur sur photos le 21 sept. : l'ANNEAU (une porte
  * ronde debout, un voile bleu dedans) -- CHOISI pour la victoire, agrandi de 20 % --,
  * le PORTAIL (le plateau du warp gate et sa colonne de lumiere) et l'ARCHE (deux
- * piliers, un linteau a glyphes, un voile). Les deux autres sont GARDES a la demande
- * du joueur, pour se deplacer dans la ville plus tard : l'arche d'un bout a l'autre de
- * la ville (avec un delai contre les abus), le portail pour monter aux tours (cahier §81.2).
+ * piliers, un linteau a glyphes, un voile). Les deux autres servent a se deplacer dans
+ * la ville (HavenGates, cahier §82) : l'ARCHE d'un bout a l'autre de la ville, le PORTAIL
+ * du pied des tours a leur terrasse et a leur sommet.
+ *
+ * ON LES TRAVERSE, sauf le plateau du portail, ou l'on se tient : une dalle de 3,5/16.
  * Incassable, sans butin, sans objet ; posee et retiree par HavenReturn -- et si un
  * redemarrage l'oublie, elle s'efface d'elle-meme (HavenGateBlockEntity).
  */
@@ -58,9 +60,11 @@ public class HavenGateBlock extends Block implements EntityBlock {
 
     /** Pour le viseur seulement : une dalle au sol. */
     private static final VoxelShape FLOOR = Block.box(0, 0, 0, 16, 2, 16);
+    /** Le plateau du portail, ou l'on se tient : a la hauteur du dessin (0,22 bloc). */
+    private static final VoxelShape PAD = Block.box(0, 0, 0, 16, 3.5, 16);
 
     public HavenGateBlock(Properties properties) {
-        super(properties.noOcclusion().noCollission().lightLevel(state -> 12));
+        super(properties.noOcclusion().lightLevel(state -> 12));
         this.registerDefaultState(this.stateDefinition.any()
                 .setValue(FACING, Direction.SOUTH)
                 .setValue(STYLE, Style.ANNEAU));
@@ -78,7 +82,7 @@ public class HavenGateBlock extends Block implements EntityBlock {
 
     @Override
     protected VoxelShape getCollisionShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-        return Shapes.empty();
+        return state.getValue(STYLE) == Style.PORTAIL ? PAD : Shapes.empty();
     }
 
     @Override

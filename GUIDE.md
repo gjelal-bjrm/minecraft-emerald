@@ -51,6 +51,17 @@ touché. Votre mode de jeu habituel vous est rendu au village.
   (« Les rues sont à vous »). Tant que ce n'est pas fait, la ville vous attend
   envahie à chaque retour.
 
+### Se déplacer dans Haven
+
+- **Les arches** : une à chaque bout de la ville, à la pointe du bras des
+  appartements (ouest) et à celle du bras est. Traversez-en une **à pied** : vous
+  ressortez devant l'autre, à l'autre bout de la ville. Chaque joueur doit ensuite
+  attendre **20 secondes** avant de reprendre une arche.
+- **Les portails des deux tours** : un plateau lumineux au pied de chaque tour (côté
+  ville), un sur sa terrasse et un sur son sommet. Debout sur le plateau, **regardez
+  vers le haut une seconde** pour monter à l'arrêt suivant, **vers le bas** pour
+  descendre. Une chute ne blesse pas dans Haven.
+
 ### Les appartements
 
 Vous apparaissez dans un des **trois appartements**, les garages du bras ouest
@@ -684,7 +695,7 @@ Sur un serveur d'essai (`run-server`), chacun écrit son rapport puis arrête le
 - `EMERALDWEAPONS_AUTOTEST=vehicules ./gradlew runServer` : voitures et motos, rapport `run-server/vehicules_autotest.txt` ;
 - `EMERALDWEAPONS_AUTOTEST=invasion ./gradlew runServer` : invasion, décor destructible, bouton du QG et MSPT, rapport `run-server/invasion_autotest.txt` ;
 - `EMERALDWEAPONS_AUTOTEST=armes ./gradlew runServer` : Morph Gun (poses, confinement, tir des douze armes, munitions, décor, MSPT avec quatre tireurs), rapport `run-server/armes_autotest.txt` ;
-- `EMERALDWEAPONS_AUTOTEST=parcours ./gradlew runServer` : le parcours (fiche sur disque, arme qui suit les formes du joueur, ville paisible, bouton verrouillé, titre et objectifs du guide ; puis le lot 2 : râtelier du QG, deuxième arrivée envahie, reprise des rues, retour après la défaite, porte de la victoire), rapport `run-server/parcours_autotest.txt`.
+- `EMERALDWEAPONS_AUTOTEST=parcours ./gradlew runServer` : le parcours (fiche sur disque, arme qui suit les formes du joueur, ville paisible, bouton verrouillé, titre et objectifs du guide ; puis le lot 2 : râtelier du QG, deuxième arrivée envahie, reprise des rues, retour après la défaite, porte de la victoire ; puis les transports : les huit stations, l'arche et sa recharge, le portail des tours), rapport `run-server/parcours_autotest.txt`.
 
 Pour regarder un terrain (arbres, biomes) sans jouer : le run `photos` entre dans le monde
 jetable `run/saves/photos` ; avec `EMERALDWEAPONS_PHOTOS="nom@biome;nom@biome@hauteur"` (et
@@ -695,7 +706,9 @@ Les prises `nom@haven:accueil` et `nom@haven:qg` regardent le parcours de Haven,
 et lancer avec `EMERALDWEAPONS_PHOTOS_MONDE=haven_photos`. Pour le retour du Défi : `haven:envahie`
 (le joueur revient de son premier Défi, la ville rouvre envahie : titre et barre), `haven:ratelier`
 (devant le comptoir, face au râtelier), `haven:reprise` (il prend l'arme : barre de la reprise) et
-`haven:victoire` (une vraie victoire dans l'overworld pose la porte, la caméra se met en face).
+`haven:victoire` (une vraie victoire dans l'overworld pose la porte, la caméra se met en face),
+`haven:arche` et `haven:portail` (le joueur est posé dans l'arche ouest, ou sur le plateau du pied
+de la tour ouest le regard en haut : il ressort à l'autre bout, ou monte à la terrasse).
 La vitrine (`nom@vitrine:face`, `biais`, `proche0`...) montre les blocs de
 `EMERALDWEAPONS_PHOTOS_VITRINE` sur une estrade dans le ciel ; pour de grands objets,
 `EMERALDWEAPONS_PHOTOS_VITRINE_PAS` (écart), `_RECUL` et `_HAUTEUR` ; `nom@vitrine:face@18000` la
