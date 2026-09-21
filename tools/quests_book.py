@@ -8,6 +8,11 @@ l'amelioration des armes ». Cet outil ecrit notre chapitre « Mode Arcencium »
 taille le livre du profil : tout ce qui n'est pas Artefacts, Reliques ou
 Enchantement d'Apotheose disparait, avec une sauvegarde zip dans dist/.
 
+Un second chapitre, « Haven », suit le parcours du joueur dans la ville (cahier
+§79) : trois etapes, cochees par les succes caches carnet/haven_* que le mod
+accorde (haven/journey/HavenJourney). Sa premiere page est le livre que le
+joueur voulait : « Vous aviez rendez-vous au quartier general ».
+
 Le texte est ecrit EN LIGNE dans le chapitre et dans les tables de langue
 (fr_fr, en_us) : FTB Quests 2101 lit d'abord les tables, mais le joueur joue
 en fr_fr et l'on ne veut pas dependre de ce que la table prefere.
@@ -35,8 +40,8 @@ DEFAULT_INSTANCE = Path(os.environ.get("USERPROFILE", "")) / "curseforge" / "min
 SOURCE = ROOT / "modpack" / "config" / "ftbquests" / "quests"
 DEV = ROOT / "run" / "config" / "ftbquests" / "quests"
 
-# Les chapitres d'ATM10 que le livre garde (noms de fichier, sans .snbt).
-KEEP = {"arcencium", "artifacts", "relics", "apothic_enchanting"}
+# Les chapitres que le livre garde (noms de fichier, sans .snbt) : les notres et trois d'ATM10.
+KEEP = {"arcencium", "haven", "artifacts", "relics", "apothic_enchanting"}
 BOOK_ICON = "emeraldweapons:arcencium_ingot"
 
 
@@ -52,6 +57,10 @@ def ident(name):
 
 
 CHAPTER_ID = ident("chapter")
+HAVEN_CHAPTER_ID = ident("chapter/haven")
+HAVEN_TITLE = "Haven"
+HAVEN_SUBTITLE = "Le parcours dans la ville de Jak 3. Chaque étape se coche toute seule."
+HAVEN_ICON = "emeraldweapons:morph_gun"
 CHAPTER_TITLE = "Mode Arcencium"
 CHAPTER_SUBTITLE = "Le carnet du mode : dix étapes, dans l'ordre d'une partie. Chacune se coche toute seule."
 
@@ -132,6 +141,30 @@ QUESTS = [
     ], [("emeraldweapons:forge_stone", 12)]),
 ]
 
+# Le parcours de Haven (cahier §79), lot 1 : l'arrivee, le QG, le depart. Pas de
+# recompense : la ville guide, elle ne paie pas (les quetes des heros le feront).
+HAVEN_QUESTS = [
+    ("haven_arrivee", "Vous aviez rendez-vous au quartier général", "minecraft:red_bed", [
+        "Vous vous réveillez dans votre appartement, au port de &bHaven&r. La ville est calme : ses habitants et ses voitures volantes vont et viennent. Vous n'avez pas d'arme.",
+        "",
+        "Le quartier général, c'est le &6bar du Hip Hog&r. La barre en haut de l'écran donne la distance et la direction ; une voiture vous attend devant l'appartement.",
+        "",
+        "&7Se coche à la première arrivée.",
+    ], []),
+    ("haven_qg", "Le quartier général", "minecraft:bell", [
+        "Le bar du Hip Hog. Au bout du comptoir, la &cborne&r lance la partie : la vitre rouge pour le Défi, la bleue pour le Monde ouvert.",
+        "",
+        "Le bouton, près de la borne, fait passer toute la ville de paisible à envahie. Il n'obéit qu'à ceux qui ont débloqué les douze armes du Morph Gun.",
+        "",
+        "&7Se coche au premier pas dans le bar.",
+    ], []),
+    ("haven_depart", "Le départ", "emeraldweapons:emerald_sword", [
+        "Votez à la borne : quand tout le monde a voté, la partie part au village. Les armes de Jak restent dans Haven.",
+        "",
+        "&7Se coche au premier départ.",
+    ], []),
+]
+
 # Une quete a part, hors chaine : l'atelier d'Apotheose, que le joueur voulait
 # garder du livre d'ATM10 -- le chapitre des gemmes n'y est plus, on le dit ici.
 GEMS = ("gemmes", "Les gemmes d'Apothéose", "apotheosis:gem", [
@@ -149,23 +182,28 @@ def q(s):
     return '"' + s.replace("\\", "\\\\").replace('"', '\\"') + '"'
 
 
-def chapter_snbt():
+def chapter_snbt(filename=None, chapter_id=None, title_=None, subtitle=None, icon_=None,
+                 quests=None, order=0, gems=True):
+    """Un chapitre du livre : par defaut le Mode Arcencium (et sa quete des gemmes)."""
+    filename = filename or "arcencium"
+    chapter_id = chapter_id or CHAPTER_ID
+    quests = QUESTS if quests is None else quests
     out = ["{",
            "\tdefault_hide_dependency_lines: false",
            '\tdefault_quest_shape: ""',
-           '\tfilename: "arcencium"',
+           '\tfilename: %s' % q(filename),
            '\tgroup: ""',
            "\ticon: {",
-           "\t\tid: %s" % q(BOOK_ICON),
+           "\t\tid: %s" % q(icon_ or BOOK_ICON),
            "\t}",
-           "\tid: %s" % q(CHAPTER_ID),
+           "\tid: %s" % q(chapter_id),
            "\timages: [ ]",
-           "\torder_index: 0",
+           "\torder_index: %d" % order,
            '\tprogression_mode: "flexible"',
            "\tquest_links: [ ]",
            "\tquests: ["]
     prev = None
-    for i, (key, title, icon, desc, rewards) in enumerate(QUESTS):
+    for i, (key, title, icon, desc, rewards) in enumerate(quests):
         qid = ident(key)
         out.append("\t\t{")
         if prev:
@@ -202,6 +240,12 @@ def chapter_snbt():
         out.append("\t\t\ty: 0.0d")
         out.append("\t\t}")
         prev = qid
+    if not gems:
+        out += ["\t]",
+                "\tsubtitle: [%s]" % q(subtitle),
+                "\ttitle: %s" % q(title_),
+                "}", ""]
+        return "\n".join(out)
     key, title, icon, desc = GEMS
     out += ["\t\t{",
             "\t\t\tdescription: ["] + ["\t\t\t\t%s" % q(l) for l in desc] + [
@@ -225,10 +269,17 @@ def chapter_snbt():
     return "\n".join(out)
 
 
+def haven_snbt():
+    return chapter_snbt("haven", HAVEN_CHAPTER_ID, HAVEN_TITLE, HAVEN_SUBTITLE, HAVEN_ICON,
+                        HAVEN_QUESTS, order=-1, gems=False)
+
+
 def lang_entries():
     lines = ["\tchapter.%s.title: %s" % (CHAPTER_ID, q(CHAPTER_TITLE)),
-             "\tchapter.%s.chapter_subtitle: [%s]" % (CHAPTER_ID, q(CHAPTER_SUBTITLE))]
-    for key, title, icon, desc in [(k, t, i, d) for k, t, i, d, r in QUESTS] + [GEMS]:
+             "\tchapter.%s.chapter_subtitle: [%s]" % (CHAPTER_ID, q(CHAPTER_SUBTITLE)),
+             "\tchapter.%s.title: %s" % (HAVEN_CHAPTER_ID, q(HAVEN_TITLE)),
+             "\tchapter.%s.chapter_subtitle: [%s]" % (HAVEN_CHAPTER_ID, q(HAVEN_SUBTITLE))]
+    for key, title, icon, desc in [(k, t, i, d) for k, t, i, d, r in QUESTS + HAVEN_QUESTS] + [GEMS]:
         qid = ident(key)
         lines.append("\tquest.%s.title: %s" % (qid, q(title)))
         lines.append("\tquest.%s.quest_desc: [%s]" % (qid, ", ".join(q(l) for l in desc)))
@@ -237,7 +288,7 @@ def lang_entries():
 
 def merge_lang(path):
     """Ajoute nos clefs a une table de langue FTB, en remplacant les notres."""
-    ours = {CHAPTER_ID} | {ident(k[0]) for k in QUESTS} | {ident(GEMS[0])}
+    ours = {CHAPTER_ID, HAVEN_CHAPTER_ID} | {ident(k[0]) for k in QUESTS + HAVEN_QUESTS} | {ident(GEMS[0])}
     body = []
     if path.exists():
         # FTB reecrit les tables a sa facon, les listes sur plusieurs lignes :
@@ -264,13 +315,14 @@ def merge_lang(path):
 def generate():
     (SOURCE / "chapters").mkdir(parents=True, exist_ok=True)
     (SOURCE / "chapters" / "arcencium.snbt").write_text(chapter_snbt(), encoding="utf-8", newline="\n")
+    (SOURCE / "chapters" / "haven.snbt").write_text(haven_snbt(), encoding="utf-8", newline="\n")
     (SOURCE / "lang").mkdir(exist_ok=True)
     for loc in ("fr_fr", "en_us"):
         p = SOURCE / "lang" / (loc + ".snbt")
         if p.exists():
             p.unlink()
         merge_lang(p)
-    print("genere : %s" % (SOURCE / "chapters" / "arcencium.snbt"))
+    print("genere : %s et haven.snbt" % (SOURCE / "chapters" / "arcencium.snbt"))
 
 
 def install(quests: Path, prune: bool):
@@ -278,6 +330,7 @@ def install(quests: Path, prune: bool):
     (quests / "chapters").mkdir(exist_ok=True)
     (quests / "reward_tables").mkdir(exist_ok=True)
     shutil.copy(SOURCE / "chapters" / "arcencium.snbt", quests / "chapters" / "arcencium.snbt")
+    shutil.copy(SOURCE / "chapters" / "haven.snbt", quests / "chapters" / "haven.snbt")
     for loc in ("fr_fr", "en_us"):
         merge_lang(quests / "lang" / (loc + ".snbt"))
     data = quests / "data.snbt"

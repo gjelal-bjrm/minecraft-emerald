@@ -77,7 +77,8 @@ neoForge {
         photos {
             client()
             programArgument '--quickPlaySingleplayer'
-            programArgument 'photos'
+            // EMERALDWEAPONS_PHOTOS_MONDE : une autre sauvegarde jetable (les prises de Haven)
+            programArgument(System.getenv('EMERALDWEAPONS_PHOTOS_MONDE') ?: 'photos')
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
         }
 

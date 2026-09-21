@@ -5,6 +5,8 @@ import com.emerald.haven.HavenArrival;
 import com.emerald.haven.HavenRules;
 import com.emerald.haven.HavenSite;
 import com.emerald.haven.HavenState;
+import com.emerald.haven.journey.HavenJourney;
+import com.emerald.haven.journey.HavenProgress;
 import com.emerald.haven.traffic.HavenTraffic;
 import com.emerald.main.EmeraldWeaponsMod;
 import net.minecraft.ChatFormatting;
@@ -72,8 +74,10 @@ import java.util.UUID;
  * - {@link #isHavenVillager(Entity)} : un habitant de la ville paisible (invulnerable, sans commerce) ;
  * - {@link #loadedMonsters} et {@link #loadedVillagers} : ce qui est charge en ce moment.
  *
- * LE MODE est sauvegarde (HavenInvasionState). On arrive en INVASION : chaque
- * reouverture du lobby le remet. Le bouton du QG le bascule pour toute la ville.
+ * LE MODE est sauvegarde (HavenInvasionState). On arrive en PAISIBLE (parcours de
+ * Haven, cahier §79) : chaque reouverture du lobby le remet. Le bouton du QG le
+ * bascule pour toute la ville, mais n'obeit qu'a qui a la MAITRISE (les douze armes
+ * et les quetes des heros, HavenProgress) ; l'operateur en chantier passe outre.
  *
  * LA VILLE OUVERTE ({@link #cityOpen}) : lobby ouvert, ville posee, aucune pose en
  * cours. Hors de la, rien n'apparait, et tout ce qui etait la est retire.
@@ -212,10 +216,10 @@ public final class HavenInvasion {
 
     // ================================================================ lecture
 
-    /** Le mode de la ville ; INVASION si la dimension n'est pas chargee. */
+    /** Le mode de la ville ; PAISIBLE si la dimension n'est pas chargee. */
     public static Mode mode(MinecraftServer server) {
         HavenInvasionState state = HavenInvasionState.get(server);
-        return state == null ? Mode.INVASION : state.mode();
+        return state == null ? Mode.PAISIBLE : state.mode();
     }
 
     /**
@@ -418,7 +422,11 @@ public final class HavenInvasion {
         return true;
     }
 
-    /** Le clic sur le bouton du QG. Tout est revalide : Haven, ville ouverte, delai. */
+    /**
+     * Le clic sur le bouton du QG. Tout est revalide : Haven, ville ouverte, droit du
+     * joueur (la maitrise, sauf en chantier), delai. Un refus dit ce qui manque, et ne
+     * consomme pas le delai.
+     */
     public static void pressButton(ServerPlayer player, BlockPos pos) {
         MinecraftServer server = player.server;
         if (!(player.level() instanceof ServerLevel level) || !Haven.is(level)) {
@@ -427,6 +435,11 @@ public final class HavenInvasion {
         if (!cityOpen(server)) {
             player.displayClientMessage(Component.translatable("game.emeraldweapons.haven.invasion.closed")
                     .withStyle(ChatFormatting.RED), true);
+            return;
+        }
+        if (!HavenRules.chantier(player) && !HavenProgress.mastery(player.getUUID())) {
+            player.sendSystemMessage(HavenJourney.lockedButton(player.getUUID()));
+            level.playSound(null, pos, SoundEvents.VILLAGER_NO, SoundSource.BLOCKS, 0.8F, 1.0F);
             return;
         }
         long now = level.getGameTime();
@@ -494,7 +507,7 @@ public final class HavenInvasion {
      *   entier (un redemarrage ne laisse pas de trou) ; la population sauvegardee
      *   reste si la ville est ouverte, sinon tout ce qui est charge est retire ;
      * - une pose commence : les trous encore vides sont rebouches, tout est retire ;
-     * - le lobby se rouvre (phase PARTI ou ABSENTE vers ACCUEIL) : retour en INVASION ;
+     * - le lobby se rouvre (phase PARTI ou ABSENTE vers ACCUEIL) : retour en PAISIBLE ;
      * - la ville se ferme (depart vers la partie) : tout est retire, tout est reconstruit.
      */
     public static void update(MinecraftServer server) {
@@ -526,7 +539,7 @@ public final class HavenInvasion {
         boolean lobbyPhase = phase == HavenState.Phase.ACCUEIL || phase == HavenState.Phase.CHANTIER;
         if (lastPhase != null && lastPhase != HavenState.Phase.ACCUEIL && lastPhase != HavenState.Phase.CHANTIER
                 && lobbyPhase) {
-            setMode(server, Mode.INVASION, null);
+            setMode(server, Mode.PAISIBLE, null);
         }
         lastPhase = phase;
 

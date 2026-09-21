@@ -14,10 +14,26 @@ sa propre dimension. C'est le cas dans un monde neuf, ou après
 commence au village, comme avant.
 
 Dans la ville : mode aventure (à la main, rien ne se casse ni ne se pose), pas
-de faim, pas de combat entre joueurs, et l'on ne sort pas de la ville. La ville
-est **envahie de monstres** qui peuvent vous blesser, et chacun y reçoit le
-**Morph Gun** de Jak 3 pour s'en défendre (voir plus bas). Votre inventaire n'est
-pas touché. Votre mode de jeu habituel vous est rendu au village.
+de faim, pas de combat entre joueurs, et l'on ne sort pas de la ville. À
+l'arrivée, la ville est **paisible** : ses habitants et ses voitures volantes vont
+et viennent. Vous n'y avez **pas d'arme** au début : le **Morph Gun** de Jak 3 se
+gagne dans la ville (voir « Le parcours dans Haven »). Votre inventaire n'est pas
+touché. Votre mode de jeu habituel vous est rendu au village.
+
+### Le parcours dans Haven
+
+- **La première fois**, un titre vous accueille : « Bienvenue à Haven — Rendez-vous
+  au quartier général ». Puis l'**objectif reste affiché en haut de l'écran** :
+  le QG, avec la distance et la direction (la barre se remplit en approchant). Au
+  premier pas dans le bar, il devient « la borne du comptoir : vitre rouge pour le
+  Défi », puis « départ quand tous ont voté » une fois votre vote fait.
+- Le **Carnet** (le livre de FTB Quests) a un chapitre « Haven » qui coche ces
+  étapes tout seul.
+- **Vos armes vous suivent de partie en partie** : ce que vous avez débloqué du
+  Morph Gun est gardé par le monde, par joueur. Un nouveau venu n'en a aucune.
+  Le Scatter Gun se gagnera au coffre du QG, les autres par les quêtes (à venir).
+- **Le bouton du QG n'obéit qu'à la maîtrise** : avoir débloqué les douze armes
+  (puis, plus tard, fini les quêtes des héros). Sinon, il dit ce qui vous manque.
 
 ### Les appartements
 
@@ -152,7 +168,7 @@ zone de survol exactement comme une voiture (mêmes touches, Espace compris), à
 
 ### L'invasion
 
-- On arrive en **invasion** : zombies, villageois zombies et squelettes casqués
+- **En invasion** : zombies, villageois zombies et squelettes casqués
   qui rôdent dans **toutes** les rues, phantoms dans le ciel. La ville entière
   est peuplée, pas seulement autour de vous : où que vous alliez en voiture, les
   rues sont habitées, et les monstres restent là où vous les avez laissés. Ils
@@ -164,20 +180,22 @@ zone de survol exactement comme une voiture (mêmes touches, Espace compris), à
   appartement avec tout son inventaire, son expérience, le Morph Gun et des
   réserves d'éco pleines. Ni chute, ni faim, ni coup entre joueurs.
 - **Le bouton du QG**, au bout du comptoir du Hip Hog, près de la borne : voyant
-  rouge en invasion, bleu en paisible. N'importe quel joueur passe toute la ville
-  en **mode paisible** : les monstres partent, des villageois des sept régions
+  rouge en invasion, bleu en paisible. Il n'obéit qu'à qui a la **maîtrise** (les
+  douze armes débloquées) ; l'opérateur en chantier passe outre. En **mode
+  paisible**, le mode d'arrivée : les monstres partent, des villageois des sept régions
   se promènent dans toutes les rues de la ville (invulnérables, sans commerce),
   et le **trafic de Jak 3** circule sur la voie haute : voitures et motos
   civiles, un habitant au volant, sur les voies du jeu, à leur vitesse (15 m/s,
   bien moins que vous). On ne monte pas dedans ; on s'y cogne, et elles freinent
   derrière vous si vous prenez leur voie. Un nouvel appui relance l'invasion
-  (deux secondes entre deux appuis). Chaque réouverture du lobby remet
-  l'invasion.
+  (deux secondes entre deux appuis). Chaque réouverture du lobby rend la ville
+  paisible.
 
 ### Le Morph Gun
 
-- **Donné à l'arrivée** dans la ville, dans la première case libre (ou la main
-  gauche si l'inventaire est plein). Il ne se jette pas et ne se range dans aucun
+- **Donné dans la ville à qui a débloqué au moins une arme**, dans la première case
+  libre (ou la main gauche si l'inventaire est plein), avec les formes débloquées
+  seulement. Il ne se jette pas et ne se range dans aucun
   coffre ni sac : pendant qu'un coffre est ouvert, il quitte la barre et revient à
   la fermeture. Il **disparaît au départ** vers le village, quel que soit le mode
   voté ; il n'existe nulle part ailleurs que dans la ville.
@@ -562,6 +580,10 @@ Toutes commencent par `/arcencium` et demandent le niveau opérateur.
 | `haven invasion etat` | Dit le mode de la ville, le nombre de monstres et d'habitants, et les blocs cassés qui attendent leur retour |
 | `haven invasion invasion` (ou `paisible`) | Passe toute la ville en invasion ou en paisible, comme le bouton du QG |
 | `haven invasion reconstruire` | Repose tout de suite le décor cassé par les armes |
+| `haven parcours [joueur]` | La fiche de parcours d'un joueur : ses armes débloquées, sa première arrivée, le QG, ses départs, sa maîtrise |
+| `haven parcours armes <joueur> toutes` (ou `aucune`, `scatter`) | Lui donne ou retire des armes du Morph Gun ; l'arme suit dans la seconde |
+| `haven parcours maitrise <joueur>` | Les douze armes, et le bouton du QG lui obéit : pour essayer l'invasion et les armes |
+| `haven parcours remise <joueur>` | Le remet à zéro : il arrivera comme un nouveau venu, sans arme, avec le titre d'accueil |
 
 Dans Haven : mode aventure, rien ne se casse ni ne se pose à la main, pas de faim ni de
 combat entre joueurs, seuls les monstres de l'invasion blessent, et l'on ne peut pas sortir
@@ -644,12 +666,16 @@ Sur un serveur d'essai (`run-server`), chacun écrit son rapport puis arrête le
 - `EMERALDWEAPONS_AUTOTEST=atelier ./gradlew runServer` : l'atelier et le relevé de la ville entière (ville nue relevée vide, retouches relevées puis rejouées par deux poses), rapport `run-server/atelier_autotest.txt` ;
 - `EMERALDWEAPONS_AUTOTEST=vehicules ./gradlew runServer` : voitures et motos, rapport `run-server/vehicules_autotest.txt` ;
 - `EMERALDWEAPONS_AUTOTEST=invasion ./gradlew runServer` : invasion, décor destructible, bouton du QG et MSPT, rapport `run-server/invasion_autotest.txt` ;
-- `EMERALDWEAPONS_AUTOTEST=armes ./gradlew runServer` : Morph Gun (poses, confinement, tir des douze armes, munitions, décor, MSPT avec quatre tireurs), rapport `run-server/armes_autotest.txt`.
+- `EMERALDWEAPONS_AUTOTEST=armes ./gradlew runServer` : Morph Gun (poses, confinement, tir des douze armes, munitions, décor, MSPT avec quatre tireurs), rapport `run-server/armes_autotest.txt` ;
+- `EMERALDWEAPONS_AUTOTEST=parcours ./gradlew runServer` : le parcours (fiche sur disque, arme qui suit les formes du joueur, ville paisible, bouton verrouillé, titre et objectifs du guide), rapport `run-server/parcours_autotest.txt`.
 
 Pour regarder un terrain (arbres, biomes) sans jouer : le run `photos` entre dans le monde
 jetable `run/saves/photos` ; avec `EMERALDWEAPONS_PHOTOS="nom@biome;nom@biome@hauteur"` (et
 `EMERALDWEAPONS_PHOTOS_ORIGINE="x,z"` pour chercher loin de ce qui est exploré), il se place
 dans chaque biome, à midi et par beau temps, prend les captures dans `run/screenshots/` et se ferme.
+Les prises `nom@haven:accueil` et `nom@haven:qg` regardent le parcours de Haven, interface visible
+(titre d'arrivée, barre d'objectif) : copier le monde du serveur d'essai dans `run/saves/haven_photos`
+et lancer avec `EMERALDWEAPONS_PHOTOS_MONDE=haven_photos`.
 Pour photographier des animaux ou des blocs, un datapack jetable dans `run/saves/photos/datapacks/`
 peut les poser devant la caméra : l'automate place le joueur 200 tiques après son arrivée, une
 fonction de tique qui compte les tiques du joueur agit juste après (vitrine d'Alex's Mobs, cahier §78.5).

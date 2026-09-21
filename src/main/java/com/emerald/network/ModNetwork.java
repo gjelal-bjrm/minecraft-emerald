@@ -115,6 +115,12 @@ public class ModNetwork {
                 }));
 
         // la detonation d'une Super Nova : eclair blanc et secousse chez les clients proches
+        // le titre de la premiere arrivee dans Haven, joue quand le client peut le montrer
+        registrar.playToClient(com.emerald.haven.journey.HavenTitlePayload.TYPE,
+                com.emerald.haven.journey.HavenTitlePayload.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(
+                        () -> com.emerald.client.HavenJourneyClient.accept(payload)));
+
         registrar.playToClient(com.emerald.jak.gun.GunNovaPayload.TYPE,
                 com.emerald.jak.gun.GunNovaPayload.STREAM_CODEC,
                 (payload, context) -> context.enqueueWork(

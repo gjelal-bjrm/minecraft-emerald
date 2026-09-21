@@ -6866,3 +6866,293 @@ l'application CurseForge) et en dev (`neo_version`, Gradle retelecharge NeoForge
 Sodium 0.6.13 a la place d'Embeddium dans le profil, essai sur une copie du monde,
 bancs en dev. **DECISION DU JOUEUR : « Pas maintenant »** -- on reste en 21.1.174 ; a
 reproposer si un mod voulu exige plus recent (Naturalist, extensions de Dynamic Trees).
+
+## 79. Proposition : le parcours du joueur dans Haven *(preparee le 21 sept. 2026, a valider)*
+
+Reponse au §76 (idees du joueur du 21 sept.). Elle reprend le plan des quetes du §71
+(valide le 19 sept.), les idees du §66 (Defi plus dur, vendeurs payes en quetes) et
+les animaux du §78.3. Rien n'est code : chaque point est une RECOMMANDATION a valider.
+
+### 79.1 Ce qui change par rapport a aujourd'hui
+
+| Aujourd'hui | Propose |
+|---|---|
+| on arrive en INVASION, avec les DOUZE armes (`GunForm.ARRIVAL_MASK`, pour les essayer) | premiere arrivee PAISIBLE et SANS arme ; le Scatter Gun au coffre du QG a la deuxieme arrivee ; les autres armes par les quetes |
+| n'importe quel joueur bascule toute la ville au bouton du QG | le bouton est VERROUILLE jusqu'a la maitrise (toutes les quetes et les douze armes) ; ce sont les QUETES qui basculent la ville |
+| l'arme appartient a la partie (`MorphGunData`, par lobby) | la progression appartient au JOUEUR et le suit de partie en partie (modele : `SpecializationStore`) |
+| fin du Defi : titre VICTOIRE ou DEFAITE, puis `/arcencium stop` | fin du Defi : retour a Haven, avec une porte a la victoire |
+
+### 79.2 Le parcours, pas a pas
+
+1. **PREMIERE ARRIVEE.** Reveil dans son appartement (garages du bras ouest), voiture
+   garee devant. La ville est PAISIBLE : habitants, trafic volant, chats et chiens.
+   Pas de Morph Gun. Un titre au centre, « Vous aviez rendez-vous au quartier
+   general », puis l'objectif reste affiche en haut, dans le panneau du mode
+   (`GameHudClient`) : « Rejoindre le QG, le bar du Hip Hog ». Le Carnet (le livre
+   FTB Quests) ouvre un chapitre « Haven » qui suit les etapes.
+2. **LE QG.** Torn, au comptoir, accueille par une carte cliquable dans le chat (comme
+   le choix du regime, §41) et explique le Defi. La borne, devant l'entree, lance la
+   partie : vitre rouge pour le Defi, vitre bleue pour le Monde ouvert tant qu'il n'est
+   pas masque (§66). Le bouton de la ville est la, verrouille : un clic dit ce qui
+   manque.
+3. **LE DEFI**, comme aujourd'hui (village, ancres, boss), en attendant sa refonte
+   (§66 : plus dur, un monde neuf a chaque tentative).
+4. **LE RETOUR A HAVEN, TOUJOURS AVEC TOUT** : inventaire, equipement, runes, rarete,
+   Specialisation, niveau Heros (§66).
+   - VICTOIRE : a la mort du boss, une PORTE PRECURSEUR s'ouvre au centre de l'arene
+     pour toute l'equipe et mene a l'appartement de chacun. Elle reste ouverte tant
+     qu'il reste quelqu'un dans le Defi ; au bout de 5 minutes, les retardataires y
+     sont ramenes.
+   - DEFAITE (la Maree a tout recouvert) : tout le monde revient a Haven apres le titre.
+   - MORT d'un joueur : voir 79.3, question 2.
+5. **DEUXIEME ARRIVEE : HAVEN A ETE ENVAHIE.** La ville est en invasion. Titre « Haven
+   a ete envahie », objectif « Au QG : une arme t'attend ». Le bar est une zone sure.
+   Le COFFRE DU QG, individuel et donne une seule fois, remet le Morph Gun avec sa
+   seule forme rouge de niveau 1, le Scatter Gun, et de l'eco. Torn donne la premiere
+   quete, « Reprendre les rues » (la patrouille des 12 points d'eco du §71). Finie, la
+   ville redevient paisible, et un titre annonce « Des habitants ont besoin de toi ».
+6. **LES QUETES DES HEROS** (plan du §71) : Sig, Tess, Keira et Samos apparaissent a
+   leurs places ; ils brillent la premiere fois, et le Carnet les liste. CHOISIR une
+   quete (carte cliquable) passe la ville en invasion ; la finir la rend paisible.
+   Recompense : une forme du Morph Gun et un bonus pour le Defi ; les armes de rang 3
+   apres six quetes. Suivi de la quete dans le panneau du mode.
+7. **LES CONTRATS ET LES VENDEURS** (§66 et §71). Apres le premier retour du Defi,
+   des VENDEURS s'installent au marche du port avec les bonus du Defi : sceaux de
+   reussite garantie (amelioration, rarete, Specialisation), provisions de depart,
+   rune garantie. Leur prix n'est pas une monnaie mais un CONTRAT : defendre le port,
+   tenir une minute, passer les anneaux en temps limite, tuer telle creature, pecher.
+   Les contrats sont repetables, et eux aussi passent la ville en invasion le temps
+   de les remplir. Les contrats de Torn (§71) deviennent cette liste de prix.
+8. **LA MAITRISE.** Toutes les quetes des heros faites et les douze armes debloquees :
+   le bouton du QG s'ouvre a ce joueur, qui bascule la ville a volonte, hors quete en
+   cours. Titre : « Haven est a toi ».
+9. **LE MODE LIBRE.** Une PORTE DE HAVEN a fabriquer (recette en Arcencium, a ajuster).
+   Posee dans son monde, elle mene a son appartement ; la porte de l'appartement
+   ramene a celle qu'on a posee. Les armes de Jak restent dans Haven (confinement
+   actuel).
+
+La ville est COMMUNE a tous les joueurs du serveur : l'invasion de la deuxieme arrivee
+vaut pour tous ceux qui sont la ; un nouveau venu arrive dans la ville telle qu'elle
+est, a l'abri dans son appartement.
+
+### 79.3 Les neuf questions du §76, et ce que je recommande
+
+1. **Premiers pas** : la premiere arrivee EST le lobby actuel (appartement, QG, borne) ;
+   le Defi part toujours de la borne du QG.
+2. **Mort pendant le Defi** : le joueur mort revient a Haven avec tout ; SA tentative
+   s'arrete, les autres continuent ; le Defi est perdu quand tous sont revenus, ou au
+   bout du chrono. En attendant, il peut faire des quetes : « deux gameplays ».
+   Autre choix : garder la regle d'aujourd'hui (§65 : la tombe, le retour au village),
+   et seule la fin du Defi ramene a Haven.
+3. **Porte de fin** : a la mort du boss, au centre de l'arene, pour toute l'equipe ;
+   ouverte tant qu'il reste quelqu'un ; rapatriement automatique apres 5 minutes.
+4. **Coffre du QG** : individuel, a la maniere de Lootr (deja dans le modpack), une
+   seule fois par joueur ; ensuite, l'arme fait partie de sa progression.
+5. **Quetes a plusieurs** : la ville reste envahie tant qu'une quete est en cours ; un
+   joueur qui choisit une quete la PROPOSE aux autres (carte « Rejoindre »), et la
+   reussite compte pour tous ceux qui l'ont rejointe ; une quete a la fois par joueur.
+   Autre choix : chacun pour soi.
+6. **Droit du bouton** : par joueur -- toutes les quetes des heros ET les douze armes ;
+   le bouton dit ce qui manque ; pendant une quete en cours, il ne rend pas la paix.
+7. **Les PNJ** : les cinq du §71 ; Torn d'abord, puis les quatre mentors ensemble apres
+   la premiere quete. Le joueur l'apprend par le titre, la carte du chat et le Carnet.
+8. **Le guidage** : les deux. Un titre aux moments cles, l'objectif qui reste affiche
+   en haut (panneau du mode), et le Carnet qui garde la trace ; le livre « Vous aviez
+   rendez-vous au quartier general » devient la premiere page du chapitre Haven.
+9. **Le portail du mode libre** : la Porte de Haven du 79.2, point 9.
+
+### 79.4 Les animaux de Haven (§78.3)
+
+- des chats et des chiens du jeu de base, peu nombreux (une dizaine en tout), pres des
+  appartements et du marche, en ville PAISIBLE seulement : pendant l'invasion, ils se
+  cachent comme les habitants ;
+- des MOUETTES (Alex's Mobs) au-dessus du port et autour du palais, comme dans Jak 3 ;
+- des POISSONS dans le bassin du port (Aquaculture et jeu de base), toujours ;
+- des REQUINS (Alex's Mobs ou Living Things) AU LARGE, hors du bassin : qui nage trop
+  loin se fait mordre, comme avec le requin Lurker de Jak 1 ;
+- la PECHE : un nouveau PNJ, le PECHEUR, sur le quai (clin d'oeil a Jak 1), donne une
+  canne et des contrats -- « 200 livres de poisson » grace au poids d'Aquaculture,
+  « un thon », « sans te faire mordre » -- payes en bonus du Defi.
+
+### 79.5 L'ordre de construction propose
+
+1. **La progression par joueur et la premiere arrivee** : etapes du joueur gardees de
+   partie en partie, arrivee paisible sans arme, titres et objectif affiche, chapitre
+   Haven du Carnet, bouton verrouille. Remplace `ARRIVAL_MASK`.
+2. **Le retour du Defi** : mort, defaite, victoire et sa porte ; deuxieme arrivee
+   envahie, coffre du QG, premiere quete de Torn.
+3. **Les PNJ et les quetes des heros** (§71) : l'entite, les cartes de dialogue, le
+   suivi, la bascule de la ville, les recompenses.
+4. **Les contrats et les vendeurs** : les bonus du Defi.
+5. **Les animaux de Haven, la peche et les requins.**
+6. **La Porte de Haven** du mode libre.
+
+A part : la refonte du Defi (§66 : un monde neuf a chaque tentative, des ameliorations
+plus dures, le mode libre masque), qui se branche sur l'etape 4 du parcours.
+
+### 79.6 Ce que le joueur a decide *(21 sept. au soir)*
+
+- **Le parcours est valide TEL QUEL** (« Oui, tel quel »), dans l'ordre de construction
+  du 79.5 : on commence par le lot 1.
+- **La mort pendant le Defi : COMME AUJOURD'HUI** -- la tombe et le retour au village
+  (§65) ; seule la FIN du Defi, victoire ou defaite, ramene a Haven. La question 2 du
+  79.3 est donc tranchee contre ma recommandation ; le point 4 du 79.2 perd son
+  troisieme tiret.
+- **Les quetes a plusieurs : EN EQUIPE** -- celui qui choisit une quete la propose aux
+  autres (carte « Rejoindre ») et la reussite compte pour tous ceux qui l'ont rejointe.
+
+### 79.7 Pour le lot 3 : les quetes, les PNJ et la monnaie *(idees du joueur, 21 sept. au soir)*
+
+> « Il faudra qu'on definisse combien de quetes on met a disposition et a quel PNJ on
+> les donne. [...] L'idee, c'est de faire voyager les joueurs un peu partout sur la map
+> pour qu'ils la visitent. »
+
+A DEFINIR ENSEMBLE une fois les lots en cours finis : le nombre de quetes, leur PNJ,
+leurs recompenses, et les places des PNJ.
+
+- **LES PLACES.** Un PNJ dans la SALLE DE TIR -- « actuellement elle ne sert a rien » :
+  une raison d'y aller (c'est Tess, l'armuriere, au stand de tir du §71). Un PNJ SUR UN
+  BATEAU, dans l'eau de la ville : une raison d'aller dans l'eau (le Pecheur du §79.4 ?).
+  Les autres PARTOUT dans la ville, pas trop proches les uns des autres.
+- **LA MONNAIE : LES ORBES PRECURSEURS.** Les quetes paient en orbes -- « la fameuse
+  monnaie de Jak, les gemmes orange rondes qu'on est cense recuperer pour debloquer des
+  secrets ». Au lieu des secrets, les orbes ACHETENT LES ARMES, puis plus tard des
+  AMELIORATIONS (a definir ; exemple du joueur : les munitions illimitees). Cela change
+  le plan du §71, ou la quete donnait l'arme elle-meme.
+- **DES ORBES PARTOUT DANS LA VILLE**, a ramasser, pour pousser a explorer. Toutes les
+  armes achetees, ils restent la monnaie des ameliorations, en plus des quetes.
+- **RAPPEL** : les PNJ n'apparaissent qu'a la DEUXIEME arrivee ; la premiere, on va au QG
+  lancer le mode (normal ou Defi).
+- **DES QUETES DE PLUSIEURS STYLES** (ajout du joueur) : la CONDUITE des vehicules, le
+  COMBAT contre les monstres, l'EAU -- aller sous l'eau, rapporter du poisson -- avec des
+  DANGERS dans l'eau, « pas seulement des requins, plein de choses dangereuses ».
+- **LES MOUETTES** : une quete qui consiste a en tuer ; et une reaction drole -- des
+  qu'une mouette est touchee, UNE ARMEE DE MOUETTES s'envole dans tous les sens et
+  attaque parfois les joueurs (comme les cocottes de Zelda).
+
+- **LA BOUTIQUE** (le joueur, « encore une meilleure idee ») : terminer une quete paie
+  en orbes ; les orbes ACHETENT, au choix, des ARMES, des AMELIORATIONS, ou des BONUS
+  pour le mode Defi ou le mode libre. Les achats se font dans la SALLE DES ARMES, chez
+  un PNJ VENDEUR : « le shop de la map ». Trois sortes de PNJ, donc : le vendeur, les
+  donneurs de quetes, et les simples habitants. Cela remplace les vendeurs du §66 (au
+  marche, apres une defaite) et la quete qui donnait l'arme (§71). **La salle des armes
+  EST la salle de tir** (confirme par le joueur) : le stand de tir du §71, ou l'on mettait
+  Tess, l'armuriere -- elle ferait une vendeuse toute trouvee.
+
+Mes propositions, a trier avec lui :
+
+- conduite : le TAXI (un habitant a deposer a l'autre bout de la ville, en temps
+  limite -- nos voitures ont des places passager) ; ARRETER UN CHAUFFARD (une voiture
+  du trafic marquee, a percuter trois fois : les chocs existent deja) ; la LIVRAISON
+  fragile (un colis qui casse au premier choc trop fort) ;
+- combat : NETTOYER UN QUARTIER (tous les monstres d'une zone), TENIR le port une
+  minute, une ELITE a abattre (§71) ;
+- tir : les EPREUVES DE LA SALLE DE TIR avec medailles BRONZE, ARGENT, OR, comme les
+  parcours de tir de Jak 3 (`levels/gungame`) -- l'or paie plus d'orbes ;
+- eau : PLONGER pour des orbes ou des coffres engloutis au fond du port ; les dangers
+  -- requins (Alex's Mobs, Living Things) ; des MEDUSES et des PIRANHAS existent deja
+  (Aquaculture ; rien ne dit qu'ils mordent : a rendre dangereux) ; des courants qui entrainent ; et le
+  large garde par un requin geant, comme le Lurker de Jak 1 ;
+- mouettes : les mouettes d'Alex's Mobs VOLENT DEJA la nourriture des mains : une
+  quete « rattraper la mouette voleuse » va de soi ;
+- ville : RETROUVER LES CHATS PERDUS d'un habitant (les chats de Haven, §79.4), et la
+  PATROUILLE des douze points d'eco (§71).
+
+## 80. Lot 1 du parcours : la premiere arrivee, le guide, le bouton verrouille *(21 sept. 2026)*
+
+Le lot 1 du §79.5, code le soir de la validation du parcours.
+
+### 80.1 La fiche de parcours, et l'arme qui la suit
+
+- **`haven/journey/HavenProgress`** : une fiche par joueur, DANS LE MONDE
+  (`<monde>/emeraldweapons/haven_parcours.json`), comme la Specialisation : les formes
+  debloquees du Morph Gun, la premiere arrivee faite, le QG rejoint, les departs, les
+  quetes faites (lot 3). Elle survit a la partie. Les cobayes des bancs ont une fiche
+  TEMPORAIRE, jamais ecrite.
+- **L'arme appartient au joueur, plus au lobby** (`MorphGunKeeper`). `ARRIVAL_MASK`
+  n'existe plus (`GunForm.ALL_MASK`, les douze, reste pour les cobayes et l'operateur) :
+  un joueur sans forme n'a PAS d'arme (retiree s'il en avait une) ; les formes de
+  l'arme suivent celles de la fiche a chaque passage du gardien, dans les deux sens
+  (`MorphGunData.syncOwned` : une forme tenue perdue ramene au Scatter Gun, sans
+  transformation a jouer).
+
+### 80.2 La ville paisible, le bouton verrouille
+
+- **PAISIBLE PAR DEFAUT** : un etat neuf, et chaque reouverture du lobby. Un monde
+  d'avant (envahi, sans la marque « Parcours » dans `HavenInvasionState`) repasse UNE
+  fois en paisible a la lecture : on n'y reviendrait pas sans arme au milieu d'une
+  invasion.
+- **LE BOUTON DU QG n'obeit qu'a la MAITRISE** : les douze armes, et plus tard les
+  quetes des heros (`HavenProgress.REQUIRED_QUESTS`, vide au lot 1). Le refus le dit
+  (« il t'en manque 12 »), avec un « non » de villageois, sans consommer le delai ;
+  l'operateur en chantier passe outre. Les messages d'arrivee ne presentent plus le
+  bouton a tout le monde.
+
+### 80.3 Le guide
+
+`haven/journey/HavenJourney` :
+
+- **premiere arrivee** : deux secondes apres la teleportation (le terrain se charge
+  d'abord), le titre « Bienvenue a Haven », sous-titre « Vous aviez rendez-vous au
+  quartier general », un carillon ; une seule fois par joueur et par monde. UN TITRE
+  NE REVIENT PAS A LA LIGNE et s'ecrit quatre fois plus gros que le texte (le
+  sous-titre, deux fois) : a l'echelle d'interface 4 du joueur, la phrase deborde en
+  titre (~230 points de police x 4) et tient en sous-titre ; la distance et la
+  direction sont dans la barre, dont chaque texte fait moins de 360 points (426 de
+  large a l'echelle 6, 2560 pixels) ;
+- **l'objectif en haut au centre** -- une barre a lui, le centre etant libre dans
+  Haven (ni siege ni Maree ; le chronometre est en haut a gauche) :
+  « Objectif : rejoindre le QG, le bar du Hip Hog -- N blocs vers X » (bleue, se
+  remplit en approchant) ; au premier pas dans le Hip Hog, un message et une cloche,
+  puis « lancer la partie a la borne, au bout du comptoir -- vitre rouge : le Defi »
+  (rouge) ; apres son vote, « la partie part quand tout le monde a vote » (jaune).
+  Rien en chantier, dans l'atelier ni ville fermee ; la barre part avec le joueur ;
+- **le Carnet** : un chapitre « Haven » dans le livre de FTB Quests, avant celui du
+  mode (`tools/quests_book.py`, `haven.snbt`) -- « Vous aviez rendez-vous au quartier
+  general » (le livre voulu par le joueur au §76), « Le quartier general », « Le
+  depart » -- coche par les succes caches `carnet/haven_arrivee`, `haven_qg`,
+  `haven_depart`.
+
+### 80.4 Les commandes, et ce que ca change en jeu
+
+`/arcencium haven parcours [joueur]` (la fiche), `... armes <joueur> toutes|aucune|scatter`,
+`... maitrise <joueur>`, `... remise <joueur>` (nouveau venu, succes du Carnet retires).
+
+**TANT QUE LES LOTS 2 ET 3 N'EXISTENT PAS**, un joueur sans fiche arrive SANS ARME
+dans une ville paisible, et personne ne peut encore gagner d'arme : le coffre du QG
+est au lot 2, les quetes au lot 3. Pour essayer les armes et l'invasion :
+`/arcencium haven parcours <joueur> maitrise`.
+
+### 80.5 Les bancs
+
+Tous verts le 21 sept. au soir : **parcours 23** (nouveau), haven 11, vote 36,
+salles 26, atelier 17, vehicules 149, **invasion 48** (un controle de plus : le clic
+d'un joueur sans la maitrise est refuse, la ville reste envahie), armes 178. Le banc
+des armes n'a pas bouge : ses cobayes recoivent une fiche temporaire aux douze formes
+(`MorphGunKeeper.addSubject`). Premiere version du banc du parcours : KO sur un chemin
+sans dossier parent (`server.getServerDirectory()` est relatif sur le serveur
+d'essai) -- l'ecriture passe maintenant par le chemin absolu.
+
+### 80.6 Vu a l'ecran, et ce que ca a change
+
+Deux prises nouvelles de l'automate de photos, INTERFACE VISIBLE (« haven:accueil »,
+« haven:qg ») dans une copie jetable du monde du serveur d'essai
+(`EMERALDWEAPONS_PHOTOS_MONDE=haven_photos`) : le joueur de dev y arrive comme un
+nouveau venu.
+
+1. **Le titre ne se voyait pas.** La photo d'arrivee montrait « Chargement du
+   terrain... » plus de huit secondes apres l'arrivee : le titre, envoye a deux
+   secondes, se jouait SOUS l'ecran de chargement. Le titre est maintenant un message
+   a nous (`HavenTitlePayload`) que le client joue une fois l'ecran ferme, apres trois
+   secondes de monde (`client/HavenJourneyClient`), le carillon compris.
+2. **En plein ecran a l'echelle 6** : sous-titre coupe aux deux bords, fin de la barre
+   sous la minicarte de JourneyMap. Titre « Bienvenue a Haven », sous-titre « Rendez-vous
+   au quartier general » (la phrase entiere reste le titre de la page du Carnet), barre
+   sans « Objectif : » -- « Le QG, bar du Hip Hog : N blocs vers X », « La borne du
+   comptoir : vitre rouge pour le Defi », « Vote enregistre : depart quand tous ont vote »
+   -- et la ligne « Rejoins le QG » au-dessus de la barre d'objets, doublon de la barre,
+   retiree.
+3. **A l'echelle 4 du joueur** (`options.txt` du profil) : tout tient, rien ne se
+   chevauche -- titre et sous-titre au centre, chat en bas a gauche, barre en haut,
+   minicarte a droite. Le Hip Hog est tres sombre : les lumieres de l'atelier (§78.4)
+   le changeront.

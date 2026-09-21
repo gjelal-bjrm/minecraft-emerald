@@ -72,11 +72,12 @@ public enum GunForm {
     public static final int BASE_MASK = RED_1.bit() | YELLOW_1.bit() | BLUE_1.bit() | DARK_1.bit();
 
     /**
-     * Les formes DONNEES A L'ARRIVEE : les douze. Provisoire, decision du joueur du
-     * 16 sept. : quand les quetes des PNJ de Haven existeront, on n'arrivera plus
-     * qu'avec le Scatter Gun, et les autres se gagneront ; d'ici la, tout s'essaie.
+     * Les douze formes. Elles ne sont plus donnees a l'arrivee (parcours de Haven,
+     * cahier §79) : chaque joueur a les siennes (HavenProgress) -- aucune a la
+     * premiere arrivee, le Scatter Gun au coffre du QG, les autres par les quetes.
+     * Les cobayes des bancs, eux, recoivent les douze.
      */
-    public static final int ARRIVAL_MASK = (1 << 12) - 1;
+    public static final int ALL_MASK = (1 << 12) - 1;
 
     public final Family family;
     /** 1, 2 ou 3 dans sa famille. */

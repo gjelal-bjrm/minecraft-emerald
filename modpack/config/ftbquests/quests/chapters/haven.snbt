@@ -1,0 +1,93 @@
+{
+	default_hide_dependency_lines: false
+	default_quest_shape: ""
+	filename: "haven"
+	group: ""
+	icon: {
+		id: "emeraldweapons:morph_gun"
+	}
+	id: "2A20040AFE1C91C1"
+	images: [ ]
+	order_index: -1
+	progression_mode: "flexible"
+	quest_links: [ ]
+	quests: [
+		{
+			description: [
+				"Vous vous réveillez dans votre appartement, au port de &bHaven&r. La ville est calme : ses habitants et ses voitures volantes vont et viennent. Vous n'avez pas d'arme."
+				""
+				"Le quartier général, c'est le &6bar du Hip Hog&r. La barre en haut de l'écran donne la distance et la direction ; une voiture vous attend devant l'appartement."
+				""
+				"&7Se coche à la première arrivée."
+			]
+			icon: {
+				id: "minecraft:red_bed"
+			}
+			id: "50BFB3D0079383A0"
+			rewards: [
+			]
+			size: 1.25d
+			tasks: [{
+				advancement: "emeraldweapons:carnet/haven_arrivee"
+				criterion: ""
+				id: "5DB11B1761A57943"
+				type: "advancement"
+			}]
+			title: "Vous aviez rendez-vous au quartier général"
+			x: 0.0d
+			y: 0.0d
+		}
+		{
+			dependencies: ["50BFB3D0079383A0"]
+			description: [
+				"Le bar du Hip Hog. Au bout du comptoir, la &cborne&r lance la partie : la vitre rouge pour le Défi, la bleue pour le Monde ouvert."
+				""
+				"Le bouton, près de la borne, fait passer toute la ville de paisible à envahie. Il n'obéit qu'à ceux qui ont débloqué les douze armes du Morph Gun."
+				""
+				"&7Se coche au premier pas dans le bar."
+			]
+			icon: {
+				id: "minecraft:bell"
+			}
+			id: "2C29095DC701E91E"
+			rewards: [
+			]
+			size: 1.25d
+			tasks: [{
+				advancement: "emeraldweapons:carnet/haven_qg"
+				criterion: ""
+				id: "6B77BAA929C2646F"
+				type: "advancement"
+			}]
+			title: "Le quartier général"
+			x: 2.0d
+			y: 0.0d
+		}
+		{
+			dependencies: ["2C29095DC701E91E"]
+			description: [
+				"Votez à la borne : quand tout le monde a voté, la partie part au village. Les armes de Jak restent dans Haven."
+				""
+				"&7Se coche au premier départ."
+			]
+			icon: {
+				id: "emeraldweapons:emerald_sword"
+			}
+			id: "54E77607CCDEAB01"
+			rewards: [
+			]
+			size: 1.25d
+			tasks: [{
+				advancement: "emeraldweapons:carnet/haven_depart"
+				criterion: ""
+				id: "55278D3C30DF9F0D"
+				type: "advancement"
+			}]
+			title: "Le départ"
+			x: 4.0d
+			y: 0.0d
+		}
+	]
+	subtitle: ["Le parcours dans la ville de Jak 3. Chaque étape se coche toute seule."]
+	title: "Haven"
+}

@@ -732,9 +732,9 @@ public final class GunAutotest {
             ItemStack gun = MorphGunKeeper.find(this.a);
             MorphGunData data = gun == null ? null : MorphGunData.of(gun);
             long lobby = MorphGunKeeper.lobby(server);
-            check("arrivee (PlayerChangedDimensionEvent vers Haven) : exactement 1 arme, les 12 formes donnees a l'arrivee,"
+            check("arrivee (PlayerChangedDimensionEvent vers Haven) : exactement 1 arme, les 12 formes du cobaye (sa fiche de parcours),"
                             + " reserves pleines 100/200/200/15, lobby courant, dans la premiere case de la barre",
-                    MorphGunKeeper.count(this.a) == 1 && data != null && data.owned() == GunForm.ARRIVAL_MASK
+                    MorphGunKeeper.count(this.a) == 1 && data != null && data.owned() == GunForm.ALL_MASK
                             && data.full() && data.ecoRed() == 100 && data.ecoYellow() == 200 && data.ecoBlue() == 200
                             && data.ecoDark() == 15 && data.lobby() == lobby && slotOf(this.a, gun) == 0
                             && MorphGunKeeper.countStored(this.a) == 0,

@@ -33,10 +33,18 @@ import java.util.Map;
  * la ville, pose) : les monstres et les habitants portent celle de leur naissance,
  * et un troncon recharge ne rend que ceux de la generation courante
  * (HavenInvasion.welcome).
+ *
+ * LE MODE PAR DEFAUT EST PAISIBLE depuis le parcours de Haven (cahier §79) : la
+ * premiere arrivee se fait dans une ville calme, sans arme. Un monde d'avant (sans
+ * la marque « Parcours ») passe une fois en paisible a sa lecture : on n'y
+ * reviendrait pas, sans arme, au milieu d'une invasion.
  */
 public final class HavenInvasionState extends SavedData {
 
     public static final String KEY = "emeraldweapons_haven_invasion";
+
+    /** La version du parcours dont l'etat porte la marque ; en dessous, la ville repasse en paisible. */
+    static final int PARCOURS = 1;
 
     /** Un bloc casse qui attend sa reconstruction. */
     public static final class Pending {
@@ -67,7 +75,7 @@ public final class HavenInvasionState extends SavedData {
         }
     }
 
-    private HavenInvasion.Mode mode = HavenInvasion.Mode.INVASION;
+    private HavenInvasion.Mode mode = HavenInvasion.Mode.PAISIBLE;
     private long generation;
     final Map<Long, Pending> pending = new LinkedHashMap<>();
     /** L'echeance la plus proche du registre (volatile) ; MIN_VALUE force un parcours. */
@@ -87,16 +95,26 @@ public final class HavenInvasionState extends SavedData {
 
     static HavenInvasionState load(CompoundTag tag, HolderLookup.Provider registries) {
         HavenInvasionState state = new HavenInvasionState();
-        state.readFrom(tag, registries);
+        if (state.readFrom(tag, registries)) {
+            state.setDirty();
+        }
         return state;
     }
 
-    /** Relit l'etat depuis un tag : la lecture de disque, et le rechargement simule du banc d'essai. */
-    void readFrom(CompoundTag tag, HolderLookup.Provider registries) {
+    /**
+     * Relit l'etat depuis un tag : la lecture de disque, et le rechargement simule du banc d'essai.
+     *
+     * @return vrai si un etat d'avant le parcours vient de passer en paisible (a reecrire)
+     */
+    boolean readFrom(CompoundTag tag, HolderLookup.Provider registries) {
         try {
             this.mode = HavenInvasion.Mode.valueOf(tag.getString("Mode"));
         } catch (IllegalArgumentException e) {
-            this.mode = HavenInvasion.Mode.INVASION;
+            this.mode = HavenInvasion.Mode.PAISIBLE;
+        }
+        boolean migrated = tag.getInt("Parcours") < PARCOURS && this.mode != HavenInvasion.Mode.PAISIBLE;
+        if (migrated) {
+            this.mode = HavenInvasion.Mode.PAISIBLE;
         }
         this.generation = tag.getLong("Generation");
         this.pending.clear();
@@ -111,11 +129,13 @@ public final class HavenInvasionState extends SavedData {
             CompoundTag be = block.contains("Entite", Tag.TAG_COMPOUND) ? block.getCompound("Entite") : null;
             this.pending.put(block.getLong("Pos"), new Pending(state, be, block.getLong("Tique")));
         }
+        return migrated;
     }
 
     @Override
     public CompoundTag save(CompoundTag tag, HolderLookup.Provider registries) {
         tag.putString("Mode", this.mode.name());
+        tag.putInt("Parcours", PARCOURS);
         tag.putLong("Generation", this.generation);
         ListTag list = new ListTag();
         for (Map.Entry<Long, Pending> entry : this.pending.entrySet()) {
@@ -134,6 +154,22 @@ public final class HavenInvasionState extends SavedData {
 
     public HavenInvasion.Mode mode() {
         return this.mode;
+    }
+
+    /** Ce qu'une lecture donne : le mode, et s'il faut reecrire l'etat (un monde d'avant le parcours). */
+    public record Reading(HavenInvasion.Mode mode, boolean rewrite) {
+    }
+
+    /** Pour le banc du parcours : le mode d'un etat neuf. */
+    public static HavenInvasion.Mode freshMode() {
+        return new HavenInvasionState().mode;
+    }
+
+    /** Pour le banc du parcours : la lecture d'un etat sauvegarde, sans toucher a celui de la ville. */
+    public static Reading readForTest(CompoundTag tag, HolderLookup.Provider registries) {
+        HavenInvasionState state = new HavenInvasionState();
+        boolean rewrite = state.readFrom(tag, registries);
+        return new Reading(state.mode, rewrite);
     }
 
     void setMode(HavenInvasion.Mode mode) {

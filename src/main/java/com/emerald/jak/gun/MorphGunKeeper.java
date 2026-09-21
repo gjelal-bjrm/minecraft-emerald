@@ -3,6 +3,7 @@ package com.emerald.jak.gun;
 import com.emerald.haven.Haven;
 import com.emerald.haven.HavenArrival;
 import com.emerald.haven.HavenRules;
+import com.emerald.haven.journey.HavenProgress;
 import com.emerald.item.ModItems;
 import com.emerald.item.Stash;
 import com.emerald.main.EmeraldWeaponsMod;
@@ -49,12 +50,17 @@ import java.util.UUID;
  *
  * L'INVARIANT, controle a l'arrivee, a la reapparition, a la reconnexion, puis
  * toutes les {@value #GUARD_TICKS} tiques pour chaque joueur en ligne :
- *  - dans Haven, lobby ouvert, vrai joueur hors chantier et vivant : EXACTEMENT
- *    UNE arme -- dans l'inventaire, sous un curseur ou rangee cote serveur --,
- *    comptee PAR IDENTITE, compartiment par compartiment (Stash.everything
- *    recompte la case choisie et la main gauche : l'additionner a l'inventaire
- *    compterait la meme pile deux ou trois fois) ;
- *  - partout ailleurs : ZERO.
+ *  - dans Haven, lobby ouvert, vrai joueur hors chantier et vivant, qui a au moins
+ *    une forme debloquee : EXACTEMENT UNE arme -- dans l'inventaire, sous un curseur
+ *    ou rangee cote serveur --, comptee PAR IDENTITE, compartiment par compartiment
+ *    (Stash.everything recompte la case choisie et la main gauche : l'additionner a
+ *    l'inventaire compterait la meme pile deux ou trois fois) ;
+ *  - partout ailleurs, et pour qui n'a encore aucune forme : ZERO.
+ *
+ * LES FORMES SONT CELLES DU JOUEUR (parcours de Haven, cahier §79), plus celles du
+ * lobby : HavenProgress les garde de partie en partie ; aucune a la premiere
+ * arrivee, le Scatter Gun au coffre du QG, les autres par les quetes. L'arme les
+ * suit a chaque passage du gardien, dans les deux sens.
  *
  * « Les joueurs spawnent dans une partie avec les armes mais ils perdent tout
  * des qu'ils choisissent le mode libre ou defi. » Le choix effectif est le
@@ -135,11 +141,24 @@ public final class MorphGunKeeper {
         return Haven.is(player.level()) && HavenArrival.lobbyOpen(player.server);
     }
 
-    /** Ce joueur doit-il en avoir une ? Vrai joueur (ou cobaye), hors chantier, vivant, dans Haven lobby ouvert. */
+    /**
+     * Ce joueur doit-il en avoir une ? Vrai joueur (ou cobaye), hors chantier, vivant,
+     * dans Haven lobby ouvert -- et au moins une forme debloquee.
+     */
     public static boolean entitled(ServerPlayer player) {
+        return candidate(player) && formsOf(player) != 0;
+    }
+
+    /** Vrai joueur (ou cobaye), hors chantier, vivant, dans Haven lobby ouvert : l'arme le suit selon ses formes. */
+    private static boolean candidate(ServerPlayer player) {
         return (!player.isFakePlayer() || SUBJECTS.containsKey(player.getUUID()))
                 && allowed(player) && !HavenRules.chantier(player)
                 && player.isAlive() && !player.hasDisconnected();
+    }
+
+    /** Les formes du joueur : sa fiche de parcours (celle d'un cobaye est temporaire). */
+    public static int formsOf(ServerPlayer player) {
+        return HavenProgress.forms(player.getUUID());
     }
 
     /** Le numero du lobby ouvert (MorphGunState). */
@@ -249,8 +268,16 @@ public final class MorphGunKeeper {
 
     // ================================================================ cobayes du banc
 
+    /**
+     * Inscrit un cobaye. Sa fiche de parcours, temporaire, lui donne les douze formes
+     * s'il n'en avait pas deja une : les essais du Morph Gun partent de l'arme entiere.
+     */
     public static void addSubject(ServerPlayer player) {
         SUBJECTS.put(player.getUUID(), player);
+        HavenProgress.Entry entry = HavenProgress.peek(player.getUUID());
+        if (entry == null) {
+            HavenProgress.temporary(player.getUUID(), GunForm.ALL_MASK);
+        }
     }
 
     public static void removeSubject(UUID player) {
@@ -258,6 +285,7 @@ public final class MorphGunKeeper {
         HELD.remove(player);
         IN_MENU.remove(player);
         LAST.remove(player);
+        HavenProgress.dropTemporary(player);
     }
 
     // ================================================================ donner
@@ -277,7 +305,8 @@ public final class MorphGunKeeper {
      * Compte par identite ; ressort l'arme des sacs portes et du coffre de
      * l'Ender ; retire les piles d'un autre lobby ; garde celle en main s'il y en
      * a plusieurs ; sinon en donne une -- le dernier etat connu du meme lobby,
-     * ou une neuve (formes du jalon, reserves pleines). Une arme a poser va dans
+     * ou une neuve (formes du joueur, reserves pleines). Les formes de l'arme
+     * gardee suivent ensuite celles du joueur. Une arme a poser va dans
      * la premiere case libre de la barre, puis de l'inventaire, puis dans la main
      * gauche vide ; sinon elle reste rangee, avec un message. Pendant un menu
      * etranger, l'arme gardee va dans la reserve.
@@ -287,6 +316,7 @@ public final class MorphGunKeeper {
             return;
         }
         long lobby = lobby(player.server);
+        int forms = formsOf(player);
         UUID id = player.getUUID();
         Inventory inventory = player.getInventory();
         List<Spot> spots = new ArrayList<>();
@@ -347,13 +377,17 @@ public final class MorphGunKeeper {
         boolean created = false;
         if (keep == null) {
             MorphGunData last = LAST.get(id);
-            MorphGunData data = last != null && last.lobby() == lobby ? last : MorphGunData.fresh(lobby, GunForm.ARRIVAL_MASK);
+            MorphGunData data = last != null && last.lobby() == lobby ? last.syncOwned(forms) : MorphGunData.fresh(lobby, forms);
             gun = new ItemStack(ModItems.MORPH_GUN.get());
             MorphGunData.write(gun, data);
             created = true;
         } else {
             gun = keep.stack();
         }
+        // les formes suivent le parcours du joueur : une quete gagnee, une remise a zero
+        MorphGunData before = MorphGunData.of(gun);
+        boolean synced = before != null && before.owned() != forms
+                && MorphGunData.write(gun, before.syncOwned(forms));
 
         boolean warned = false;
         if (IN_MENU.contains(id)) {
@@ -378,9 +412,10 @@ public final class MorphGunKeeper {
         if (data != null) {
             LAST.put(id, data);
         }
-        if (created || stale > 0 || extra > 0 || pulled > 0) {
-            LOGGER.info("Morph Gun : {} {}{}{}{}{}", player.getGameProfile().getName(),
+        if (created || stale > 0 || extra > 0 || pulled > 0 || synced) {
+            LOGGER.info("Morph Gun : {} {}{}{}{}{}{}", player.getGameProfile().getName(),
                     created ? "recoit l'arme (lobby " + lobby + ")" : "garde son arme",
+                    synced ? ", formes suivies (" + Integer.bitCount(forms) + " sur 12)" : "",
                     stale > 0 ? ", " + stale + " pile(s) d'un autre lobby retiree(s)" : "",
                     extra > 0 ? ", " + extra + " doublon(s) retire(s)" : "",
                     pulled > 0 ? ", " + pulled + " ressortie(s) d'un sac ou du coffre de l'Ender" : "",
@@ -520,15 +555,23 @@ public final class MorphGunKeeper {
      * Un passage du gardien sur un joueur.
      *
      * Dans Haven lobby ouvert : l'invariant pour qui y a droit, rien pour
-     * l'operateur en chantier ni pour un mort (sa reapparition s'en charge).
-     * Ailleurs : retrait -- complet (sacs, coffre de l'Ender) si le joueur est
-     * encore dans la ville lobby ferme, sur lui seulement sinon : l'arme n'entre
-     * dans un sac que dans la ville, et chaque sortie vide les sacs.
+     * l'operateur en chantier ni pour un mort (sa reapparition s'en charge), et
+     * retrait complet pour qui n'a aucune forme (un nouveau venu, une remise a
+     * zero). Ailleurs : retrait -- complet (sacs, coffre de l'Ender) si le joueur
+     * est encore dans la ville lobby ferme, sur lui seulement sinon : l'arme
+     * n'entre dans un sac que dans la ville, et chaque sortie vide les sacs.
      */
     public static void guard(ServerPlayer player) {
         if (allowed(player)) {
             if (entitled(player)) {
                 ensure(player);
+            } else if (candidate(player) && formsOf(player) == 0) {
+                int removed = strip(player, true);
+                forget(player.getUUID());
+                if (removed > 0) {
+                    LOGGER.info("Morph Gun : {} n'a aucune forme debloquee, {} arme(s) retiree(s)",
+                            player.getGameProfile().getName(), removed);
+                }
             }
             return;
         }
@@ -591,27 +634,16 @@ public final class MorphGunKeeper {
 
     // ================================================================ chemins d'entree et de sortie
 
-    /** Connexion : dans la ville lobby ouvert, l'invariant ; ailleurs, retrait complet. */
+    /**
+     * Connexion : dans la ville lobby ouvert, le passage du gardien (l'invariant, ou le
+     * retrait pour qui n'a aucune forme) ; ailleurs, retrait complet.
+     */
     static void login(ServerPlayer player) {
         if (allowed(player)) {
-            ensure(player);
-            upgrade(player);
+            guard(player);
         } else {
             strip(player, true);
             forget(player.getUUID());
-        }
-    }
-
-    /**
-     * Une arme donnee par une version precedente du mod, dans ce meme lobby, recoit A LA
-     * CONNEXION les formes ajoutees depuis (GunForm.ARRIVAL_MASK). Pas dans le gardien :
-     * il repasserait toutes les secondes sur une arme dont on a retire des formes expres.
-     */
-    private static void upgrade(ServerPlayer player) {
-        ItemStack gun = find(player);
-        MorphGunData held = gun == null ? null : MorphGunData.of(gun);
-        if (held != null && (held.owned() & GunForm.ARRIVAL_MASK) != GunForm.ARRIVAL_MASK) {
-            MorphGunData.write(gun, held.withOwned(held.owned() | GunForm.ARRIVAL_MASK));
         }
     }
 

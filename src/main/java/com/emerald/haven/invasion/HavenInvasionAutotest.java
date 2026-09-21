@@ -10,12 +10,14 @@ import com.emerald.haven.HavenRooms;
 import com.emerald.haven.HavenRules;
 import com.emerald.haven.HavenSite;
 import com.emerald.haven.HavenState;
+import com.emerald.haven.journey.HavenProgress;
 import com.emerald.haven.traffic.HavenTraffic;
 import com.emerald.haven.traffic.HavenTrafficData;
 import com.emerald.haven.traffic.TrafficDriver;
 import com.emerald.jak.vehicle.JakVehicleEntity;
 import com.emerald.haven.HavenVote;
 import com.emerald.jak.JakBuilder;
+import com.emerald.jak.gun.GunForm;
 import com.emerald.main.EmeraldWeaponsMod;
 import com.mojang.authlib.GameProfile;
 import net.minecraft.core.BlockPos;
@@ -1071,7 +1073,18 @@ public final class HavenInvasionAutotest {
                 "durete " + before.getDestroySpeed(level, pos));
         int monsters = HavenInvasion.monsters().size();
         HavenInvasion.resetButtonCooldown();
+        // le parcours : le bouton n'obeit qu'a qui a la maitrise (les douze armes)
+        Cobaye stranger = COBAYES.get(COBAYES.size() - 1);
+        HavenProgress.dropTemporary(stranger.getUUID());
+        stranger.moveTo(pos.getX() + 0.5, pos.getY() - 1, pos.getZ() + 1.5);
+        before.useWithoutItem(level, stranger, new BlockHitResult(Vec3.atCenterOf(pos), Direction.UP, pos, false));
+        check("clic d'un joueur sans la maitrise (aucune arme debloquee) : refuse, la ville reste envahie",
+                HavenInvasion.mode(server) == HavenInvasion.Mode.INVASION && !HavenProgress.mastery(stranger.getUUID())
+                        && HavenInvasion.monsters().size() >= monsters,
+                "mode " + HavenInvasion.mode(server) + ", armes manquantes " + HavenProgress.missingWeapons(stranger.getUUID())
+                        + ", monstres " + monsters + " -> " + HavenInvasion.monsters().size());
         Cobaye presser = COBAYES.get(0);
+        HavenProgress.temporary(presser.getUUID(), GunForm.ALL_MASK);
         presser.moveTo(pos.getX() + 0.5, pos.getY() - 1, pos.getZ() + 1.5);
         before.useWithoutItem(level, presser, new BlockHitResult(Vec3.atCenterOf(pos), Direction.UP, pos, false));
         long left = level.getEntities(net.minecraft.world.level.entity.EntityTypeTest.forClass(Mob.class),
@@ -1450,7 +1463,8 @@ public final class HavenInvasionAutotest {
         if (level != null) {
             int removed = HavenInvasion.removeAll(level);
             int rebuilt = HavenDestruction.rebuildAll(level);
-            HavenInvasion.setMode(server, HavenInvasion.Mode.INVASION, null);
+            // le mode par defaut du parcours : une ville paisible
+            HavenInvasion.setMode(server, HavenInvasion.Mode.PAISIBLE, null);
             for (ChunkPos pos : HELD) {
                 level.getChunkSource().removeRegionTicket(JakBuilder.TICKET, pos, TICKET_DISTANCE, pos);
             }
@@ -1465,6 +1479,9 @@ public final class HavenInvasionAutotest {
                     + HavenInvasion.mode(server));
         }
         HELD.clear();
+        for (Cobaye cobaye : COBAYES) {
+            HavenProgress.dropTemporary(cobaye.getUUID());
+        }
         line("RESULTAT : " + passed + " OK, " + failed + " KO");
         Path file = server.getServerDirectory().resolve("invasion_autotest.txt");
         try {

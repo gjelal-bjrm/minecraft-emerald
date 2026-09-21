@@ -13,7 +13,8 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- * Le cote client de l'automate de photos (PhotoAutomaton) : sans interface a l'ecran,
+ * Le cote client de l'automate de photos (PhotoAutomaton) : sans interface a l'ecran
+ * (sauf pour les prises du parcours de Haven, qui regardent le titre et la barre),
  * sans pause quand la fenetre perd la main, il prend chaque photo demandee dans
  * run/screenshots/, et ferme le jeu a la fin. Inerte sans EMERALDWEAPONS_PHOTOS.
  */
@@ -33,7 +34,7 @@ public final class PhotoClient {
         }
         Minecraft mc = Minecraft.getInstance();
         mc.options.pauseOnLostFocus = false;
-        mc.options.hideGui = true;
+        mc.options.hideGui = !PhotoAutomaton.pendingGui();
         if (PhotoAutomaton.finished()) {
             stopping = true;
             mc.stop();
@@ -47,6 +48,16 @@ public final class PhotoClient {
         PhotoAutomaton.clientTerrain(mc.levelRenderer.hasRenderedAllSections());
         if (TAKEN.add(wanted)) {
             return;                       // premiere tique avec cette prise : on laisse le serveur la preparer
+        }
+        if (PhotoAutomaton.pendingGui() && !PhotoAutomaton.overdue()) {
+            // l'interface a l'ecran : jamais un ecran de chargement, et le titre d'accueil pendant qu'il se voit
+            if (mc.screen != null) {
+                return;
+            }
+            int age = HavenJourneyClient.titleAge();
+            if (wanted.contains("accueil") && (age < 25 || age > 100)) {
+                return;
+            }
         }
         if (PhotoAutomaton.readyToShoot()) {
             Screenshot.grab(mc.gameDirectory, wanted + ".png", mc.getMainRenderTarget(), message -> { });

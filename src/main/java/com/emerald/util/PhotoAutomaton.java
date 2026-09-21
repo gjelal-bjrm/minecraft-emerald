@@ -46,6 +46,14 @@ import java.util.Objects;
  * Le joueur passe en chantier (la ville ne le retient pas), le mode Arcencium est
  * eteint (ni meteo ni confinement), et il vole en spectateur pour chaque prise.
  * Toutes les prises faites, le client se ferme.
+ *
+ * LES PRISES DE HAVEN (« nom@haven:accueil », « nom@haven:qg ») regardent le parcours
+ * du joueur, INTERFACE VISIBLE : titre et barre d'objectif. Rien n'est prepare -- ni
+ * chantier, ni mode eteint : le joueur arrive dans la ville comme n'importe qui.
+ * « accueil » attend la premiere arrivee et son titre ; « qg » pose le joueur dans le
+ * Hip Hog, face a la borne, et attend que le titre soit parti. Il faut un monde ou la
+ * ville est posee et le lobby ouvert (EMERALDWEAPONS_PHOTOS_MONDE choisit la sauvegarde
+ * du run « photos »).
  */
 @EventBusSubscriber(modid = EmeraldWeaponsMod.MODID)
 public final class PhotoAutomaton {
@@ -68,7 +76,23 @@ public final class PhotoAutomaton {
     private static final int START_DELAY = 200;
 
     private record Shot(String name, ResourceLocation biome, int height) {
+        /** Une prise du parcours de Haven, interface visible. */
+        boolean haven() {
+            return "haven".equals(this.biome.getNamespace());
+        }
+
+        /** Tiques d'attente d'une prise de Haven : le titre visible, ou deja parti. */
+        int havenSettle() {
+            return "accueil".equals(this.biome.getPath()) ? 30 : 140;
+        }
     }
+
+    /** Une prise de Haven attend au plus une minute que le joueur soit arrive. */
+    private static final int HAVEN_MAX_WAIT = 1200;
+    private static int havenWait;
+    /** La prise en cours montre l'interface (prises de Haven). */
+    private static volatile boolean pendingGui;
+    private static volatile int pendingSettle = SETTLE;
 
     private static final List<Shot> SHOTS = parse();
     private static int index;
@@ -97,7 +121,18 @@ public final class PhotoAutomaton {
 
     /** Le monde a eu le temps de se generer et de se dessiner : le client peut prendre la photo. */
     public static boolean readyToShoot() {
-        return pending != null && waited >= SETTLE && (clientReady >= READY_TICKS || waited >= MAX_WAIT);
+        int ready = pendingGui ? 10 : READY_TICKS;
+        return pending != null && waited >= pendingSettle && (clientReady >= ready || waited >= MAX_WAIT);
+    }
+
+    /** La prise en cours montre-t-elle l'interface (titre, barre d'objectif) ? */
+    public static boolean pendingGui() {
+        return pendingGui;
+    }
+
+    /** La prise attend depuis plus d'une minute : le client la fait quand meme. */
+    public static boolean overdue() {
+        return pending != null && waited >= MAX_WAIT;
     }
 
     /** Le client dit, a chaque tique, s'il a fini de dessiner le terrain autour de lui. */
@@ -143,11 +178,16 @@ public final class PhotoAutomaton {
         if (server.getPlayerList().getPlayerCount() == 0) {
             return;
         }
-        if (++ticks < START_DELAY) {
+        boolean havenNext = index < SHOTS.size() && SHOTS.get(index).haven();
+        if (++ticks < START_DELAY && !havenNext) {
             return;
         }
         ServerPlayer player = server.getPlayerList().getPlayers().get(0);
         ServerLevel overworld = server.overworld();
+        if (havenNext && !finished) {
+            havenShot(server, player, SHOTS.get(index));
+            return;
+        }
         if (!prepared) {
             prepared = true;
             HavenRules.setChantier(player, true);
@@ -184,6 +224,87 @@ public final class PhotoAutomaton {
             pending = null;
             index++;
         }
+    }
+
+    /** Une prise du parcours de Haven : attendre le bon moment, puis la laisser au client, interface visible. */
+    private static void havenShot(MinecraftServer server, ServerPlayer player, Shot shot) {
+        if (pending == null) {
+            if (!havenReady(server, player, shot)) {
+                if (++havenWait > HAVEN_MAX_WAIT) {
+                    LOGGER.warn("photos : {} jamais prete (Haven : ville posee, lobby ouvert, joueur arrive ?), sautee",
+                            shot.name());
+                    havenWait = 0;
+                    index++;
+                }
+                return;
+            }
+            havenWait = 0;
+            pending = shot.name();
+            pendingGui = true;
+            pendingSettle = shot.havenSettle();
+            taken = false;
+            waited = 0;
+            clientReady = 0;
+            LOGGER.info("photos : {} ({}), interface visible", shot.name(), shot.biome());
+            return;
+        }
+        ++waited;
+        if (waited >= pendingSettle && taken) {
+            LOGGER.info("photos : prise {} faite apres {} tiques", shot.name(), waited);
+            pending = null;
+            pendingGui = false;
+            pendingSettle = SETTLE;
+            index++;
+            if (index >= SHOTS.size()) {
+                finished = true;
+                LOGGER.info("photos : toutes les prises sont faites, fermeture");
+            }
+        }
+    }
+
+    /**
+     * Le moment d'une prise de Haven. « accueil » : le joueur est arrive et son titre
+     * vient d'etre joue. « qg » : le joueur est pose dans le Hip Hog, face a la borne.
+     */
+    private static boolean havenReady(MinecraftServer server, ServerPlayer player, Shot shot) {
+        if (!com.emerald.haven.Haven.is(player.level()) || !com.emerald.haven.HavenArrival.lobbyOpen(server)) {
+            return false;
+        }
+        if ("accueil".equals(shot.biome().getPath())) {
+            return com.emerald.haven.journey.HavenProgress.get(player.getUUID()).welcomed
+                    && !com.emerald.haven.journey.HavenJourney.titlePending(player.getUUID());
+        }
+        com.emerald.haven.HavenArrival.Layout rooms = com.emerald.haven.HavenArrival.layout(server);
+        if (rooms == null) {
+            return false;
+        }
+        BlockPos origin = com.emerald.haven.HavenState.get(server).origin();
+        BlockPos center = rooms.hqCenter(origin);
+        BlockPos vote = rooms.votePos(origin);
+        ServerLevel level = (ServerLevel) player.level();
+        BlockPos feet = null;
+        for (int r = 0; r <= 8 && feet == null; r++) {
+            for (int dx = -r; dx <= r && feet == null; dx++) {
+                for (int dz = -r; dz <= r && feet == null; dz++) {
+                    for (int dy = -3; dy <= 3 && feet == null; dy++) {
+                        BlockPos at = center.offset(dx, dy, dz);
+                        if (rooms.inHq(origin, at.getX() + 0.5, at.getY(), at.getZ() + 0.5)
+                                && com.emerald.haven.HavenArrival.standable(level, at)) {
+                            feet = at;
+                        }
+                    }
+                }
+            }
+        }
+        if (feet == null) {
+            LOGGER.warn("photos : aucune place debout dans le Hip Hog pres de {}", center.toShortString());
+            return false;
+        }
+        double dx = vote.getX() + 0.5 - (feet.getX() + 0.5);
+        double dz = vote.getZ() + 0.5 - (feet.getZ() + 0.5);
+        float yaw = (float) Math.toDegrees(Math.atan2(-dx, dz));
+        player.teleportTo(level, feet.getX() + 0.5, feet.getY(), feet.getZ() + 0.5, yaw, 10.0F);
+        return true;
     }
 
     /** Le joueur au-dessus du biome, sur le sol, regard vers l'est ; plonge s'il est en hauteur. */

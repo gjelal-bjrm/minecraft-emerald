@@ -1,6 +1,8 @@
 {
 	chapter.5BA8D1052A10A044.title: "Mode Arcencium"
 	chapter.5BA8D1052A10A044.chapter_subtitle: ["Le carnet du mode : dix étapes, dans l'ordre d'une partie. Chacune se coche toute seule."]
+	chapter.2A20040AFE1C91C1.title: "Haven"
+	chapter.2A20040AFE1C91C1.chapter_subtitle: ["Le parcours dans la ville de Jak 3. Chaque étape se coche toute seule."]
 	quest.1FB3B169020C8803.title: "Le premier Arcencium"
 	quest.1FB3B169020C8803.quest_desc: ["Descendez sous le niveau zéro, plus profond que le diamant. Une pioche en diamant en tire le brut ; une pioche en fer n'en tire que des éclats, et quatre éclats font un brut.", "", "Attendez l'&bAurore&r : elle montre les filons à travers la roche.", "", "&7Se coche avec un brut, un lingot ou quatre éclats dans le sac."]
 	quest.44168CEBF6E694D4.title: "Trois lingots"
@@ -21,6 +23,12 @@
 	quest.610C30B23A89F1C2.quest_desc: ["Dans un sanctuaire, cinq sceaux dorment dans la pyramide et les ailes. Cliquez-en un pour l'éveiller.", "", "Tous éveillés, l'ancre du sommet accepte l'Arcencium.", "", "&7Se coche au premier sceau éveillé, n'importe où."]
 	quest.05970D6664249579.title: "Tenir une ancre"
 	quest.05970D6664249579.quest_desc: ["Au sommet du sanctuaire, alimentez l'ancre en lingots d'Arcencium (8 pour la première) et tenez le siège.", "", "Trois ancres tenues lèvent l'&dArc-en-ciel&r et son boss.", "", "&7Se coche à la première ancre tenue."]
+	quest.50BFB3D0079383A0.title: "Vous aviez rendez-vous au quartier général"
+	quest.50BFB3D0079383A0.quest_desc: ["Vous vous réveillez dans votre appartement, au port de &bHaven&r. La ville est calme : ses habitants et ses voitures volantes vont et viennent. Vous n'avez pas d'arme.", "", "Le quartier général, c'est le &6bar du Hip Hog&r. La barre en haut de l'écran donne la distance et la direction ; une voiture vous attend devant l'appartement.", "", "&7Se coche à la première arrivée."]
+	quest.2C29095DC701E91E.title: "Le quartier général"
+	quest.2C29095DC701E91E.quest_desc: ["Le bar du Hip Hog. Au bout du comptoir, la &cborne&r lance la partie : la vitre rouge pour le Défi, la bleue pour le Monde ouvert.", "", "Le bouton, près de la borne, fait passer toute la ville de paisible à envahie. Il n'obéit qu'à ceux qui ont débloqué les douze armes du Morph Gun.", "", "&7Se coche au premier pas dans le bar."]
+	quest.54E77607CCDEAB01.title: "Le départ"
+	quest.54E77607CCDEAB01.quest_desc: ["Votez à la borne : quand tout le monde a voté, la partie part au village. Les armes de Jak restent dans Haven.", "", "&7Se coche au premier départ."]
 	quest.6021D93700B93DB2.title: "Les gemmes d'Apothéose"
 	quest.6021D93700B93DB2.quest_desc: ["Nos armes et armures acceptent les &dgemmes&r et les affixes d'Apothéose comme n'importe quelle pièce.", "", "Dans l'atelier du village, à côté de la Forge : la &6Table de taille&r pour sertir une gemme, la &6Table de récupération&r pour la reprendre, la &6Table de reforge&r pour retirer les affixes.", "", "Les chapitres &eArtefacts&r, &eReliques&r et &eEnchantement d'Apothéose&r du livre d'ATM10 sont gardés plus bas.", "", "&7Cochez quand c'est lu."]
 }

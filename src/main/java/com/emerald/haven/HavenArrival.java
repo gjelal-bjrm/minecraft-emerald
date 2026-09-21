@@ -429,8 +429,7 @@ public final class HavenArrival {
         Component direction = Component.translatable(direction(dx, dz));
         player.sendSystemMessage(Component.translatable("game.emeraldweapons.haven.arrival",
                 place.room().number(), distance, direction).withStyle(ChatFormatting.AQUA));
-        player.displayClientMessage(Component.translatable("game.emeraldweapons.haven.arrival.bar", direction)
-                .withStyle(ChatFormatting.GOLD), true);
+        // la ligne au-dessus de la barre d'objets est remplacee par la barre d'objectif (HavenJourney)
         // l'etat de la ville : envahie (on arrive en invasion) ou paisible, et le bouton qui la bascule
         boolean invasion = com.emerald.haven.invasion.HavenInvasion.mode(server)
                 == com.emerald.haven.invasion.HavenInvasion.Mode.INVASION;
@@ -439,6 +438,8 @@ public final class HavenArrival {
                         : "game.emeraldweapons.haven.invasion.arrival.off")
                 .withStyle(invasion ? ChatFormatting.RED : ChatFormatting.GREEN));
         com.emerald.haven.invasion.HavenInvasion.warnPeacefulDifficulty(player);
+        // le parcours : le titre de la premiere arrivee, puis le guide vers le QG
+        com.emerald.haven.journey.HavenJourney.onArrive(player);
     }
 
     /**
@@ -489,8 +490,8 @@ public final class HavenArrival {
         player.setRespawnPosition(Haven.LEVEL, place.feet(), place.yaw(), true, false);
     }
 
-    /** Le point cardinal dominant : +X est, -X ouest, +Z sud, -Z nord. */
-    private static String direction(int dx, int dz) {
+    /** Le point cardinal dominant : +X est, -X ouest, +Z sud, -Z nord (cle de langue). */
+    public static String direction(int dx, int dz) {
         if (Math.abs(dx) >= Math.abs(dz)) {
             return dx >= 0 ? "game.emeraldweapons.haven.dir.east" : "game.emeraldweapons.haven.dir.west";
         }
@@ -548,6 +549,7 @@ public final class HavenArrival {
      */
     public static void toVillage(ServerPlayer player, boolean kit) {
         MinecraftServer server = player.server;
+        com.emerald.haven.journey.HavenJourney.onDeparture(player);
         ServerLevel overworld = server.overworld();
         BlockPos village = GameState.get(overworld).village();
         BlockPos stand = village.equals(BlockPos.ZERO)

@@ -170,6 +170,20 @@ public record MorphGunData(GunForm form, GunForm previous, long changeTick, int 
                 this.ecoBlue, this.ecoDark, this.triggerStart, this.triggerEnd, this.lobby);
     }
 
+    /**
+     * Les formes suivent le parcours du joueur (HavenProgress) : une quete gagnee les
+     * augmente, une remise a zero les retire. Si la forme tenue n'est plus possedee,
+     * l'arme revient a sa premiere forme possedee, sans transformation a jouer.
+     */
+    public MorphGunData syncOwned(int mask) {
+        if ((mask & this.form.bit()) != 0 || mask == 0) {
+            return withOwned(mask);
+        }
+        GunForm start = (mask & GunForm.RED_1.bit()) != 0 ? GunForm.RED_1 : firstOwned(mask);
+        return new MorphGunData(start, start, NEVER, mask, this.ecoRed, this.ecoYellow,
+                this.ecoBlue, this.ecoDark, this.triggerStart, this.triggerEnd, this.lobby);
+    }
+
     public MorphGunData withTrigger(long start, long end) {
         return new MorphGunData(this.form, this.previous, this.changeTick, this.owned, this.ecoRed,
                 this.ecoYellow, this.ecoBlue, this.ecoDark, start, end, this.lobby);
