@@ -244,10 +244,10 @@ zone de survol exactement comme une voiture (mêmes touches, Espace compris), à
   comme les habitants.
 - **Les mouettes** sur tous les quais (Alex's Mobs). Elles volent la nourriture qu'on
   tient en main. **Ne frappez pas une mouette** : une armée de dix-huit mouettes
-  arrive de tous les côtés, tourne autour de vous et, parfois, vous pique (un
-  demi-cœur, pas plus d'un coup toutes les trois secondes). Elle repart au bout de
-  vingt secondes, ou dès que vous vous mettez à l'abri dans un appartement ou au
-  Hip Hog.
+  arrive de tous les côtés, tourne autour de vous, et tour à tour elles foncent sur
+  vous : elles vous bousculent et vous piquent (un demi-cœur par coup, jamais plus
+  de trois coups en une seconde et demie). Elle repart au bout de vingt secondes,
+  ou dès que vous vous mettez à l'abri dans un appartement ou au Hip Hog.
 - **Le bassin du port**, l'eau entre l'arc de la ville et la jetée des deux tours :
   poissons en bancs, poissons volants, cténophores, homards, hippocampes, raies manta ;
   des phoques et des crabes sur les pontons. On peut y nager sans crainte.

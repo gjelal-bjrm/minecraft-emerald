@@ -7612,10 +7612,12 @@ d'aujourd'hui), avec un plafond de ce qui est charge par role.
   ralentissement). Le joueur qui entre au large en est prevenu dans la barre d'action,
   une fois par minute. Les dangers se tuent (les armes du Morph Gun les visent aussi).
 - L'ARMEE DE MOUETTES (`SeagullArmy`) : qui frappe une mouette voit arriver dix-huit
-  mouettes de tous les cotes ; elles tournent autour de lui a trois ou six blocs et,
-  parfois, l'une pique sur sa tete (un demi-coeur, au plus un coup toutes les TROIS
-  secondes : a deux, le banc en comptait huit en vingt secondes, quatre coeurs -- pas
-  « parfois »). Vingt secondes, ou jusqu'a ce qu'il se mette a l'abri (appartement, Hip Hog) ;
+  mouettes de tous les cotes ; elles tournent autour de lui a trois ou six blocs et, tour
+  a tour, l'une fonce sur lui : elle le BOUSCULE et le pique (un demi-coeur). La limite
+  est celle du joueur : « les mouettes doivent pouvoir bousculer, et pas plus de trois
+  coups toutes les 1,5 secondes » -- au plus trois coups sur toute fenetre de trente
+  tiques ; un coup qui ne porte pas (invulnerabilite d'un demi-coeur) ne compte pas.
+  Vingt secondes, ou jusqu'a ce qu'il se mette a l'abri (appartement, Hip Hog) ;
   puis elles repartent vers le large, et trente secondes de repit. Invulnerables, comme les
   cocottes de Zelda ; les autres mouettes du coin s'envolent. Le vol est celui des
   mouettes d'Alex's Mobs, sans leurs buts, menees par leur controle de vol.
@@ -7627,12 +7629,14 @@ Deux choses vues en photo (vrai client, shaders), corrigees :
   est introuvable -- le chien restait assis au milieu de la rue. Les compagnons perdent ce
   but (a la naissance et a chaque rechargement) : ils se promenent, colliers visibles ;
   les chats gardent l'envie de s'asseoir sur un coffre ou un four.
-- LES MOUETTES DE L'ARMEE BOUSCULAIENT : dix-huit mouettes qui frolent un joueur l'ont
-  pousse de deux blocs, et il est tombe par un trou au bord de la rue de l'arc. Elles sont
-  maintenant dans une equipe sans collision (`emeraldweapons.armee`, videe a la fin de
-  chaque armee) et piquent au-dessus de la tete, sans entrer dans le joueur. Et l'envol
-  se replie plus pres (8 a 14 blocs, puis au-dessus du joueur) entre les murs d'une rue
-  etroite, ou dans un coin a peine charge.
+- LES MOUETTES DE L'ARMEE BOUSCULENT : en photo, elles ont pousse le joueur de deux
+  blocs, et il est tombe par un trou au bord de la rue de l'arc. Je les avais mises dans
+  une equipe sans collision ; le joueur l'a refusee le soir meme (« les mouettes doivent
+  pouvoir bousculer »), en fixant en meme temps la limite des coups (trois en 1,5 s). Elles
+  foncent de nouveau droit sur la tete ; l'equipe, si elle traine dans un monde, est
+  retiree a la premiere armee. Reste de cette photo : l'envol se replie plus pres (8 a 14
+  blocs, puis au-dessus du joueur) entre les murs d'une rue etroite, ou dans un coin a
+  peine charge.
 
 ### 85.3 La carte de l'eau
 

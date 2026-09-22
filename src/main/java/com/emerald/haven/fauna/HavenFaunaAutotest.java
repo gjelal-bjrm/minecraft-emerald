@@ -108,6 +108,8 @@ public final class HavenFaunaAutotest {
     private static double closest = Double.MAX_VALUE;
     private static int maxPecks;
     private static int armySize;
+    private static float pecked;
+    private static List<Long> peckTicks = new ArrayList<>();
     private static List<UUID> armyIds = new ArrayList<>();
     // l'abri
     private static int petsBefore;
@@ -539,19 +541,26 @@ public final class HavenFaunaAutotest {
                     "blessee " + hurt + " (" + hitHealth + " -> " + hitGull.getHealth() + "), armee " + armySize
                             + String.format(Locale.ROOT, ", a %.1f blocs en moyenne", firstDistance));
             boolean armored = true;
-            boolean ghosts = true;
+            boolean jostle = true;
             for (Mob gull : army) {
                 armored &= !gull.hurt(level.damageSources().playerAttack(cobaye), 5.0F);
-                ghosts &= SeagullArmy.collisionFree(level, gull);
+                jostle &= gull.getTeam() == null && gull.isPushable();
             }
             check("les mouettes de l'armee sont invulnerables (comme les cocottes)", !army.isEmpty() && armored, "");
-            check("et ne bousculent personne : equipe sans collision", !army.isEmpty() && ghosts, "");
+            check("et bousculent (choix du joueur) : aucune equipe sans collision, corps qui heurtent",
+                    !army.isEmpty() && jostle && server.getScoreboard().getPlayerTeam("emeraldweapons.armee") == null, "");
             check("pendant sa colere, une seconde mouette frappee ne leve pas une seconde armee",
                     SeagullArmy.trigger(level, cobaye, hitGull) == 0, "");
         }
         if (t > 0) {
-            // le cobaye ne tique pas : son invulnerabilite apres un coup ne retomberait jamais
+            // le cobaye ne tique pas : son invulnerabilite apres un coup ne retomberait jamais.
+            // Sans elle, seule la regle des trois coups en une seconde et demie limite l'armee ;
+            // et on le soigne a chaque tique, en comptant ce qu'il a perdu
             cobaye.invulnerableTime = 0;
+            if (cobaye.getHealth() < cobaye.getMaxHealth()) {
+                pecked += cobaye.getMaxHealth() - cobaye.getHealth();
+                cobaye.setHealth(cobaye.getMaxHealth());
+            }
             List<Mob> army = SeagullArmy.gullsForTest(cobaye.getUUID());
             if (!army.isEmpty() && t % 20 == 0) {
                 double sum = 0;
@@ -563,15 +572,24 @@ public final class HavenFaunaAutotest {
             int[] state = SeagullArmy.stateForTest(cobaye.getUUID());
             if (state != null) {
                 maxPecks = Math.max(maxPecks, state[1]);
+                peckTicks = SeagullArmy.pecksForTest(cobaye.getUUID());
             }
         }
         if (t == SeagullArmy.DURATION - 20) {
             check("l'armee vole autour du joueur : distance moyenne tombee sous 9 blocs",
                     closest < 9.0, String.format(Locale.ROOT, "%.1f au depart, %.1f au plus pres", firstDistance, closest));
-            check("et le pique, parfois : au moins deux coups de bec, un demi-coeur chacun, jamais plus d'un toutes les 3 s",
-                    maxPecks >= 2 && maxPecks <= SeagullArmy.DURATION / SeagullArmy.PECK_EVERY + 1
-                            && cobaye.getHealth() <= cobayeStart - SeagullArmy.PECK_DAMAGE + 0.01F,
-                    maxPecks + " coups, vie " + cobayeStart + " -> " + cobaye.getHealth());
+            int worst = 0;
+            for (int i = 0; i < peckTicks.size(); i++) {
+                int inWindow = 0;
+                for (int j = i; j < peckTicks.size() && peckTicks.get(j) - peckTicks.get(i) < SeagullArmy.PECK_WINDOW; j++) {
+                    inWindow++;
+                }
+                worst = Math.max(worst, inWindow);
+            }
+            check("et le pique : des coups de bec d'un demi-coeur, jamais plus de trois sur une seconde et demie",
+                    maxPecks >= 3 && worst <= SeagullArmy.PECK_BURST
+                            && Math.abs(pecked - maxPecks * SeagullArmy.PECK_DAMAGE) < 0.01F,
+                    maxPecks + " coups en 19 s, au plus " + worst + " sur 30 tiques, " + pecked + " points de vie perdus");
         }
         if (t == SeagullArmy.DURATION + SeagullArmy.LEAVE + 20) {
             int left = 0;
@@ -580,11 +598,9 @@ public final class HavenFaunaAutotest {
                     left++;
                 }
             }
-            net.minecraft.world.scores.PlayerTeam team = server.getScoreboard().getPlayerTeam(SeagullArmy.TEAM);
-            int members = team == null ? 0 : team.getPlayers().size();
-            check("au bout de 20 s, l'armee s'en va et disparait, et son equipe se vide",
-                    SeagullArmy.stateForTest(cobaye.getUUID()) == null && left == 0 && members == 0,
-                    left + " mouettes de l'armee encore la, " + members + " dans l'equipe");
+            check("au bout de 20 s, l'armee s'en va et disparait",
+                    SeagullArmy.stateForTest(cobaye.getUUID()) == null && left == 0,
+                    left + " mouettes de l'armee encore la");
             check("repit de 30 s : frapper une mouette ne leve pas d'armee tout de suite",
                     SeagullArmy.trigger(level, cobaye, hitGull) == 0, "");
             next(Stage.SHELTER);
