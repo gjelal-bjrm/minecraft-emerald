@@ -39,7 +39,7 @@ public final class PhotoClient {
         mc.options.hideGui = !PhotoAutomaton.pendingGui();
         if (PhotoAutomaton.finished()) {
             stopping = true;
-            mc.stop();
+            AutomatonExit.stop("photos", 30);          // jamais d'ecran noir laisse derriere soi
             return;
         }
         String wanted = PhotoAutomaton.pending();

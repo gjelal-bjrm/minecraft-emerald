@@ -818,5 +818,10 @@
   "item.emeraldweapons.arcencium_shield.parade": "Parade immédiate : il pare dès qu'il est levé",
   "item.emeraldweapons.arcencium_shield.riposte": "Riposte prismatique : un coup paré renvoie un cœur de dégâts et repousse (une fois par seconde)",
   "weather.emeraldweapons.aurore.cold": "Le Grand Froid vous gagne : mettez-vous à l'abri sous un toit, sous terre ou près d'un feu.",
-  "weather.emeraldweapons.aurore.cold.frozen": "Vous gelez ! Sous terre, sous un toit ou près d'un feu, vite."
+  "weather.emeraldweapons.aurore.cold.frozen": "Vous gelez ! Sous terre, sous un toit ou près d'un feu, vite.",
+  "block.emeraldweapons.arc_portal": "Portail d'Arcencium",
+  "game.emeraldweapons.haven.depart.open": "Le portail vers le village est ouvert au QG : traversez l'arche quand vous êtes prêts.",
+  "game.emeraldweapons.haven.depart.reminder": "L'arche du QG mène au village (%s sur %s déjà partis).",
+  "game.emeraldweapons.haven.depart.late": "Le portail se referme : départ pour le village.",
+  "game.emeraldweapons.haven.agenda.rdv.depart": "Le départ : traversez l'arche du QG pour rejoindre le village."
 }

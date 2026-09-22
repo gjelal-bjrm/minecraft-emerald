@@ -31,10 +31,18 @@ public class GoldenGateBlock extends Block {
         return Shapes.empty();
     }
 
+    /**
+     * PLUS POSE DEPUIS LES ARCHES (cahier §84) : un bloc reste d'un monde d'avant -- une meteo
+     * interrompue par un arret -- s'efface de lui-meme, au hasard des tiques.
+     */
     @Override
-    protected void entityInside(BlockState state, Level level, BlockPos pos, Entity entity) {
-        if (level instanceof ServerLevel server && entity instanceof ServerPlayer player) {
-            com.emerald.weather.GoldenGate.touch(server, player, pos);
-        }
+    protected boolean isRandomlyTicking(BlockState state) {
+        return true;
+    }
+
+    @Override
+    protected void randomTick(BlockState state, net.minecraft.server.level.ServerLevel level, BlockPos pos,
+                              net.minecraft.util.RandomSource random) {
+        level.setBlock(pos, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
     }
 }

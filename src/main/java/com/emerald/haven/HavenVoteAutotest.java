@@ -701,10 +701,12 @@ public final class HavenVoteAutotest {
             HavenVote.depart(server, modeBefore);
             HavenVote.followVoteBlock(server);           // ce que la tique suivante ferait
             boolean statusLobby = game.status() == GameState.Status.LOBBY;
+            // la place de la borne peut accueillir l'arche du depart (HavenDeparture, §84) : on
+            // verifie que la BORNE est partie, pas que la case est vide
             check("depart : phase PARTI, votes effaces, les DEUX moities de la borne retirees"
                             + (statusLobby ? ", regime applique" : ""),
                     state.phase() == HavenState.Phase.PARTI && state.vote(voter) == null
-                            && level.getBlockState(urn).isAir() && level.getBlockState(top).isAir()
+                            && !level.getBlockState(urn).is(vote) && !level.getBlockState(top).is(vote)
                             && (!statusLobby || (game.modeChosen() && game.mode() == modeBefore)),
                     "phase " + state.phase() + ", vote " + state.vote(voter) + ", borne "
                             + name(level.getBlockState(urn)) + " / " + name(level.getBlockState(top)) + ", statut "

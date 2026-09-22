@@ -397,16 +397,17 @@ public final class HavenVote {
      *    pendant le depart va au village, pas dans un appartement.
      * 2. Le mode est applique ; ModeChoice l'annonce a TOUS les joueurs du
      *    serveur, ceux de la ville compris.
-     * 3. Chacun passe au village : teleportation, reapparition dans l'overworld,
-     *    mode de jeu d'origine rendu, kit de depart. Le kit vide l'inventaire :
-     *    c'est voulu ici, et nulle part ailleurs dans la ville -- et seulement
-     *    si la Lame n'a pas encore ouvert la partie (LOBBY ou PROLOGUE), comme
-     *    pour le retardataire. Le vote et « skip » exigent deja une partie en
-     *    attente ; la garde est la pour qu'aucun autre appel ne vide les poches
-     *    d'un serveur en pleine partie.
-     * 4. L'annonce du village, APRES la teleportation : envoyee avant, elle
-     *    n'aurait atteint que les joueurs de l'overworld, c'est-a-dire personne.
-     * 5. Les votes sont effaces, les deux moities de la borne retirees.
+     * 3. Les votes sont effaces, les deux moities de la borne retirees : sa place peut
+     *    accueillir l'arche du depart.
+     * 4. L'ARCHE DU DEPART S'OUVRE dans le bar (HavenDeparture, cahier §84) : chacun la
+     *    passe quand il est pret et arrive au village -- teleportation, reapparition dans
+     *    l'overworld, mode de jeu d'origine rendu, kit de depart, annonce du village. Le
+     *    kit vide l'inventaire : c'est voulu ici, et nulle part ailleurs dans la ville --
+     *    et seulement si la Lame n'a pas encore ouvert la partie (LOBBY ou PROLOGUE), comme
+     *    pour le retardataire. Le vote et « skip » exigent deja une partie en attente ; la
+     *    garde est la pour qu'aucun autre appel ne vide les poches d'un serveur en pleine
+     *    partie. Qui n'est pas dans la ville part tout de suite ; sans place pour l'arche,
+     *    tout le monde part d'un coup, comme avant.
      */
     public static void depart(MinecraftServer server, @Nullable GameState.Mode mode) {
         HavenState state = HavenState.get(server);
@@ -417,7 +418,22 @@ public final class HavenVote {
         reset();
         state.setPhase(HavenState.Phase.PARTI);
         ModeChoice.choose(overworld, chosen);
+        state.clearVotes();
+        // les deux moities partent tout de suite, troncon charge s'il le faut :
+        // sans cela, une borne loin de tout joueur restait au monde sauvegarde
+        keepVoteBlock(server, true);
         List<ServerPlayer> players = List.copyOf(server.getPlayerList().getPlayers());
+        if (com.emerald.haven.journey.HavenDeparture.open(server, chosen, kit)) {
+            // l'arche emmene ceux de la ville ; les autres (hors de la ville) partent tout de suite
+            for (ServerPlayer player : players) {
+                if (!Haven.is(player.level()) && !HavenRules.chantier(player)) {
+                    HavenArrival.toVillage(player, kit);
+                }
+            }
+            LOGGER.info("ville de Haven : depart vers le village en {}, {} joueurs, par l'arche du QG",
+                    chosen, players.size());
+            return;
+        }
         for (ServerPlayer player : players) {
             HavenArrival.toVillage(player, kit);
         }
@@ -429,10 +445,6 @@ public final class HavenVote {
         for (ServerPlayer player : overworld.players()) {
             player.sendSystemMessage(where);
         }
-        state.clearVotes();
-        // les deux moities partent tout de suite, troncon charge s'il le faut :
-        // sans cela, une borne loin de tout joueur restait au monde sauvegarde
-        keepVoteBlock(server, true);
         LOGGER.info("ville de Haven : depart vers le village en {}, {} joueurs", chosen, players.size());
     }
 
@@ -548,6 +560,14 @@ public final class HavenVote {
             BlockState wantUpper = voteState(DoubleBlockHalf.UPPER);
             if (lower == wantLower && upper == wantUpper) {
                 return pos;
+            }
+            // UNE ARCHE DU DEPART ORPHELINE sur la place de la borne (un arret du serveur en
+            // plein depart, d'avant le nettoyage a l'arret) : elle s'en va, la borne revient
+            for (BlockPos cell : new BlockPos[]{pos, top}) {
+                if (level.getBlockState(cell).is(ModBlocks.ARC_PORTAL.get())
+                        && !com.emerald.haven.journey.HavenDeparture.isGate(level, cell)) {
+                    level.setBlock(cell, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
+                }
             }
             if (HavenVoteBlock.fits(level, pos)) {
                 level.setBlock(pos, wantLower, QUIET);

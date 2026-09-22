@@ -157,6 +157,9 @@ public final class HavenAgenda {
         if (!Haven.is(player.level())) {
             return Component.translatable("game.emeraldweapons.haven.agenda.partie");
         }
+        if (HavenDeparture.isOpen()) {
+            return Component.translatable("game.emeraldweapons.haven.agenda.rdv.depart");
+        }
         if (!HavenJourney.guided(player)) {
             return Component.translatable("game.emeraldweapons.haven.agenda.ferme");
         }

@@ -4,6 +4,7 @@ import com.emerald.block.ModBlocks;
 import com.emerald.main.EmeraldWeaponsMod;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
@@ -44,11 +45,16 @@ import java.util.UUID;
  *    vrai vide (six blocs d'air au moins, de preference dix), qui MONTENT bloc
  *    par bloc du sol au plafond. Dedans on monte, on descend accroupi, on ne
  *    tombe jamais. Un gouffre devient une descente ;
- *  - LES BRUMES ETOILEES : une ou deux paires de nuages d'etoiles, a 30-120
- *    blocs l'un de l'autre. Entrer dans l'un, c'est se dissoudre et etre porte
- *    sur un arc, a travers la roche s'il le faut, jusqu'a l'autre. Dans les
- *    deux sens. Techniquement on chevauche un porteur invisible qui suit une
- *    courbe : c'est ce qui rend le vol FLUIDE a l'ecran, sans a-coups.
+ *  - LES BRUMES ETOILEES : une ou deux paires d'arches au voile de nuit etoilee,
+ *    a 30-120 blocs l'une de l'autre. Passer dans l'une, c'est se dissoudre et
+ *    etre porte sur un arc, a travers la roche s'il le faut, jusqu'a l'autre.
+ *    Dans les deux sens. Techniquement on chevauche un porteur invisible qui
+ *    suit une courbe : c'est ce qui rend le vol FLUIDE a l'ecran, sans a-coups.
+ *
+ * DES ARCHES, ET PLUS DES NUAGES (22 sept., cahier §84) : six cubes translucides en croix,
+ * dont chaque bras emportait, « tres embetant a prendre [...] je ne sais pas quelle partie
+ * je dois contourner ». Ce sont des arches d'Arcencium (ArcPortals) : seul le voile
+ * emporte, et une brume ne se leve que la ou son arche tient.
  *
  * LA FIN, ANNONCEE : a 45 s de la fin de l'Aurore, un message ; a 15 s, un
  * second. Puis chaque colonne s'eteint DE HAUT EN BAS, bloc par bloc, et chaque
@@ -123,12 +129,12 @@ public final class AuroreCaves {
     private static final List<BlockPos> lit = new ArrayList<>();
     private static final ArrayDeque<BlockPos> rising = new ArrayDeque<>();
     private static final ArrayDeque<BlockPos> fading = new ArrayDeque<>();
-    /** Chaque bloc de brume, et l'ancre de sa paire ; chaque ancre, sa jumelle. */
-    private static final Map<BlockPos, BlockPos> mistBlocks = new HashMap<>();
+    /** Chaque arche de brume levee et le cote vers lequel elle regarde ; chaque ancre, sa jumelle. */
+    private static final Map<BlockPos, Direction> arches = new HashMap<>();
     private static final Map<BlockPos, BlockPos> links = new HashMap<>();
     private static final Map<UUID, Transit> transits = new HashMap<>();
-    /** Qui touche une brume CETTE tique, et qui la touchait a la precedente. */
-    private static final Set<UUID> touching = new HashSet<>();
+    /** Qui est dans le voile d'une brume CETTE tique (et laquelle), et qui l'etait a la precedente. */
+    private static final Map<UUID, BlockPos> touching = new HashMap<>();
     private static final Set<UUID> wasTouching = new HashSet<>();
     private static final Map<UUID, Long> arrivedAt = new HashMap<>();
     /** Les pieds des puits leves : pour le journal, et donc pour les essais. */
@@ -137,7 +143,7 @@ public final class AuroreCaves {
     private static final Map<UUID, BlockPos> servedAt = new HashMap<>();
     /** Les brumes de rappel de la fin : d'ou, vers ou, et jusqu'a quand. */
     private static final Map<BlockPos, BlockPos> recalls = new HashMap<>();
-    private static final List<BlockPos> recallBlocks = new ArrayList<>();
+    private static final List<BlockPos> recallArches = new ArrayList<>();
     private static long recallUntil = -1L;
     private static final Map<UUID, Long> nextTry = new HashMap<>();
 
@@ -256,19 +262,15 @@ public final class AuroreCaves {
         lit.sort((a, b) -> Integer.compare(b.getY(), a.getY()));
         fading.addAll(lit);
         lit.clear();
-        for (BlockPos pos : mistBlocks.keySet()) {
-            if (level.getBlockState(pos).is(ModBlocks.STAR_MIST.get())) {
-                level.setBlock(pos, Blocks.AIR.defaultBlockState(), 3);
-                level.sendParticles(com.emerald.particles.ModParticles.PRISM_MOTE.get(),
-                        pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, 6, 0.4, 0.4, 0.4, 0.0);
-            }
+        for (BlockPos pos : arches.keySet()) {
+            com.emerald.block.ArcPortals.remove(level, pos);
         }
-        if (!mistBlocks.isEmpty()) {
+        if (!arches.isEmpty()) {
             for (ServerPlayer player : level.players()) {
                 player.playNotifySound(SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.AMBIENT, 0.8F, 1.4F);
             }
         }
-        mistBlocks.clear();
+        arches.clear();
         links.clear();
         arrivedAt.clear();
         // LE RAPPEL : qui est encore sous terre voit une brume se lever a ses
@@ -276,6 +278,11 @@ public final class AuroreCaves {
         // haut, jusqu'au premier bloc a ciel ouvert. L'Aurore ne laisse
         // personne au fond.
         clearRecalls(level);
+        // A L'ARRET DU SERVEUR (WeatherManager y finit la meteo en cours), pas de rappel :
+        // l'arche serait posee -- la roche taillee -- pour etre retiree aussitot
+        if (!level.getServer().isRunning()) {
+            return;
+        }
         for (ServerPlayer player : level.players()) {
             placeRecall(level, player);
         }
@@ -283,7 +290,7 @@ public final class AuroreCaves {
 
     /**
      * La brume de rappel d'un joueur, s'il est sous terre et qu'il y a un jour
-     * au-dessus.
+     * au-dessus : une arche au voile d'aube, a cote de lui.
      *
      * A COTE DE LUI, JAMAIS SUR LUI. Elle se levait « a ses pieds », au sens
      * propre : sur son bloc et sur celui de sa tete. Le joueur etait donc
@@ -306,20 +313,17 @@ public final class AuroreCaves {
         if (top.getY() <= feet.getY() + 3) {
             return;
         }
-        BlockPos anchor = recallSpot(level, feet);
-        if (anchor == null) {
+        com.emerald.block.ArcPortals.Placement where = recallSpot(level, player);
+        if (where == null) {
             return;                         // ni place ni roche a tailler : on n'insiste pas
         }
+        BlockPos anchor = where.anchor();
         recalls.put(anchor, top);
         links.put(anchor, top);                        // un seul sens : on ne redescend pas par la
-        BlockPos[] cloud = {anchor, anchor.above()};
-        for (BlockPos pos : cloud) {
-            if (level.getBlockState(pos).isAir()) {
-                level.setBlock(pos, ModBlocks.RECALL_MIST.get().defaultBlockState(), 3);
-                mistBlocks.put(pos, anchor);
-                recallBlocks.add(pos);
-            }
-        }
+        com.emerald.block.ArcPortals.place(level, anchor, where.facing(),
+                com.emerald.block.ArcPortalBlock.Tint.AUBE);
+        arches.put(anchor, where.facing());
+        recallArches.add(anchor);
         // ET IL N'Y EST PAS DEJA. Meme posee a cote, la brume pourrait toucher
         // sa boite : on le declare « touchait deja », ce qui repousse le depart
         // au moment ou il en sortira et y reviendra de lui-meme.
@@ -332,74 +336,138 @@ public final class AuroreCaves {
     }
 
     /**
-     * Ou poser la brume de rappel : a cote du joueur, ou dans la paroi.
+     * Ou poser l'arche de rappel : a cote du joueur, ou dans la paroi.
      *
-     * Trois passes, de la plus polie a la plus brutale. D'abord les quatre
-     * voisins de plain-pied, deja creux : rien a casser. Puis les quatre
-     * diagonales, pour le cas d'une galerie etroite. Enfin la taille : on
-     * ouvre une alcove d'un bloc sur deux dans la premiere paroi de roche
-     * naturelle venue. Null si les huit cotes sont autre chose que de la
-     * roche -- un coffre, une porte, un bloc pose -- car on ne casse jamais
-     * ce que le joueur a mis la.
+     * D'abord une place ou l'arche tient deja, a deux ou trois blocs de lui, tournee vers
+     * lui : rien a casser. Sinon la taille : on ouvre dans la premiere paroi de roche
+     * naturelle venue, a deux blocs devant lui, le passage de l'arche (trois de large, quatre
+     * de haut) et le pas qui y mene. Null si rien ne s'y prete -- un coffre, une porte, un
+     * bloc pose -- car on ne casse jamais ce que le joueur a mis la.
      */
     @Nullable
-    private static BlockPos recallSpot(ServerLevel level, BlockPos feet) {
-        int[][] straight = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
-        int[][] corners = {{1, 1}, {1, -1}, {-1, 1}, {-1, -1}};
-        for (int[][] ring : new int[][][]{straight, corners}) {
-            for (int[] d : ring) {
-                BlockPos spot = feet.offset(d[0], 0, d[1]);
-                if (level.getBlockState(spot).isAir() && level.getBlockState(spot.above()).isAir()) {
-                    return spot;
+    private static com.emerald.block.ArcPortals.Placement recallSpot(ServerLevel level, ServerPlayer player) {
+        BlockPos feet = player.blockPosition();
+        for (int r = 2; r <= 4; r++) {
+            for (Direction d : com.emerald.block.ArcPortals.facings(feet, feet.relative(player.getDirection(), 4))) {
+                BlockPos anchor = feet.relative(d, r);
+                for (int dy = 0; dy <= 1; dy++) {
+                    BlockPos at = anchor.above(dy);
+                    if (com.emerald.block.ArcPortals.fitsFront(level, at, d.getOpposite())
+                            && !at.equals(feet)) {
+                        return new com.emerald.block.ArcPortals.Placement(at, d.getOpposite());
+                    }
                 }
             }
         }
-        for (int[] d : straight) {
-            BlockPos spot = feet.offset(d[0], 0, d[1]);
-            BlockPos head = spot.above();
-            if (Underground.natural(level.getBlockState(spot))
-                    && (level.getBlockState(head).isAir()
-                        || Underground.natural(level.getBlockState(head)))) {
-                level.destroyBlock(spot, false);
-                if (!level.getBlockState(head).isAir()) {
-                    level.destroyBlock(head, false);
+        // LA TAILLE : devant lui d'abord, puis sur les cotes
+        for (Direction d : com.emerald.block.ArcPortals.facings(feet, feet.relative(player.getDirection(), 4))) {
+            BlockPos anchor = feet.relative(d, 2);
+            Direction facing = d.getOpposite();                // l'arche regarde le joueur
+            Direction side = facing.getClockWise();
+            List<BlockPos> carve = new ArrayList<>();
+            boolean ok = true;
+            for (int l = -1; l <= 1 && ok; l++) {
+                BlockPos base = anchor.relative(side, l);
+                BlockState floor = level.getBlockState(base.below());
+                if (!floor.isFaceSturdy(level, base.below(), Direction.UP)) {
+                    ok = false;
                 }
-                level.sendParticles(com.emerald.particles.ModParticles.PRISM_MOTE.get(),
-                        spot.getX() + 0.5, spot.getY() + 1.0, spot.getZ() + 0.5,
-                        12, 0.4, 0.6, 0.4, 0.02);
-                return spot;
+                for (int y = 0; y <= 3 && ok; y++) {
+                    BlockPos cell = base.above(y);
+                    BlockState state = level.getBlockState(cell);
+                    if (state.isAir()) {
+                        continue;
+                    }
+                    if (Underground.natural(state) && !Underground.ore(state)) {
+                        carve.add(cell);
+                    } else {
+                        ok = false;
+                    }
+                }
+            }
+            BlockPos step = feet.relative(d);
+            for (BlockPos cell : new BlockPos[]{step, step.above()}) {
+                BlockState state = level.getBlockState(cell);
+                if (!ok || state.isAir()) {
+                    continue;
+                }
+                if (Underground.natural(state) && !Underground.ore(state)) {
+                    carve.add(cell);
+                } else {
+                    ok = false;
+                }
+            }
+            if (!ok) {
+                continue;
+            }
+            for (BlockPos cell : carve) {
+                level.destroyBlock(cell, false);
+            }
+            level.sendParticles(com.emerald.particles.ModParticles.PRISM_MOTE.get(),
+                    anchor.getX() + 0.5, anchor.getY() + 1.5, anchor.getZ() + 0.5, 20, 0.9, 1.2, 0.4, 0.02);
+            return new com.emerald.block.ArcPortals.Placement(anchor, facing);
+        }
+        return null;
+    }
+
+    /**
+     * A l'arret, les arches s'en vont AVANT la sauvegarde : elles ne restent pas dans le monde.
+     * En dernier, apres WeatherManager qui finit la meteo en cours.
+     */
+    @SubscribeEvent(priority = net.neoforged.bus.api.EventPriority.LOWEST)
+    public static void onServerStopping(net.neoforged.neoforge.event.server.ServerStoppingEvent event) {
+        ServerLevel level = event.getServer().overworld();
+        for (BlockPos pos : arches.keySet()) {
+            com.emerald.block.ArcPortals.remove(level, pos);
+        }
+        arches.clear();
+        recallArches.clear();
+    }
+
+    /** Pour le banc d'essai (ArcenciumAutotest) : la brume de rappel de ce joueur, et son arche. */
+    @Nullable
+    public static BlockPos recallForTest(ServerLevel level, ServerPlayer player) {
+        placeRecall(level, player);
+        for (Map.Entry<BlockPos, BlockPos> entry : recalls.entrySet()) {
+            if (entry.getKey().distSqr(player.blockPosition()) <= 25.0) {
+                return entry.getKey();
             }
         }
         return null;
     }
 
+    /** Pour le banc d'essai : retire les brumes de rappel. */
+    public static void clearRecallsForTest(ServerLevel level) {
+        clearRecalls(level);
+    }
+
     private static void clearRecalls(ServerLevel level) {
-        for (BlockPos pos : recallBlocks) {
-            if (level.getBlockState(pos).is(ModBlocks.RECALL_MIST.get())) {
-                level.setBlock(pos, Blocks.AIR.defaultBlockState(), 3);
-            }
-            mistBlocks.remove(pos);
+        for (BlockPos anchor : recallArches) {
+            com.emerald.block.ArcPortals.remove(level, anchor);
+            arches.remove(anchor);
         }
         for (BlockPos anchor : recalls.keySet()) {
             links.remove(anchor);
         }
-        recallBlocks.clear();
+        recallArches.clear();
         recalls.clear();
         recallUntil = -1L;
     }
 
     /**
-     * UNE PAIRE A LA DEMANDE : la Chambre d'Aurore pose la sienne ici. Les deux
-     * ancres doivent etre de l'air avec de l'air au-dessus.
+     * UNE PAIRE A LA DEMANDE : la Chambre d'Aurore pose la sienne ici -- ou a trois blocs
+     * pres, la ou une arche tient.
      */
     public static boolean placePair(ServerLevel level, BlockPos anchorA, BlockPos anchorB) {
-        if (!level.getBlockState(anchorA).isAir() || !level.getBlockState(anchorB).isAir()) {
+        com.emerald.block.ArcPortals.Placement a = com.emerald.block.ArcPortals.nearest(level, anchorA, 3, 2, anchorB);
+        com.emerald.block.ArcPortals.Placement b = com.emerald.block.ArcPortals.nearest(level, anchorB, 3, 2, anchorA);
+        if (a == null || b == null || a.anchor().equals(b.anchor())) {
             return false;
         }
-        links.put(anchorA, anchorB);
-        links.put(anchorB, anchorA);
-        placeMist(level, anchorA);
-        placeMist(level, anchorB);
+        links.put(a.anchor(), b.anchor());
+        links.put(b.anchor(), a.anchor());
+        placeMist(level, a);
+        placeMist(level, b);
         active = true;
         return true;
     }
@@ -439,7 +507,7 @@ public final class AuroreCaves {
         lit.clear();
         rising.clear();
         wellFloors.clear();
-        mistBlocks.clear();
+        arches.clear();
         links.clear();
         warnedFirst = false;
         warnedSecond = false;
@@ -564,60 +632,50 @@ public final class AuroreCaves {
             if (best == null) {
                 continue;
             }
+            // les deux arches doivent tenir, chacune a deux blocs pres de son lieu
+            com.emerald.block.ArcPortals.Placement archA = com.emerald.block.ArcPortals.nearest(
+                    level, a.floor().above(), 2, 1, best.floor());
+            com.emerald.block.ArcPortals.Placement archB = archA == null ? null : com.emerald.block.ArcPortals.nearest(
+                    level, best.floor().above(), 2, 1, a.floor());
+            if (archA == null || archB == null) {
+                used.add(archA == null ? a.floor() : best.floor());
+                continue;
+            }
             used.add(a.floor());
             used.add(best.floor());
-            BlockPos anchorA = a.floor().above();
-            BlockPos anchorB = best.floor().above();
-            links.put(anchorA, anchorB);
-            links.put(anchorB, anchorA);
-            placeMist(level, anchorA);
-            placeMist(level, anchorB);
+            links.put(archA.anchor(), archB.anchor());
+            links.put(archB.anchor(), archA.anchor());
+            placeMist(level, archA);
+            placeMist(level, archB);
             pairs++;
         }
         return pairs;
     }
 
-    /** Un nuage de six blocs : une croix au sol et deux de haut au centre. */
-    private static void placeMist(ServerLevel level, BlockPos anchor) {
-        BlockPos[] cloud = {anchor, anchor.above(), anchor.north(), anchor.south(), anchor.east(), anchor.west()};
-        for (BlockPos pos : cloud) {
-            if (level.getBlockState(pos).isAir()) {
-                level.setBlock(pos, ModBlocks.STAR_MIST.get().defaultBlockState(), 3);
-                mistBlocks.put(pos, anchor);
-            }
-        }
-        level.playSound(null, anchor, SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.AMBIENT, 1.0F, 1.5F);
+    /** Une arche au voile de nuit etoilee. */
+    private static void placeMist(ServerLevel level, com.emerald.block.ArcPortals.Placement where) {
+        com.emerald.block.ArcPortals.place(level, where.anchor(), where.facing(),
+                com.emerald.block.ArcPortalBlock.Tint.ETOILEE);
+        arches.put(where.anchor(), where.facing());
+        level.playSound(null, where.anchor(), SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.AMBIENT, 1.0F, 1.5F);
     }
 
     // ------------------------------------------------------------ le voyage
 
-    /** Un joueur est dans une brume cette tique (StarMistBlock). */
-    public static void touch(ServerLevel level, ServerPlayer player, BlockPos pos) {
-        if (mistBlocks.containsKey(pos)) {
-            touching.add(player.getUUID());
-        }
+    /** Cette arche est-elle une brume en service ? (ArcPortalBlockEntity efface les autres.) */
+    public static boolean isArch(BlockPos pos) {
+        return arches.containsKey(pos);
     }
 
-    private static void depart(ServerLevel level, ServerPlayer player) {
-        BlockPos anchor = mistBlocks.get(player.blockPosition());
-        if (anchor == null) {
-            // il touche un bloc du nuage sans etre sur l'ancre : on cherche celui-ci
-            for (Map.Entry<BlockPos, BlockPos> entry : mistBlocks.entrySet()) {
-                if (entry.getKey().distSqr(player.blockPosition()) <= 2.0) {
-                    anchor = entry.getValue();
-                    break;
-                }
-            }
-        }
-        if (anchor == null) {
-            return;
-        }
+    private static void depart(ServerLevel level, ServerPlayer player, BlockPos anchor) {
         BlockPos exit = links.get(anchor);
         if (exit == null) {
             return;
         }
         Vec3 from = player.position();
-        Vec3 to = Vec3.atBottomCenterOf(exit);
+        // devant l'arche jumelle, le dos tourne a elle ; le rappel, lui, mene au jour
+        Direction exitFacing = arches.get(exit);
+        Vec3 to = exitFacing == null ? Vec3.atBottomCenterOf(exit) : com.emerald.block.ArcPortals.exit(exit, exitFacing);
         Vec3 mid = from.add(to).scale(0.5);
         Vec3 control = new Vec3(mid.x, Math.max(from.y, to.y) + TRANSIT_ARC, mid.z);
         ArmorStand carrier = new ArmorStand(level, from.x, from.y, from.z);
@@ -679,7 +737,13 @@ public final class AuroreCaves {
             if (t >= 1.0) {
                 player.stopRiding();
                 carrier.discard();
-                player.teleportTo(transit.to.x, transit.to.y, transit.to.z);
+                Direction exitFacing = arches.get(transit.exit);
+                if (exitFacing != null) {
+                    player.teleportTo(level, transit.to.x, transit.to.y, transit.to.z,
+                            com.emerald.block.ArcPortals.exitYaw(exitFacing), player.getXRot());
+                } else {
+                    player.teleportTo(transit.to.x, transit.to.y, transit.to.z);
+                }
                 player.setInvulnerable(false);
                 arrivedAt.put(player.getUUID(), level.getGameTime());
                 wasTouching.add(player.getUUID());            // il est dans la brume d'arrivee : pas de retour immediat
@@ -728,22 +792,38 @@ public final class AuroreCaves {
         if (recallUntil >= 0 && level.getGameTime() > recallUntil) {
             clearRecalls(level);
         }
-        // les departs : qui vient d'ENTRER dans une brume, et n'en revient pas a l'instant
+        // QUI EST DANS UN VOILE : les pieds entre les piliers d'une arche, pres de son plan
+        if (!arches.isEmpty()) {
+            for (ServerPlayer player : level.players()) {
+                if (player.isSpectator() || transits.containsKey(player.getUUID())) {
+                    continue;
+                }
+                for (Map.Entry<BlockPos, Direction> arch : arches.entrySet()) {
+                    if (arch.getKey().distSqr(player.blockPosition()) <= 16.0
+                            && com.emerald.block.ArcPortals.inVeil(player, arch.getKey(), arch.getValue())) {
+                        touching.put(player.getUUID(), arch.getKey());
+                        break;
+                    }
+                }
+            }
+        }
+        // les departs : qui vient d'ENTRER dans un voile, et n'en revient pas a l'instant
         if (active || !recalls.isEmpty()) {
             long now = level.getGameTime();
-            for (UUID id : touching) {
+            for (Map.Entry<UUID, BlockPos> entry : touching.entrySet()) {
+                UUID id = entry.getKey();
                 if (wasTouching.contains(id) || transits.containsKey(id)
                         || now - arrivedAt.getOrDefault(id, -1000L) < 60) {
                     continue;
                 }
                 ServerPlayer player = level.getServer().getPlayerList().getPlayer(id);
                 if (player != null) {
-                    depart(level, player);
+                    depart(level, player, entry.getValue());
                 }
             }
         }
         wasTouching.clear();
-        wasTouching.addAll(touching);
+        wasTouching.addAll(touching.keySet());
         touching.clear();
         tickTransits(level);
     }

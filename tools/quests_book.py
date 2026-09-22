@@ -162,7 +162,7 @@ HAVEN_QUESTS = [
         "&7Se coche au premier pas dans le bar.",
     ], []),
     ("haven_depart", "Le départ", "emeraldweapons:emerald_sword", [
-        "Votez à la borne : quand tout le monde a voté, la partie part au village. Les armes de Jak restent dans Haven.",
+        "Votez à la borne : quand tout le monde a voté, une &carche&r s'ouvre dans le bar, rouge pour le Défi, bleue pour le Monde ouvert. Passez-la quand vous êtes prêts : elle mène au village. Les armes de Jak restent dans Haven.",
         "",
         "La fin du &cDéfi&r ramène à Haven : après une défaite, tout le monde rentre ; après une victoire, une &bporte précurseur&r s'ouvre là où le boss est tombé.",
         "",

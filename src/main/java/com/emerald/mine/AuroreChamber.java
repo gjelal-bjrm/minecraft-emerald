@@ -44,8 +44,8 @@ import java.util.UUID;
  * ordre :
  *
  *   1. CONTRE LE FILON que la boussole designe (diamant sans pioche en
- *      diamant, Arcencium avec) : une poche de trois sur trois est creusee
- *      contre le minerai, on arrive dessus ;
+ *      diamant, Arcencium avec) : une poche de trois sur trois, et quatre de
+ *      haut pour l'arche, est creusee contre le minerai, on arrive dessus ;
  *   2. sinon dans la plus grande grotte que le sondage connaisse ;
  *   3. sinon au jour, a la surface au-dessus de la chambre.
  *
@@ -195,8 +195,9 @@ public final class AuroreChamber {
         for (Direction side : sides) {
             BlockPos core = vein.relative(side, 2);
             List<BlockPos> cells = new ArrayList<>();
+            // TROIS DE LARGE, QUATRE DE HAUT : la brume est une arche (cahier §84)
             for (int a = -1; a <= 1; a++) {
-                for (int h = -1; h <= 1; h++) {
+                for (int h = -1; h <= 2; h++) {
                     for (int b = -1; b <= 1; b++) {
                         cells.add(core.offset(a, h, b));
                     }

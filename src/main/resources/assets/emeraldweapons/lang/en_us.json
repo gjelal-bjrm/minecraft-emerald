@@ -818,5 +818,10 @@
   "item.emeraldweapons.arcencium_shield.parade": "Instant parry: blocks as soon as it is raised",
   "item.emeraldweapons.arcencium_shield.riposte": "Prismatic riposte: a blocked hit returns one heart of damage and knocks back (once per second)",
   "weather.emeraldweapons.aurore.cold": "The Great Cold is setting in: take shelter under a roof, underground or near a fire.",
-  "weather.emeraldweapons.aurore.cold.frozen": "You are freezing! Underground, under a roof or near a fire, quick."
+  "weather.emeraldweapons.aurore.cold.frozen": "You are freezing! Underground, under a roof or near a fire, quick.",
+  "block.emeraldweapons.arc_portal": "Arcencium portal",
+  "game.emeraldweapons.haven.depart.open": "The portal to the village is open at HQ: walk through the arch when you are ready.",
+  "game.emeraldweapons.haven.depart.reminder": "The HQ arch leads to the village (%s of %s already gone).",
+  "game.emeraldweapons.haven.depart.late": "The portal is closing: off to the village.",
+  "game.emeraldweapons.haven.agenda.rdv.depart": "Departure: walk through the HQ arch to reach the village."
 }

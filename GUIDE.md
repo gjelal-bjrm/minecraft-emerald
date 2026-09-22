@@ -104,9 +104,13 @@ lumineuses. Tout le monde peut voter, même sans être opérateur.
 - On peut changer d'avis. Quand tout le monde est d'accord, un compte à rebours
   de **5 secondes** démarre. Il s'arrête si quelqu'un change d'avis, arrive,
   part ou sort du bar, et repart de 5 secondes si le groupe est encore d'accord.
-- Au départ, le mode voté s'applique. Tout le monde arrive au village avec le
-  **kit de départ** (il remplace l'inventaire) et son mode de jeu habituel.
-  Ensuite, la partie se joue comme avant.
+- Au départ, le mode voté s'applique, la borne s'en va et une **arche s'ouvre dans
+  le bar** : son voile est **rouge pour le Défi**, **bleu pour le Monde ouvert**.
+  Chacun la traverse quand il est prêt et arrive au village avec le **kit de
+  départ** (il remplace l'inventaire) et son mode de jeu habituel. Elle se referme
+  quand toute l'équipe est passée ; au bout de trois minutes, les retardataires
+  partent d'eux-mêmes. Rien ne presse : le chrono du Défi ne part qu'au retrait de
+  la Lame.
 - Tant que le lobby est ouvert, la Lame du Serment refuse de venir : le mode
   se vote au QG. Après le départ, elle se tire sans redemander le mode.
 - Un joueur qui se connecte après le départ arrive directement au village.
@@ -362,7 +366,12 @@ matériaux d'Apotheosis.
 | | Ce que vous voyez | Ce que ça vous donne |
 |---|---|---|
 | **Battue** | Le monde en noir et blanc, un cor, des corbeaux | Une **Proie** (cerf ou sanglier) à chasser, indiquée par la ligne « Proie » du panneau de gauche ; elle ne **brille en or qu'à moins de 24 blocs**. Elle fuit, panique quand on la touche, et **quatre gardes** l'escortent. Plus de monstres, et plus près. Le coup porté à une créature qui ne vous a pas vu est critique |
-| **Aurore** | Rideaux de lumière dans tout le ciel, carillon de fond | Les filons proches se montrent (panneau, losanges, carillon), hâte et vitesse. Mais c'est le **Grand Froid** : dehors, on gèle en 14 secondes (givre, pas ralenti, puis un cœur toutes les deux secondes). Sous un toit, sous terre ou près d'un feu (feu de camp, four allumé, lave), on se réchauffe. Le moment de descendre miner |
+| **Aurore** | Rideaux de lumière dans tout le ciel, carillon de fond | Les filons proches se montrent (panneau, losanges, carillon), hâte et vitesse. Mais c'est le **Grand Froid** : dehors, on gèle en 14 secondes (givre, pas ralenti, puis un cœur toutes les deux secondes). Sous un toit, sous terre ou près d'un feu (feu de camp, four allumé, lave), on se réchauffe. Le moment de descendre miner. Dans les grottes, des **arches au voile étoilé** vont par paires : on passe dans l'une, on est porté jusqu'à l'autre. À la fin, une **arche d'aube** s'ouvre à côté de qui est encore sous terre : elle remonte au jour |
+| **Heure Dorée** | La lumière s'épaissit et jaunit | Une **arche dorée** s'ouvre à dix ou quinze blocs de chacun, une autre au bord de l'atelier du village : on passe dans la sienne, on ressort devant l'atelier, et l'on revient par celle du village. Elles tiennent 45 secondes après la fin, compte à rebours à l'écran. La Forge réussit mieux, l'Établi ne prend pas son Éclat |
+
+Les arches ne se prennent qu'**en passant dans leur voile**, entre les piliers : à côté,
+derrière ou contre un pilier, il ne se passe rien. On ressort devant l'arche d'arrivée, le
+dos tourné à elle.
 
 ### Les agressives
 

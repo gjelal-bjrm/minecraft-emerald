@@ -1,7 +1,6 @@
 package com.emerald.haven;
 
 import com.emerald.main.EmeraldWeaponsMod;
-import net.minecraft.client.Minecraft;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -35,6 +34,8 @@ public final class HavenAtelierClient {
         }
         stopping = true;
         LOGGER.info("atelier : releve automatique termine, fermeture du client");
-        Minecraft.getInstance().stop();
+        // la sauvegarde du monde de l'atelier passe d'abord : quatre-vingt-dix secondes avant
+        // tout arret force (AutomatonExit)
+        com.emerald.client.AutomatonExit.stop("atelier", 90);
     }
 }

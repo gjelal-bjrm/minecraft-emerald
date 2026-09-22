@@ -67,7 +67,9 @@ import java.util.UUID;
  *      une fois par seconde ;
  *   5. le Grand Froid : on gele dehors, pas sous terre ni pres d'un feu de camp ;
  *   6. la Battue : la Proie ne brille que de pres, sa garde ne brille pas, tout s'en va a
- *      la fin, et les lueurs d'avant s'eteignent au rechargement.
+ *      la fin, et les lueurs d'avant s'eteignent au rechargement ;
+ *   7. les arches (cahier §84) : le voile seul emporte (pas les piliers, ni derriere) ; la
+ *      porte doree du village loin des etablis ; une paire de brumes posee puis retiree.
  * Rapport dans partie_autotest.txt, puis arret.
  */
 @EventBusSubscriber(modid = EmeraldWeaponsMod.MODID)
@@ -107,6 +109,7 @@ public final class ArcenciumAutotest {
             shield(level, spawn);
             cold(level, spawn);
             battue(level, spawn);
+            arches(level, spawn);
         } catch (RuntimeException e) {
             LOGGER.error("autotest partie : exception", e);
             check("deroulement sans exception", false, e.toString());
@@ -365,6 +368,126 @@ public final class ArcenciumAutotest {
                         + " un garde d'une Battue finie ne revient pas",
                 !old.hasGlowingTag() && eye.hasGlowingTag() && !strayAdded,
                 "ancienne lueur " + old.hasGlowingTag() + ", oeil " + eye.hasGlowingTag() + ", garde ajoute " + strayAdded);
+    }
+
+    // ================================================================ 7. les arches
+
+    private static void arches(ServerLevel level, BlockPos spawn) {
+        line("--- les arches d'Arcencium : porte doree, brumes de l'Aurore");
+        // une arche posee a la main sur une dalle degagee : ou elle emporte, ou non
+        BlockPos base = surface(level, spawn.getX() + 20, spawn.getZ() + 20).above(30);
+        for (int dx = -3; dx <= 3; dx++) {
+            for (int dz = -3; dz <= 3; dz++) {
+                level.setBlock(base.offset(dx, -1, dz), net.minecraft.world.level.block.Blocks.SMOOTH_STONE.defaultBlockState(), 3);
+                for (int dy = 0; dy <= 4; dy++) {
+                    level.setBlock(base.offset(dx, dy, dz), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
+                }
+            }
+        }
+        net.minecraft.core.Direction facing = net.minecraft.core.Direction.NORTH;
+        boolean fits = com.emerald.block.ArcPortals.fits(level, base, facing);
+        com.emerald.block.ArcPortals.place(level, base, facing, com.emerald.block.ArcPortalBlock.Tint.DOREE);
+        boolean placed = level.getBlockState(base).is(com.emerald.block.ModBlocks.ARC_PORTAL.get());
+        FakePlayer walker = fake(level, "arche", base);
+        java.util.function.BiFunction<Double, Double, Boolean> at = (lateral, depth) -> {
+            // l'arche regarde le nord : la profondeur va vers -z, la largeur le long de x
+            walker.moveTo(base.getX() + 0.5 - lateral, base.getY(), base.getZ() + 0.5 - depth, 0.0F, 0.0F);
+            return com.emerald.block.ArcPortals.inVeil(walker, base, facing);
+        };
+        boolean centre = at.apply(0.0, 0.0);
+        boolean edge = at.apply(0.7, 0.2);
+        boolean pillar = at.apply(1.05, 0.0);
+        boolean before = at.apply(0.0, 0.9);
+        boolean behind = at.apply(0.0, -0.9);
+        net.minecraft.world.phys.Vec3 out = com.emerald.block.ArcPortals.exit(base, facing);
+        check("l'arche tient sur une dalle degagee ; le voile emporte au centre et au bord du passage, jamais contre"
+                        + " un pilier, devant ni derriere ; on ressort devant elle",
+                fits && placed && centre && edge && !pillar && !before && !behind && out.z < base.getZ() + 0.5 - 1.0,
+                "tient " + fits + ", posee " + placed + ", centre " + centre + ", bord " + edge + ", pilier " + pillar
+                        + ", devant " + before + ", derriere " + behind);
+        com.emerald.block.ArcPortals.remove(level, base);
+        check("retiree : plus de bloc", level.getBlockState(base).isAir(), level.getBlockState(base).toString());
+
+        // la porte doree du village : a cote de l'atelier, jamais sur ses etablis
+        GameState state = GameState.get(level);
+        BlockPos workshop = state.workshop();
+        if (workshop.equals(BlockPos.ZERO)) {
+            line("pas d'atelier dans ce monde d'essai : porte du village non essayee");
+        } else {
+            com.emerald.weather.GoldenGate.begin(level);
+            BlockPos village = com.emerald.weather.GoldenGate.villageGate();
+            double far = village == null ? -1 : Math.sqrt(village.distSqr(workshop));
+            boolean clearOfStations = village != null && !nearStationForTest(level, village);
+            boolean arch = village != null && level.getBlockState(village).is(com.emerald.block.ModBlocks.ARC_PORTAL.get());
+            check("Heure Doree : l'arche du village est posee a cote de l'atelier, a plus de quatre blocs de chaque etabli",
+                    arch && clearOfStations && far >= 5.0,
+                    "arche " + village + " (" + arch + "), a " + Math.round(far) + " blocs du centre de l'atelier, loin des etablis "
+                            + clearOfStations);
+            com.emerald.weather.GoldenGate.clear(level);
+            check("fin de l'Heure Doree : l'arche s'en va", village == null || level.getBlockState(village).isAir(),
+                    village == null ? "-" : level.getBlockState(village).toString());
+        }
+
+        // une paire de brumes : deux salles creusees sous terre, une arche dans chacune
+        BlockPos roomA = new BlockPos(spawn.getX() + 40, level.getMinBuildHeight() + 30, spawn.getZ() + 40);
+        BlockPos roomB = roomA.offset(0, 6, 36);
+        for (BlockPos room : List.of(roomA, roomB)) {
+            level.getChunkAt(room);
+            for (int dx = -2; dx <= 2; dx++) {
+                for (int dz = -2; dz <= 2; dz++) {
+                    level.setBlock(room.offset(dx, -1, dz), net.minecraft.world.level.block.Blocks.STONE.defaultBlockState(), 3);
+                    for (int dy = 0; dy <= 3; dy++) {
+                        level.setBlock(room.offset(dx, dy, dz), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
+                    }
+                }
+            }
+        }
+        boolean pair = com.emerald.mine.AuroreCaves.placePair(level, roomA, roomB);
+        List<BlockPos> mists = com.emerald.mine.AuroreCaves.mists();
+        boolean both = mists.size() >= 2 && mists.stream().allMatch(m ->
+                level.getBlockState(m).is(com.emerald.block.ModBlocks.ARC_PORTAL.get())
+                        && com.emerald.mine.AuroreCaves.isArch(m));
+        com.emerald.mine.AuroreCaves.end(level);
+        boolean gone = mists.stream().allMatch(m -> !level.getBlockState(m).is(com.emerald.block.ModBlocks.ARC_PORTAL.get()));
+        check("Aurore : une paire de brumes se leve en deux arches, et s'en va a la fin",
+                pair && both && gone, "paire " + pair + ", arches " + mists + ", retirees " + gone);
+
+        // LE RAPPEL, au fond d'une galerie d'un bloc : l'arche se taille dans la roche devant lui
+        BlockPos tunnel = new BlockPos(spawn.getX() - 40, level.getMinBuildHeight() + 40, spawn.getZ() - 40);
+        level.getChunkAt(tunnel);
+        for (int dx = -4; dx <= 4; dx++) {
+            for (int dz = -4; dz <= 4; dz++) {
+                for (int dy = -1; dy <= 4; dy++) {
+                    level.setBlock(tunnel.offset(dx, dy, dz), net.minecraft.world.level.block.Blocks.STONE.defaultBlockState(), 3);
+                }
+            }
+        }
+        level.setBlock(tunnel, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
+        level.setBlock(tunnel.above(), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
+        FakePlayer digger = fake(level, "rappel", tunnel);
+        digger.setYRot(180.0F);                                  // il regarde le nord
+        BlockPos recall = com.emerald.mine.AuroreCaves.recallForTest(level, digger);
+        boolean arch = recall != null && level.getBlockState(recall).is(com.emerald.block.ModBlocks.ARC_PORTAL.get())
+                && level.getBlockState(recall).getValue(com.emerald.block.ArcPortalBlock.TEINTE)
+                == com.emerald.block.ArcPortalBlock.Tint.AUBE;
+        com.emerald.mine.AuroreCaves.clearRecallsForTest(level);
+        boolean cleared = recall == null || !level.getBlockState(recall).is(com.emerald.block.ModBlocks.ARC_PORTAL.get());
+        check("Aurore finie, au fond d'une galerie d'un bloc : l'arche d'aube du rappel se taille dans la roche,"
+                        + " a deux blocs, et s'en va a la fin de son temps",
+                arch && cleared && recall.distSqr(tunnel) <= 9.0,
+                "arche " + recall + " (" + arch + "), retiree " + cleared);
+    }
+
+    /** Un etabli a quatre blocs ou moins (la regle de la porte du village). */
+    private static boolean nearStationForTest(ServerLevel level, BlockPos at) {
+        for (BlockPos pos : BlockPos.betweenClosed(at.offset(-4, -1, -4), at.offset(4, 2, 4))) {
+            net.minecraft.world.level.block.state.BlockState s = level.getBlockState(pos);
+            if (s.is(com.emerald.block.ModBlocks.ARCENCIUM_FORGE.get()) || s.is(com.emerald.block.ModBlocks.SOCKET_BENCH.get())
+                    || s.is(com.emerald.block.ModBlocks.SPECIALIZATION_ALTAR.get())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     // ================================================================ outils

@@ -318,6 +318,7 @@ public final class HavenArrival {
      * retrouve son appartement » -- celui ou la porte de victoire l'a deja mene.
      */
     public static int reopen(MinecraftServer server, boolean keepApartments) {
+        com.emerald.haven.journey.HavenDeparture.close(server);   // une arche du depart encore ouverte s'en va
         HavenState state = HavenState.get(server);
         GameState.get(server.overworld()).forgetModeChoice();
         state.clearVotes();

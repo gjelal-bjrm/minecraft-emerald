@@ -7444,3 +7444,105 @@ Grand Froid (dehors, sous terre, feu de camp), Battue (lueur de pres, garde de q
 fin, lueurs d'avant eteintes) : 16 OK. `parcours` : section 11 (agenda, equipe, reunion),
 48 OK. `vehicules` : aucun choc fantome sur 150 tiques de paquets en desordre, aucune
 collision serveur avec un autre vehicule, le coussin du bord en calcul.
+
+## 84. Les portails redessines, le depart par une arche, et ou en sont les quetes *(22 sept., apres-midi)*
+
+> « Je n'aime pas du tout les portails. Ils sont moches, mal faits et pas pratiques a
+> prendre. Pareil pour les portails de teleportation et les portails qui permettent de
+> remonter a la surface quand on a la meteo aurore [...] Parfois, j'ai besoin de les
+> contourner et je ne sais pas quelle partie je dois contourner. Il faut les faire en
+> beaucoup plus beaux. Concernant l'heure doree, le portail qui ramene a la ville, il ne
+> faut pas qu'il ramene pile sur les forges. »
+
+### 84.1 Ce qui n'allait pas
+
+La Porte doree (Heure Doree), les Brumes etoilees et la Brume de rappel (Aurore) etaient
+SIX CUBES TRANSLUCIDES EN CROIX (cinq au sol, un dessus), une texture de 16 pixels sans
+animation : aucun bord lisible, et chaque bras de la croix emportait. La porte du
+village se posait sur le premier sol degage au centre de l'atelier -- le DESSUS de
+l'Etabli a sertir, ses bras a hauteur de tete entre la Forge et l'Autel : on la prenait
+en se servant des etablis.
+
+### 84.2 Les arches d'Arcencium
+
+Trois formes ont ete dessinees et photographiees en jeu (vrai client, shaders), en trois
+teintes : l'ANNEAU (une porte ronde debout), l'ARCHE (deux piliers et une voute en plein
+cintre) et le PLATEAU (un disque au sol et sa colonne de lumiere). Metal noir de la
+matiere de l'Arcencium (`refs/arcencium_material_ref.png`), fissures qui s'allument d'un
+arc-en-ciel qui COURT le long du metal, voile anime a la couleur du role : OR pour
+l'Heure Doree, NUIT ETOILEE pour les brumes par paires, AUBE pour le rappel.
+**Le joueur a choisi l'ARCHE pour tous** (« la plus lisible : on voit exactement ou
+passer »).
+
+- `ArcPortalBlock` (formes et teintes), `ArcPortalRenderer` (dessin, outils communs dans
+  `PortalMesh`, partages avec la porte de Haven), `tools/arc_porte_textures.py`
+  (textures).
+- `ArcPortals` : SEUL LE VOILE EMPORTE -- les pieds entre les piliers, sous la voute, a
+  moins de 0,4 bloc du plan de l'arche. A cote, derriere, contre un pilier : rien. Une
+  arche ne se pose que la ou elle TIENT : un passage de trois blocs sur quatre, un sol
+  sous ses trois blocs, de quoi se tenir devant et derriere. On ressort 1,7 bloc devant
+  l'arche d'arrivee, le dos tourne a elle.
+- Poses par le jeu, les arches sont TEMPORAIRES : a l'ARRET DU SERVEUR, elles s'en vont
+  toutes AVANT la sauvegarde (Heure Doree, Aurore, depart) ; et une arche que plus rien
+  ne connait s'efface d'elle-meme des qu'un joueur passe pres d'elle (une entite de bloc
+  ne tique pas dans un troncon sans joueur : c'est pourquoi le retrait a l'arret compte).
+  La borne du vote ecarte aussi une arche orpheline posee a sa place, et l'Aurore que
+  l'arret finit ne pose pas de rappel (il serait taille dans la roche pour rien). Les
+  anciens cubes d'un monde d'avant s'effacent au hasard des tiques.
+- HEURE DOREE (`GoldenGate`) : l'arche des champs a dix ou quinze blocs du joueur, tournee
+  vers lui ; l'arche du village AU BORD DE LA DALLE de l'atelier, jamais a moins de
+  quatre blocs d'un etabli, tournee vers l'atelier.
+- AURORE (`AuroreCaves`) : une paire ne se leve que si ses deux arches tiennent (a deux
+  blocs pres de leur lieu) ; le rappel se pose a deux ou trois blocs du joueur, ou se
+  taille dans la roche naturelle devant lui (passage de trois sur quatre, jamais un
+  minerai ni un bloc pose). La Chambre d'Aurore creuse sa poche contre le filon sur
+  quatre de haut, pour l'arche.
+
+### 84.3 Le depart par une arche
+
+> « Plutot que de juste les teleporter quand ils ont choisi le defi, il faudrait faire
+> apparaitre un portail qui les permettra de se teleporter dans le village de depart. »
+
+`HavenDeparture` : a la fin du compte a rebours du vote, la borne s'en va et une arche
+s'ouvre dans le Hip Hog, a sa place ou tout pres -- ROUGE pour le Defi, BLEUE pour le
+Monde ouvert, les couleurs des vitres de la borne. Chacun la passe quand il est pret et
+arrive au village (kit, annonce du village). Elle se referme quand toute l'equipe est
+passee ; au bout de trois minutes, ceux qui trainent partent d'eux-memes. L'agenda dit
+« traversez l'arche du QG », le Carnet aussi (quete « Le depart »). Sans place pour l'arche, le depart se fait d'un coup, comme
+avant.
+
+### 84.4 Ou en sont les quetes, et les animaux (question du joueur)
+
+- Lots 1 et 2 du parcours faits, puis les transports (§82) et l'agenda (§83).
+- **Lot 3 (les PNJ, leurs quetes, les orbes precurseurs, la boutique de la salle des
+  armes) : pas commence** -- son contenu est a definir ensemble (§79.7 : combien de
+  quetes, quels PNJ, ou, et ce qu'elles paient).
+- **Lot 5 (les animaux de Haven, la peche, les requins) : pas commence** -- chats et
+  chiens en ville paisible, mouettes, poissons, requins au large, le Pecheur (§79.4).
+
+### 84.5 Monde ouvert, puis Defi : que se passe-t-il ? (question du joueur)
+
+- On ne revient pas du Monde ouvert a la ville sans commande : seule la fin d'un Defi
+  ramene a Haven ; la Porte de Haven du mode libre est le lot 6.
+- Revenue par la commande et votant le Defi, l'equipe joue DANS LE MEME MONDE : meme
+  carte, meme village, meme Lame (GameManager.setup la replante), les trois sanctuaires
+  retires au sort ailleurs, a 900 blocs ; ce qui a ete mine ou bati reste. Au depart, le
+  kit de depart remplace l'inventaire ; le personnage (niveau de Heros, ailes) est garde,
+  lui, par monde. Le monde neuf a chaque Defi (§66) n'est pas fait.
+
+### 84.6 Les outils
+
+- La fenetre noire : le client lance par l'automate de photos (et le releve de l'atelier)
+  se bloquait a la fermeture, apres celle de JEI, fenetre noire ; le joueur devait le
+  tuer au gestionnaire de taches. `AutomatonExit` : si la fermeture normale n'a pas fini
+  en trente secondes (quatre-vingt-dix pour l'atelier, dont le monde se sauvegarde),
+  le processus s'arrete.
+- L'automate de photos : prises EN MAIN (`nom@main:vue`, objet `EMERALDWEAPONS_PHOTOS_MAIN`
+  : premiere personne, leve, de face, inventaire ouvert, livre ouvert -- un ecran qui met
+  le jeu en pause est pris cote client), et la vitrine EN DIRECT
+  (`EMERALDWEAPONS_PHOTOS_VITRINE_DIRECT=1` : l'estrade a la premiere prise, les blocs a
+  la suivante, joueur deja la).
+- Un piege mesure : des portails invisibles sur la vitrine venaient de la VITRINE (estrade
+  videe et regarnie dans la meme tique, ou troncon pas encore dessine a une origine
+  neuve), pas du jeu -- pose en direct devant la camera, l'arche et la porte de Haven
+  s'affichent. Toujours regarder que l'ESTRADE elle-meme est a l'image avant de conclure.

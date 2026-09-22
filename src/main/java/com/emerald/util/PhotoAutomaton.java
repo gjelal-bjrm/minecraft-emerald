@@ -66,6 +66,10 @@ import java.util.Objects;
  * leve (clic droit tenu), vu de face (troisieme personne), l'inventaire ouvert, ou le
  * livre ouvert (l'agenda de Haven : ses pages du moment).
  *
+ * LES PORTES DOREES (« nom@porte:village », « nom@porte:village@18000 » la nuit) : l'Heure
+ * Doree se leve pour de vrai (GoldenGate), et la camera cadre l'arche du village, l'atelier
+ * derriere elle -- pour voir OU elle se pose, et non plus seulement a quoi elle ressemble.
+ *
  * LES PRISES DE HAVEN (« nom@haven:accueil », « nom@haven:qg ») regardent le parcours
  * du joueur, INTERFACE VISIBLE : titre et barre d'objectif. Rien n'est prepare -- ni
  * chantier, ni mode eteint : le joueur arrive dans la ville comme n'importe qui.
@@ -102,6 +106,14 @@ public final class PhotoAutomaton {
     private static volatile String handsView;
     /** La camera libre de Haven : « x,y,z,lacet,tangage » en cellules du volume (prise « nom@haven:camera »). */
     private static final String CAMERA = Objects.requireNonNullElse(System.getenv(VARIABLE + "_CAMERA"), "").trim();
+    /**
+     * La vitrine « en direct » (EMERALDWEAPONS_PHOTOS_VITRINE_DIRECT=1) : l'estrade est batie
+     * a la premiere prise, les blocs poses a la suivante, le joueur deja la -- comme un
+     * portail qui s'ouvre pres de lui en partie, et non comme un troncon qui arrive tout fait.
+     */
+    private static final boolean SHOWCASE_LIVE = "1".equals(System.getenv(VARIABLE + "_VITRINE_DIRECT"));
+    private static boolean showcaseFilled;
+    private static boolean stageSeen;
     /** L'ecart entre deux blocs de la vitrine, en blocs. */
     private static final int SHOWCASE_STEP = intEnv(VARIABLE + "_VITRINE_PAS", 2);
     /** La camera de la vitrine recule d'autant de fois. */
@@ -143,6 +155,11 @@ public final class PhotoAutomaton {
         /** Une prise d'un objet en main. */
         boolean hands() {
             return "main".equals(this.biome.getNamespace());
+        }
+
+        /** Une prise d'une porte doree posee par le jeu. */
+        boolean gate() {
+            return "porte".equals(this.biome.getNamespace());
         }
 
         /** Tiques d'attente d'une prise de Haven : le titre visible, ou deja parti ; le bout de la ville, charge. */
@@ -350,6 +367,15 @@ public final class PhotoAutomaton {
                     }
                 }
             }
+            stage = center;
+            LOGGER.info("photos : estrade batie en {}", center.toShortString());
+        }
+        // les blocs : tout de suite, ou a la prise suivante si la vitrine est « en direct »
+        boolean firstCall = !showcaseFilled && STAGED.isEmpty() && !stageSeen;
+        stageSeen = true;
+        if (!showcaseFilled && !(SHOWCASE_LIVE && firstCall)) {
+            showcaseFilled = true;
+            BlockPos center = stage;
             String[] states = SHOWCASE.isEmpty() ? new String[0] : SHOWCASE.split("\\|");
             for (int i = 0; i < states.length; i++) {
                 BlockPos at = center.offset((int) Math.round((i - (states.length - 1) / 2.0) * SHOWCASE_STEP), 0, 0);
@@ -362,8 +388,8 @@ public final class PhotoAutomaton {
                     LOGGER.warn("photos : vitrine, etat illisible « {} » : {}", states[i], e.getMessage());
                 }
             }
-            stage = center;
-            LOGGER.info("photos : vitrine batie en {}, {} bloc(s)", center.toShortString(), STAGED.size());
+            LOGGER.info("photos : vitrine garnie en {}, {} bloc(s){}", center.toShortString(), STAGED.size(),
+                    SHOWCASE_LIVE ? ", en direct" : "");
         }
         double cx = stage.getX() + 0.5;
         double cy = stage.getY();
@@ -445,6 +471,39 @@ public final class PhotoAutomaton {
         return true;
     }
 
+    /**
+     * La porte doree du village, posee par le jeu : l'Heure Doree se leve une fois, puis la
+     * camera se met derriere l'arche, un peu en hauteur, et regarde l'atelier a travers elle.
+     */
+    private static boolean placeGate(ServerLevel level, ServerPlayer player, Shot shot) {
+        if (PREPARED.add("porte")) {
+            com.emerald.weather.GoldenGate.begin(level);
+        }
+        run(level.getServer(), "time set " + (shot.height() > 0 ? shot.height() : 6000));
+        BlockPos gate = com.emerald.weather.GoldenGate.villageGate();
+        net.minecraft.core.Direction facing = gate == null ? null : com.emerald.weather.GoldenGate.facing(gate);
+        BlockPos workshop = com.emerald.game.GameState.get(level).workshop();
+        if (gate == null || facing == null) {
+            LOGGER.warn("photos : pas d'arche du village (pas de village dans ce monde ?)");
+            return false;
+        }
+        net.minecraft.world.phys.Vec3 target = workshop.equals(BlockPos.ZERO)
+                ? net.minecraft.world.phys.Vec3.atBottomCenterOf(gate).add(0.0, 1.5, 0.0)
+                : net.minecraft.world.phys.Vec3.atBottomCenterOf(gate).add(net.minecraft.world.phys.Vec3.atBottomCenterOf(workshop))
+                .scale(0.5).add(0.0, 1.0, 0.0);
+        net.minecraft.core.Direction side = facing.getClockWise();
+        net.minecraft.world.phys.Vec3 eye = net.minecraft.world.phys.Vec3.atBottomCenterOf(gate)
+                .add(-facing.getStepX() * 7.0 + side.getStepX() * 3.0, 4.5, -facing.getStepZ() * 7.0 + side.getStepZ() * 3.0);
+        double dx = target.x - eye.x;
+        double dz = target.z - eye.z;
+        float yaw = (float) Math.toDegrees(Math.atan2(-dx, dz));
+        float pitch = (float) -Math.toDegrees(Math.atan2(target.y - eye.y, Math.sqrt(dx * dx + dz * dz)));
+        player.setGameMode(GameType.SPECTATOR);
+        player.teleportTo(level, eye.x, eye.y - player.getEyeHeight(), eye.z, yaw, pitch);
+        LOGGER.info("photos : {} (porte doree du village en {}, regarde {}, atelier en {})", shot.name(), gate, facing, workshop);
+        return true;
+    }
+
     /** Une prise du parcours de Haven : attendre le bon moment, puis la laisser au client, interface visible. */
     private static void havenShot(MinecraftServer server, ServerPlayer player, Shot shot) {
         if (pending == null) {
@@ -512,6 +571,30 @@ public final class PhotoAutomaton {
             }
             return com.emerald.haven.journey.HavenProgress.get(player.getUUID()).invaded
                     && !com.emerald.haven.journey.HavenJourney.titlePending(player.getUUID());
+        }
+        if ("depart".equals(path)) {
+            // l'arche du depart (HavenDeparture) : ouverte une fois, puis le joueur debout
+            // devant elle, a cinq blocs, qui la regarde -- interface visible (le rappel s'y lit)
+            if (PREPARED.add(shot.name())) {
+                com.emerald.haven.journey.HavenDeparture.open(server, com.emerald.game.GameState.Mode.DEFI, false);
+            }
+            BlockPos gate = com.emerald.haven.journey.HavenDeparture.gate();
+            if (gate == null) {
+                return false;
+            }
+            net.minecraft.core.Direction facing = com.emerald.haven.journey.HavenDeparture.facing();
+            ServerLevel level = (ServerLevel) player.level();
+            BlockPos stand = gate.relative(facing, 5);
+            for (int back = 5; back >= 3; back--) {
+                BlockPos at = gate.relative(facing, back);
+                if (com.emerald.haven.HavenArrival.standable(level, at)) {
+                    stand = at;
+                    break;
+                }
+            }
+            player.teleportTo(level, stand.getX() + 0.5, stand.getY(), stand.getZ() + 0.5,
+                    facing.getOpposite().toYRot(), 8.0F);
+            return true;
         }
         if ("arche".equals(path) || "portail".equals(path)) {
             return gateReady(server, player, shot, path);
@@ -717,6 +800,9 @@ public final class PhotoAutomaton {
         }
         if (shot.hands()) {
             return placeHands(level, player, shot);
+        }
+        if (shot.gate()) {
+            return placeGate(level, player, shot);
         }
         BlockPos from = player.blockPosition();
         if (!ORIGIN.isEmpty()) {

@@ -33,6 +33,11 @@ public class ModBlockEntities {
                     () -> BlockEntityType.Builder.of(HavenGateBlockEntity::new,
                             ModBlocks.HAVEN_GATE.get()).build(null));
 
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<ArcPortalBlockEntity>>
+            ARC_PORTAL = BLOCK_ENTITIES.register("arc_portal",
+                    () -> BlockEntityType.Builder.of(ArcPortalBlockEntity::new,
+                            ModBlocks.ARC_PORTAL.get()).build(null));
+
     public static void register(IEventBus eventBus) {
         BLOCK_ENTITIES.register(eventBus);
     }

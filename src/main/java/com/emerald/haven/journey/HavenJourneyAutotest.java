@@ -76,7 +76,8 @@ import java.util.UUID;
  *      portail des tours (regard tenu, desarme a l'arrivee, sommet, descente) ;
  *  11. l'agenda (§83) : donne a la premiere arrivee, une seule fois, Alex's Mobs prevenu, son
  *      annonce differee apres le titre ; ses pages ; l'equipe attendue au QG, puis reunie :
- *      la borne pour tous et la question du mode.
+ *      la borne pour tous et la question du mode ;
+ *  12. l'arche du depart (§84) : ouverte dans le bar, rouge pour le Defi, refermee.
  * Rapport dans parcours_autotest.txt, puis arret.
  */
 @EventBusSubscriber(modid = EmeraldWeaponsMod.MODID)
@@ -185,6 +186,7 @@ public final class HavenJourneyAutotest {
         returnDefeat(server);
         returnVictory(server);
         gates(server, level);
+        departure(server, level);
         isolation(server);
     }
 
@@ -547,6 +549,26 @@ public final class HavenJourneyAutotest {
             }
         }
         return false;
+    }
+
+    // ================================================================ 12. l'arche du depart (§84)
+
+    private static void departure(MinecraftServer server, ServerLevel level) {
+        line("--- l'arche du depart au QG (§84)");
+        HavenArrival.Layout rooms = HavenArrival.layout(server);
+        BlockPos origin = HavenState.get(server).origin();
+        boolean opened = HavenDeparture.open(server, GameState.Mode.DEFI, false);
+        BlockPos gate = HavenDeparture.gate();
+        net.minecraft.world.level.block.state.BlockState placed = gate == null ? null : level.getBlockState(gate);
+        boolean inBar = gate != null && rooms != null
+                && rooms.inHq(origin, gate.getX() + 0.5, gate.getY(), gate.getZ() + 0.5);
+        boolean red = placed != null && placed.is(ModBlocks.ARC_PORTAL.get())
+                && placed.getValue(com.emerald.block.ArcPortalBlock.TEINTE) == com.emerald.block.ArcPortalBlock.Tint.DEFI;
+        check("le vote fini : l'arche du depart s'ouvre, rouge pour le Defi, dans le bar (sinon devant sa porte)",
+                opened && red, "ouverte " + opened + " en " + gate + " (dans le bar " + inBar + "), " + placed);
+        HavenDeparture.close(server);
+        check("refermee : plus d'arche", gate == null || !level.getBlockState(gate).is(ModBlocks.ARC_PORTAL.get()),
+                gate == null ? "-" : level.getBlockState(gate).toString());
     }
 
     // ================================================================ 7. lot 2 : le ratelier du QG

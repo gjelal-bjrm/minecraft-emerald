@@ -296,6 +296,17 @@ public class ModBlocks {
                     .mapColor(MapColor.COLOR_LIGHT_BLUE)
                     .sound(SoundType.AMETHYST)));
 
+    /**
+     * Les portails d'Arcencium (voir ArcPortalBlock, cahier §84) : la Porte doree de l'Heure
+     * Doree, les Brumes de l'Aurore. Sans objet : la meteo les pose et les retire.
+     */
+    public static final DeferredBlock<ArcPortalBlock> ARC_PORTAL = registerBlockOnly("arc_portal",
+            () -> new ArcPortalBlock(BlockBehaviour.Properties.of()
+                    .strength(-1.0F, 3600000.0F).noLootTable()
+                    .pushReaction(net.minecraft.world.level.material.PushReaction.BLOCK)
+                    .mapColor(MapColor.COLOR_PURPLE)
+                    .sound(SoundType.AMETHYST)));
+
     private static <T extends Block> DeferredBlock<T> registerBlockOnly(String name, Supplier<T> block) {
         return BLOCKS.register(name, block);
     }
