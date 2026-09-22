@@ -28,7 +28,7 @@
 	quest.2C29095DC701E91E.title: "Le quartier général"
 	quest.2C29095DC701E91E.quest_desc: ["Le bar du Hip Hog, où l'équipe se retrouve. Au bout du comptoir, la &cborne&r lance la partie : choisissez ensemble, la vitre bleue pour le Monde ouvert, la rouge pour le Défi.", "", "Le bouton, près de la borne, fait passer toute la ville de paisible à envahie. Il n'obéit qu'à ceux qui ont débloqué les douze armes du Morph Gun.", "", "&7Se coche au premier pas dans le bar."]
 	quest.54E77607CCDEAB01.title: "Le départ"
-	quest.54E77607CCDEAB01.quest_desc: ["Votez à la borne : quand tout le monde a voté, la partie part au village. Les armes de Jak restent dans Haven.", "", "La fin du &cDéfi&r ramène à Haven : après une défaite, tout le monde rentre ; après une victoire, une &bporte précurseur&r s'ouvre là où le boss est tombé.", "", "&7Se coche au premier départ."]
+	quest.54E77607CCDEAB01.quest_desc: ["Votez à la borne : quand tout le monde a voté, une &carche&r s'ouvre dans le bar, rouge pour le Défi, bleue pour le Monde ouvert. Passez-la quand vous êtes prêts : elle mène au village. Les armes de Jak restent dans Haven.", "", "La fin du &cDéfi&r ramène à Haven : après une défaite, tout le monde rentre ; après une victoire, une &bporte précurseur&r s'ouvre là où le boss est tombé.", "", "&7Se coche au premier départ."]
 	quest.68FB1573204FE751.title: "Ton arme au QG"
 	quest.68FB1573204FE751.quest_desc: ["Au retour du Défi, &cHaven a été envahie&r. Au QG, sur le râtelier derrière le comptoir, le Morph Gun vous attend avec sa première forme : le &cScatter Gun&r.", "", "Le râtelier ne donne l'arme qu'une fois : elle reste ensuite à vous, de partie en partie.", "", "&7Se coche quand vous prenez l'arme."]
 	quest.5203F0EEE2EA3BEF.title: "Reprendre les rues"
