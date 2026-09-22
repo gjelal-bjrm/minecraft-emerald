@@ -7826,14 +7826,16 @@ La monnaie des quetes (§85.1), et de quoi explorer : CENT CINQUANTE orbes cache
 ville (`tools/haven_orbs_map.py` -> `jak/haven_orbs.json`, graine 86) -- 72 dans les rues,
 28 sur les toits, 10 autour des stations des tours, 25 dans le bassin, 15 au large.
 
-L'ORBE EST DESSINE, ET NON REPRIS DU JEU -- la seule piece du lot qui le soit, et c'est la
-photo qui l'a decide. Jak 3 n'a pas d'orbe dans ce qui est extrait : ses collectables sont
-l'OEUF de Ndi Madman (`collectables-skill`) et la GEMME a tete de mort (`collectables-gem`).
-Cuits et poses en ville, le premier est un oeuf rose a glyphes, la seconde une pastille rouge
-couchee par terre : ni l'un ni l'autre n'est « la gemme orange ronde » que le joueur voulait
-(§79.7). L'orbe est donc une texture a nous (`tools/haven_orb_texture.py`) : une sphere doree
-a reflet et a spirale, posee face a la camera -- une sphere se regarde de partout pareil --,
-qui flotte, respire et porte sa couronne de lumiere (`HavenOrbRenderer`).
+L'ORBE EST L'OEUF ROSE DU JEU (`collectables-skill`, l'oeuf de Ndi Madman), cuit comme les
+projectiles ; il tourne, flotte et porte une couronne de lumiere (`HavenOrbRenderer`).
+
+CE POINT S'EST JOUE EN DEUX TEMPS. Jak 3 n'a pas d'orbe precurseur dans ce qui est extrait :
+ses collectables sont cet oeuf et la gemme a tete de mort (`collectables-gem`, couchee et
+plate). Lisant « les gemmes orange rondes de Jak » (§79.7), j'ai d'abord juge qu'aucun des
+deux ne faisait l'affaire et dessine une sphere doree. Le joueur a tranche le soir meme, en
+voyant la photo : « pour les collectables, je voulais justement que tu reprennes l'oeuf rose
+du jeu original ». C'est donc l'oeuf -- et la lecon tient en une ligne : quand une piece du
+jeu existe, on la montre avant de la remplacer par un dessin.
 
 Chaque orbe est une ENTITE, posee quand son troncon est charge, et qui NE SE MONTRE QU'A
 QUI NE L'A PAS PRIS (`broadcastToPlayer`) : celui qui le ramasse recoit le paquet de
@@ -7893,7 +7895,7 @@ ses prises `haven:quete_*` -- les six heros, le bateau, l'orbe, les cibles, les 
 l'ecran de la boutique et le compteur d'orbes :
 
 - LE CHAMP DE FORCE des cibles KG, opaque, cachait entierement les gardes (§86.5) ;
-- L'OEUF ET LA GEMME de Jak ne font pas un orbe : l'orbe est dessine (§86.6) ;
+- L'OEUF ET LA GEMME de Jak, montres en photo, ont fait choisir l'oeuf rose au joueur (§86.6) ;
 - LE COMPTEUR D'ORBES etait en haut a droite, sous la minicarte de JourneyMap : il est passe
   en bas a droite ;
 - UN HEROS REGARDAIT LE MUR : sa place est maintenant la plus DEGAGEE des environs, et son

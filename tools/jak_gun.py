@@ -170,10 +170,12 @@ AMMO = [("gun_ammo_red", "gun-ammo-red-lod0"), ("gun_ammo_yellow", "gun-ammo-yel
 SHOTS = [("gun_grenade", "gun-grenade-lod0"), ("gun_saucer", "gun-saucer-lod0"),
          # le missile de la Super Nova (l'anneau gun-dark-2-ring du Mass Inverter ne vit que par l'echelle
          # de ses os, animee par le jeu : au repos c'est un disque plat ; le mod dessine son anneau lui-meme)
-         ("gun_nuke", "gun-nuke-lod0")]
-# (l'orbe precurseur des quetes n'est PAS ici : Jak 3 n'a pas d'orbe dans ce qui est extrait --
-# l'oeuf de Ndi Madman est rose, la gemme a tete de mort est couchee et plate. Il est dessine :
-# tools/haven_orb_texture.py, cahier §86)
+         ("gun_nuke", "gun-nuke-lod0"),
+         # LA MONNAIE DES QUETES DE HAVEN : l'OEUF ROSE de Jak 3 (« collectables-skill », l'oeuf
+         # de Ndi Madman). Choix du joueur, 22 sept. : « pour les collectables, je voulais
+         # justement que tu reprennes l'oeuf rose du jeu original » -- c'est donc une piece du
+         # jeu, et non un dessin a nous (cahier §86.6)
+         ("haven_orb", "collectables-skill-lod0")]
 # les cibles du stand de tir de Jak 3 (niveau lgunnorm, les parcours de tir de Tess) : les gardes KG en
 # carton a abattre, le KG dore des points en plus, et les civils qu'on ne tire pas (lot 3 de Haven)
 TARGETS = [("haven_cible_kg_b", "gun-kg-target-b-lod0"), ("haven_cible_kg_c", "gun-kg-target-c-lod0"),
