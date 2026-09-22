@@ -7546,3 +7546,126 @@ avant.
   videe et regarnie dans la meme tique, ou troncon pas encore dessine a une origine
   neuve), pas du jeu -- pose en direct devant la camera, l'arche et la porte de Haven
   s'affichent. Toujours regarder que l'ESTRADE elle-meme est a l'image avant de conclure.
+
+## 85. Les quetes definies, et les animaux de Haven d'abord *(22 sept., soir)*
+
+### 85.1 Les quetes : ce que le joueur a decide
+
+A la question « et pour les quetes ? », la proposition complete du lot 3, tiree de ses idees
+du 21 sept. (§79.7) : six personnages, dix-sept quetes, les orbes pour monnaie, la boutique
+de Tess.
+
+| Personnage | Ou | Style | Quetes |
+|---|---|---|---|
+| Torn | comptoir du QG | la ville | Reprendre les rues (existe) ; la patrouille des 12 points d'eco ; tenir le port une minute (se refait) |
+| Tess | salle des armes | boutique et tir | la boutique ; 3 epreuves de tir chronometrees, bronze, argent, or |
+| Sig | place du bras ouest | combat | la chasse (25 monstres) ; les brutes (3 en armure) ; nettoyer le marche |
+| Keira | cour du bras central | conduite | les anneaux ; le taxi (un habitant a deposer, chronometre) ; le chauffard (percuter 3 fois une voiture marquee) |
+| Samos | terrasse de la tour ouest | eco | les quatre ecos sans mourir ; tenir la plate-forme 60 s ; trois vagues et une elite |
+| Le Pecheur | bateau dans le port | eau | la peche (200 livres) ; les coffres engloutis ; l'armee de mouettes |
+
+Les ORBES : un compteur par joueur (pas un objet : au depart du Defi, le kit remplace
+l'inventaire), garde de partie en partie ; 30 a 80 par quete, l'or double ; environ 150
+caches dans la ville. Chez Tess : les onze armes, puis les ameliorations et les bonus du
+Defi.
+
+**Reponses du joueur** :
+- la liste : « Oui, mais avant les quetes je veux que tu fasses les animaux dans la ville »,
+  puis « Fais d'abord les animaux » ;
+- les prix : PAR COULEUR -- rouge 40, jaune 80, bleu 120, sombre 200 orbes (environ 1 300
+  pour les onze) ;
+- l'invasion : SEULEMENT LES QUETES DE COMBAT (Torn, Sig, Samos) ; la conduite, le tir et
+  l'eau se font en ville paisible ;
+- l'ordre : TOUT D'UN COUP -- les six personnages et les dix-sept quetes en une livraison.
+
+### 85.2 Les animaux de Haven
+
+Le plan du §79.4, les ajouts du §79.7 (« pas seulement des requins, plein de choses
+dangereuses », l'armee de mouettes). `haven/fauna/HavenFauna` : six roles, chacun a sa
+place, peuplee comme la ville (un quota par troncon, compte par troncon de naissance,
+persistant, etiquete de la generation, refuse au rechargement s'il n'est plus de la ville
+d'aujourd'hui), avec un plafond de ce qui est charge par role.
+
+| Role | Especes | Ou | Combien |
+|---|---|---|---|
+| Compagnons | chats, chiens (jeu de base) | six lieux : rue des appartements, devant le Hip Hog, place et arcades du bras ouest, cour du bras central, place du bras est | 13 en tout, EN VILLE PAISIBLE seulement |
+| Mouettes | Alex's Mobs | tous les quais | une pour 150 cellules de quai ; 40 chargees au plus |
+| Poissons | morue, saumon, poissons tropicaux ; poisson volant, ctenophore, homard, poulpe mimetique (Alex's Mobs) ; hareng, lieu, merou, thon, fletan (Aquaculture) ; hippocampe, raie manta (Living Things) | le BASSIN du port | un pour 160 colonnes, en bancs ; 110 charges au plus |
+| Rivage | phoques (Alex's Mobs), crabes (Living Things) | les pontons bas du bassin | un pour 30 cellules de ponton ; 12 charges au plus |
+| Dangers | requin marteau, requin lutin, squelette de poisson (Alex's Mobs) ; requin (Living Things) ; meduse (Aquaculture) | le LARGE seulement | un pour 2 048 colonnes ; 30 charges au plus |
+| Armee | les mouettes de la colere | autour de qui a frappe | 18 par armee |
+
+- COMPAGNONS : chiens apprivoises (collier de couleur au hasard, les neuf robes de loup),
+  chats apprivoises deux fois sur trois (les autres, errants, s'ecartent des joueurs).
+  Invulnerables ; a l'invasion, ils rentrent comme les habitants, et reviennent a la paix,
+  hors de la vue des joueurs. Un compagnon trop loin de son lieu (48 blocs) s'en va et
+  revient chez lui.
+- LE LARGE : les dangers ne visent qu'un joueur DANS L'EAU DU LARGE, a moins de 24 blocs --
+  « qui nage trop loin se fait mordre » ; au bassin, on est a l'abri ; un joueur qui sort
+  de l'eau ou rentre au bassin est lache. Un danger qui passe sous le pont des tours et
+  entre au bassin est ramene a sa derniere place au large -- de meme s'il se glisse sous un
+  quai ou un ponton DU BASSIN (eau couverte, le bassin a quatre blocs et le large nulle
+  part : un requin s'y cachait, vu au banc). Le requin marteau TOURNE
+  autour de sa proie dix-huit a vingt-deux secondes avant de mordre (le but d'Alex's
+  Mobs) : on voit l'aileron, on a le temps de rentrer ; le requin de Living Things et le
+  squelette de poisson attaquent tout de suite. Les meduses piquent (2 points et un
+  ralentissement). Le joueur qui entre au large en est prevenu dans la barre d'action,
+  une fois par minute. Les dangers se tuent (les armes du Morph Gun les visent aussi).
+- L'ARMEE DE MOUETTES (`SeagullArmy`) : qui frappe une mouette voit arriver dix-huit
+  mouettes de tous les cotes ; elles tournent autour de lui a trois ou six blocs et,
+  parfois, l'une pique sur sa tete (un demi-coeur, au plus un coup toutes les TROIS
+  secondes : a deux, le banc en comptait huit en vingt secondes, quatre coeurs -- pas
+  « parfois »). Vingt secondes, ou jusqu'a ce qu'il se mette a l'abri (appartement, Hip Hog) ;
+  puis elles repartent vers le large, et trente secondes de repit. Invulnerables, comme les
+  cocottes de Zelda ; les autres mouettes du coin s'envolent. Le vol est celui des
+  mouettes d'Alex's Mobs, sans leurs buts, menees par leur controle de vol.
+
+Deux choses vues en photo (vrai client, shaders), corrigees :
+
+- UN ANIMAL APPRIVOISE SANS MAITRE RESTE ASSIS POUR TOUJOURS : le but « assis sur
+  ordre » du jeu (SitWhenOrderedToGoal) fait asseoir un animal apprivoise quand son maitre
+  est introuvable -- le chien restait assis au milieu de la rue. Les compagnons perdent ce
+  but (a la naissance et a chaque rechargement) : ils se promenent, colliers visibles ;
+  les chats gardent l'envie de s'asseoir sur un coffre ou un four.
+- LES MOUETTES DE L'ARMEE BOUSCULAIENT : dix-huit mouettes qui frolent un joueur l'ont
+  pousse de deux blocs, et il est tombe par un trou au bord de la rue de l'arc. Elles sont
+  maintenant dans une equipe sans collision (`emeraldweapons.armee`, videe a la fin de
+  chaque armee) et piquent au-dessus de la tete, sans entrer dans le joueur. Et l'envol
+  se replie plus pres (8 a 14 blocs, puis au-dessus du joueur) entre les murs d'une rue
+  etroite, ou dans un coin a peine charge.
+
+### 85.3 La carte de l'eau
+
+`tools/haven_fauna_map.py` lit le volume pose (ctyport.jakv) et ecrit
+`data/emeraldweapons/jak/haven_fauna.json`, avec une image de controle
+`build/jak/faune-carte.png`. L'eau libre : la surface (cellule 57) que rien ne couvre a
+moins de vingt cellules -- les pontons et le pont des tours (cellules 58 a 74) couvrent,
+les cables et les rails de glisse (86 a 106) non : sans cette limite, le cable de la tour
+ouest coupait le bassin en deux. Le BASSIN : la plus grande etendue qui ne touche pas le
+bord (214 553 colonnes) ; le LARGE : tout ce qui touche le bord (408 852 colonnes ; le
+rideau de barrieres noyees occupe la premiere et la derniere colonne). Toute l'eau a six
+blocs de fond (le generateur plat). Les QUAIS : les cellules de pieds de la carte de
+l'invasion a trois colonnes au plus d'une eau libre, jusqu'a douze cellules au-dessus
+(8 704 au bord du bassin, 10 540 au bord du large) ; les pontons bas (quatre cellules au
+plus) portent les phoques et les crabes.
+
+### 85.4 Les regles
+
+- Degats sur un animal : compagnons, rivage et armee n'en prennent aucun ; les poissons
+  seulement le sechage (un poisson echoue meurt, un autre le remplace) ; une mouette
+  seulement d'un joueur ; les dangers tout. Ni butin, ni experience, ni petits.
+- Degats sur un joueur (`HavenRules.playerMayBeHurt`) : les dangers du large et l'armee
+  blessent, comme les monstres ; jamais dans une zone sure.
+- Les vehicules ne renversent aucun animal de la ville, sauf les dangers : ils les
+  ecartent, sans un point de degat.
+- Ni seau, ni laisse, ni nourriture, ni apprivoisement : on regarde les animaux de la
+  ville.
+- Les especes d'un mod absent sont sautees (sans Alex's Mobs : ni mouettes ni armee).
+
+### 85.5 Le banc de la faune
+
+Le serveur des bancs tourne sans les mods du modpack (build.gradle). Le banc de la faune a
+besoin d'Alex's Mobs, d'Aquaculture et de Living Things : `tools/dev_mods.py --server`
+les pose dans `run-server/mods` le temps du banc, `--server --clean` les retire (les autres
+bancs gardent leur ville a un seul mod). Aquaculture et Living Things ont aussi ete copies
+du profil dans `run/mods` (le client de dev).

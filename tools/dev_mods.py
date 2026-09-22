@@ -14,6 +14,15 @@ Usage :
     python tools/dev_mods.py gateways apotheosis cataclysm irons_spellbooks
     python tools/dev_mods.py --list          # ce qui est deja installe
     python tools/dev_mods.py --clean         # vide run/mods
+
+LE SERVEUR DES BANCS (run-server/) tourne SANS les mods du modpack, et c'est
+voulu (build.gradle) : les bancs mesurent la ville avec le seul mod. Le banc de
+la faune de Haven a pourtant besoin des animaux d'Alex's Mobs, d'Aquaculture et
+de Living Things. --server les pose dans run-server/mods le temps de ce banc,
+et --server --clean les retire ensuite :
+
+    python tools/dev_mods.py --server alexsmobs aquaculture livingthings
+    python tools/dev_mods.py --server --clean
 """
 
 import io as _io
@@ -25,6 +34,7 @@ import zipfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 RUN_MODS = os.path.join(ROOT, "run", "mods")
+SERVER_MODS = os.path.join(ROOT, "run-server", "mods")
 # LE PROFIL DU MODE, PAS LA COPIE D'ATM10 : le joueur ne joue plus sur
 # « All the Mods 10 - CUSTOM », et le dev ne doit pas lire ailleurs que la ou
 # il joue. Les deux dossiers ont les memes jars a quatre pres, mais le principe
@@ -35,6 +45,7 @@ MODS_DIR = os.path.join(os.environ.get("USERPROFILE", ""), "curseforge", "minecr
 PROVIDED = {"minecraft", "neoforge", "forge", "java"}
 
 _MODID = re.compile(r'^\s*modId\s*=\s*"([^"]+)"', re.MULTILINE)
+_MODS_BLOCK = re.compile(r'\[\[mods\]\](.*?)(?=\[\[|\Z)', re.DOTALL)
 _DEP_BLOCK = re.compile(r'\[\[dependencies\.[^\]]+\]\](.*?)(?=\[\[|\Z)', re.DOTALL)
 _TYPE = re.compile(r'^\s*type\s*=\s*"([^"]+)"', re.MULTILINE)
 _MANDATORY = re.compile(r'^\s*mandatory\s*=\s*(true|false)', re.MULTILINE)
@@ -83,9 +94,14 @@ def nested_ids(path):
 def parse(text):
     provides = set()
     requires = set()
-    # les identifiants declares hors bloc de dependance sont ceux du mod lui-meme
-    head = text.split("[[dependencies.")[0]
-    provides.update(_MODID.findall(head))
+    # les identifiants des blocs [[mods]] sont ceux du mod lui-meme. Pas « tout ce qui
+    # precede la premiere dependance » : Alex's Mobs declare ses dependances AVANT son
+    # bloc [[mods]], et son jar passait pour celui de CodxLib (22 sept.)
+    for block in _MODS_BLOCK.findall(text):
+        provides.update(_MODID.findall(block))
+    if not provides:
+        head = text.split("[[dependencies.")[0]
+        provides.update(_MODID.findall(head))
     for block in _DEP_BLOCK.findall(text):
         ids = _MODID.findall(block)
         if not ids:
@@ -139,18 +155,22 @@ def resolve(targets, by_id, meta):
 
 
 def main():
+    global RUN_MODS
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    if "--server" in sys.argv:
+        RUN_MODS = SERVER_MODS
+    where = os.path.relpath(RUN_MODS, ROOT).replace(os.sep, "/")
     os.makedirs(RUN_MODS, exist_ok=True)
 
     if "--clean" in sys.argv:
         for name in os.listdir(RUN_MODS):
             if name.endswith(".jar"):
                 os.remove(os.path.join(RUN_MODS, name))
-        print("run/mods vide")
+        print("%s vide" % where)
         return
     if "--list" in sys.argv or not args:
         jars = sorted(n for n in os.listdir(RUN_MODS) if n.endswith(".jar"))
-        print("%d jar(s) dans run/mods :" % len(jars))
+        print("%d jar(s) dans %s :" % (len(jars), where))
         for name in jars:
             print("   " + name)
         return
@@ -182,7 +202,7 @@ def main():
         print("  %-28s %s" % (mod_id, os.path.basename(path)))
     if missing:
         print("  !! dependances introuvables : %s" % ", ".join(sorted(missing)))
-    print("%d jar(s) installes dans run/mods" % len(chosen))
+    print("%d jar(s) installes dans %s" % (len(chosen), where))
 
 
 if __name__ == "__main__":

@@ -390,8 +390,9 @@ public final class HavenRules {
      * Les degats dans la ville : SEULS LES MONSTRES BLESSENT LES JOUEURS.
      *
      * Passent : les degats dont l'auteur est un monstre (Mob qui est un Enemy :
-     * coup de zombie, fleche de squelette, pique de phantom), sauf sur un joueur
-     * dans une zone sure (appartements, Hip Hog). Et ceux qui passent outre
+     * coup de zombie, fleche de squelette, pique de phantom), ou un animal qui
+     * blesse (les dangers du large, l'armee de mouettes : HavenFauna), sauf sur un
+     * joueur dans une zone sure (appartements, Hip Hog). Et ceux qui passent outre
      * l'invulnerabilite -- le vide, /kill -- : un operateur doit pouvoir tuer un
      * joueur coince.
      *
@@ -431,7 +432,9 @@ public final class HavenRules {
         if (cause instanceof Player || direct instanceof Player) {
             return false;
         }
-        if (!(cause instanceof Mob) || !(cause instanceof Enemy)) {
+        // les dangers du large et l'armee de mouettes blessent aussi (HavenFauna, cahier §85)
+        boolean wild = com.emerald.haven.fauna.HavenFauna.hurtsPlayers(cause);
+        if (!wild && (!(cause instanceof Mob) || !(cause instanceof Enemy))) {
             return false;
         }
         return !(target.level() instanceof ServerLevel level)

@@ -234,6 +234,29 @@ zone de survol exactement comme une voiture (mêmes touches, Espace compris), à
   (deux secondes entre deux appuis). Chaque réouverture du lobby rend la ville
   paisible.
 
+### Les animaux de la ville
+
+- **Chats et chiens**, une douzaine, autour de six lieux : la rue des appartements,
+  devant le Hip Hog, la place et les arcades du bras ouest, la cour du bras central,
+  la place du bras est. Les chiens portent un collier ; certains chats sont errants et
+  s'écartent. On ne peut ni les blesser ni les emmener, et les voitures les écartent
+  sans les renverser. **Seulement en ville paisible** : à l'invasion, ils rentrent
+  comme les habitants.
+- **Les mouettes** sur tous les quais (Alex's Mobs). Elles volent la nourriture qu'on
+  tient en main. **Ne frappez pas une mouette** : une armée de dix-huit mouettes
+  arrive de tous les côtés, tourne autour de vous et, parfois, vous pique (un
+  demi-cœur, pas plus d'un coup toutes les trois secondes). Elle repart au bout de
+  vingt secondes, ou dès que vous vous mettez à l'abri dans un appartement ou au
+  Hip Hog.
+- **Le bassin du port**, l'eau entre l'arc de la ville et la jetée des deux tours :
+  poissons en bancs, poissons volants, cténophores, homards, hippocampes, raies manta ;
+  des phoques et des crabes sur les pontons. On peut y nager sans crainte.
+- **Le large**, hors de la jetée et autour des bras de la ville : requins, requins
+  lutins, squelettes de poisson, méduses qui piquent. **Qui nage au large se fait
+  mordre** : les dangers visent tout nageur à moins de 24 blocs, et le lâchent dès
+  qu'il sort de l'eau ou rentre au bassin. Un message prévient quand on y entre. Les
+  armes du Morph Gun les touchent.
+
 ### Le Morph Gun
 
 - **Donné dans la ville à qui a débloqué au moins une arme**, dans la première case
@@ -744,6 +767,7 @@ Sur un serveur d'essai (`run-server`), chacun écrit son rapport puis arrête le
 - `EMERALDWEAPONS_AUTOTEST=invasion ./gradlew runServer` : invasion, décor destructible, bouton du QG et MSPT, rapport `run-server/invasion_autotest.txt` ;
 - `EMERALDWEAPONS_AUTOTEST=armes ./gradlew runServer` : Morph Gun (poses, confinement, tir des douze armes, munitions, décor, MSPT avec quatre tireurs), rapport `run-server/armes_autotest.txt` ;
 - `EMERALDWEAPONS_AUTOTEST=parcours ./gradlew runServer` : le parcours (fiche sur disque, arme qui suit les formes du joueur, ville paisible, bouton verrouillé, titre et objectifs du guide ; puis le lot 2 : râtelier du QG, deuxième arrivée envahie, reprise des rues, retour après la défaite, porte de la victoire ; puis les transports : les huit stations, l'arche et sa recharge, le portail des tours ; puis l'agenda, l'équipe attendue au QG et la réunion), rapport `run-server/parcours_autotest.txt` ;
+- `EMERALDWEAPONS_AUTOTEST=faune ./gradlew runServer` : les animaux de la ville (carte de l'eau, places de chaque espèce, plafonds, dangers tenus au large et agressifs au large seulement, piqûre des méduses, armée de mouettes, compagnons à l'invasion), rapport `run-server/faune_autotest.txt` ; avant, `python tools/dev_mods.py --server alexsmobs aquaculture livingthings`, après, `python tools/dev_mods.py --server --clean` ;
 - `EMERALDWEAPONS_AUTOTEST=partie ./gradlew runServer` : la partie (chances de la Forge et métal perdu, coffres des sanctuaires selon l'avancée, vol d'élytre des ailes +20, bouclier d'Arcencium, Grand Froid de l'Aurore, Proie de la Battue et sa garde), rapport `run-server/partie_autotest.txt`.
 
 Pour regarder un terrain (arbres, biomes) sans jouer : le run `photos` entre dans le monde

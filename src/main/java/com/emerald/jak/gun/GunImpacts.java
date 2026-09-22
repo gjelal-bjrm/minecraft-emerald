@@ -63,9 +63,10 @@ public final class GunImpacts {
     private GunImpacts() {
     }
 
-    /** Une cible des armes : un monstre de l'invasion, vivant, dans Haven. */
+    /** Une cible des armes : un monstre de l'invasion, ou un danger du large (cahier §85), vivant, dans Haven. */
     public static boolean isTarget(@Nullable Entity entity) {
-        return entity instanceof Mob mob && mob.isAlive() && !mob.isRemoved() && HavenInvasion.isHavenMonster(mob);
+        return entity instanceof Mob mob && mob.isAlive() && !mob.isRemoved()
+                && (HavenInvasion.isHavenMonster(mob) || com.emerald.haven.fauna.HavenFauna.isDanger(mob));
     }
 
     /** Le type de degat des armes du Morph Gun (data/emeraldweapons/damage_type/morph_gun.json). */

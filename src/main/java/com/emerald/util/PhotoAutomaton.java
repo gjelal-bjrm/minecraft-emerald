@@ -71,7 +71,9 @@ import java.util.Objects;
  * derriere elle -- pour voir OU elle se pose, et non plus seulement a quoi elle ressemble.
  *
  * LES PRISES DE HAVEN (« nom@haven:accueil », « nom@haven:qg ») regardent le parcours
- * du joueur, INTERFACE VISIBLE : titre et barre d'objectif. Rien n'est prepare -- ni
+ * du joueur, INTERFACE VISIBLE : titre et barre d'objectif. Les animaux de la ville
+ * (« faune_port », « faune_rue », « faune_bassin », « faune_large », « faune_armee ») sont
+ * poses devant la camera, interface masquee (HavenFaunaPhotos). Rien n'est prepare -- ni
  * chantier, ni mode eteint : le joueur arrive dans la ville comme n'importe qui.
  * « accueil » attend la premiere arrivee et son titre ; « qg » pose le joueur dans le
  * Hip Hog, face a la borne, et attend que le titre soit parti. Le lot 2 : « envahie »
@@ -171,9 +173,9 @@ public final class PhotoAutomaton {
             return "arche".equals(path) ? 200 : 140;
         }
 
-        /** Une prise de Haven qui montre l'interface (titre, barre) ; la camera libre la masque. */
+        /** Une prise de Haven qui montre l'interface (titre, barre) ; la camera libre et les animaux la masquent. */
         boolean havenGui() {
-            return !this.biome.getPath().startsWith("camera");
+            return !this.biome.getPath().startsWith("camera") && !this.biome.getPath().startsWith("faune_");
         }
     }
 
@@ -598,6 +600,10 @@ public final class PhotoAutomaton {
         }
         if ("arche".equals(path) || "portail".equals(path)) {
             return gateReady(server, player, shot, path);
+        }
+        if (path.startsWith("faune_")) {
+            // les animaux de la ville (cahier §85), poses devant la camera
+            return com.emerald.haven.fauna.HavenFaunaPhotos.ready(server, player, path, PREPARED.add(shot.name()));
         }
         if ("ratelier".equals(path) || "reprise".equals(path)) {
             BlockPos rack = com.emerald.haven.journey.HavenRack.position(server);

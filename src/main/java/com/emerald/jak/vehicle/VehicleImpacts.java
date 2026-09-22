@@ -288,9 +288,17 @@ public final class VehicleImpacts {
             if (!inside) {
                 continue;
             }
-            double launch = Math.min(RAM_LAUNCH_MAX, momentum * RAM_LAUNCH);
             double dx = speed < 1.0E-4 ? 0.0 : motion.x / speed;
             double dz = speed < 1.0E-4 ? 0.0 : motion.z / speed;
+            if (com.emerald.haven.fauna.HavenFauna.sparedByVehicles(mob)) {
+                // UN ANIMAL DE LA VILLE NE SE RENVERSE PAS (cahier §85) : ecarte sur le cote,
+                // sans un point de degat -- un chat, une mouette, un phoque
+                double side = (mob.getX() - car.getX()) * -dz + (mob.getZ() - car.getZ()) * dx >= 0.0 ? 1.0 : -1.0;
+                mob.setDeltaMovement(-dz * side * 0.6, 0.25, dx * side * 0.6);
+                mob.hurtMarked = true;
+                continue;
+            }
+            double launch = Math.min(RAM_LAUNCH_MAX, momentum * RAM_LAUNCH);
             // LA VITESSE EST POSEE, PAS AJOUTEE : sous le vehicule, le corps est repris a
             // chaque tique, et l'addition l'envoyait a 130 m/s au bout de six (banc du
             // 20 sept.). Pose, il file devant le vehicule a la vitesse du choc.

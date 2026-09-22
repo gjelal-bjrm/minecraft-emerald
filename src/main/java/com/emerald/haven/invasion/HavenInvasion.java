@@ -198,8 +198,8 @@ public final class HavenInvasion {
     private static final Map<UUID, Vec3> LAST_OUTSIDE = new HashMap<>();
     /** Les apparitions recentes, pour le banc d'essai (256 au plus). */
     static final List<HavenSpawner.Spawned> RECENT = new ArrayList<>();
-    /** Les ancres du banc d'essai : des joueurs simules, en plus des vrais. */
-    static final List<Vec3> TEST_ANCHORS = new ArrayList<>();
+    /** Les ancres du banc d'essai : des joueurs simules, en plus des vrais (bancs de l'invasion et de la faune). */
+    public static final List<Vec3> TEST_ANCHORS = new ArrayList<>();
     /** Les quotas par troncon, pour la carte et l'origine courantes. */
     @Nullable
     private static Quotas quotas;
@@ -415,8 +415,10 @@ public final class HavenInvasion {
             return false;
         }
         state.setMode(mode);
+        // a l'invasion, les habitants, le trafic et les chats et chiens de la ville rentrent
         int removed = mode == Mode.PAISIBLE ? removeMonsters(level)
-                : removeVillagers(level) + HavenTraffic.removeAll(level);
+                : removeVillagers(level) + HavenTraffic.removeAll(level)
+                + com.emerald.haven.fauna.HavenFauna.removePets(level);
         HavenInvasionButton.keep(server, true);
         announce(level, mode, who);
         LOGGER.info("ville de Haven : mode {} ({}), {} entites retirees", mode,
@@ -575,6 +577,8 @@ public final class HavenInvasion {
             return;
         }
         HavenDestruction.tick(level);
+        // les animaux de la ville (cahier §85) : quais, bassin, large, compagnons
+        com.emerald.haven.fauna.HavenFauna.tick(level, ticks);
         if (ticks % SWEEP_PERIOD == 0) {
             sweep(level);
         }
@@ -857,7 +861,8 @@ public final class HavenInvasion {
      * dans un troncon decharge sera refuse a son rechargement (voir {@link #welcome}).
      */
     public static int removeAll(ServerLevel level) {
-        int removed = removeMonsters(level) + removeVillagers(level) + HavenTraffic.removeAll(level);
+        int removed = removeMonsters(level) + removeVillagers(level) + HavenTraffic.removeAll(level)
+                + com.emerald.haven.fauna.HavenFauna.removeAll(level);
         HavenInvasionState.get(level).bumpGeneration();
         return removed;
     }

@@ -823,5 +823,7 @@
   "game.emeraldweapons.haven.depart.open": "The portal to the village is open at HQ: walk through the arch when you are ready.",
   "game.emeraldweapons.haven.depart.reminder": "The HQ arch leads to the village (%s of %s already gone).",
   "game.emeraldweapons.haven.depart.late": "The portal is closing: off to the village.",
+  "game.emeraldweapons.haven.faune.armee": "The seagulls strike back! Take cover.",
+  "game.emeraldweapons.haven.faune.large": "Open sea: sharks and jellyfish lurk here. The harbour basin is safe.",
   "game.emeraldweapons.haven.agenda.rdv.depart": "Departure: walk through the HQ arch to reach the village."
 }
