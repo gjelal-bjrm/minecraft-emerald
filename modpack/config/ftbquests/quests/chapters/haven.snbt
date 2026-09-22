@@ -16,7 +16,7 @@
 			description: [
 				"Vous vous réveillez dans votre appartement, au port de &bHaven&r. La ville est calme : ses habitants et ses voitures volantes vont et viennent. Vous n'avez pas d'arme."
 				""
-				"Le quartier général, c'est le &6bar du Hip Hog&r. La barre en haut de l'écran donne la distance et la direction ; une voiture vous attend devant l'appartement."
+				"Le quartier général, c'est le &6bar du Hip Hog&r. Votre &6agenda&r (clic droit) donne le prochain rendez-vous ; la barre en haut de l'écran, la distance et la direction. Une voiture vous attend devant l'appartement."
 				""
 				"&7Se coche à la première arrivée."
 			]
@@ -40,7 +40,7 @@
 		{
 			dependencies: ["50BFB3D0079383A0"]
 			description: [
-				"Le bar du Hip Hog. Au bout du comptoir, la &cborne&r lance la partie : la vitre rouge pour le Défi, la bleue pour le Monde ouvert."
+				"Le bar du Hip Hog, où l'équipe se retrouve. Au bout du comptoir, la &cborne&r lance la partie : choisissez ensemble, la vitre bleue pour le Monde ouvert, la rouge pour le Défi."
 				""
 				"Le bouton, près de la borne, fait passer toute la ville de paisible à envahie. Il n'obéit qu'à ceux qui ont débloqué les douze armes du Morph Gun."
 				""
