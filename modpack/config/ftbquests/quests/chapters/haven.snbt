@@ -141,6 +141,112 @@
 			x: 8.0d
 			y: 0.0d
 		}
+		{
+			dependencies: ["5203F0EEE2EA3BEF"]
+			description: [
+				"Les rues reprises, &6six héros&r vous attendent : &cTorn&r au comptoir du QG, &dTess&r à la salle des armes, &6Sig&r sur la place du bras ouest, &bKeira&r dans la cour du bras central, &aSamos&r sur la terrasse de la tour ouest, et &3le Pêcheur&r sur son bateau, dans le bassin."
+				""
+				"Clic droit pour leur parler : leurs quêtes s'écrivent dans le chat, avec un bouton &a[Accepter]&r. Une quête à la fois ; les autres joueurs peuvent la &b[Rejoindre]&r, et la réussite paie toute l'équipe."
+				""
+				"Les quêtes de combat &c envahissent la ville&r le temps de la faire."
+				""
+				"&7Se coche à votre première quête."
+			]
+			icon: {
+				id: "minecraft:villager_spawn_egg"
+			}
+			id: "7FFA7E1790A8274A"
+			rewards: [
+			]
+			size: 1.25d
+			tasks: [{
+				advancement: "emeraldweapons:carnet/haven_heros"
+				criterion: ""
+				id: "7F3261C31E92C95D"
+				type: "advancement"
+			}]
+			title: "Les héros de Haven"
+			x: 10.0d
+			y: 0.0d
+		}
+		{
+			dependencies: ["7FFA7E1790A8274A"]
+			description: [
+				"La monnaie de Haven. Les quêtes en donnent (30 à 80), et &6cent cinquante&r sont cachés dans la ville : dans les rues, sur les toits, autour des tours, au fond du bassin et au large."
+				""
+				"Le compteur est en haut à droite ; votre &6agenda&r a une page « ta bourse ». Chacun a les siens, et ils vous suivent de partie en partie."
+				""
+				"&7Se coche au premier orbe caché ramassé."
+			]
+			icon: {
+				id: "minecraft:gold_nugget"
+			}
+			id: "2D0A7C8A96260869"
+			rewards: [
+			]
+			size: 1.25d
+			tasks: [{
+				advancement: "emeraldweapons:carnet/haven_orbe"
+				criterion: ""
+				id: "7522BA06CB499A93"
+				type: "advancement"
+			}]
+			title: "Les orbes précurseurs"
+			x: 12.0d
+			y: 0.0d
+		}
+		{
+			dependencies: ["2D0A7C8A96260869"]
+			description: [
+				"À la salle des armes, &dTess&r vend : les &6onze armes&r du Morph Gun au prix de leur couleur (rouge 40, jaune 80, bleue 120, sombre 200), l'&eéco illimité&r d'une couleur, et les &dbonus du Défi&r — provisions, rune garantie, sceau de forge, sceau de rareté, sceau de Spécialisation."
+				""
+				"Les sceaux ne partent que quand ils servent : ils changent un échec en réussite."
+				""
+				"&7Se coche à votre premier achat."
+			]
+			icon: {
+				id: "emeraldweapons:morph_gun"
+			}
+			id: "0D6574ACC27B03EB"
+			rewards: [
+			]
+			size: 1.25d
+			tasks: [{
+				advancement: "emeraldweapons:carnet/haven_boutique"
+				criterion: ""
+				id: "0EC8E732275386F3"
+				type: "advancement"
+			}]
+			title: "La boutique de Tess"
+			x: 14.0d
+			y: 0.0d
+		}
+		{
+			dependencies: ["0D6574ACC27B03EB"]
+			description: [
+				"Les &6douze armes&r et les &6dix-sept quêtes&r des héros : le bouton du QG vous obéit, et Haven passe de paisible à envahie quand vous le voulez."
+				""
+				"Le contrat du port, qui se refait, n'en fait pas partie."
+				""
+				"&7Se coche quand tout est fait."
+			]
+			icon: {
+				id: "minecraft:nether_star"
+			}
+			id: "12BFFBFB2A984314"
+			rewards: [
+			]
+			size: 1.25d
+			tasks: [{
+				advancement: "emeraldweapons:carnet/haven_maitrise"
+				criterion: ""
+				id: "653282E71599ADF4"
+				type: "advancement"
+			}]
+			title: "La maîtrise"
+			x: 16.0d
+			y: 0.0d
+		}
 	]
 	subtitle: ["Le parcours dans la ville de Jak 3. Chaque étape se coche toute seule."]
 	title: "Haven"

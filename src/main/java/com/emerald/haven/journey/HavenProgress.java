@@ -18,7 +18,9 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.BitSet;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -43,6 +45,11 @@ import java.util.UUID;
  * dans la ville envahie (« envahie » : son titre a ete joue), et LES RUES REPRISES
  * (« reprise » : l'equipe a abattu les monstres qu'il fallait pendant qu'il etait la).
  *
+ * LES QUETES DES HEROS (lot 3, cahier §86) ajoutent la bourse du joueur : ses ORBES
+ * PRECURSEURS (gagnes aux quetes et ramasses dans la ville, depenses chez Tess), les orbes
+ * caches deja trouves, ses medailles, et ce qu'il a achete (sceaux, provisions, munitions
+ * illimitees...). Comme le reste, ils suivent le joueur de partie en partie, dans ce monde.
+ *
  * LES COBAYES DES BANCS ont une fiche TEMPORAIRE, jamais ecrite : un joueur factice
  * n'a rien a faire dans la sauvegarde d'un monde.
  */
@@ -56,9 +63,15 @@ public final class HavenProgress {
 
     /**
      * Les quetes des heros qu'il faut avoir faites pour la maitrise, en plus des douze
-     * armes. Vide jusqu'au lot 3 (les PNJ de Haven).
+     * armes (lot 3, cahier §86) : toutes, sauf le contrat de Torn qui se refait (« port »).
      */
-    public static final List<String> REQUIRED_QUESTS = List.of();
+    public static final List<String> REQUIRED_QUESTS = List.of(
+            "rues", "patrouille",
+            "chasse", "brutes", "marche",
+            "anneaux", "taxi", "chauffard",
+            "tir1", "tir2", "tir3",
+            "ecos", "plateforme", "elite",
+            "peche", "coffres", "mouettes");
 
     /** Ce qu'on sait d'un joueur. */
     public static final class Entry {
@@ -76,12 +89,21 @@ public final class HavenProgress {
         public boolean reprise;
         /** Les quetes des heros faites (lot 3). */
         public final Set<String> quests = new LinkedHashSet<>();
+        /** Ses orbes precurseurs : la monnaie de la ville. */
+        public int orbs;
+        /** Les orbes caches deja trouves, par numero (jak/haven_orbs.json). */
+        public final BitSet found = new BitSet();
+        /** Ses medailles aux epreuves : 1 bronze, 2 argent, 3 or. */
+        public final Map<String, Integer> medals = new LinkedHashMap<>();
+        /** Ce qu'il a achete chez Tess et qui se garde ou s'use : sceaux, provisions, munitions illimitees. */
+        public final Map<String, Integer> bonus = new LinkedHashMap<>();
         /** Fiche d'un cobaye de banc : jamais ecrite. */
         boolean temporary;
 
         boolean blank() {
             return this.forms == 0 && !this.welcomed && !this.hq && this.departures == 0 && !this.invaded
-                    && !this.reprise && this.quests.isEmpty();
+                    && !this.reprise && this.quests.isEmpty() && this.orbs == 0 && this.found.isEmpty()
+                    && this.medals.isEmpty() && this.bonus.isEmpty();
         }
     }
 
@@ -142,7 +164,114 @@ public final class HavenProgress {
         return entry != null && entry.departures > 0 && !entry.reprise;
     }
 
+    /** Ses orbes. */
+    public static int orbs(UUID id) {
+        Entry entry = ENTRIES.get(id);
+        return entry == null ? 0 : entry.orbs;
+    }
+
+    /** A-t-il deja trouve cet orbe cache ? */
+    public static boolean found(UUID id, int orb) {
+        Entry entry = ENTRIES.get(id);
+        return entry != null && entry.found.get(orb);
+    }
+
+    /** Combien d'orbes caches il a trouves. */
+    public static int foundCount(UUID id) {
+        Entry entry = ENTRIES.get(id);
+        return entry == null ? 0 : entry.found.cardinality();
+    }
+
+    /** A-t-il fait cette quete ? */
+    public static boolean done(UUID id, String quest) {
+        Entry entry = ENTRIES.get(id);
+        return entry != null && entry.quests.contains(quest);
+    }
+
+    /** Sa meilleure medaille a cette epreuve (0 : aucune). */
+    public static int medal(UUID id, String quest) {
+        Entry entry = ENTRIES.get(id);
+        return entry == null ? 0 : entry.medals.getOrDefault(quest, 0);
+    }
+
+    /** Combien il a de ce bonus (sceaux, provisions...) ; 1 pour un bonus acquis une fois pour toutes. */
+    public static int bonus(UUID id, String key) {
+        Entry entry = ENTRIES.get(id);
+        return entry == null ? 0 : entry.bonus.getOrDefault(key, 0);
+    }
+
     // ================================================================ ecriture
+
+    /** Ajoute (ou retire, si negatif) des orbes, et ecrit. @return le nouveau solde */
+    public static int addOrbs(UUID id, int amount) {
+        Entry entry = get(id);
+        entry.orbs = Math.max(0, entry.orbs + amount);
+        save();
+        return entry.orbs;
+    }
+
+    /** Depense des orbes s'il en a assez, et ecrit. @return faux s'il n'en a pas assez */
+    public static boolean spendOrbs(UUID id, int amount) {
+        Entry entry = get(id);
+        if (amount < 0 || entry.orbs < amount) {
+            return false;
+        }
+        entry.orbs -= amount;
+        save();
+        return true;
+    }
+
+    /** Note un orbe cache trouve. @return vrai s'il ne l'avait pas encore */
+    public static boolean markFound(UUID id, int orb) {
+        Entry entry = get(id);
+        if (entry.found.get(orb)) {
+            return false;
+        }
+        entry.found.set(orb);
+        save();
+        return true;
+    }
+
+    /** Note une quete faite. @return vrai si c'est la premiere fois */
+    public static boolean completeQuest(UUID id, String quest) {
+        boolean first = get(id).quests.add(quest);
+        save();
+        return first;
+    }
+
+    /** Garde la meilleure medaille. @return la medaille d'avant */
+    public static int setMedal(UUID id, String quest, int medal) {
+        Entry entry = get(id);
+        int before = entry.medals.getOrDefault(quest, 0);
+        if (medal > before) {
+            entry.medals.put(quest, medal);
+            save();
+        }
+        return before;
+    }
+
+    /** Ajoute un bonus (ou en fixe un acquis une fois pour toutes a 1). */
+    public static void addBonus(UUID id, String key, int amount) {
+        Entry entry = get(id);
+        entry.bonus.merge(key, amount, Integer::sum);
+        save();
+    }
+
+    /** Consomme un bonus s'il en a un, et ecrit. @return vrai s'il en avait */
+    public static boolean takeBonus(UUID id, String key) {
+        Entry entry = ENTRIES.get(id);
+        if (entry == null || entry.bonus.getOrDefault(key, 0) <= 0) {
+            return false;
+        }
+        int left = entry.bonus.get(key) - 1;
+        if (left <= 0) {
+            entry.bonus.remove(key);
+        } else {
+            entry.bonus.put(key, left);
+        }
+        save();
+        return true;
+    }
 
     /** Remplace ses formes, et ecrit. */
     public static void setForms(UUID id, int mask) {
@@ -257,6 +386,22 @@ public final class HavenProgress {
                         entry.quests.add(quest.getAsString());
                     }
                 }
+                entry.orbs = o.has("orbes") ? Math.max(0, o.get("orbes").getAsInt()) : 0;
+                if (o.has("orbes_trouves")) {
+                    for (JsonElement orb : o.getAsJsonArray("orbes_trouves")) {
+                        entry.found.set(orb.getAsInt());
+                    }
+                }
+                if (o.has("medailles")) {
+                    for (Map.Entry<String, JsonElement> m : o.getAsJsonObject("medailles").entrySet()) {
+                        entry.medals.put(m.getKey(), m.getValue().getAsInt());
+                    }
+                }
+                if (o.has("bonus")) {
+                    for (Map.Entry<String, JsonElement> b : o.getAsJsonObject("bonus").entrySet()) {
+                        entry.bonus.put(b.getKey(), b.getValue().getAsInt());
+                    }
+                }
                 into.put(UUID.fromString(e.getKey()), entry);
                 read++;
             }
@@ -287,6 +432,18 @@ public final class HavenProgress {
                 quests.add(quest);
             }
             o.add("quetes", quests);
+            o.addProperty("orbes", entry.orbs);
+            JsonArray found = new JsonArray();
+            for (int i = entry.found.nextSetBit(0); i >= 0; i = entry.found.nextSetBit(i + 1)) {
+                found.add(i);
+            }
+            o.add("orbes_trouves", found);
+            JsonObject medals = new JsonObject();
+            entry.medals.forEach(medals::addProperty);
+            o.add("medailles", medals);
+            JsonObject bonus = new JsonObject();
+            entry.bonus.forEach(bonus::addProperty);
+            o.add("bonus", bonus);
             root.add(e.getKey().toString(), o);
         }
         try {

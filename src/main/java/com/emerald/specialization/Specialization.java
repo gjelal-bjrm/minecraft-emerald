@@ -138,6 +138,11 @@ public final class Specialization {
         }
         consume(player, cost);
         boolean success = player.getRandom().nextInt(100) < ODDS[target];
+        // le sceau de Specialisation de Tess (boutique de Haven) fait reussir une tentative ratee
+        if (!success && com.emerald.haven.quest.HavenShop.useSeal(player,
+                com.emerald.haven.quest.HavenShop.SEAL_SPECIALIZATION)) {
+            success = true;
+        }
         if (success) {
             entry.level = target;
             int points = pointsFor(target);

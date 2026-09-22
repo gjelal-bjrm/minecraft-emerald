@@ -2,6 +2,13 @@ package com.emerald.haven.journey;
 
 import com.emerald.haven.Haven;
 import com.emerald.haven.HavenState;
+import com.emerald.haven.quest.HavenHero;
+import com.emerald.haven.quest.HavenOrbs;
+import com.emerald.haven.quest.HavenQuest;
+import com.emerald.haven.quest.HavenQuestBook;
+import com.emerald.haven.quest.HavenQuests;
+import com.emerald.haven.quest.HavenShop;
+import com.emerald.haven.quest.QuestRun;
 import com.emerald.item.ModItems;
 import com.emerald.jak.gun.GunForm;
 import com.emerald.main.EmeraldWeaponsMod;
@@ -20,6 +27,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * L'agenda de Haven (cahier §83) : le « systeme de quete, entre guillemets » voulu par le
@@ -125,12 +133,92 @@ public final class HavenAgenda {
         }
     }
 
-    /** Les pages : le prochain rendez-vous, puis le carnet de route. */
+    /** Les pages : le prochain rendez-vous, le carnet de route ; les rues reprises, les quetes et la bourse. */
     public static List<Component> pages(ServerPlayer player) {
         List<Component> out = new ArrayList<>();
         out.add(nextPage(player));
         out.add(roadPage(player));
+        if (HavenProgress.get(player.getUUID()).reprise) {
+            out.add(questPage(player, HavenHero.TORN, HavenHero.SIG, HavenHero.KEIRA));
+            out.add(questPage(player, HavenHero.TESS, HavenHero.SAMOS, HavenHero.PECHEUR));
+            out.add(pursePage(player));
+        }
         return out;
+    }
+
+    /** Les quetes de trois heros : faites, en cours, a faire, fermees. */
+    private static Component questPage(ServerPlayer player, HavenHero... heroes) {
+        UUID id = player.getUUID();
+        QuestRun mine = HavenQuests.runOf(id);
+        MutableComponent page = Component.empty();
+        page.append(Component.translatable("game.emeraldweapons.haven.agenda.quetes")
+                .withStyle(ChatFormatting.BOLD, ChatFormatting.DARK_BLUE));
+        for (HavenHero hero : heroes) {
+            page.append("\n\n");
+            page.append(hero.displayName().copy().withStyle(ChatFormatting.BOLD, ChatFormatting.DARK_GRAY));
+            for (HavenQuest quest : HavenQuestBook.of(hero)) {
+                page.append("\n");
+                boolean done = HavenProgress.done(id, quest.id());
+                HavenQuest before = HavenQuestBook.before(quest);
+                boolean closed = !done && before != null && !HavenProgress.done(id, before.id());
+                if (mine != null && mine.quest == quest) {
+                    page.append(Component.literal("⟳ ").append(quest.title()).withStyle(ChatFormatting.DARK_AQUA));
+                } else if (done) {
+                    MutableComponent line = Component.literal("✓ ").append(quest.title()).withStyle(ChatFormatting.DARK_GREEN);
+                    if (quest.medals()) {
+                        line.append(" ").append(HavenQuests.medalName(HavenProgress.medal(id, quest.id())));
+                    }
+                    page.append(line);
+                } else if (closed) {
+                    page.append(Component.literal("✗ ").append(quest.title()).withStyle(ChatFormatting.GRAY));
+                } else {
+                    page.append(Component.literal("▶ ").append(quest.title()).withStyle(ChatFormatting.BLACK));
+                }
+            }
+        }
+        return page;
+    }
+
+    /** La bourse : les orbes, les orbes caches trouves, les bonus achetes chez Tess. */
+    private static Component pursePage(ServerPlayer player) {
+        UUID id = player.getUUID();
+        MutableComponent page = Component.empty();
+        page.append(Component.translatable("game.emeraldweapons.haven.agenda.bourse")
+                .withStyle(ChatFormatting.BOLD, ChatFormatting.DARK_BLUE));
+        page.append("\n\n");
+        page.append(Component.translatable("game.emeraldweapons.haven.agenda.orbes", HavenProgress.orbs(id))
+                .withStyle(ChatFormatting.GOLD));
+        page.append("\n");
+        page.append(Component.translatable("game.emeraldweapons.haven.agenda.orbes.trouves", HavenProgress.foundCount(id),
+                HavenOrbs.total(player.server)).withStyle(ChatFormatting.BLACK));
+        page.append("\n\n");
+        page.append(Component.translatable("game.emeraldweapons.haven.agenda.bonus")
+                .withStyle(ChatFormatting.DARK_RED, ChatFormatting.UNDERLINE));
+        boolean any = false;
+        for (String key : List.of(HavenShop.PROVISIONS, HavenShop.RUNE, HavenShop.SEAL_FORGE, HavenShop.SEAL_RARITY,
+                HavenShop.SEAL_SPECIALIZATION)) {
+            int count = HavenProgress.bonus(id, key);
+            if (count > 0) {
+                page.append("\n");
+                page.append(Component.translatable("game.emeraldweapons.haven.boutique." + key).append(" ×" + count)
+                        .withStyle(ChatFormatting.BLACK));
+                any = true;
+            }
+        }
+        for (GunForm.Family family : GunForm.Family.values()) {
+            if (HavenShop.unlimited(id, family)) {
+                page.append("\n");
+                page.append(Component.translatable("game.emeraldweapons.haven.boutique." + HavenShop.unlimitedKey(family))
+                        .withStyle(ChatFormatting.BLACK));
+                any = true;
+            }
+        }
+        if (!any) {
+            page.append("\n");
+            page.append(Component.translatable("game.emeraldweapons.haven.agenda.bonus.aucun")
+                    .withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC));
+        }
+        return page;
     }
 
     private static Component nextPage(ServerPlayer player) {
@@ -172,6 +260,12 @@ public final class HavenAgenda {
             case ARME -> Component.translatable("game.emeraldweapons.haven.agenda.rdv.arme");
             case REPRISE -> Component.translatable("game.emeraldweapons.haven.agenda.rdv.reprise",
                     HavenJourney.repriseCount(player.server), HavenJourney.REPRISE_GOAL);
+            case QUETE -> {
+                QuestRun run = HavenQuests.runOf(player.getUUID());
+                yield run == null ? Component.translatable("game.emeraldweapons.haven.agenda.rdv.quetes")
+                        : Component.translatable("game.emeraldweapons.haven.agenda.rdv.quete",
+                        run.quest.title(), run.quest.giver().displayName(), run.objective());
+            }
         };
     }
 

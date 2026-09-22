@@ -1,0 +1,1209 @@
+{
+ "_format": [
+  "Orbes precurseurs caches de Haven, ecrits par tools/haven_orbs_map.py ; lus par com.emerald.haven.quest.HavenOrbs.",
+  "cellule : la cellule du volume ou flotte l'orbe (Y monde = cellule + 5) ; lieu : rue, toit, tour, bassin, large.",
+  "Le NUMERO est l'indice dans la liste : les fiches des joueurs retiennent les numeros trouves. Ne pas reordonner."
+ ],
+ "orbes": [
+  {
+   "cellule": [
+    1028,
+    66,
+    422
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    1086,
+    66,
+    240
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    600,
+    62,
+    91
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    1151,
+    65,
+    217
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    267,
+    64,
+    482
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    801,
+    66,
+    184
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    313,
+    68,
+    297
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    89,
+    62,
+    220
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    650,
+    66,
+    200
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    123,
+    66,
+    279
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    593,
+    62,
+    134
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    915,
+    66,
+    518
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    896,
+    66,
+    232
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    721,
+    66,
+    90
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    645,
+    62,
+    110
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    985,
+    66,
+    279
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    505,
+    66,
+    225
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    484,
+    66,
+    653
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    283,
+    66,
+    329
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    198,
+    66,
+    311
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    140,
+    66,
+    325
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    196,
+    66,
+    379
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    374,
+    66,
+    542
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    360,
+    68,
+    258
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    645,
+    66,
+    240
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    949,
+    66,
+    254
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    997,
+    62,
+    358
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    772,
+    66,
+    583
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    1092,
+    66,
+    466
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    428,
+    66,
+    650
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    742,
+    66,
+    221
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    1153,
+    66,
+    263
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    1199,
+    62,
+    204
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    1097,
+    66,
+    353
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    503,
+    66,
+    171
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    190,
+    66,
+    524
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    1026,
+    66,
+    486
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    543,
+    62,
+    239
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    72,
+    66,
+    278
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    543,
+    66,
+    606
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    631,
+    62,
+    157
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    418,
+    65,
+    609
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    873,
+    66,
+    202
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    1022,
+    69,
+    309
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    1192,
+    62,
+    259
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    743,
+    67,
+    266
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    212,
+    66,
+    451
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    1125,
+    66,
+    294
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    681,
+    64,
+    243
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    742,
+    66,
+    641
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    798,
+    66,
+    619
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    740,
+    66,
+    9
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    738,
+    66,
+    569
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    790,
+    66,
+    54
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    835,
+    65,
+    641
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    813,
+    66,
+    141
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    777,
+    66,
+    119
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    1070,
+    66,
+    529
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    524,
+    66,
+    666
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    942,
+    66,
+    294
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    874,
+    64,
+    569
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    432,
+    66,
+    175
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    238,
+    66,
+    402
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    972,
+    66,
+    318
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    685,
+    69,
+    628
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    1154,
+    62,
+    173
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    788,
+    66,
+    674
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    90,
+    67,
+    313
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    1059,
+    66,
+    279
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    1213,
+    62,
+    105
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    57,
+    62,
+    130
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    820,
+    66,
+    80
+   ],
+   "lieu": "rue"
+  },
+  {
+   "cellule": [
+    594,
+    74,
+    620
+   ],
+   "lieu": "toit"
+  },
+  {
+   "cellule": [
+    193,
+    71,
+    290
+   ],
+   "lieu": "toit"
+  },
+  {
+   "cellule": [
+    1104,
+    70,
+    257
+   ],
+   "lieu": "toit"
+  },
+  {
+   "cellule": [
+    679,
+    71,
+    614
+   ],
+   "lieu": "toit"
+  },
+  {
+   "cellule": [
+    921,
+    71,
+    239
+   ],
+   "lieu": "toit"
+  },
+  {
+   "cellule": [
+    274,
+    71,
+    324
+   ],
+   "lieu": "toit"
+  },
+  {
+   "cellule": [
+    617,
+    75,
+    634
+   ],
+   "lieu": "toit"
+  },
+  {
+   "cellule": [
+    980,
+    71,
+    294
+   ],
+   "lieu": "toit"
+  },
+  {
+   "cellule": [
+    653,
+    76,
+    629
+   ],
+   "lieu": "toit"
+  },
+  {
+   "cellule": [
+    987,
+    71,
+    320
+   ],
+   "lieu": "toit"
+  },
+  {
+   "cellule": [
+    1133,
+    71,
+    237
+   ],
+   "lieu": "toit"
+  },
+  {
+   "cellule": [
+    1153,
+    72,
+    302
+   ],
+   "lieu": "toit"
+  },
+  {
+   "cellule": [
+    890,
+    70,
+    208
+   ],
+   "lieu": "toit"
+  },
+  {
+   "cellule": [
+    308,
+    70,
+    263
+   ],
+   "lieu": "toit"
+  },
+  {
+   "cellule": [
+    1062,
+    70,
+    284
+   ],
+   "lieu": "toit"
+  },
+  {
+   "cellule": [
+    146,
+    70,
+    262
+   ],
+   "lieu": "toit"
+  },
+  {
+   "cellule": [
+    218,
+    70,
+    306
+   ],
+   "lieu": "toit"
+  },
+  {
+   "cellule": [
+    629,
+    75,
+    610
+   ],
+   "lieu": "toit"
+  },
+  {
+   "cellule": [
+    168,
+    70,
+    276
+   ],
+   "lieu": "toit"
+  },
+  {
+   "cellule": [
+    611,
+    70,
+    79
+   ],
+   "lieu": "toit"
+  },
+  {
+   "cellule": [
+    570,
+    70,
+    630
+   ],
+   "lieu": "toit"
+  },
+  {
+   "cellule": [
+    957,
+    70,
+    274
+   ],
+   "lieu": "toit"
+  },
+  {
+   "cellule": [
+    1037,
+    70,
+    300
+   ],
+   "lieu": "toit"
+  },
+  {
+   "cellule": [
+    95,
+    70,
+    309
+   ],
+   "lieu": "toit"
+  },
+  {
+   "cellule": [
+    645,
+    71,
+    82
+   ],
+   "lieu": "toit"
+  },
+  {
+   "cellule": [
+    331,
+    71,
+    242
+   ],
+   "lieu": "toit"
+  },
+  {
+   "cellule": [
+    118,
+    70,
+    245
+   ],
+   "lieu": "toit"
+  },
+  {
+   "cellule": [
+    497,
+    70,
+    156
+   ],
+   "lieu": "toit"
+  },
+  {
+   "cellule": [
+    475,
+    66,
+    584
+   ],
+   "lieu": "tour"
+  },
+  {
+   "cellule": [
+    486,
+    123,
+    585
+   ],
+   "lieu": "tour"
+  },
+  {
+   "cellule": [
+    770,
+    123,
+    587
+   ],
+   "lieu": "tour"
+  },
+  {
+   "cellule": [
+    481,
+    123,
+    596
+   ],
+   "lieu": "tour"
+  },
+  {
+   "cellule": [
+    476,
+    123,
+    590
+   ],
+   "lieu": "tour"
+  },
+  {
+   "cellule": [
+    768,
+    66,
+    579
+   ],
+   "lieu": "tour"
+  },
+  {
+   "cellule": [
+    480,
+    66,
+    577
+   ],
+   "lieu": "tour"
+  },
+  {
+   "cellule": [
+    774,
+    156,
+    604
+   ],
+   "lieu": "tour"
+  },
+  {
+   "cellule": [
+    478,
+    156,
+    604
+   ],
+   "lieu": "tour"
+  },
+  {
+   "cellule": [
+    764,
+    123,
+    589
+   ],
+   "lieu": "tour"
+  },
+  {
+   "cellule": [
+    902,
+    52,
+    314
+   ],
+   "lieu": "bassin"
+  },
+  {
+   "cellule": [
+    543,
+    52,
+    493
+   ],
+   "lieu": "bassin"
+  },
+  {
+   "cellule": [
+    452,
+    52,
+    542
+   ],
+   "lieu": "bassin"
+  },
+  {
+   "cellule": [
+    674,
+    52,
+    414
+   ],
+   "lieu": "bassin"
+  },
+  {
+   "cellule": [
+    586,
+    52,
+    446
+   ],
+   "lieu": "bassin"
+  },
+  {
+   "cellule": [
+    853,
+    52,
+    259
+   ],
+   "lieu": "bassin"
+  },
+  {
+   "cellule": [
+    620,
+    52,
+    257
+   ],
+   "lieu": "bassin"
+  },
+  {
+   "cellule": [
+    981,
+    52,
+    414
+   ],
+   "lieu": "bassin"
+  },
+  {
+   "cellule": [
+    513,
+    52,
+    361
+   ],
+   "lieu": "bassin"
+  },
+  {
+   "cellule": [
+    568,
+    52,
+    338
+   ],
+   "lieu": "bassin"
+  },
+  {
+   "cellule": [
+    321,
+    52,
+    426
+   ],
+   "lieu": "bassin"
+  },
+  {
+   "cellule": [
+    519,
+    52,
+    427
+   ],
+   "lieu": "bassin"
+  },
+  {
+   "cellule": [
+    783,
+    52,
+    490
+   ],
+   "lieu": "bassin"
+  },
+  {
+   "cellule": [
+    709,
+    52,
+    439
+   ],
+   "lieu": "bassin"
+  },
+  {
+   "cellule": [
+    864,
+    52,
+    473
+   ],
+   "lieu": "bassin"
+  },
+  {
+   "cellule": [
+    808,
+    52,
+    455
+   ],
+   "lieu": "bassin"
+  },
+  {
+   "cellule": [
+    923,
+    52,
+    489
+   ],
+   "lieu": "bassin"
+  },
+  {
+   "cellule": [
+    742,
+    52,
+    298
+   ],
+   "lieu": "bassin"
+  },
+  {
+   "cellule": [
+    661,
+    52,
+    566
+   ],
+   "lieu": "bassin"
+  },
+  {
+   "cellule": [
+    745,
+    52,
+    526
+   ],
+   "lieu": "bassin"
+  },
+  {
+   "cellule": [
+    482,
+    52,
+    282
+   ],
+   "lieu": "bassin"
+  },
+  {
+   "cellule": [
+    761,
+    52,
+    436
+   ],
+   "lieu": "bassin"
+  },
+  {
+   "cellule": [
+    617,
+    52,
+    481
+   ],
+   "lieu": "bassin"
+  },
+  {
+   "cellule": [
+    248,
+    52,
+    436
+   ],
+   "lieu": "bassin"
+  },
+  {
+   "cellule": [
+    638,
+    52,
+    374
+   ],
+   "lieu": "bassin"
+  },
+  {
+   "cellule": [
+    837,
+    52,
+    41
+   ],
+   "lieu": "large"
+  },
+  {
+   "cellule": [
+    992,
+    52,
+    612
+   ],
+   "lieu": "large"
+  },
+  {
+   "cellule": [
+    102,
+    52,
+    530
+   ],
+   "lieu": "large"
+  },
+  {
+   "cellule": [
+    838,
+    52,
+    142
+   ],
+   "lieu": "large"
+  },
+  {
+   "cellule": [
+    1029,
+    52,
+    555
+   ],
+   "lieu": "large"
+  },
+  {
+   "cellule": [
+    191,
+    52,
+    67
+   ],
+   "lieu": "large"
+  },
+  {
+   "cellule": [
+    269,
+    52,
+    609
+   ],
+   "lieu": "large"
+  },
+  {
+   "cellule": [
+    1183,
+    52,
+    687
+   ],
+   "lieu": "large"
+  },
+  {
+   "cellule": [
+    901,
+    52,
+    134
+   ],
+   "lieu": "large"
+  },
+  {
+   "cellule": [
+    98,
+    52,
+    75
+   ],
+   "lieu": "large"
+  },
+  {
+   "cellule": [
+    970,
+    52,
+    229
+   ],
+   "lieu": "large"
+  },
+  {
+   "cellule": [
+    1151,
+    52,
+    506
+   ],
+   "lieu": "large"
+  },
+  {
+   "cellule": [
+    129,
+    52,
+    104
+   ],
+   "lieu": "large"
+  },
+  {
+   "cellule": [
+    1121,
+    52,
+    648
+   ],
+   "lieu": "large"
+  },
+  {
+   "cellule": [
+    160,
+    52,
+    122
+   ],
+   "lieu": "large"
+  }
+ ]
+}

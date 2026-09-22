@@ -171,6 +171,19 @@ SHOTS = [("gun_grenade", "gun-grenade-lod0"), ("gun_saucer", "gun-saucer-lod0"),
          # le missile de la Super Nova (l'anneau gun-dark-2-ring du Mass Inverter ne vit que par l'echelle
          # de ses os, animee par le jeu : au repos c'est un disque plat ; le mod dessine son anneau lui-meme)
          ("gun_nuke", "gun-nuke-lod0")]
+# (l'orbe precurseur des quetes n'est PAS ici : Jak 3 n'a pas d'orbe dans ce qui est extrait --
+# l'oeuf de Ndi Madman est rose, la gemme a tete de mort est couchee et plate. Il est dessine :
+# tools/haven_orb_texture.py, cahier §86)
+# les cibles du stand de tir de Jak 3 (niveau lgunnorm, les parcours de tir de Tess) : les gardes KG en
+# carton a abattre, le KG dore des points en plus, et les civils qu'on ne tire pas (lot 3 de Haven)
+TARGETS = [("haven_cible_kg_b", "gun-kg-target-b-lod0"), ("haven_cible_kg_c", "gun-kg-target-c-lod0"),
+           ("haven_cible_kg_d", "gun-kg-target-d-lod0"), ("haven_cible_bonus", "gun-kg-target-bonus-lod0"),
+           ("haven_cible_cit_a", "gun-cit-a-lod0"), ("haven_cible_cit_b", "gun-cit-b-lod0"),
+           ("haven_cible_cit_c", "gun-cit-c-lod0"), ("haven_cible_cit_d", "gun-cit-d-lod0")]
+TARGET_LEVEL = "lgunnorm"
+# LES PIECES QU'ON NE CUIT PAS : le champ de force des cibles KG est une silhouette orange
+# posee DEVANT la cible ; opaque (l'alpha PS2 vaut 128), elle cachait entierement le garde.
+SKIP_TEXTURES = ("forcefield",)
 
 # (pickup-type de Jak, nom de forme, pose, nom de l'arme)
 FORMS = [(26, "gun-red-1", "gun-idle-red", "Scatter Gun"),
@@ -285,9 +298,9 @@ def ibm16(v):
 class Glb:
     """Un glb habille : noeuds, squelette, animations (echantillonnage glTF LINEAR)."""
 
-    def __init__(self, name):
+    def __init__(self, name, level=LEVEL):
         self.name = name
-        self.path = os.path.join(ja.LEVELS, LEVEL, name + ".glb")
+        self.path = os.path.join(ja.LEVELS, level, name + ".glb")
         if not os.path.isfile(self.path):
             sys.exit("modele introuvable : %s" % self.path)
         self.js, self.blob = ja.read_glb(self.path)
@@ -465,6 +478,9 @@ def read_model(glb, model):
             pbr = material.get("pbrMetallicRoughness", {})
             if "baseColorTexture" not in pbr:
                 sys.exit("%s : triangle sans texture, non gere" % model)
+            base_name = js["images"][js["textures"][pbr["baseColorTexture"]["index"]]["source"]].get("name") or ""
+            if any(skip in base_name for skip in SKIP_TEXTURES):
+                continue
             if any(abs(f - 2.0) > 1e-3 for f in pbr.get("baseColorFactor", [1.0] * 4)):
                 sys.exit("%s : facteur de couleur %s, 2 attendu" % (model, pbr.get("baseColorFactor")))
             spec = material.get("extensions", {}).get("KHR_materials_specular")
@@ -881,7 +897,8 @@ def main():
     os.makedirs(args.out, exist_ok=True)
 
     gun_glb = Glb(GUN[1])
-    models = [read_model(gun_glb, GUN[0])] + [read_model(Glb(name), model) for model, name in AMMO + SHOTS]
+    models = ([read_model(gun_glb, GUN[0])] + [read_model(Glb(name), model) for model, name in AMMO + SHOTS]
+              + [read_model(Glb(name, TARGET_LEVEL), model) for model, name in TARGETS])
     atlas, tiles = build_atlas(models)
     atlas_path = os.path.join(args.out, "morph_gun.png")
     atlas.save(atlas_path)

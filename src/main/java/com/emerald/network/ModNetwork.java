@@ -172,6 +172,23 @@ public class ModNetwork {
                     }
                 }));
 
+        // les quetes de Haven (lot 3) : les reperes des quetes, la bourse d'orbes, la boutique de Tess
+        registrar.playToClient(QuestMarkersPayload.TYPE, QuestMarkersPayload.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(
+                        () -> com.emerald.client.QuestMarkersClient.accept(payload)));
+        registrar.playToClient(HavenOrbsPayload.TYPE, HavenOrbsPayload.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(
+                        () -> com.emerald.client.HavenOrbsHud.accept(payload)));
+        registrar.playToClient(HavenShopPayload.TYPE, HavenShopPayload.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(
+                        () -> com.emerald.client.HavenShopClient.accept(payload)));
+        registrar.playToServer(HavenShopBuyPayload.TYPE, HavenShopBuyPayload.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(() -> {
+                    if (context.player() instanceof ServerPlayer player) {
+                        com.emerald.haven.quest.HavenShop.buy(player, payload.article());
+                    }
+                }));
+
         // le souffle d'une explosion sur la voiture d'un joueur : c'est son client qui l'applique
         registrar.playToClient(com.emerald.jak.vehicle.VehicleImpulsePayload.TYPE,
                 com.emerald.jak.vehicle.VehicleImpulsePayload.STREAM_CODEC,

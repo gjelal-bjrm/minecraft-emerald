@@ -173,9 +173,17 @@ public final class PhotoAutomaton {
             return "arche".equals(path) ? 200 : 140;
         }
 
-        /** Une prise de Haven qui montre l'interface (titre, barre) ; la camera libre et les animaux la masquent. */
+        /**
+         * Une prise de Haven qui montre l'interface (titre, barre) ; la camera libre, les
+         * animaux et les quetes la masquent -- sauf celles des quetes qui montrent justement
+         * un ecran ou un compteur (« _ui »).
+         */
         boolean havenGui() {
-            return !this.biome.getPath().startsWith("camera") && !this.biome.getPath().startsWith("faune_");
+            String path = this.biome.getPath();
+            if (path.startsWith("quete_")) {
+                return path.endsWith("_ui");
+            }
+            return !path.startsWith("camera") && !path.startsWith("faune_");
         }
     }
 
@@ -604,6 +612,10 @@ public final class PhotoAutomaton {
         if (path.startsWith("faune_")) {
             // les animaux de la ville (cahier §85), poses devant la camera
             return com.emerald.haven.fauna.HavenFaunaPhotos.ready(server, player, path, PREPARED.add(shot.name()));
+        }
+        if (path.startsWith("quete_")) {
+            // les quetes des heros (cahier §86) : heros, bateau, orbe, cibles, reperes, boutique
+            return com.emerald.haven.quest.HavenQuestPhotos.ready(server, player, path, PREPARED.add(shot.name()));
         }
         if ("ratelier".equals(path) || "reprise".equals(path)) {
             BlockPos rack = com.emerald.haven.journey.HavenRack.position(server);

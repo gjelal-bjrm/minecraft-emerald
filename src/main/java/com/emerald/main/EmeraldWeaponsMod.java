@@ -61,5 +61,9 @@ public class EmeraldWeaponsMod {
                 WastelanderEntity.createAttributes().build());
         event.put(Jak3Registry.KG_DEATHBOT.get(),
                 KGDeathbotEntity.createAttributes().build());
+        event.put(Jak3Registry.HAVEN_NPC.get(),
+                com.emerald.haven.quest.HavenNpcEntity.createAttributes().build());
+        event.put(Jak3Registry.HAVEN_TARGET.get(),
+                com.emerald.haven.quest.HavenTargetEntity.createAttributes().build());
     }
 }

@@ -193,6 +193,15 @@ final class SeagullArmy {
         while (it.hasNext()) {
             Army army = it.next().getValue();
             army.gulls.removeIf(g -> g.isRemoved() || !g.isAlive());
+            // LA COLERE SE COMBAT PENDANT LA QUETE DU PECHEUR, ET SEULEMENT LA (cahier §86) :
+            // l'invulnerabilite de l'entite tombe, sans quoi le coup serait refuse avant meme
+            // que la regle des degats (HavenFauna.onDamage) ne soit consultee.
+            boolean hunted = com.emerald.haven.quest.HavenQuests.gullHunt();
+            for (Mob gull : army.gulls) {
+                if (gull.isInvulnerable() == hunted) {
+                    gull.setInvulnerable(!hunted);
+                }
+            }
             ServerPlayer target = army.target;
             boolean lost = target.isRemoved() || !target.isAlive() || target.isSpectator() || target.level() != level
                     || !Haven.is(target.level())

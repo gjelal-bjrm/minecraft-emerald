@@ -88,6 +88,8 @@ public final class HavenFaunaAutotest {
     private static int failed;
 
     private static final List<ChunkPos> HELD = new ArrayList<>();
+    /** Les troncons forces autour du cobaye pendant l'armee de mouettes. */
+    private static final List<ChunkPos> ARMY_CHUNKS = new ArrayList<>();
     private static ChunkPos forced;
     private static final List<Vec3> ANCHORS = new ArrayList<>();
     private static Cobaye cobaye;
@@ -522,6 +524,17 @@ public final class HavenFaunaAutotest {
             // le cobaye se tient au sol, pres de la mouette
             BlockPos feet = hitGull.blockPosition();
             cobaye.moveTo(feet.getX() + 0.5, feet.getY(), feet.getZ() + 0.5);
+            // SES TRONCONS DOIVENT TIQUER : l'armee nait a quinze ou vingt blocs, et un joueur
+            // simule ne fait rien tiquer. Sans cela, les mouettes restent en l'air sans bouger
+            // -- vu le 22 sept. : « 20,6 blocs au depart, 14,3 au plus pres », aucun coup de bec.
+            ChunkPos middle = new ChunkPos(cobaye.blockPosition());
+            for (int dx = -2; dx <= 2; dx++) {
+                for (int dz = -2; dz <= 2; dz++) {
+                    ChunkPos around = new ChunkPos(middle.x + dx, middle.z + dz);
+                    level.setChunkForced(around.x, around.z, true);
+                    ARMY_CHUNKS.add(around);
+                }
+            }
             cobaye.heal();
             cobayeStart = cobaye.getHealth();
             hitHealth = hitGull.getHealth();
@@ -727,9 +740,13 @@ public final class HavenFaunaAutotest {
             if (forced != null) {
                 level.setChunkForced(forced.x, forced.z, false);
             }
+            for (ChunkPos pos : ARMY_CHUNKS) {
+                level.setChunkForced(pos.x, pos.z, false);
+            }
             line("nettoyage : " + removed + " entites retirees, mode " + HavenInvasion.mode(server));
         }
         HELD.clear();
+        ARMY_CHUNKS.clear();
         line("RESULTAT : " + passed + " OK, " + failed + " KO");
         Path file = server.getServerDirectory().resolve("faune_autotest.txt");
         try {

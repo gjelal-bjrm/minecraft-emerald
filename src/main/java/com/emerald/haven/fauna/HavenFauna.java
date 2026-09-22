@@ -7,6 +7,8 @@ import com.emerald.haven.invasion.HavenInvasionData;
 import com.emerald.haven.invasion.HavenInvasionState;
 import com.emerald.haven.invasion.HavenProtection;
 import com.emerald.haven.invasion.HavenSpawner;
+import com.emerald.haven.quest.HavenQuests;
+import com.emerald.jak.gun.GunImpacts;
 import com.emerald.jak.vehicle.VehicleImpacts;
 import com.emerald.main.EmeraldWeaponsMod;
 import net.minecraft.ChatFormatting;
@@ -101,7 +103,9 @@ import java.util.UUID;
  *    proie dix-huit a vingt-deux secondes avant de mordre (son propre but, CirclePreyGoal) :
  *    on voit l'aileron, on a le temps de rentrer ; les autres attaquent tout de suite. Un danger qui entre dans le bassin est
  *    ramene a sa derniere place au large. Ils blessent (HavenRules) et se tuent.
- *  - ARMEE ({@link Role#ARMY}) : les mouettes de l'armee, le temps de sa colere.
+ *  - ARMEE ({@link Role#ARMY}) : les mouettes de l'armee, le temps de sa colere. On ne les
+ *    blesse pas -- sauf pendant la quete de l'armee de mouettes (cahier §86), qui est la
+ *    leur : le tireur peut alors les abattre, et elles comptent.
  *
  * LA POPULATION suit la regle de la ville (HavenInvasion) : un quota par troncon,
  * compte par troncon de NAISSANCE, persistant, etiquete de la generation de la ville ;
@@ -262,6 +266,12 @@ public final class HavenFauna {
             return null;
         }
         return Role.byId(entity.getPersistentData().getString(ROLE_KEY));
+    }
+
+    /** Une mouette, des quais ou de l'armee (la quete du Pecheur les compte toutes les deux). */
+    public static boolean gullOrArmy(@Nullable Entity entity) {
+        Role role = role(entity);
+        return role == Role.GULL || role == Role.ARMY;
     }
 
     /** Un danger du large (vise par les armes, blesse les joueurs). */
@@ -1094,16 +1104,30 @@ public final class HavenFauna {
         if (role == null) {
             return;
         }
+        // le tireur de la quete des mouettes, s'il y en a un derriere ce coup
+        ServerPlayer hunter = source.getEntity() instanceof ServerPlayer p ? p
+                : source.is(GunImpacts.DAMAGE_TYPE) && target.getLastHurtByMob() instanceof ServerPlayer shooter ? shooter
+                : null;
         switch (role) {
-            case PET, SHORE, ARMY -> event.setCanceled(true);
+            case PET, SHORE -> event.setCanceled(true);
+            case ARMY -> {
+                // LA COLERE DES MOUETTES NE SE COMBAT PAS -- sauf pendant la quete du Pecheur,
+                // qui est justement celle de l'armee : la, elles s'abattent comme les autres.
+                if (hunter == null || hunter.isSpectator() || !HavenQuests.gullHunt()) {
+                    event.setCanceled(true);
+                }
+            }
             case FISH -> {
                 if (!source.is(DamageTypes.DRY_OUT)) {
                     event.setCanceled(true);
                 }
             }
             case GULL -> {
-                if (source.getEntity() instanceof ServerPlayer player && !player.isSpectator()) {
-                    SeagullArmy.trigger(level, player, (Mob) target);
+                // un coup de joueur ; ou un tir du Morph Gun, qui n'a pas d'auteur mais laisse le
+                // tireur en dernier agresseur (GunImpacts.hurt) -- il ne vise les mouettes que
+                // pendant la quete de l'armee de mouettes
+                if (hunter != null && !hunter.isSpectator()) {
+                    SeagullArmy.trigger(level, hunter, (Mob) target);
                 } else {
                     event.setCanceled(true);
                 }

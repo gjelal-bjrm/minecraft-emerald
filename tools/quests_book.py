@@ -182,6 +182,36 @@ HAVEN_QUESTS = [
         "",
         "&7Se coche quand les rues sont reprises.",
     ], []),
+    ("haven_heros", "Les héros de Haven", "minecraft:villager_spawn_egg", [
+        "Les rues reprises, &6six héros&r vous attendent : &cTorn&r au comptoir du QG, &dTess&r à la salle des armes, &6Sig&r sur la place du bras ouest, &bKeira&r dans la cour du bras central, &aSamos&r sur la terrasse de la tour ouest, et &3le Pêcheur&r sur son bateau, dans le bassin.",
+        "",
+        "Clic droit pour leur parler : leurs quêtes s'écrivent dans le chat, avec un bouton &a[Accepter]&r. Une quête à la fois ; les autres joueurs peuvent la &b[Rejoindre]&r, et la réussite paie toute l'équipe.",
+        "",
+        "Les quêtes de combat &c envahissent la ville&r le temps de la faire.",
+        "",
+        "&7Se coche à votre première quête.",
+    ], []),
+    ("haven_orbe", "Les orbes précurseurs", "minecraft:gold_nugget", [
+        "La monnaie de Haven. Les quêtes en donnent (30 à 80), et &6cent cinquante&r sont cachés dans la ville : dans les rues, sur les toits, autour des tours, au fond du bassin et au large.",
+        "",
+        "Le compteur est en haut à droite ; votre &6agenda&r a une page « ta bourse ». Chacun a les siens, et ils vous suivent de partie en partie.",
+        "",
+        "&7Se coche au premier orbe caché ramassé.",
+    ], []),
+    ("haven_boutique", "La boutique de Tess", "emeraldweapons:morph_gun", [
+        "À la salle des armes, &dTess&r vend : les &6onze armes&r du Morph Gun au prix de leur couleur (rouge 40, jaune 80, bleue 120, sombre 200), l'&eéco illimité&r d'une couleur, et les &dbonus du Défi&r — provisions, rune garantie, sceau de forge, sceau de rareté, sceau de Spécialisation.",
+        "",
+        "Les sceaux ne partent que quand ils servent : ils changent un échec en réussite.",
+        "",
+        "&7Se coche à votre premier achat.",
+    ], []),
+    ("haven_maitrise", "La maîtrise", "minecraft:nether_star", [
+        "Les &6douze armes&r et les &6dix-sept quêtes&r des héros : le bouton du QG vous obéit, et Haven passe de paisible à envahie quand vous le voulez.",
+        "",
+        "Le contrat du port, qui se refait, n'en fait pas partie.",
+        "",
+        "&7Se coche quand tout est fait.",
+    ], []),
 ]
 
 # Une quete a part, hors chaine : l'atelier d'Apotheose, que le joueur voulait

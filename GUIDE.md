@@ -40,9 +40,10 @@ touché. Votre mode de jeu habituel vous est rendu au village.
   étapes tout seul.
 - **Vos armes vous suivent de partie en partie** : ce que vous avez débloqué du
   Morph Gun est gardé par le monde, par joueur. Un nouveau venu n'en a aucune.
-  Le Scatter Gun se prend au râtelier du QG, les autres par les quêtes (à venir).
-- **Le bouton du QG n'obéit qu'à la maîtrise** : avoir débloqué les douze armes
-  (puis, plus tard, fini les quêtes des héros). Sinon, il dit ce qui vous manque.
+  Le Scatter Gun se prend au râtelier du QG, les autres s'achètent chez Tess avec les
+  orbes des quêtes.
+- **Le bouton du QG n'obéit qu'à la maîtrise** : avoir débloqué les douze armes et fini
+  les quêtes des héros. Sinon, il dit ce qui vous manque.
 - **La fin du Défi ramène à Haven.** Après une **défaite**, tout le monde rentre
   une fois le titre lu. Après une **victoire**, une **porte précurseur** s'ouvre là
   où le boss est tombé : qui la traverse rentre dans son appartement et attend
@@ -247,7 +248,9 @@ zone de survol exactement comme une voiture (mêmes touches, Espace compris), à
   arrive de tous les côtés, tourne autour de vous, et tour à tour elles foncent sur
   vous : elles vous bousculent et vous piquent (un demi-cœur par coup, jamais plus
   de trois coups en une seconde et demie). Elle repart au bout de vingt secondes,
-  ou dès que vous vous mettez à l'abri dans un appartement ou au Hip Hog.
+  ou dès que vous vous mettez à l'abri dans un appartement ou au Hip Hog. **On ne
+  peut pas la combattre** — sauf pendant la quête du Pêcheur, « l'armée de
+  mouettes », qui est justement la sienne.
 - **Le bassin du port**, l'eau entre l'arc de la ville et la jetée des deux tours :
   poissons en bancs, poissons volants, cténophores, homards, hippocampes, raies manta ;
   des phoques et des crabes sur les pontons. On peut y nager sans crainte.
@@ -256,6 +259,56 @@ zone de survol exactement comme une voiture (mêmes touches, Espace compris), à
   mordre** : les dangers visent tout nageur à moins de 24 blocs, et le lâchent dès
   qu'il sort de l'eau ou rentre au bassin. Un message prévient quand on y entre. Les
   armes du Morph Gun les touchent.
+
+### Les quêtes des héros
+
+- **Les six héros arrivent à la deuxième visite**, une fois que vous êtes revenu d'un
+  Défi : **Torn** au comptoir du QG, **Tess** à la salle des armes (le stand de tir),
+  **Sig** sur la place du bras ouest, **Keira** dans la cour du bras central, **Samos**
+  sur la terrasse de la tour ouest, et **le Pêcheur** sur un petit bateau amarré au pied
+  de l'escalier qui descend dans le bassin, sous l'arc nord. Tant que les rues ne sont pas
+  reprises, seul Torn vous parle.
+- **Clic droit sur un héros** : sa carte s'écrit dans le chat — ses trois quêtes, l'état
+  de chacune (✓ faite, ⟳ en cours, ▶ à faire, ✗ fermée tant que la précédente n'est pas
+  faite) et ce qu'elle paie. **Les boutons se cliquent dans le chat** : `[Accepter]`,
+  `[Rejoindre]`, `[Abandonner]`, et `[Boutique]` chez Tess. Chaque bouton ne sert qu'une
+  fois et vaut cinq minutes.
+- **Une quête à la fois**, et une seule fois la même en même temps : qui accepte propose
+  aux autres joueurs de la ville de le rejoindre (une carte `[Rejoindre]`, une minute).
+  **La réussite paie toute l'équipe** ; aider sur une quête qu'on a déjà faite rapporte
+  dix orbes.
+- **Les quêtes de combat envahissent la ville** le temps de la quête (Torn, Sig, Samos) :
+  le bouton du QG ne rend pas la paix avant la fin. La conduite, le tir et l'eau se font
+  en ville paisible.
+- **L'objectif en haut de l'écran suit la quête**, et des repères montrent où aller :
+  colonnes de lumière, anneaux de la course, cercle de la zone à tenir.
+
+| Héros | Quêtes | Orbes |
+|---|---|---|
+| Torn | Reprendre les rues ; la patrouille des douze points d'éco (10 min) ; tenir le port une minute (se refait) | 40 ; 60 ; 25 |
+| Sig | la chasse (25 monstres au Pulvérisator) ; les trois brutes en armure (6 min) ; nettoyer le marché (5 min) | 40 ; 60 ; 50 |
+| Keira | la course aux dix anneaux ; le taxi (3 min de trajet) ; le chauffard (3 chocs) | 50 ; 40 ; 50 |
+| Tess | trois épreuves de tir chronométrées, bronze, argent, or | 30 à 60 chacune |
+| Samos | les quatre écos sans mourir ; tenir la plate-forme ; trois vagues et une élite | 60 ; 60 ; 80 |
+| Le Pêcheur | la pêche (200 livres) ; les six coffres engloutis (10 min) ; l'armée de mouettes (10 abattues, l'armée comprise) | 50 ; 50 ; 40 |
+
+- **Les épreuves de tir** se jouent aux cibles du stand de Jak 3 : les gardes KG en carton
+  valent un point, le KG doré trois, et **les civils coûtent deux points** — ne tirez pas
+  dessus. Une minute par épreuve ; le score donne la médaille, et l'or paie le double du
+  bronze. Refaire une épreuve ne paie que la différence.
+- **Les orbes précurseurs** sont la monnaie : les quêtes en donnent, et **cent cinquante
+  sont cachés dans la ville** — dans les rues, sur les toits, autour des tours, au fond
+  du bassin et au large. Le compteur est en haut à droite dans Haven ; l'agenda a une page
+  « ta bourse ». Chacun a les siens, et ils vous suivent de partie en partie.
+- **La boutique de Tess**, à la salle des armes : les **onze armes** du Morph Gun au prix
+  de leur couleur (rouge 40, jaune 80, bleue 120, sombre 200 ; le Pulvérisator reste au
+  râtelier du QG, et il faut la première d'une couleur avant la deuxième) ; **l'éco
+  illimité** d'une couleur (150 à 400 orbes) qui garde la réserve pleine dans la ville ;
+  et les **bonus du Défi** : provisions de départ (40), rune garantie (50), sceau de forge,
+  sceau de rareté et sceau de Spécialisation (60 chacun). Les sceaux ne partent que quand
+  ils servent : ils changent un échec en réussite.
+- **La maîtrise** — les douze armes **et** les dix-sept quêtes des héros — ouvre le bouton
+  du QG. Le contrat du port, qui se refait, n'en fait pas partie.
 
 ### Le Morph Gun
 
@@ -768,6 +821,7 @@ Sur un serveur d'essai (`run-server`), chacun écrit son rapport puis arrête le
 - `EMERALDWEAPONS_AUTOTEST=armes ./gradlew runServer` : Morph Gun (poses, confinement, tir des douze armes, munitions, décor, MSPT avec quatre tireurs), rapport `run-server/armes_autotest.txt` ;
 - `EMERALDWEAPONS_AUTOTEST=parcours ./gradlew runServer` : le parcours (fiche sur disque, arme qui suit les formes du joueur, ville paisible, bouton verrouillé, titre et objectifs du guide ; puis le lot 2 : râtelier du QG, deuxième arrivée envahie, reprise des rues, retour après la défaite, porte de la victoire ; puis les transports : les huit stations, l'arche et sa recharge, le portail des tours ; puis l'agenda, l'équipe attendue au QG et la réunion), rapport `run-server/parcours_autotest.txt` ;
 - `EMERALDWEAPONS_AUTOTEST=faune ./gradlew runServer` : les animaux de la ville (carte de l'eau, places de chaque espèce, plafonds, dangers tenus au large et agressifs au large seulement, piqûre des méduses, armée de mouettes, compagnons à l'invasion), rapport `run-server/faune_autotest.txt` ; avant, `python tools/dev_mods.py --server alexsmobs aquaculture livingthings`, après, `python tools/dev_mods.py --server --clean` ;
+- `EMERALDWEAPONS_AUTOTEST=quetes ./gradlew runServer` : les quêtes des héros (le livre des quêtes, les six héros et le bateau du Pêcheur, les cartes du chat et leurs jetons, l'épreuve de tir jusqu'à la médaille, la pêche au poids, les coffres engloutis, la chasse aux mouettes, la patrouille, la tenue du port et l'invasion qui va avec, les orbes cachés, la boutique de Tess et ses sceaux, puis le ménage), rapport `run-server/quetes_autotest.txt` ; avant, `python tools/dev_mods.py --server alexsmobs aquaculture livingthings`, après, `python tools/dev_mods.py --server --clean` ;
 - `EMERALDWEAPONS_AUTOTEST=partie ./gradlew runServer` : la partie (chances de la Forge et métal perdu, coffres des sanctuaires selon l'avancée, vol d'élytre des ailes +20, bouclier d'Arcencium, Grand Froid de l'Aurore, Proie de la Battue et sa garde), rapport `run-server/partie_autotest.txt`.
 
 Pour regarder un terrain (arbres, biomes) sans jouer : le run `photos` entre dans le monde
@@ -782,6 +836,12 @@ et lancer avec `EMERALDWEAPONS_PHOTOS_MONDE=haven_photos`. Pour le retour du Dé
 `haven:victoire` (une vraie victoire dans l'overworld pose la porte, la caméra se met en face),
 `haven:arche` et `haven:portail` (le joueur est posé dans l'arche ouest, ou sur le plateau du pied
 de la tour ouest le regard en haut : il ressort à l'autre bout, ou monte à la terrasse).
+Pour les quêtes des héros : `haven:quete_torn` (et `quete_tess`, `quete_sig`, `quete_keira`,
+`quete_samos`, `quete_pecheur`) pose le héros de face, `haven:quete_bateau` le bateau du Pêcheur,
+`haven:quete_orbe` un orbe précurseur à deux pas, `haven:quete_cibles` les trois sortes de cibles du
+stand de tir, `haven:quete_reperes` les trois repères (colonne, anneau, zone) ; `haven:quete_boutique_ui`
+ouvre l'écran de la boutique de Tess et `haven:quete_hud_ui` montre le compteur d'orbes et la barre
+d'objectif (ces deux-là gardent l'interface, les autres la masquent).
 La vitrine (`nom@vitrine:face`, `biais`, `proche0`...) montre les blocs de
 `EMERALDWEAPONS_PHOTOS_VITRINE` sur une estrade dans le ciel ; pour de grands objets,
 `EMERALDWEAPONS_PHOTOS_VITRINE_PAS` (écart), `_RECUL` et `_HAUTEUR` ; `nom@vitrine:face@18000` la

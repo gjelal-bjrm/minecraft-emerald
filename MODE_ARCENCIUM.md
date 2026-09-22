@@ -7673,3 +7673,238 @@ besoin d'Alex's Mobs, d'Aquaculture et de Living Things : `tools/dev_mods.py --s
 les pose dans `run-server/mods` le temps du banc, `--server --clean` les retire (les autres
 bancs gardent leur ville a un seul mod). Aquaculture et Living Things ont aussi ete copies
 du profil dans `run/mods` (le client de dev).
+
+## 86. Les quetes des heros, les orbes et la boutique *(22 sept. 2026, nuit)*
+
+Le lot 3 du parcours (§79.5), tel que le joueur l'a arrete au §85.1 : six personnages,
+dix-huit quetes, les orbes pour monnaie, la boutique de Tess -- et TOUT D'UN COUP. Tout
+tient dans le paquet `haven/quest` (et `haven/quest/runs` pour le deroulement de chaque
+quete) ; rien n'est sauvegarde dans le monde, sauf la fiche du joueur (`HavenProgress`).
+
+### 86.1 Les heros et le bateau
+
+`HavenNpcs` pose SIX heros (`HavenHero`), une entite a nous (`HavenNpcEntity`, un
+PathfinderMob et non un villageois : les zombies l'ignorent, et aucun metier ne s'y
+accroche), invulnerable, jamais poussee, jamais sauvegardee, nommee au-dessus de la tete.
+Le rendu (`HavenNpcRenderer`) est le modele de villageois du jeu, avec un type de biome et
+un metier par heros -- l'armurier pour Torn, le clerc pour Tess, le forgeron d'armes pour
+Sig, le forgeron d'outils pour Keira, le bibliothecaire pour Samos, le pecheur pour le
+Pecheur.
+
+| Heros | Place (cellules) | Style |
+|---|---|---|
+| Torn | comptoir du QG, 334 69 166 | la ville, combat |
+| Tess | salle des armes, 778 66 101 | boutique et tir |
+| Sig | place du bras ouest, 152 66 298 | combat |
+| Keira | cour du bras central, 628 62 118 | conduite |
+| Samos | terrasse de la tour ouest, 477 123 593 | eco, combat |
+| Le Pecheur | sur son bateau, dans le bassin | l'eau |
+
+Ils ne sont la QU'A PARTIR DE LA DEUXIEME ARRIVEE (« les PNJ n'apparaissent qu'a la
+deuxieme arrivee », le joueur, §79.7) : il faut qu'un joueur de la ville soit revenu d'un
+Defi. Toutes les vingt tiques, chaque heros dont le troncon est charge est pose s'il
+manque, et ramene a sa place s'il s'en ecarte.
+
+LE BATEAU DU PECHEUR (`HavenBoat`) : « un PNJ sur un bateau, dans l'eau de la ville, pour
+donner une raison d'aller dans l'eau » (le joueur, §79.7). Cinq blocs sur neuf, coque et
+pont de chene noir, bastingage de sapin, un mat et sa lanterne, deux tonneaux ; amarre au
+pied de l'escalier qui descend dans le bassin sous l'arc nord, poupe ouverte sur la marche
+du bas. Sa place se recalcule a l'identique depuis la carte de l'eau (§85.3) ; le retrait
+rend l'eau sous la surface et l'air au-dessus.
+
+### 86.2 La carte de dialogue, et les jetons
+
+Un clic droit sur un heros ecrit sa carte dans le chat : son mot d'accueil, puis une ligne
+par quete -- ✓ faite (avec sa medaille), ⟳ en cours, ▶ a faire, ✗ fermee tant que la
+precedente n'est pas faite -- et ce qu'elle paie. Chez Tess, une ligne `[Boutique]` ; sur
+la quete en cours, `[Abandonner]`.
+
+LES BOUTONS DU CHAT SONT DES JETONS (`HavenCards`). Un ClickEvent ne sait lancer qu'une
+commande, et `/arcencium` est reservee a l'operateur : chaque bouton pose un jeton au
+hasard -- (joueur, action, expiration) -- et lance `/carte <jeton>`, commande OUVERTE A
+TOUS mais qui ne fait rien d'autre que retrouver le jeton. Un jeton n'appartient qu'a un
+joueur, vaut cinq minutes (une minute pour « Rejoindre »), et ne sert qu'une fois.
+
+### 86.3 Le deroulement d'une quete
+
+`HavenQuests` tient les quetes en cours ; chaque quete a sa sous-classe de `QuestRun`.
+
+- UNE QUETE A LA FOIS par joueur, et un seul deroulement de chaque quete a la fois : qui
+  arrive pendant qu'elle court la REJOINT (carte « Rejoindre » proposee a toute la ville
+  quand quelqu'un accepte).
+- L'INVASION SEULEMENT POUR LE COMBAT (choix du joueur) : les quetes de Torn, Sig et Samos
+  envahissent la ville le temps de la faire, et le bouton du QG ne rend pas la paix tant
+  qu'une quete de combat court. La paix revient a la fin, si c'est la quete qui avait
+  envahi.
+- LA BARRE D'OBJECTIF du guide (`HavenJourney`, objectif `QUETE`) montre la quete, son
+  heros et son avancement tant qu'elle dure.
+- LES REPERES (`QuestMarkers`, paquet `QuestMarkersPayload`, rendu `QuestMarkersClient`) :
+  colonne de lumiere, anneau oriente, cercle de zone, dessines a travers les murs comme la
+  pulsation des ancres. Ils ne partent qu'au changement, et s'effacent a la fin.
+- LES RECOMPENSES, en orbes : la premiere reussite paie ; le contrat du port se refait et
+  paie a chaque fois ; un coup de main sur une quete deja faite paie DIX orbes ; les
+  epreuves de tir paient a la medaille, et refaire mieux paie la difference.
+- LES ECHECS ont leur mot : le temps, la zone lachee, une mort, un score trop bas, le
+  client perdu, la carte manquante, l'abandon. Un arret du serveur, la fermeture de la
+  ville ou un depart annulent tout et retirent ce qui avait ete pose.
+
+### 86.4 Les dix-huit quetes
+
+| Heros | Quete | Orbes | Limite | Ce qu'elle demande |
+|---|---|---|---|---|
+| Torn | rues | 40 | -- | les rues reprises du lot 2, comptees ici (et payees au retour) |
+| Torn | patrouille | 60 | 10 min | passer aux douze points d'eco |
+| Torn | port | 25, se refait | -- | tenir la place du port une minute (vagues toutes les 8 s) |
+| Sig | chasse | 40 | -- | 25 monstres au Pulvérisator, et a lui seul |
+| Sig | brutes | 60 | 6 min | trois brutes en armure de diamant, 60 PV, glowing |
+| Sig | marche | 50 | 5 min | dix-huit monstres poses au marche |
+| Keira | anneaux | 50 | -- | dix anneaux sur la voie haute, 2 min 30 a partir du premier |
+| Keira | taxi | 40 | 10 min | un habitant d'une place a l'autre, 3 min de trajet |
+| Keira | chauffard | 50 | 3 min | percuter trois fois une voiture du trafic |
+| Tess | tir1 | 30 a 60 | 5 min | cibles fixes, une minute |
+| Tess | tir2 | 30 a 60 | 5 min | cibles mobiles |
+| Tess | tir3 | 30 a 60 | 5 min | cibles lointaines, plus breves |
+| Samos | ecos | 60 | 8 min | les quatre couleurs d'eco sans mourir |
+| Samos | plateforme | 60 | -- | tenir la terrasse une minute (avec des phantoms) |
+| Samos | elite | 80 | -- | trois vagues, puis une elite de 200 PV en netherite |
+| Pecheur | peche | 50 | -- | deux cents livres de poisson |
+| Pecheur | coffres | 50 | 10 min | six coffres au fond, trois au bassin, trois au large |
+| Pecheur | mouettes | 40 | -- | dix mouettes des quais |
+
+LA PECHE a ses propres poids : Aquaculture ne pese pas ses poissons dans le profil, donc
+chaque espece a ses deux bornes (la morue cinq a seize livres, le thon jusqu'a deux cent
+cinquante), tirees plus souvent pres de la petite ; ce qui n'est pas un poisson ne pese
+rien. La canne du Pecheur (Appat III, Chance de la mer I) est remise a qui n'en a pas.
+
+LES COFFRES sont des coffres gorges d'eau poses au fond reel de la colonne, tires dans la
+carte de l'eau (cinq a quatorze blocs de fond, quarante blocs entre eux, et au large a
+moins de quarante blocs d'un quai) ; ils ne sont poses que quand leur troncon est charge,
+et le nettoyage rend l'eau. Ouvrir un coffre paie CINQ orbes a qui l'ouvre. Le Pecheur
+prete son souffle : respiration aquatique tant qu'on est dans l'eau.
+
+LES MOUETTES : la quete rend les mouettes visables par le Morph Gun (`GunImpacts.isTarget`),
+et le coup d'une arme -- qui n'a pas d'auteur, mais laisse le tireur en dernier agresseur --
+appelle l'armee comme un coup de poing (§85.2). « Une quete qui consiste a en tuer, et une
+reaction drole » (le joueur, §79.7).
+
+ET L'ARMEE S'ABAT, ELLE AUSSI, PENDANT CETTE QUETE-LA. Ailleurs, la colere des mouettes ne
+se combat pas : on la subit, on se met a l'abri (§85.2). Mais la quete du Pecheur EST celle
+de l'armee : le banc l'a montre en cherchant dix mouettes autour du port -- il n'y en a que
+quatre a la fois, et la chasse tournait a l'attente. Les dix-huit mouettes que le premier
+coup fait venir sont donc la vraie reserve de cibles : elles se tirent, elles comptent, et
+la quete devient la bataille que son nom annonce.
+
+### 86.5 Les cibles du stand de tir
+
+Les epreuves de Tess se tirent sur LES CIBLES DE JAK 3, pas sur des disques inventes : le
+niveau `lgunnorm` (les parcours de tir du jeu) porte `gun-kg-target-b/c/d` (les gardes KG
+en carton), `gun-kg-target-bonus` (le KG dore) et `gun-cit-a/b/c/d` (les civils). Les huit
+sont cuits par `tools/jak_gun.py` dans l'atlas du Morph Gun, qui passe a 1024 x 1024
+(`Glb` sait lire un autre niveau que `common`). Un garde vaut un point, le dore trois, un
+civil en coute deux : c'est la regle du jeu, et elle rend le tir vivant.
+
+LE CHAMP DE FORCE NE SE CUIT PAS (`SKIP_TEXTURES`) : les cibles KG portent devant elles une
+silhouette orange, translucide dans le jeu, opaque chez nous (l'alpha PS2 vaut 128). La
+premiere photo ne montrait que deux taches orange a la place des gardes.
+
+Une cible (`HavenTargetEntity`) est une entite vivante -- pour que les armes la visent --
+debout face au tireur, qui se dresse sur sa charniere en un quart de seconde, glisse de
+cote dans la deuxieme epreuve, et s'en va au bout de deux a quatre secondes. Elle ne
+compte QUE les vrais tirs : une arme du Morph Gun, une fleche, un coup de joueur ; la
+suffocation ou le vide la retirent sans point.
+
+Trois cibles a la fois, dans un eventail de cent quarante degres autour du regard qu'avait
+le tireur AU SIGNAL (et non de son regard du moment : sinon elles naitraient toujours
+devant lui). Elles demandent un sol libre et un trait libre depuis ses yeux -- avec un
+FILET DE SECURITE trouve au banc : adosse a un mur, le tireur ne voyait aucune place, et
+l'epreuve restait vide ; au bout de trois secondes sans cible, le tour s'ouvre en entier et
+le trait libre n'est plus demande.
+
+### 86.6 Les orbes precurseurs
+
+La monnaie des quetes (§85.1), et de quoi explorer : CENT CINQUANTE orbes caches dans la
+ville (`tools/haven_orbs_map.py` -> `jak/haven_orbs.json`, graine 86) -- 72 dans les rues,
+28 sur les toits, 10 autour des stations des tours, 25 dans le bassin, 15 au large.
+
+L'ORBE EST DESSINE, ET NON REPRIS DU JEU -- la seule piece du lot qui le soit, et c'est la
+photo qui l'a decide. Jak 3 n'a pas d'orbe dans ce qui est extrait : ses collectables sont
+l'OEUF de Ndi Madman (`collectables-skill`) et la GEMME a tete de mort (`collectables-gem`).
+Cuits et poses en ville, le premier est un oeuf rose a glyphes, la seconde une pastille rouge
+couchee par terre : ni l'un ni l'autre n'est « la gemme orange ronde » que le joueur voulait
+(§79.7). L'orbe est donc une texture a nous (`tools/haven_orb_texture.py`) : une sphere doree
+a reflet et a spirale, posee face a la camera -- une sphere se regarde de partout pareil --,
+qui flotte, respire et porte sa couronne de lumiere (`HavenOrbRenderer`).
+
+Chaque orbe est une ENTITE, posee quand son troncon est charge, et qui NE SE MONTRE QU'A
+QUI NE L'A PAS PRIS (`broadcastToPlayer`) : celui qui le ramasse recoit le paquet de
+retrait, les autres le voient encore. La bourse, les orbes trouves et les medailles sont
+dans la fiche du joueur, donc gardes de partie en partie ; un compteur en haut a droite
+(`HavenOrbsHud`) et une page de l'agenda les rappellent.
+
+### 86.7 La boutique de Tess
+
+« Le shop de la map » (§79.7), dans la salle des armes, ouverte par la carte de Tess et
+seulement a portee de voix d'elle. L'ecran (`HavenShopScreen`, sur le modele de la fiche
+du Heros) ne decide de rien : le serveur envoie le catalogue et le solde, l'achat repart en
+paquet, et le serveur revalide tout.
+
+- LES ONZE ARMES, au prix de leur couleur -- rouge 40, jaune 80, bleue 120, sombre 200
+  (environ 1 300 orbes pour les onze) --, la premiere d'une couleur avant la deuxieme ; le
+  Pulvérisator reste au ratelier du QG.
+- L'ECO ILLIMITE d'une couleur (150, 200, 250, 400) : la reserve de la famille est remplie
+  a chaque tique dans la ville, ce qui couvre TOUS les debits du Morph Gun sans les
+  toucher un a un.
+- LES BONUS DU DEFI, qui s'accumulent et servent une fois : les PROVISIONS (40) et la RUNE
+  GARANTIE (50), remises au depart (`HavenArrival.toVillage`, apres le kit) ; le SCEAU DE
+  FORGE (60), qui change un echec en reussite a la forge d'Arcencium ET a l'etabli ; le
+  SCEAU DE RARETE (60), qui fait monter d'un rang un Eclat du Destin qui n'aurait rien
+  donne ; le SCEAU DE SPECIALISATION (60), qui fait reussir une tentative ratee. Les sceaux
+  NE PARTENT QUE QUAND ILS SERVENT.
+
+### 86.8 Ce que le lot change ailleurs
+
+- LA MAITRISE demande desormais les douze armes ET les dix-sept quetes des heros (le
+  contrat du port, qui se refait, n'en est pas) : le bouton du QG dit ce qui manque des
+  deux.
+- LES RUES REPRISES (lot 2) sont la premiere quete de Torn : elles sont comptees et payees
+  au moment de la reprise, et rattrapees a la premiere visite pour qui les avait deja
+  reprises.
+- L'AGENDA gagne trois pages une fois les rues reprises : les quetes des trois premiers
+  heros, celles des trois autres, et la bourse (orbes, orbes caches trouves, achats).
+- `GunEco.pickup` previent les quetes de Samos AVANT le remplissage : toucher un eco compte
+  meme la reserve pleine.
+- `GunImpacts.isTarget` accepte les cibles du stand, et les mouettes pendant la quete.
+- `HavenFauna.onDamage` accepte le coup du Morph Gun sur une mouette (il n'a pas d'auteur).
+- `VehicleImpacts` previent la quete du chauffard a chaque choc entre voitures, et epargne
+  les heros comme les animaux.
+
+### 86.9 Le banc des quetes
+
+`EMERALDWEAPONS_AUTOTEST=quetes ./gradlew runServer` (avec les mods des animaux, comme le
+banc de la faune) joue le lot entier avec deux cobayes : le livre des quetes, les six heros
+et le bateau, la carte du chat CLIQUEE PAR SON JETON, l'epreuve de tir jusqu'a la medaille,
+la peche au poids, les coffres engloutis, la chasse aux mouettes au Morph Gun, la
+patrouille, la tenue du port et l'invasion qui va avec, les orbes caches, la boutique
+(armes, eco illimite, sceaux, provisions, rune) et le menage. Rapport dans
+`run-server/quetes_autotest.txt`.
+
+LES PHOTOS (§84 : on regarde avant de livrer) ont trouve le reste, et l'automate a gagne
+ses prises `haven:quete_*` -- les six heros, le bateau, l'orbe, les cibles, les reperes,
+l'ecran de la boutique et le compteur d'orbes :
+
+- LE CHAMP DE FORCE des cibles KG, opaque, cachait entierement les gardes (§86.5) ;
+- L'OEUF ET LA GEMME de Jak ne font pas un orbe : l'orbe est dessine (§86.6) ;
+- LE COMPTEUR D'ORBES etait en haut a droite, sous la minicarte de JourneyMap : il est passe
+  en bas a droite ;
+- UN HEROS REGARDAIT LE MUR : sa place est maintenant la plus DEGAGEE des environs, et son
+  cap suit le plus grand vide (`HavenNpcs.openness`, `facing`) ;
+- « Quete de Le Pecheur » : le debut d'une quete se dit « %s te confie une quete : %s ».
+
+Ce qu'il a trouve du premier coup :
+
+- LE TIREUR ADOSSE A UN MUR ne voyait aucune place libre, et l'epreuve restait vide : d'ou
+  le filet de securite du §86.5 ;
+- SUR UN SERVEUR, RIEN N'EST TRADUIT (les langues sont des ressources du client) : le banc
+  cherche les cartes par leur cle, pas par leur libelle ;
+- un orbe pris n'est pas retire du monde -- il reste pour les autres joueurs : c'est le
+  paquet de retrait, et lui seul, qui l'efface chez celui qui l'a pris.

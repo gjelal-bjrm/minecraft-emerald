@@ -77,6 +77,11 @@ public class Jak3ClientEvents {
                     }
                 });
 
+        // les quetes de Haven (lot 3) : les heros, les orbes caches, les cibles du stand de tir
+        event.registerEntityRenderer(Jak3Registry.HAVEN_NPC.get(), HavenNpcRenderer::new);
+        event.registerEntityRenderer(Jak3Registry.HAVEN_ORB.get(), HavenOrbRenderer::new);
+        event.registerEntityRenderer(Jak3Registry.HAVEN_TARGET.get(), HavenTargetRenderer::new);
+
         event.registerEntityRenderer(Jak3Registry.KG_DEATHBOT.get(),
                 ctx -> new MobRenderer<KGDeathbotEntity, HumanoidModel<KGDeathbotEntity>>(ctx,
                         new HumanoidModel<>(ctx.bakeLayer(ModelLayers.PLAYER_INNER_ARMOR)), 0.5f) {

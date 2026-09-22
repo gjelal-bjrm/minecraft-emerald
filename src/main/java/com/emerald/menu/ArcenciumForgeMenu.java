@@ -174,6 +174,11 @@ public class ArcenciumForgeMenu extends AbstractContainerMenu {
             return false;
         }
         int after = Upgrade.attempt(before, player.level().random);
+        // le sceau de forge de Tess (boutique de Haven) change un echec en reussite
+        if (after <= before && player instanceof net.minecraft.server.level.ServerPlayer served
+                && com.emerald.haven.quest.HavenShop.useSeal(served, com.emerald.haven.quest.HavenShop.SEAL_FORGE)) {
+            after = before + 1;
+        }
         Upgrade.set(gear, after);
         this.input.setItem(SLOT_GEAR, gear);            // le nom a change : on le re-annonce
         boolean won = after > before;

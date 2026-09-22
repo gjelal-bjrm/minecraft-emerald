@@ -93,6 +93,8 @@ public final class GunEco {
         if (gun == null) {
             return false;
         }
+        // les quetes de Samos comptent l'eco touche, meme la reserve pleine
+        com.emerald.haven.quest.HavenQuests.onEco(player, eco.family());
         int added = MorphGunData.refill(gun, eco.family(), eco.amount());
         if (added <= 0) {
             return false;

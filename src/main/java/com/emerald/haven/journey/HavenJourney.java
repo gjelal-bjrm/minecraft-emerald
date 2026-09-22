@@ -90,7 +90,7 @@ public final class HavenJourney {
     public static final int REPRISE_GOAL = 25;
 
     /** Ce que le guide demande au joueur. */
-    public enum Objective { QG, EQUIPE, BORNE, ATTENTE, ARME, REPRISE }
+    public enum Objective { QG, EQUIPE, BORNE, ATTENTE, ARME, REPRISE, QUETE }
 
     /** Un titre a jouer : a quelle tique, et lequel (HavenTitlePayload). */
     private record Title(long due, int kind) {
@@ -212,6 +212,10 @@ public final class HavenJourney {
         }
         if (HavenState.get(player.server).vote(id) != null) {
             return Objective.ATTENTE;
+        }
+        // une quete des heros en cours : la barre la suit (lot 3, cahier §86)
+        if (com.emerald.haven.quest.HavenQuests.bar(player) != null) {
+            return Objective.QUETE;
         }
         HavenProgress.Entry entry = HavenProgress.get(id);
         if (entry.departures > 0 && (entry.forms & GunForm.RED_1.bit()) == 0) {
@@ -424,6 +428,14 @@ public final class HavenJourney {
                 }
                 bar.setColor(BossEvent.BossBarColor.PINK);
             }
+            case QUETE -> {
+                com.emerald.haven.quest.HavenQuests.Bar quest = com.emerald.haven.quest.HavenQuests.bar(player);
+                if (quest != null) {
+                    bar.setName(quest.text());
+                    bar.setColor(quest.color());
+                    bar.setProgress(quest.progress());
+                }
+            }
             case REPRISE -> {
                 int count = repriseCount(player.server);
                 bar.setName(Component.translatable("game.emeraldweapons.haven.parcours.objectif.reprise",
@@ -583,6 +595,8 @@ public final class HavenJourney {
             award(player, "haven_reprise");
             player.sendSystemMessage(Component.translatable("game.emeraldweapons.haven.parcours.reprise.fin", REPRISE_GOAL)
                     .withStyle(ChatFormatting.GREEN));
+            // la premiere quete de Torn, faite : sa recompense en orbes
+            com.emerald.haven.quest.HavenQuests.streetsCatchUp(player);
             // tout de suite : on est en pleine rue, pas derriere un ecran de chargement
             TITLES.put(player.getUUID(), new Title(now, HavenTitlePayload.REPRISE));
         }
@@ -602,7 +616,7 @@ public final class HavenJourney {
     // ================================================================ le carnet
 
     /** Accorde le succes cache d'une etape du carnet (ce que lit le livre de FTB Quests). */
-    static void award(ServerPlayer player, String key) {
+    public static void award(ServerPlayer player, String key) {
         if (player.isFakePlayer()) {
             return;
         }

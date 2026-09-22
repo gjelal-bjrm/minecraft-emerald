@@ -346,14 +346,18 @@ public final class HavenJourneyAutotest {
         HavenProgress.temporary(nobody, 0);
         Component refusal = HavenJourney.lockedButton(nobody);
         Object[] args = refusal.getContents() instanceof TranslatableContents t ? t.getArgs() : new Object[0];
-        check("sans la maitrise : le refus dit ce qui manque (12 armes sur 12), et la maitrise est refusee",
-                !HavenProgress.mastery(nobody) && args.length == 2 && Integer.valueOf(12).equals(args[0])
-                        && Integer.valueOf(12).equals(args[1]),
+        int quests = HavenProgress.REQUIRED_QUESTS.size();
+        check("sans la maitrise : le refus dit ce qui manque (12 armes sur 12, " + quests + " quetes), et la maitrise est refusee",
+                !HavenProgress.mastery(nobody) && args.length == 3 && Integer.valueOf(12).equals(args[0])
+                        && Integer.valueOf(12).equals(args[1]) && Integer.valueOf(quests).equals(args[2]),
                 Arrays.toString(args));
-        HavenProgress.temporary(nobody, GunForm.ALL_MASK);
-        check("les douze armes (et aucune quete demandee au lot 1) : la maitrise",
-                HavenProgress.mastery(nobody) && HavenProgress.REQUIRED_QUESTS.isEmpty(),
-                "armes manquantes " + HavenProgress.missingWeapons(nobody));
+        HavenProgress.Entry entry = HavenProgress.temporary(nobody, GunForm.ALL_MASK);
+        check("les douze armes sans les quetes des heros (lot 3) : pas encore la maitrise",
+                !HavenProgress.mastery(nobody) && HavenProgress.missingQuests(nobody) == quests,
+                "quetes manquantes " + HavenProgress.missingQuests(nobody));
+        entry.quests.addAll(HavenProgress.REQUIRED_QUESTS);
+        check("les douze armes et les " + quests + " quetes : la maitrise",
+                HavenProgress.mastery(nobody), "armes manquantes " + HavenProgress.missingWeapons(nobody));
         HavenProgress.dropTemporary(nobody);
     }
 

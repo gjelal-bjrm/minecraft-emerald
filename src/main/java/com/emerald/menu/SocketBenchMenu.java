@@ -135,8 +135,16 @@ public class SocketBenchMenu extends AbstractContainerMenu {
                     // SEIZE ECLATS AU PLUS PAR PRISE : une pile pleine posait
                     // soixante-quatre jets d'un coup, et le haut de table
                     // s'achetait en une fois.
-                    com.emerald.item.GearRarity after = com.emerald.item.GearRarity.roll(
+                    com.emerald.item.GearRarity rolled = com.emerald.item.GearRarity.roll(
                             stack, Math.min(16, fee.getCount()), player.level().random);
+                    // le sceau de rarete de Tess (boutique de Haven) : au moins un rang de plus
+                    int ceiling = com.emerald.item.GearEligibility.rarityMax(stack);
+                    if (rolled == before && before.ordinal() < ceiling
+                            && player instanceof net.minecraft.server.level.ServerPlayer sealed
+                            && com.emerald.haven.quest.HavenShop.useSeal(sealed, com.emerald.haven.quest.HavenShop.SEAL_RARITY)) {
+                        rolled = com.emerald.item.GearRarity.values()[before.ordinal() + 1];
+                    }
+                    com.emerald.item.GearRarity after = rolled;
                     com.emerald.item.GearRarity.set(stack, after);
                     player.displayClientMessage(after == before
                             ? net.minecraft.network.chat.Component.translatable(
@@ -166,6 +174,11 @@ public class SocketBenchMenu extends AbstractContainerMenu {
                         stoneUsed = true;
                         int after = com.emerald.item.Upgrade.attempt(
                                 before, player.level().random);
+                        // le sceau de forge de Tess (boutique de Haven) change un echec en reussite
+                        if (after <= before && player instanceof net.minecraft.server.level.ServerPlayer sealed
+                                && com.emerald.haven.quest.HavenShop.useSeal(sealed, com.emerald.haven.quest.HavenShop.SEAL_FORGE)) {
+                            after = Math.min(before + 1, com.emerald.item.GearEligibility.upgradeMax(stack));
+                        }
                         com.emerald.item.Upgrade.set(stack, after);
                         boolean won = after > before;
                         boolean lost = after < before;

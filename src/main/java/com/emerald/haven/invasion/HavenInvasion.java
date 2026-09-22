@@ -452,9 +452,16 @@ public final class HavenInvasion {
                     .withStyle(ChatFormatting.YELLOW), true);
             return;
         }
+        Mode next = mode(server) == Mode.INVASION ? Mode.PAISIBLE : Mode.INVASION;
+        // une quete de combat des heros tient la ville envahie jusqu'a sa fin (lot 3, cahier §86)
+        if (next == Mode.PAISIBLE && com.emerald.haven.quest.HavenQuests.combatRunning()) {
+            player.displayClientMessage(Component.translatable("game.emeraldweapons.haven.quete.bouton.combat")
+                    .withStyle(ChatFormatting.RED), true);
+            level.playSound(null, pos, SoundEvents.VILLAGER_NO, SoundSource.BLOCKS, 0.8F, 1.0F);
+            return;
+        }
         lastPress = now;
         level.playSound(null, pos, SoundEvents.STONE_BUTTON_CLICK_ON, SoundSource.BLOCKS, 0.9F, 0.8F);
-        Mode next = mode(server) == Mode.INVASION ? Mode.PAISIBLE : Mode.INVASION;
         setMode(server, next, player.getDisplayName());
         if (next == Mode.INVASION) {
             warnPeacefulDifficulty(player);

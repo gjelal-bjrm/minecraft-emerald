@@ -576,5 +576,7 @@ public final class HavenArrival {
         if (kit) {
             GameManager.equipStarter(player);
         }
+        // ce qu'il a achete chez Tess pour le Defi : provisions, rune garantie
+        com.emerald.haven.quest.HavenShop.onDeparture(player);
     }
 }

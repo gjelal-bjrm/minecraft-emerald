@@ -187,6 +187,40 @@ public class Jak3Registry {
                             .updateInterval(1)
                             .build("gun_nuke"));
 
+    /** Un heros de Haven qui donne des quetes (lot 3, cahier §86) : pose par HavenNpcs, jamais sauvegarde. */
+    public static final DeferredHolder<EntityType<?>, EntityType<com.emerald.haven.quest.HavenNpcEntity>> HAVEN_NPC =
+            ENTITIES.register("haven_pnj", () ->
+                    EntityType.Builder.<com.emerald.haven.quest.HavenNpcEntity>of(
+                                    com.emerald.haven.quest.HavenNpcEntity::new, MobCategory.MISC)
+                            .noSave()
+                            .sized(0.6f, 1.95f)
+                            .clientTrackingRange(10)
+                            .build("haven_pnj"));
+
+    /** Un orbe precurseur cache dans la ville : chacun ne voit que ceux qu'il n'a pas pris (HavenOrbs). */
+    public static final DeferredHolder<EntityType<?>, EntityType<com.emerald.haven.quest.HavenOrbEntity>> HAVEN_ORB =
+            ENTITIES.register("haven_orb", () ->
+                    EntityType.Builder.<com.emerald.haven.quest.HavenOrbEntity>of(
+                                    com.emerald.haven.quest.HavenOrbEntity::new, MobCategory.MISC)
+                            .noSave()
+                            .sized(0.5f, 0.6f)
+                            .fireImmune()
+                            .clientTrackingRange(6)
+                            .updateInterval(Integer.MAX_VALUE)
+                            .build("haven_orb"));
+
+    /** Une cible du stand de tir de Tess (RangeRun). */
+    public static final DeferredHolder<EntityType<?>, EntityType<com.emerald.haven.quest.HavenTargetEntity>> HAVEN_TARGET =
+            ENTITIES.register("haven_cible", () ->
+                    EntityType.Builder.<com.emerald.haven.quest.HavenTargetEntity>of(
+                                    com.emerald.haven.quest.HavenTargetEntity::new, MobCategory.MISC)
+                            .noSave()
+                            .sized(1.6f, 1.7f)
+                            .fireImmune()
+                            .clientTrackingRange(6)
+                            .updateInterval(1)
+                            .build("haven_cible"));
+
     // -------------------------------------------------------------------------
     // Structure types
     // -------------------------------------------------------------------------

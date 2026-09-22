@@ -153,8 +153,16 @@ public final class VehicleImpacts {
             if (at == null) {
                 continue;
             }
-            worst = Math.max(worst, resolve(car, other, at));
+            double hit = resolve(car, other, at);
+            worst = Math.max(worst, hit);
             motion = car.impactVelocity();
+            // UNE VOITURE DU TRAFIC HEURTEE PAR UN JOUEUR AU VOLANT : le seul calcul ou le serveur
+            // voit les deux (la voiture du joueur est simulee par son client) -- pour le chauffard
+            // de Keira (quetes de Haven, cahier §86)
+            if (hit > 0.0 && !level.isClientSide() && car.traffic() != null
+                    && other.getControllingPassenger() instanceof net.minecraft.server.level.ServerPlayer driver) {
+                com.emerald.haven.quest.HavenQuests.onRam(driver, car, hit);
+            }
         }
         return worst;
     }
@@ -290,7 +298,7 @@ public final class VehicleImpacts {
             }
             double dx = speed < 1.0E-4 ? 0.0 : motion.x / speed;
             double dz = speed < 1.0E-4 ? 0.0 : motion.z / speed;
-            if (com.emerald.haven.fauna.HavenFauna.sparedByVehicles(mob)) {
+            if (com.emerald.haven.fauna.HavenFauna.sparedByVehicles(mob) || mob instanceof com.emerald.haven.quest.HavenNpcEntity) {
                 // UN ANIMAL DE LA VILLE NE SE RENVERSE PAS (cahier §85) : ecarte sur le cote,
                 // sans un point de degat -- un chat, une mouette, un phoque
                 double side = (mob.getX() - car.getX()) * -dz + (mob.getZ() - car.getZ()) * dx >= 0.0 ? 1.0 : -1.0;
