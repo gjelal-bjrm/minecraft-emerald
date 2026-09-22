@@ -17,7 +17,8 @@ import net.minecraft.resources.ResourceLocation;
  */
 public record ArtifactActionPayload(Action action) implements CustomPacketPayload {
 
-    public enum Action { DOUBLE_JUMP, RETURN }
+    /** WINGS_FLIGHT : les ailes +20 se deploient (le vol d'elytre, WingsFlight). A la fin : l'ordre fait le code. */
+    public enum Action { DOUBLE_JUMP, RETURN, WINGS_FLIGHT }
 
     public static final CustomPacketPayload.Type<ArtifactActionPayload> TYPE =
             new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(

@@ -59,6 +59,13 @@ import java.util.Objects;
  * trois blocs de large) : EMERALDWEAPONS_PHOTOS_VITRINE_PAS (l'ecart entre deux blocs),
  * _RECUL (la camera recule d'autant de fois) et _HAUTEUR (ou elle vise, en blocs).
  *
+ * EN MAIN (« nom@main:premiere », « leve », « face », « face_leve », « inventaire »,
+ * « livre ») : l'objet EMERALDWEAPONS_PHOTOS_MAIN (un bouclier dans la main gauche, le
+ * reste dans la droite), tenu par le joueur debout sur l'estrade de la vitrine, a midi,
+ * INTERFACE VISIBLE (sans elle, le jeu ne dessine pas la main) : a la premiere personne,
+ * leve (clic droit tenu), vu de face (troisieme personne), l'inventaire ouvert, ou le
+ * livre ouvert (l'agenda de Haven : ses pages du moment).
+ *
  * LES PRISES DE HAVEN (« nom@haven:accueil », « nom@haven:qg ») regardent le parcours
  * du joueur, INTERFACE VISIBLE : titre et barre d'objectif. Rien n'est prepare -- ni
  * chantier, ni mode eteint : le joueur arrive dans la ville comme n'importe qui.
@@ -88,6 +95,11 @@ public final class PhotoAutomaton {
     private static final String SPEC = Objects.requireNonNullElse(System.getenv(VARIABLE), "").trim();
     private static final String ORIGIN = Objects.requireNonNullElse(System.getenv(VARIABLE + "_ORIGINE"), "").trim();
     private static final String SHOWCASE = Objects.requireNonNullElse(System.getenv(VARIABLE + "_VITRINE"), "").trim();
+    /** L'objet des prises en main (« nom@main:vue »). */
+    private static final String HELD = Objects.requireNonNullElse(System.getenv(VARIABLE + "_MAIN"), "").trim();
+    /** La vue de la prise en main en cours, ou null. */
+    @Nullable
+    private static volatile String handsView;
     /** La camera libre de Haven : « x,y,z,lacet,tangage » en cellules du volume (prise « nom@haven:camera »). */
     private static final String CAMERA = Objects.requireNonNullElse(System.getenv(VARIABLE + "_CAMERA"), "").trim();
     /** L'ecart entre deux blocs de la vitrine, en blocs. */
@@ -126,6 +138,11 @@ public final class PhotoAutomaton {
         /** Une prise de la vitrine de blocs. */
         boolean showcase() {
             return "vitrine".equals(this.biome.getNamespace());
+        }
+
+        /** Une prise d'un objet en main. */
+        boolean hands() {
+            return "main".equals(this.biome.getNamespace());
         }
 
         /** Tiques d'attente d'une prise de Haven : le titre visible, ou deja parti ; le bout de la ville, charge. */
@@ -195,6 +212,12 @@ public final class PhotoAutomaton {
     public static boolean readyToShoot() {
         int ready = pendingGui ? 10 : READY_TICKS;
         return pending != null && waited >= pendingSettle && (clientReady >= ready || waited >= MAX_WAIT);
+    }
+
+    /** La vue de la prise en main en cours (« premiere », « leve »...), ou null : pour le client. */
+    @Nullable
+    public static String handsView() {
+        return handsView;
     }
 
     /** La prise en cours montre-t-elle l'interface (titre, barre d'objectif) ? */
@@ -294,6 +317,8 @@ public final class PhotoAutomaton {
             LOGGER.info("photos : prise {} faite apres {} tiques{}", shot.name(), waited,
                     waited >= MAX_WAIT ? " (terrain pas entierement dessine)" : "");
             pending = null;
+            pendingGui = false;
+            handsView = null;
             index++;
         }
     }
@@ -380,6 +405,43 @@ public final class PhotoAutomaton {
         }
         LOGGER.info("photos : {} (vitrine, {}) camera {} {} {} ; blocs {}", shot.name(), view,
                 Math.round(ex * 10) / 10.0, Math.round(ey * 10) / 10.0, Math.round(ez * 10) / 10.0, staged);
+        return true;
+    }
+
+    /**
+     * Une prise en main : le joueur debout au centre de l'estrade (batie par la vitrine),
+     * regard au nord, en survie ; l'objet dans la bonne main. Pour « livre », l'agenda de
+     * Haven s'ouvre (ses pages du moment) ; le client fait le reste (camera, clic tenu,
+     * inventaire).
+     */
+    private static boolean placeHands(ServerLevel level, ServerPlayer player, Shot shot) {
+        net.minecraft.world.item.Item item = BuiltInRegistries.ITEM.get(ResourceLocation.parse(
+                HELD.isEmpty() ? "emeraldweapons:arcencium_shield" : HELD));
+        if (stage == null) {
+            placeShowcase(level, player, new Shot(shot.name(), ResourceLocation.fromNamespaceAndPath("vitrine", "face"), 0));
+        }
+        run(level.getServer(), "time set 6000");
+        String view = shot.biome().getPath();
+        player.setGameMode(GameType.SURVIVAL);
+        player.getAbilities().invulnerable = true;
+        player.onUpdateAbilities();
+        net.minecraft.world.item.ItemStack stack = new net.minecraft.world.item.ItemStack(item);
+        boolean offhand = item instanceof net.minecraft.world.item.ShieldItem;
+        player.getInventory().selected = 0;
+        player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND,
+                offhand ? net.minecraft.world.item.ItemStack.EMPTY : stack.copy());
+        player.setItemInHand(net.minecraft.world.InteractionHand.OFF_HAND,
+                offhand ? stack.copy() : net.minecraft.world.item.ItemStack.EMPTY);
+        if (offhand) {
+            player.getInventory().setItem(1, stack.copy());     // l'icone dans la barre d'objets aussi
+        }
+        player.teleportTo(level, stage.getX() + 0.5, stage.getY(), stage.getZ() - 2.5, 180.0F, 8.0F);
+        if ("livre".equals(view) && item == com.emerald.item.ModItems.HAVEN_AGENDA.get()) {
+            com.emerald.haven.journey.HavenAgenda.open(player);
+        }
+        handsView = view;
+        pendingGui = true;
+        LOGGER.info("photos : {} (en main : {}, {})", shot.name(), BuiltInRegistries.ITEM.getKey(item), view);
         return true;
     }
 
@@ -652,6 +714,9 @@ public final class PhotoAutomaton {
     private static boolean place(MinecraftServer server, ServerLevel level, ServerPlayer player, Shot shot) {
         if (shot.showcase()) {
             return placeShowcase(level, player, shot);
+        }
+        if (shot.hands()) {
+            return placeHands(level, player, shot);
         }
         BlockPos from = player.blockPosition();
         if (!ORIGIN.isEmpty()) {

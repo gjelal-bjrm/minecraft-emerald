@@ -142,10 +142,10 @@ public final class VehiclePhysics {
             }
         }
 
-        Vec3 wanted = new Vec3(
+        Vec3 wanted = cushion(car, new Vec3(
                 -Math.sin(yaw) * motion[0] + Math.cos(yaw) * motion[1],
                 vy,
-                Math.cos(yaw) * motion[0] + Math.sin(yaw) * motion[1]);
+                Math.cos(yaw) * motion[0] + Math.sin(yaw) * motion[1]));
         int[] stoppers = {-1, -1, -1};
         Vec3 allowed = move(car, wanted, stoppers);
 
@@ -157,6 +157,70 @@ public final class VehiclePhysics {
         // le choc contre le decor incline et fait tourner la voiture, la ou il a porte
         VehicleImpacts.wall(car, wanted, after, stoppers);
         car.syncParts();
+    }
+
+    // ------------------------------------------------------------ le bord de la ville
+
+    /** L'epaisseur du coussin, en blocs, devant le rideau de barrieres du bord de la grille. */
+    static final double CUSHION = 12.0;
+    /** Le freinage du coussin, en blocs par tique au carre : bien sous le seuil d'un choc. */
+    static final double CUSHION_BRAKE = 0.2;
+    /** L'ecart garde devant le rideau. */
+    private static final double CUSHION_MARGIN = 0.4;
+
+    /**
+     * LE BORD DE LA VILLE SE SENT AVANT DE SE TOUCHER (22 sept., cahier §83).
+     *
+     * Un rideau de barrieres ferme la grille de Haven sur ses quatre bords (jak_voxelize,
+     * lecon 11) : au-dela, c'est la mer du generateur. Invisible, il arretait net une
+     * voiture lancee -- un choc contre rien, et le son qui va avec. Les voies du trafic
+     * passent a huit blocs du rideau sud, et a pleine vitesse on tourne sur quarante.
+     *
+     * Dans les {@value #CUSHION} derniers blocs, la vitesse VERS le rideau est bornee a
+     * celle qui s'arrete pile avant lui en freinant de {@value #CUSHION_BRAKE} bloc par tique
+     * au carre : la voiture ralentit et glisse le long du bord, sans choc ni son ; le client
+     * du conducteur fait scintiller le rideau devant elle (JakVehicleClient.shimmer).
+     */
+    static Vec3 cushion(JakVehicleEntity car, Vec3 wanted) {
+        if (!car.level().dimension().equals(Haven.LEVEL)) {
+            return wanted;
+        }
+        AABB reach = car.getBoundingBox();
+        for (AABB box : car.collisionBoxes()) {
+            reach = reach.minmax(box);
+        }
+        double west = Haven.ORIGIN.getX() + 1.0;                       // la face interieure du rideau
+        double east = Haven.ORIGIN.getX() + Haven.GRID_WIDTH - 1.0;
+        double north = Haven.ORIGIN.getZ() + 1.0;
+        double south = Haven.ORIGIN.getZ() + Haven.GRID_DEPTH - 1.0;
+        if (car.getX() < west || car.getX() > east || car.getZ() < north || car.getZ() > south) {
+            return wanted;                              // hors de la grille (la mer du banc d'essai) : pas de rideau
+        }
+        double vx = soften(soften(wanted.x, reach.minX - west, -1), east - reach.maxX, 1);
+        double vz = soften(soften(wanted.z, reach.minZ - north, -1), south - reach.maxZ, 1);
+        if (vx == wanted.x && vz == wanted.z) {
+            return wanted;
+        }
+        if (car.level().isClientSide) {
+            double gapX = Math.min(reach.minX - west, east - reach.maxX);
+            double gapZ = Math.min(reach.minZ - north, south - reach.maxZ);
+            JakVehicleClient.shimmer(car, gapX < gapZ ? (reach.minX - west < east - reach.maxX ? west : east) : Double.NaN,
+                    gapX < gapZ ? Double.NaN : (reach.minZ - north < south - reach.maxZ ? north : south));
+        }
+        return new Vec3(vx, wanted.y, vz);
+    }
+
+    /**
+     * La composante {@code v} bornee devant une face a {@code gap} blocs ; {@code outward}
+     * est le signe d'une vitesse qui va vers la face.
+     */
+    static double soften(double v, double gap, int outward) {
+        double toward = v * outward;
+        if (gap >= CUSHION || toward <= 0.0) {
+            return v;
+        }
+        double allowed = Math.sqrt(2.0 * CUSHION_BRAKE * Math.max(0.0, gap - CUSHION_MARGIN));
+        return toward > allowed ? allowed * outward : v;
     }
 
     /**

@@ -154,8 +154,13 @@ public class JakVehicleEntity extends Entity {
     private boolean serverKnown;
     /** Le deplacement recu du client du conducteur au dernier tick, cote serveur (voir tick). */
     private Vec3 drivenMotion = Vec3.ZERO;
-    /** Vitesse a plat de la tique precedente, vue du serveur : un choc la fait chuter d'un coup. */
+    /**
+     * Vitesse a plat de la tique precedente, vue du cote qui simule (le serveur, ou le client
+     * du conducteur) : un choc la fait chuter d'un coup.
+     */
     private double lastFlatSpeed;
+    /** Tique du dernier choc annonce par le client du conducteur, cote serveur (VehicleImpacts.reported). */
+    private long lastReportedCrash = Long.MIN_VALUE;
     /** Tiques d'etourdissement apres un choc : le trafic ne pilote plus, il derive. */
     private int stun;
     /** La vitesse du debut de la tique : celle que l'autre lit dans un choc (VehicleImpacts). */
@@ -298,6 +303,23 @@ public class JakVehicleEntity extends Entity {
 
     void setLastFlatSpeed(double speed) {
         this.lastFlatSpeed = speed;
+    }
+
+    long lastReportedCrash() {
+        return this.lastReportedCrash;
+    }
+
+    void setLastReportedCrash(long tick) {
+        this.lastReportedCrash = tick;
+    }
+
+    /**
+     * Cote serveur : un client conduit cette voiture. Le serveur ne la simule pas, il recoit
+     * ses positions (handleMoveVehicle) ; sa vitesse n'est que le deplacement recu.
+     */
+    public boolean remoteDriven() {
+        return !this.level().isClientSide && this.traffic == null && !this.isControlledByLocalInstance()
+                && (this.autotestRemoteDriver || this.getControllingPassenger() instanceof Player);
     }
 
     /** Etourdit le vehicule : le trafic lache son volant et derive (VehicleImpacts). */
@@ -612,6 +634,31 @@ public class JakVehicleEntity extends Entity {
         return true;
     }
 
+    /**
+     * COTE SERVEUR, LA VOITURE D'UN JOUEUR NE BUTE CONTRE AUCUN AUTRE VEHICULE, NI EUX
+     * CONTRE ELLE (22 sept., cahier §83).
+     *
+     * Son client la fait voler contre le trafic tel qu'il le voit : quelques blocs en
+     * arriere de ce que tient le serveur (une position toutes les trois tiques, puis
+     * l'interpolation). Le serveur, lui, revalidait chaque deplacement recu contre SES
+     * positions du trafic (ServerGamePacketListenerImpl.handleMoveVehicle) et renvoyait la
+     * voiture en arriere quand elles se recoupaient : un choc contre rien, en plein ciel. Et
+     * le trafic butait de son cote contre la copie en retard de la voiture du joueur. Les
+     * chocs entre vehicules restent : ils passent par VehicleImpacts.vehicles, pas par les
+     * boites de collision.
+     */
+    @Override
+    public boolean canCollideWith(Entity other) {
+        if (!this.level().isClientSide) {
+            JakVehicleEntity car = other instanceof JakVehicleEntity vehicle ? vehicle
+                    : other instanceof VehiclePart part ? part.getParent() : null;
+            if (car != null && car != this && (this.remoteDriven() || car.remoteDriven())) {
+                return false;
+            }
+        }
+        return super.canCollideWith(other);
+    }
+
     @Override
     public boolean isPushable() {
         return false;
@@ -882,6 +929,7 @@ public class JakVehicleEntity extends Entity {
         }
         this.tickLerp();
         boolean simulating = this.traffic != null ? !client : this.isControlledByLocalInstance();
+        boolean resumed = simulating && !this.simulatedHere;
         if (simulating && !this.simulatedHere) {
             // on reprend la simulation : on part de l'equilibre que tout le monde voit
             this.attitude.set(this.entityData.get(DATA_PITCH), this.entityData.get(DATA_ROLL));
@@ -895,6 +943,16 @@ public class JakVehicleEntity extends Entity {
             }
         } else if (this.isControlledByLocalInstance()) {
             VehiclePhysics.tick(this, this.input());
+            if (client) {
+                // le choc, entendu par le client qui conduit, sur sa propre vitesse
+                // (VehicleImpacts.watchDriver) ; a la reprise, on part de la vitesse du moment
+                if (resumed) {
+                    Vec3 v = this.getDeltaMovement();
+                    this.lastFlatSpeed = Math.hypot(v.x, v.z);
+                } else {
+                    VehicleImpacts.watchDriver(this);
+                }
+            }
         } else {
             if (!client) {
                 this.drivenMotion = this.serverKnown

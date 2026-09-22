@@ -80,6 +80,13 @@ public final class Prowl {
     private static final int RING_MAX = 96;
     /** Au plus par passe et par joueur. */
     private static final int PER_PASS = 2;
+    /**
+     * PENDANT LA BATTUE : trois fois le vivier, plus pres (24 a 48 blocs) et quatre poses par
+     * passe. « Il n'y a pas assez de monstres, ils sont trop eloignes » (22 sept., cahier §83).
+     */
+    private static final int BATTUE_RING_MIN = 24;
+    private static final int BATTUE_RING_MAX = 48;
+    private static final int BATTUE_PER_PASS = 4;
     /** La ZONE SURE du village : rien n'y apparait. */
     private static final int VILLAGE_PEACE = 48;
     /** Combien de points on essaie avant d'abandonner une pose. */
@@ -133,9 +140,10 @@ public final class Prowl {
         // pas a eux d'etre a cote de moi » -- on peuple simplement l'anneau
         // deux fois plus, entre quarante-huit et quatre-vingt-seize blocs. Le
         // joueur voit des silhouettes au loin et decide.
-        if (com.emerald.weather.WeatherManager.current()
-                == com.emerald.weather.Weather.BATTUE) {
-            want *= 2;
+        boolean battue = com.emerald.weather.WeatherManager.current()
+                == com.emerald.weather.Weather.BATTUE;
+        if (battue) {
+            want *= 3;
         }
         if (want <= 0) {
             return;
@@ -160,8 +168,9 @@ public final class Prowl {
             int nearby = level.getEntitiesOfClass(Mob.class, around,
                     mob -> mob instanceof Enemy && mob.isAlive()).size();
             int posed = 0;
-            for (int i = 0; i < PER_PASS && nearby + i < want; i++) {
-                if (spawnOne(level, player, roster, phase, village)) {
+            int perPass = battue ? BATTUE_PER_PASS : PER_PASS;
+            for (int i = 0; i < perPass && nearby + i < want; i++) {
+                if (spawnOne(level, player, roster, phase, village, battue)) {
                     posed++;
                 }
             }
@@ -210,7 +219,9 @@ public final class Prowl {
     }
 
     private static boolean spawnOne(ServerLevel level, ServerPlayer player,
-                                    List<String> roster, GamePhase phase, BlockPos village) {
+                                    List<String> roster, GamePhase phase, BlockPos village, boolean battue) {
+        int ringMin = battue ? BATTUE_RING_MIN : RING_MIN;
+        int ringMax = battue ? BATTUE_RING_MAX : RING_MAX;
         // UN ANNEAU COMPLET, ET PLUSIEURS ESSAIS. On ne vise plus le dos du
         // joueur : a cette distance, n'importe quelle direction convient. Les
         // essais servent a ecarter le village, les murs et les chunks non
@@ -218,7 +229,7 @@ public final class Prowl {
         BlockPos at = null;
         for (int attempt = 0; attempt < TRIES && at == null; attempt++) {
             double angle = level.random.nextDouble() * Math.PI * 2;
-            double dist = RING_MIN + level.random.nextDouble() * (RING_MAX - RING_MIN);
+            double dist = ringMin + level.random.nextDouble() * (ringMax - ringMin);
             int x = (int) Math.round(player.getX() + Math.cos(angle) * dist);
             int z = (int) Math.round(player.getZ() + Math.sin(angle) * dist);
             BlockPos spot = new BlockPos(x, WorldSetup.surfaceY(level, x, z), z);

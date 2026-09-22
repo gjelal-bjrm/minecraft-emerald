@@ -27,10 +27,14 @@ import net.neoforged.neoforge.client.event.ClientTickEvent;
  *    +5   la chute se freine       (on descend a un tiers de la vitesse)
  *    +10  on plane                 (une poussee douce vers l'avant)
  *    +15  on plane fort            (l'envergure pleine : presque une elytre)
- *    +20  le double saut           (voir ArtifactInputClient)
+ *    +20  le double saut, puis LE VOL D'ELYTRE (voir ArtifactInputClient)
  *
- * On ne vole jamais vers le HAUT : un plane descend toujours, meme au +20.
- * C'est ce qui le distingue du vol creatif, et ce qui le laisse honnete.
+ * Le plane ne monte jamais : il descend toujours. C'est ce qui le distingue du
+ * vol creatif, et ce qui le laisse honnete. Au +20, un second appui en l'air
+ * apres le double saut deploie les ailes : c'est alors le vrai vol d'elytre du
+ * jeu (piquer pour prendre de la vitesse, remonter sur l'elan, les fusees), tenu
+ * par le serveur (WingsFlight) -- le joueur l'attendait, et ne l'avait pas
+ * (22 sept., cahier §83).
  */
 @EventBusSubscriber(modid = EmeraldWeaponsMod.MODID, value = Dist.CLIENT)
 public final class WingsFlightClient {

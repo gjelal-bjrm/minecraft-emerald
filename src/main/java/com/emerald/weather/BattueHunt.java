@@ -21,6 +21,7 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.AvoidEntityGoal;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
 import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
+import net.minecraft.world.entity.ai.goal.PanicGoal;
 import net.minecraft.world.entity.ai.goal.WaterAvoidingRandomStrollGoal;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
@@ -28,6 +29,8 @@ import net.minecraft.world.item.ItemStack;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
+import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 
@@ -52,6 +55,17 @@ import java.util.UUID;
  * de la phase, des plumes et une grosse part d'experience. La rater ne coute
  * rien : « La Proie s'est echappee », c'est tout.
  *
+ * DEPUIS LE 22 SEPT. (cahier §83) : « la cible ne fuit pas du tout, personne ne la
+ * defend, c'est vraiment beaucoup trop facile », et « pendant la battue on voit tous les
+ * monstres, un peu comme un wall hack ». Desormais :
+ *   - SEULE LA PROIE BRILLE, en or, et seulement quand un joueur est a moins de
+ *     {@link #PREY_SIGHT} blocs ; plus de losange a l'ecran, plus de nom a travers les
+ *     murs : de loin, le seul repere est la ligne « Proie » du panneau de gauche ;
+ *   - elle FUIT de plus loin et plus vite, et PANIQUE quand on la touche (une poussee
+ *     de vitesse a chaque coup) ;
+ *   - une ESCORTE de {@link #ESCORT} monstres de la phase la garde et la suit ;
+ *   - elle a plus de vie.
+ *
  * LA SERIE. Deux kills a moins de huit secondes d'ecart ouvrent une serie :
  * x1,5 de butin, x2 a cinq kills, x3 a dix. Elle s'applique a tout ce que la
  * Battue rend deja -- plumes, pierres, cristaux, runes, experience -- et elle
@@ -74,7 +88,14 @@ public final class BattueHunt {
     private static final double SPAWN_SPAN = 20.0;
     /** La laisse : au-dela, elle revient vers son point d'apparition. */
     private static final double LEASH = 120.0;
-    private static final float PREY_HEALTH = 60.0F;
+    private static final float PREY_HEALTH = 80.0F;
+    /** On ne la voit briller qu'a moins de cela : de loin, seul le panneau guide. */
+    public static final double PREY_SIGHT = 24.0;
+    /** Sa garde : autant de monstres de la phase, autour d'elle. */
+    public static final int ESCORT = 4;
+    /** La garde ne s'eloigne pas de la Proie au-dela de cela. */
+    private static final int ESCORT_LEASH = 10;
+    public static final String TAG_ESCORT = "emeraldweapons_battue_escort";
     private static final double PREY_SCALE = 1.6;
     /** Le brame : toutes les vingt secondes. */
     private static final int BUGLE_EVERY = 400;
@@ -93,6 +114,7 @@ public final class BattueHunt {
 
     @Nullable
     private static UUID prey;
+    private static final List<UUID> escort = new java.util.ArrayList<>();
     private static BlockPos preyHome = BlockPos.ZERO;
     private static boolean preyIsBoar;
     private static String preyName = "";
@@ -106,6 +128,7 @@ public final class BattueHunt {
     static void begin(ServerLevel level) {
         streaks.clear();
         prey = null;
+        escort.clear();
         if (level.players().isEmpty()) {
             return;
         }
@@ -130,6 +153,8 @@ public final class BattueHunt {
             beast.discard();
         }
         prey = null;
+        dismissEscort(level);
+        clearCompass(level);
         for (UUID id : streaks.keySet()) {
             ServerPlayer player = level.getServer().getPlayerList().getPlayer(id);
             if (player != null) {
@@ -166,7 +191,9 @@ public final class BattueHunt {
                 level.random.nextFloat() * 360.0F, 0.0F);
         beast.finalizeSpawn(level, level.getCurrentDifficultyAt(spot), MobSpawnType.EVENT, null);
         beast.setCustomName(Component.literal(preyName));
-        beast.setCustomNameVisible(true);
+        // son nom ne se lit que de pres, en la visant : visible en permanence, il
+        // traversait les murs comme la lueur
+        beast.setCustomNameVisible(false);
         beast.setPersistenceRequired();
         beast.addTag(BattueScene.TAG_PREY);
         // PLUS GROSSE, PLUS SOLIDE : l'attribut d'echelle du jeu, sans retexture
@@ -182,14 +209,17 @@ public final class BattueHunt {
         beast.goalSelector.removeAllGoals(goal -> true);
         beast.targetSelector.removeAllGoals(goal -> true);
         beast.goalSelector.addGoal(0, new FloatGoal(beast));
-        beast.goalSelector.addGoal(1, new AvoidEntityGoal<>(beast, Player.class, 24.0F,
-                preyIsBoar ? 1.1 : 1.2, preyIsBoar ? 1.3 : 1.45));
+        // TOUCHEE, ELLE PANIQUE ; de loin, elle s'eloigne de qui approche
+        beast.goalSelector.addGoal(1, new PanicGoal(beast, preyIsBoar ? 1.7 : 1.9));
+        beast.goalSelector.addGoal(2, new AvoidEntityGoal<>(beast, Player.class, 32.0F,
+                preyIsBoar ? 1.25 : 1.35, preyIsBoar ? 1.5 : 1.65));
         beast.goalSelector.addGoal(5, new WaterAvoidingRandomStrollGoal(beast, 1.0));
         beast.goalSelector.addGoal(6, new LookAtPlayerGoal(beast, Player.class, 12.0F));
         level.addFreshEntity(beast);
         prey = beast.getUUID();
         preyHome = spot;
         lastCharge = level.getGameTime();
+        raiseEscort(level, beast);
         for (ServerPlayer player : level.players()) {
             player.sendSystemMessage(Component.translatable("game.emeraldweapons.battue.prey.spawned",
                             Component.literal(preyName).withStyle(ChatFormatting.GOLD))
@@ -218,6 +248,24 @@ public final class BattueHunt {
         LivingEntity beast = preyEntity(level);
         if (beast == null || !beast.isAlive()) {
             return;
+        }
+        if (now % 10 == 0) {
+            // LA LUEUR, DE PRES SEULEMENT : de loin, rien ne la trahit
+            boolean near = false;
+            List<ServerPlayer> watchers = new java.util.ArrayList<>(level.players());
+            watchers.addAll(SUBJECTS);
+            for (ServerPlayer player : watchers) {
+                if (!player.isSpectator() && player.distanceToSqr(beast) <= PREY_SIGHT * PREY_SIGHT) {
+                    near = true;
+                    break;
+                }
+            }
+            if (beast.hasGlowingTag() != near) {
+                beast.setGlowingTag(near);
+            }
+        }
+        if (now % 20 == 0) {
+            guard(level, beast);
         }
         // la laisse : trop loin de chez elle, elle y revient
         if (beast instanceof PathfinderMob mob && beast.distanceToSqr(preyHome.getX(), preyHome.getY(),
@@ -249,6 +297,169 @@ public final class BattueHunt {
                 }
             }
         }
+    }
+
+    // ------------------------------------------------------------ la garde
+
+    /** La garde de la Proie : des monstres de la phase, autour d'elle, qui la suivent. */
+    private static void raiseEscort(ServerLevel level, LivingEntity beast) {
+        com.emerald.game.GameState state = com.emerald.game.GameState.get(level);
+        com.emerald.game.GamePhase phase = state.phase(level);
+        int tier = switch (phase) {
+            case EXPLORATION -> 1;
+            case MONTEE -> 2;
+            default -> 3;
+        };
+        // les creatures du vivier presentes dans ce pack ; a defaut, celles du jeu
+        List<EntityType<?>> types = new java.util.ArrayList<>();
+        for (String id : com.emerald.game.SiegeRoster.forTier(tier)) {
+            EntityType.byString(id).ifPresent(types::add);
+        }
+        if (types.isEmpty()) {
+            types.addAll(List.of(com.emerald.game.SiegeRoster.vanillaFallback(tier)));
+        }
+        int raised = 0;
+        for (int i = 0; i < ESCORT * 8 && raised < ESCORT; i++) {
+            // autour de la Proie, a trois a sept blocs ; a court d'essais, a ses pieds
+            BlockPos spot;
+            if (i < ESCORT * 6) {
+                double angle = level.random.nextDouble() * Math.PI * 2;
+                double dist = 3.0 + level.random.nextDouble() * 4.0;
+                int x = (int) Math.round(beast.getX() + Math.cos(angle) * dist);
+                int z = (int) Math.round(beast.getZ() + Math.sin(angle) * dist);
+                spot = new BlockPos(x, com.emerald.game.WorldSetup.surfaceY(level, x, z), z);
+                if (!level.isLoaded(spot) || !free(level, spot) || !free(level, spot.above())
+                        || level.getBlockState(spot.below()).getCollisionShape(level, spot.below()).isEmpty()) {
+                    continue;                           // herbe et fleurs laissent passer ; eau, feuilles non
+                }
+            } else {
+                spot = beast.blockPosition();
+            }
+            EntityType<?> type = types.get(level.random.nextInt(types.size()));
+            Entity created = type.spawn(level, spot, MobSpawnType.EVENT);
+            if (!(created instanceof net.minecraft.world.entity.Mob guard)) {
+                continue;
+            }
+            guard.addTag(TAG_ESCORT);
+            guard.setPersistenceRequired();
+            if (guard.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.HEAD).isEmpty()) {
+                // la Battue tient le jour : sans casque, les morts-vivants de la garde brulent
+                guard.setItemSlot(net.minecraft.world.entity.EquipmentSlot.HEAD,
+                        new ItemStack(net.minecraft.world.item.Items.LEATHER_HELMET));
+                guard.setDropChance(net.minecraft.world.entity.EquipmentSlot.HEAD, 0.0F);
+            }
+            com.emerald.game.MobGear.equip(guard, com.emerald.game.MobGear.stage(level, tier), level.random);
+            guard.restrictTo(beast.blockPosition(), ESCORT_LEASH);
+            escort.add(guard.getUUID());
+            raised++;
+        }
+        LOGGER.info("Battue : {} garde(s) autour de la Proie", raised);
+    }
+
+    /** Un bloc ou l'on tient debout : rien de solide, pas d'eau. */
+    private static boolean free(ServerLevel level, BlockPos pos) {
+        net.minecraft.world.level.block.state.BlockState state = level.getBlockState(pos);
+        return state.getCollisionShape(level, pos).isEmpty() && state.getFluidState().isEmpty();
+    }
+
+    /** Chaque seconde : la garde reste autour de la Proie, et la rejoint si elle s'eloigne. */
+    private static void guard(ServerLevel level, LivingEntity beast) {
+        escort.removeIf(id -> {
+            Entity entity = level.getEntity(id);
+            if (!(entity instanceof net.minecraft.world.entity.PathfinderMob guard) || !guard.isAlive()) {
+                return true;
+            }
+            guard.restrictTo(beast.blockPosition(), ESCORT_LEASH);
+            if (guard.getTarget() == null && guard.distanceToSqr(beast) > ESCORT_LEASH * ESCORT_LEASH) {
+                guard.getNavigation().moveTo(beast, 1.25);
+            }
+            return false;
+        });
+    }
+
+    /** La fin de la Battue : la garde se disperse. */
+    private static void dismissEscort(ServerLevel level) {
+        for (UUID id : escort) {
+            Entity entity = level.getEntity(id);
+            if (entity != null && entity.isAlive()) {
+                level.sendParticles(net.minecraft.core.particles.ParticleTypes.CLOUD,
+                        entity.getX(), entity.getY() + 0.8, entity.getZ(), 12, 0.4, 0.5, 0.4, 0.02);
+                entity.discard();
+            }
+        }
+        escort.clear();
+    }
+
+    /** Le panneau de gauche oublie la Proie (morte ou echappee). */
+    private static void clearCompass(ServerLevel level) {
+        for (ServerPlayer player : level.players()) {
+            PacketDistributor.sendToPlayer(player, new com.emerald.network.VeinSyncPayload(
+                    List.of(), (long) com.emerald.network.VeinSyncPayload.KIND_PREY));
+        }
+    }
+
+    /** Touchee, la Proie prend une poussee de vitesse : on ne l'acheve pas en la collant. */
+    @SubscribeEvent
+    public static void onPreyHurt(LivingDamageEvent.Post event) {
+        LivingEntity victim = event.getEntity();
+        if (victim.level().isClientSide() || !victim.getTags().contains(BattueScene.TAG_PREY) || !victim.isAlive()) {
+            return;
+        }
+        victim.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, 60, 1, true, false, false));
+    }
+
+    /**
+     * Ce qui reste d'une Battue passee, recharge avec son troncon : la Proie ou la garde
+     * d'une Battue finie s'en vont, et une lueur laissee sur un monstre par l'ancienne
+     * Battue (qui faisait briller tout ce qui vivait) s'eteint. Les yeux des Echos gardent
+     * la leur.
+     */
+    @SubscribeEvent
+    public static void onJoin(EntityJoinLevelEvent event) {
+        if (event.getLevel().isClientSide() || !(event.getEntity() instanceof net.minecraft.world.entity.Mob mob)) {
+            return;
+        }
+        boolean current = WeatherManager.current() == Weather.BATTUE
+                && (mob.getUUID().equals(prey) || escort.contains(mob.getUUID()));
+        if (!current && (mob.getTags().contains(BattueScene.TAG_PREY) || mob.getTags().contains(TAG_ESCORT))) {
+            event.setCanceled(true);
+            return;
+        }
+        if (mob.hasGlowingTag() && !mob.getTags().contains(com.emerald.mine.Echoes.TAG_EYE)
+                && !mob.getTags().contains(BattueScene.TAG_PREY)) {
+            mob.setGlowingTag(false);
+        }
+    }
+
+    // ------------------------------------------------------------ banc d'essai
+
+    /** Les cobayes du banc (ArcenciumAutotest) : vus par la Proie comme de vrais joueurs. */
+    private static final List<ServerPlayer> SUBJECTS = new java.util.ArrayList<>();
+
+    /** Pour le banc : cette bete devient la Proie, avec sa garde ; ce cobaye la voit. */
+    public static void adoptForTest(ServerLevel level, LivingEntity beast, ServerPlayer subject) {
+        SUBJECTS.clear();
+        SUBJECTS.add(subject);
+        escort.clear();
+        beast.addTag(BattueScene.TAG_PREY);
+        prey = beast.getUUID();
+        preyHome = beast.blockPosition();
+        raiseEscort(level, beast);
+    }
+
+    /** Pour le banc : une tique de la Proie (lueur de pres, garde). */
+    public static void tickForTest(ServerLevel level, long now) {
+        tickPrey(level, now);
+    }
+
+    public static List<UUID> escortForTest() {
+        return List.copyOf(escort);
+    }
+
+    /** Pour le banc : la fin de la Battue (Proie et garde s'en vont). */
+    public static void endForTest(ServerLevel level) {
+        end(level);
+        SUBJECTS.clear();
     }
 
     // ------------------------------------------------------------ la Serie
@@ -314,6 +525,7 @@ public final class BattueHunt {
     /** L'hallali : le cor a la mort, et la paie de la Proie. */
     private static void hallali(ServerLevel level, ServerPlayer killer, LivingEntity beast) {
         prey = null;
+        clearCompass(level);
         var horns = SoundEvents.GOAT_HORN_SOUND_VARIANTS;
         for (ServerPlayer player : level.players()) {
             player.playNotifySound(horns.get(5).value(), SoundSource.WEATHER, 1.0F, 1.0F);

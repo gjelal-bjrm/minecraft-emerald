@@ -94,6 +94,26 @@ public final class JakVehicleClient {
         PacketDistributor.sendToServer(new VehicleAttitudePayload(pitch, roll));
     }
 
+    /**
+     * Le rideau du bord de la ville scintille devant la voiture que le coussin retient
+     * (VehiclePhysics.cushion) : on voit ce qui ralentit. {@code wallX} ou {@code wallZ}
+     * donne la face (l'autre est NaN).
+     */
+    static void shimmer(JakVehicleEntity car, double wallX, double wallZ) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level == null || car.tickCount % 2 != 0) {
+            return;
+        }
+        net.minecraft.util.RandomSource random = car.getRandom();
+        for (int i = 0; i < 6; i++) {
+            double along = (random.nextDouble() - 0.5) * 10.0;
+            double y = car.getY() - 1.5 + random.nextDouble() * 5.0;
+            double x = Double.isNaN(wallX) ? car.getX() + along : wallX;
+            double z = Double.isNaN(wallX) ? wallZ : car.getZ() + along;
+            mc.level.addParticle(net.minecraft.core.particles.ParticleTypes.END_ROD, x, y, z, 0.0, 0.0, 0.0);
+        }
+    }
+
     /** Le souffle d'une explosion sur la voiture que ce client conduit : il l'applique lui-meme. */
     public static void acceptImpulse(VehicleImpulsePayload payload) {
         Minecraft mc = Minecraft.getInstance();

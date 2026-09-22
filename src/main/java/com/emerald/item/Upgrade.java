@@ -55,8 +55,18 @@ public final class Upgrade {
      * rapporte le plus coute le plus cher a obtenir. Sans cela, les trois
      * derniers crans seraient simplement les trois meilleurs, et il n'y aurait
      * rien a decider -- seulement a attendre.
+     *
+     * LES TROIS DERNIERS CRANS DIVISES PAR DEUX ENVIRON (22 sept., cahier §83) : 26, 18 et
+     * 10 % devenaient 18, 9 et 4 %. « J'ai pu passer en un seul evenement mon arbre de +1 a
+     * +10. » Un +10 est un evenement ; il avait cesse d'en etre un.
      */
-    private static final int[] ODDS = {90, 82, 74, 62, 52, 44, 36, 26, 18, 10};
+    private static final int[] ODDS = {90, 82, 74, 62, 52, 44, 36, 18, 9, 4};
+
+    /** A partir de ce niveau (vers +8, +9, +10), un echec emporte aussi le metal, et l'Heure Doree aide moins. */
+    public static final int HARD_FROM = 7;
+    /** Ce que l'Heure Doree ajoute aux chances, en points : en dessous de HARD_FROM, puis a partir. */
+    private static final int GOLDEN_BONUS = 15;
+    private static final int GOLDEN_BONUS_HARD = 5;
 
     /**
      * UN ECHEC NE FAIT PAS REDESCENDRE. Il coute la pierre et le metal, rien
@@ -72,6 +82,9 @@ public final class Upgrade {
      * ci-dessus : une chance sur dix au dernier pas. Cela suffit, et cela reste
      * lisible -- le joueur sait ce qu'il risque, et ce qu'il risque est du
      * materiel, jamais son arme.
+     *
+     * (Mesures d'avant le 22 sept. : les chances des trois derniers crans ont baisse, et
+     * leurs echecs emportent desormais le metal -- voir ODDS et refund.)
      *
      * Mesure du bareme actuel, en partant de zero :
      *
@@ -155,8 +168,13 @@ public final class Upgrade {
         return true;
     }
 
+    /** Vrai si un echec depuis ce niveau rend le metal (en dessous de HARD_FROM). */
+    public static boolean refunds(int level) {
+        return level < HARD_FROM;
+    }
+
     /**
-     * REND LE METAL D'UNE TENTATIVE MANQUEE.
+     * REND LE METAL D'UNE TENTATIVE MANQUEE -- JUSQU'A +7.
      *
      * « J'etais rapidement bloque parce qu'il me manquait du fer et de l'or. »
      * Le compte le confirme : monter cinq pieces a +5 coutait en moyenne cent
@@ -166,11 +184,21 @@ public final class Upgrade {
      * un tirage ne doit jamais precede un paiement qui pourrait echouer -- mais
      * un rate ne coute plus que la Pierre de Forge. Le metal revient dans le
      * sac, ou aux pieds si le sac est plein.
+     *
+     * VERS +8, +9 ET +10, LE METAL EST PERDU (22 sept., cahier §83) : diamant, netherite et
+     * Arcencium sont les metaux de la fin, et un echec gratuit rendait ces crans trop
+     * faciles a tenter en boucle. Rien n'est rendu a partir de {@link #HARD_FROM}.
+     *
+     * @return vrai si le metal est revenu
      */
-    public static void refund(net.minecraft.world.entity.player.Player player, int level) {
+    public static boolean refund(net.minecraft.world.entity.player.Player player, int level) {
+        if (!refunds(level)) {
+            return false;
+        }
         Cost cost = cost(Math.min(MAX, level + 1));
         ItemStack back = new ItemStack(cost.material(), cost.amount());
         Stash.give(player, back);                    // inventaire, sac, ou aux pieds
+        return true;
     }
 
     private Upgrade() {
@@ -219,13 +247,18 @@ public final class Upgrade {
      *
      * L'infobulle affiche donc le chiffre DU MOMENT : on voit la fenetre
      * s'ouvrir sans avoir a la connaitre.
+     *
+     * CINQ POINTS SEULEMENT VERS +8, +9 ET +10 (22 sept., cahier §83) : quinze points sur
+     * 9 % et 4 % faisaient plus que doubler les chances des derniers crans, et toute la
+     * montee se faisait dans la meme fenetre.
      */
     public static int odds(int level, boolean golden) {
         if (level >= MAX) {
             return 0;
         }
         int base = ODDS[Math.max(0, level)];
-        return golden ? Math.min(100, base + 15) : base;
+        int bonus = level >= HARD_FROM ? GOLDEN_BONUS_HARD : GOLDEN_BONUS;
+        return golden ? Math.min(100, base + bonus) : base;
     }
 
     /** Vrai si l'on approche du sommet : sert a prevenir dans l'infobulle. */

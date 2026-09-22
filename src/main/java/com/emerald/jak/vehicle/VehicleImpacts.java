@@ -445,7 +445,36 @@ public final class VehicleImpacts {
         if (!(car.level() instanceof ServerLevel level)) {
             return 0.0;
         }
-        Vec3 motion = car.serverMotion();
+        if (car.remoteDriven()) {
+            // LA VOITURE D'UN JOUEUR : C'EST SON CLIENT QUI ENTEND LE CHOC (22 sept., cahier
+            // §83). Le serveur n'a que les positions recues : une tique ou n'arrive aucun
+            // paquet du conducteur (les deux horloges derivent) lui montrait une voiture
+            // arretee net, et le choc sonnait en plein ciel -- « des collisions avec rien du
+            // tout ». Le client, lui, a la vraie vitesse (watchDriver).
+            car.setLastFlatSpeed(0.0);
+            return 0.0;
+        }
+        double force = drop(car, car.serverMotion());
+        if (force > 0.0) {
+            crash(level, car, force);
+        }
+        return force;
+    }
+
+    /**
+     * Le choc vu par le client qui conduit, sur la vitesse de sa propre simulation : il
+     * l'annonce au serveur, qui le joue pour tous (VehicleCrashPayload, {@link #reported}).
+     * A appeler a chaque tique du client du conducteur, apres le deplacement.
+     */
+    public static void watchDriver(JakVehicleEntity car) {
+        double force = drop(car, car.getDeltaMovement());
+        if (force > 0.0) {
+            PacketDistributor.sendToServer(new VehicleCrashPayload((float) force));
+        }
+    }
+
+    /** La vitesse a plat perdue depuis la tique precedente, en force de choc (0 : aucun). */
+    private static double drop(JakVehicleEntity car, Vec3 motion) {
         double speed = Math.hypot(motion.x, motion.z);
         double before = car.lastFlatSpeed();
         car.setLastFlatSpeed(speed);
@@ -453,7 +482,28 @@ public final class VehicleImpacts {
         if (drop < CRASH_DROP || car.tickCount < 5) {
             return 0.0;
         }
-        double force = Math.min(1.0, (drop - CRASH_DROP) / (CRASH_FULL - CRASH_DROP));
+        return Math.min(1.0, (drop - CRASH_DROP) / (CRASH_FULL - CRASH_DROP));
+    }
+
+    /** Le plus court ecart entre deux chocs annonces par un client, en tiques. */
+    private static final int REPORT_GAP = 4;
+
+    /** Le choc annonce par le client du conducteur : verifie, puis joue pour tous. */
+    public static void reported(ServerPlayer player, float force) {
+        if (!(player.getVehicle() instanceof JakVehicleEntity car) || car.getControllingPassenger() != player
+                || !(force > 0.0F) || !(car.level() instanceof ServerLevel level)) {
+            return;                                     // !(force > 0) ecarte aussi NaN
+        }
+        long now = level.getGameTime();
+        if (now - car.lastReportedCrash() < REPORT_GAP) {
+            return;
+        }
+        car.setLastReportedCrash(now);
+        crash(level, car, Math.min(1.0, force));
+    }
+
+    /** Le son et les eclats d'un choc, pour tous ceux qui sont pres. */
+    private static void crash(ServerLevel level, JakVehicleEntity car, double force) {
         crashes++;
         Vec3 at = car.position().add(0.0, car.spec().boxTop * 0.5, 0.0);
         SoundEvent sound = force > 0.5 ? SoundEvents.ANVIL_LAND : SoundEvents.IRON_GOLEM_DAMAGE;
@@ -461,7 +511,6 @@ public final class VehicleImpacts {
                 0.5F + 0.5F * (float) force, 0.8F + 0.4F * level.random.nextFloat());
         level.sendParticles(ModParticles.JAK_VEHICLE_SPARK.get(), at.x, at.y, at.z,
                 4 + (int) (force * 16.0), 0.5, 0.3, 0.5, 0.25);
-        return force;
     }
 
     /** Chocs assez forts pour s'entendre depuis le demarrage (banc d'essai). */

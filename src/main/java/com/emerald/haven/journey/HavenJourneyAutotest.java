@@ -73,7 +73,10 @@ import java.util.UUID;
  *   9. le retour du Defi : defaite (apres le titre), porte de victoire (attente de
  *      l'equipe, dernier entre, cinq minutes), rien en Monde ouvert ;
  *  10. les transports : les huit stations posees, l'arche (passage, recharge, retour) et le
- *      portail des tours (regard tenu, desarme a l'arrivee, sommet, descente).
+ *      portail des tours (regard tenu, desarme a l'arrivee, sommet, descente) ;
+ *  11. l'agenda (§83) : donne a la premiere arrivee, une seule fois, Alex's Mobs prevenu, son
+ *      annonce differee apres le titre ; ses pages ; l'equipe attendue au QG, puis reunie :
+ *      la borne pour tous et la question du mode.
  * Rapport dans parcours_autotest.txt, puis arret.
  */
 @EventBusSubscriber(modid = EmeraldWeaponsMod.MODID)
@@ -176,6 +179,7 @@ public final class HavenJourneyAutotest {
         gun(server, level);
         button();
         guide(server, level);
+        agenda(server, level);
         rack(server, level);
         secondArrival(server, level);
         returnDefeat(server);
@@ -404,10 +408,10 @@ public final class HavenJourneyAutotest {
         boolean inside = rooms.inHq(origin, fake.getX(), fake.getY(), fake.getZ());
         HavenJourney.update(fake, now + HavenJourney.TITLE_DELAY + 2);
         ServerBossEvent red = HavenJourney.bar(fake.getUUID());
-        check("dans le Hip Hog : objectif « la borne » (barre rouge), QG note pour ce lobby et sur la fiche",
+        check("dans le Hip Hog, seul de l'equipe : objectif « la borne » (barre violette), QG note pour ce lobby et sur la fiche",
                 inside && HavenJourney.shown(fake.getUUID()) == HavenJourney.Objective.BORNE
                         && HavenJourney.reachedHqThisLobby(fake.getUUID()) && HavenProgress.get(fake.getUUID()).hq
-                        && red != null && red.getColor() == BossEvent.BossBarColor.RED,
+                        && red != null && red.getColor() == BossEvent.BossBarColor.PURPLE,
                 "dans la boite " + inside + ", objectif " + HavenJourney.shown(fake.getUUID()));
 
         state.setVote(fake.getUUID(), GameState.Mode.DEFI);
@@ -439,6 +443,110 @@ public final class HavenJourneyAutotest {
                 "departs " + departures + " -> " + HavenProgress.get(fake.getUUID()).departures);
         HavenJourney.removeSubject(fake.getUUID());
         HavenProgress.dropTemporary(fake.getUUID());
+    }
+
+    // ================================================================ 11. l'agenda et l'equipe (§83)
+
+    private static void agenda(MinecraftServer server, ServerLevel level) {
+        line("--- l'agenda, l'equipe au QG, le choix du mode (§83)");
+        HavenState state = HavenState.get(server);
+        HavenArrival.Layout rooms = HavenArrival.layout(server);
+        if (rooms == null || rooms.rooms().isEmpty()) {
+            check("salles de la ville lues", false, "haven_rooms.json absent");
+            return;
+        }
+        BlockPos origin = state.origin();
+        BlockPos far = HavenArrival.standIn(level, origin, rooms.rooms().get(0), 0);
+        FakePlayer a = subject(level, "agenda-a", far);
+        FakePlayer b = subject(level, "agenda-b", far);
+        for (FakePlayer p : List.of(a, b)) {
+            HavenJourney.addSubject(p);
+            HavenProgress.temporary(p.getUUID(), 0);
+        }
+        try {
+            long now = level.getGameTime();
+            HavenJourney.onArrive(a);
+            boolean given = HavenAgenda.has(a);
+            boolean told = a.getPersistentData().getCompound("PlayerPersisted").getBoolean("alexsmobs_has_book");
+            List<Component> later = HavenJourney.laterTexts(a.getUUID());
+            boolean deferred = later.stream().anyMatch(c -> key(c).equals("game.emeraldweapons.haven.agenda.recu"));
+            long due = HavenJourney.laterDue(a.getUUID());
+            check("premiere arrivee : l'agenda donne, Alex's Mobs ne donnera plus son dictionnaire, et « tu as recu ton agenda »"
+                            + " attend la fin du titre (" + HavenJourney.AFTER_TITLE + " tiques)",
+                    given && told && deferred && due >= now + HavenJourney.AFTER_TITLE,
+                    "agenda " + given + ", drapeau " + told + ", differe " + deferred + " a +" + (due - now));
+            HavenJourney.onArrive(a);
+            int agendas = 0;
+            for (int i = 0; i < a.getInventory().getContainerSize(); i++) {
+                if (HavenAgenda.isAgenda(a.getInventory().getItem(i))) {
+                    agendas += a.getInventory().getItem(i).getCount();
+                }
+            }
+            check("seconde arrivee : toujours un seul agenda", agendas == 1, agendas + " agenda(s)");
+
+            List<Component> pages = HavenAgenda.pages(a);
+            check("les pages : le prochain rendez-vous (le QG, discuter avec l'equipe) puis le carnet de route",
+                    pages.size() == 2 && mentions(pages.get(0), "game.emeraldweapons.haven.agenda.rdv.qg")
+                            && mentions(pages.get(1), "game.emeraldweapons.haven.agenda.etape.qg"),
+                    pages.size() + " page(s)");
+
+            HavenJourney.onArrive(b);
+            BlockPos hq = rooms.hqCenter(origin);
+            a.moveTo(hq.getX() + 0.5, hq.getY(), hq.getZ() + 0.5, 0.0F, 0.0F);
+            long later1 = now + HavenJourney.TITLE_DELAY + 1;
+            HavenJourney.update(a, later1);
+            HavenJourney.update(b, later1);
+            ServerBossEvent bar = HavenJourney.bar(a.getUUID());
+            Object[] args = bar != null && bar.getName().getContents() instanceof TranslatableContents t ? t.getArgs() : new Object[0];
+            check("au QG sans l'equipe : « l'equipe arrive (1 sur 2) », barre jaune ; l'agenda dit d'attendre l'equipe",
+                    HavenJourney.shown(a.getUUID()) == HavenJourney.Objective.EQUIPE && bar != null
+                            && bar.getColor() == BossEvent.BossBarColor.YELLOW && args.length == 2
+                            && Integer.valueOf(1).equals(args[0]) && Integer.valueOf(2).equals(args[1])
+                            && mentions(HavenAgenda.pages(a).get(0), "game.emeraldweapons.haven.agenda.rdv.equipe"),
+                    "objectif " + HavenJourney.shown(a.getUUID()) + ", arguments " + Arrays.toString(args));
+
+            b.moveTo(hq.getX() + 1.5, hq.getY(), hq.getZ() + 0.5, 0.0F, 0.0F);
+            HavenJourney.update(b, later1 + 1);
+            HavenJourney.update(a, later1 + 1);
+            HavenJourney.reuniteForTest(server);
+            boolean both = HavenJourney.shown(a.getUUID()) == HavenJourney.Objective.BORNE
+                    && HavenJourney.shown(b.getUUID()) == HavenJourney.Objective.BORNE;
+            ServerBossEvent purple = HavenJourney.bar(a.getUUID());
+            boolean titles = HavenJourney.titleKind(a.getUUID()) == HavenTitlePayload.REUNION
+                    && HavenJourney.titleKind(b.getUUID()) == HavenTitlePayload.REUNION;
+            boolean asked = HavenJourney.laterTexts(a.getUUID()).stream()
+                    .anyMatch(c -> key(c).equals("game.emeraldweapons.haven.parcours.reunion"))
+                    && HavenJourney.laterTexts(b.getUUID()).stream()
+                    .anyMatch(c -> key(c).equals("game.emeraldweapons.haven.parcours.reunion"));
+            check("l'equipe reunie : la borne pour les deux (barre violette), le titre « L'equipe est reunie »"
+                            + " et la question du mode, sans pousser le Defi",
+                    both && purple != null && purple.getColor() == BossEvent.BossBarColor.PURPLE && titles && asked
+                            && mentions(HavenAgenda.pages(a).get(0), "game.emeraldweapons.haven.agenda.rdv.mode"),
+                    "borne " + both + ", titres " + titles + ", question " + asked);
+        } finally {
+            for (FakePlayer p : List.of(a, b)) {
+                HavenJourney.removeSubject(p.getUUID());
+                HavenProgress.dropTemporary(p.getUUID());
+            }
+        }
+    }
+
+    /** La cle d'un texte traduit, ou "". */
+    private static String key(Component component) {
+        return component.getContents() instanceof TranslatableContents t ? t.getKey() : "";
+    }
+
+    /** Vrai si la cle apparait dans ce texte ou dans l'un de ses morceaux. */
+    private static boolean mentions(Component component, String wanted) {
+        if (key(component).equals(wanted)) {
+            return true;
+        }
+        for (Component part : component.getSiblings()) {
+            if (mentions(part, wanted)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     // ================================================================ 7. lot 2 : le ratelier du QG

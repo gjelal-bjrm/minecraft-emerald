@@ -1998,10 +1998,15 @@ public final class Sanctuary {
         }
     }
 
-    /** La table de butin du palier : moyenne, bonne, puis de quoi affronter le boss. */
+    /**
+     * La table de butin des coffres : UNE SEULE depuis le 22 sept. (cahier §83), qui suit
+     * l'avancee de la partie a l'ouverture (SanctuariesTakenCondition) -- le premier
+     * sanctuaire visite donne peu, le troisieme le plus, quel que soit l'ordre de pose des
+     * ancres. Le palier n'y entre plus ; les anciennes tables sanctuary_tier1..3 renvoient
+     * a celle-ci, pour les coffres deja poses.
+     */
     private static String sanctuaryTable(int rank) {
-        return "%s:chests/sanctuary_tier%d".formatted(EmeraldWeaponsMod.MODID,
-                Math.max(1, Math.min(3, rank)));
+        return "%s:chests/sanctuary".formatted(EmeraldWeaponsMod.MODID);
     }
 
 

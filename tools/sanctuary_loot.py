@@ -14,6 +14,20 @@ casser.
 L'echelle est celle du cahier : la premiere ancre paie moyennement, la
 deuxieme bien, la troisieme doit armer pour le boss. Un coffre de palier trois
 doit valoir le siege qu'on vient de tenir.
+
+LE BUTIN SUIT L'AVANCEE (22 sept., cahier §83). Le palier venait de l'ordre de
+POSE des ancres : le premier sanctuaire visite pouvait etre le plus riche, et
+« les recompenses sont beaucoup trop genereuses en materiaux des le premier
+sanctuaire ». Une seule table, chests/sanctuary.json, dont chaque tirage porte
+une condition emeraldweapons:sanctuaries_taken (SanctuariesTakenCondition) :
+
+  - aucun sanctuaire pris : le palier MODESTE -- le palier un, fer et or
+    divises par huit, diamant et Eclats du Destin par quatre ;
+  - un sanctuaire pris : le palier deux ;
+  - deux ou plus (et tout cycle suivant du monde ouvert) : le palier trois.
+
+Les anciennes tables sanctuary_tier1..3 renvoient a la nouvelle : un coffre
+deja pose suit l'avancee lui aussi.
 """
 
 import io
@@ -261,7 +275,77 @@ def table(tier):
     total = sum(e.get("weight", 1) for e in entries)
     pools.append(pool(1, [{"type": "minecraft:empty", "weight": blanks * total}] + entries))
 
+    # 7. LES ECLATS DU DESTIN GARANTIS (12 sept. : « les Eclats doublent sans
+    # toucher aux des ») : six par coffre. Ecrits a la main dans les tables ce
+    # jour-la ; le generateur les porte desormais.
+    pools.append(pool(1, [{"type": "minecraft:item", "name": "%s:fate_shard" % MOD,
+                           "functions": [{"function": "minecraft:set_count", "count": 6}]}]))
+
     return {"type": "minecraft:chest", "pools": pools}
+
+
+def modest():
+    """Le palier MODESTE : le premier sanctuaire visite, quel qu'il soit.
+
+    Le palier un, avec le fer et l'or divises par huit, le diamant et les
+    Eclats du Destin par quatre (moyennes par coffre). Les plumes, le bois de
+    Prisme, la nourriture et les artefacts ne bougent pas : ce sont eux qui
+    font fouiller, et le Prisme sert a fabriquer les armes du mode.
+    """
+    base = table(1)
+    pools = base["pools"]
+    # 1. la monnaie : l'Eclat tombe a 1 et pese deux fois moins que le reste
+    pools[0] = pool({"min": 1, "max": 2}, [
+        item("%s:fate_shard" % MOD, 5, (1, 1)),
+        item("%s:arcencium_feather" % MOD, 10, (1, 2)),
+        item("%s:raw_arcencium" % MOD, 2, (1, 3)),
+        item("%s:prism_branch" % MOD, 6, (4, 10)),
+        item("%s:prism_fiber" % MOD, 6, (4, 10)),
+    ])
+    # 2. Apotheosis : un seul tirage, une seule piece
+    pools[1] = pool(1, [tag_entry("%s:sanctuary/tier1" % MOD, 10, (1, 1))])
+    # 4. la forge : fer et or au huitieme, le diamant au quart
+    pools[3] = pool({"min": 1, "max": 2}, [
+        item("minecraft:iron_ingot", 10, (1, 2)),
+        item("minecraft:gold_ingot", 5, (1, 1)),
+        item("%s:arcencium_feather" % MOD, 4, (1, 2)),
+        item("minecraft:diamond", 1, (1, 1)),
+        item("minecraft:enchanted_book", 2),
+        {"type": "minecraft:empty", "weight": 5},
+    ])
+    # 7. les Eclats garantis : un ou deux au lieu de six
+    pools[-1] = pool(1, [item("%s:fate_shard" % MOD, 1, (1, 2))])
+    return base
+
+
+def taken(minimum=None, maximum=None):
+    """La condition d'avancee : les sanctuaires deja pris (SanctuariesTakenCondition)."""
+    cond = {"condition": "%s:sanctuaries_taken" % MOD}
+    if minimum is not None:
+        cond["min"] = minimum
+    if maximum is not None:
+        cond["max"] = maximum
+    return cond
+
+
+def progress_table():
+    """La table unique : chaque tirage ne joue qu'a son etape d'avancee."""
+    stages = [(modest(), taken(maximum=0)),
+              (table(2), taken(minimum=1, maximum=1)),
+              (table(3), taken(minimum=2))]
+    pools = []
+    for stage, cond in stages:
+        for p in stage["pools"]:
+            p = dict(p)
+            p["conditions"] = [cond]
+            pools.append(p)
+    return {"type": "minecraft:chest", "pools": pools}
+
+
+def forward():
+    """Une ancienne table de palier : elle renvoie a la table qui suit l'avancee."""
+    return {"type": "minecraft:chest", "pools": [pool(1, [
+        {"type": "minecraft:loot_table", "value": "%s:chests/sanctuary" % MOD}])]}
 
 
 def write(path, payload):
@@ -278,7 +362,8 @@ def main():
               tag(APOTH[tier]))
         write(os.path.join(DATA, "loot_table", "chests",
                            "sanctuary_tier%d.json" % tier),
-              table(tier))
+              forward())
+    write(os.path.join(DATA, "loot_table", "chests", "sanctuary.json"), progress_table())
 
 
 if __name__ == "__main__":

@@ -73,6 +73,12 @@ public class WingsLayer<T extends AbstractClientPlayer, M extends PlayerModel<T>
         float flap = Mth.sin(ageInTicks * tempo) * reach
                 + (moving ? Mth.sin(ageInTicks * (astral ? 0.22F : 0.32F)) * 12.0F : 0.0F);
         float lift = Mth.sin(ageInTicks * tempo + 1.2F) * (astral ? 4.5F : 3.0F);
+        if (player.isFallFlying()) {
+            // LE VOL D'ELYTRE : les ailes s'ouvrent en grand et planent, sans battre -- une
+            // ondulation lente, comme un rapace qui tient le vent
+            flap = -17.0F + Mth.sin(ageInTicks * 0.09F) * 2.5F;
+            lift = 3.0F + Mth.sin(ageInTicks * 0.09F + 1.0F) * 1.5F;
+        }
         // LA LUEUR VIT. Une passe emissive fixe se remarque une fois puis
         // disparait du regard ; l'astrale scintille -- deux ondes qui ne
         // battent jamais a l'unisson, comme des etoiles qui vacillent.

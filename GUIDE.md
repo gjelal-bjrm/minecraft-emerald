@@ -23,10 +23,19 @@ touché. Votre mode de jeu habituel vous est rendu au village.
 ### Le parcours dans Haven
 
 - **La première fois**, un titre vous accueille : « Bienvenue à Haven — Rendez-vous
-  au quartier général ». Puis l'**objectif reste affiché en haut de l'écran** :
-  le QG, avec la distance et la direction (la barre se remplit en approchant). Au
-  premier pas dans le bar, il devient « la borne du comptoir : vitre rouge pour le
-  Défi », puis « départ quand tous ont voté » une fois votre vote fait.
+  au quartier général ». Le chat reste vide à l'arrivée : ce qui est à lire passe
+  après le titre.
+- **L'agenda de Haven** remplace le livre des animaux d'Alex's Mobs : vous le recevez
+  à la première arrivée (et de nouveau s'il se perd). Clic droit pour le lire : le
+  **prochain rendez-vous** (d'abord « Rendez-vous au quartier général, le bar du Hip
+  Hog, pour discuter avec l'équipe ») et le **carnet de route**, coché au fil du
+  parcours.
+- L'**objectif reste affiché en haut de l'écran** : le QG, avec la distance et la
+  direction (la barre se remplit en approchant). Dans le bar, tant que toute
+  l'équipe n'y est pas passée : « l'équipe arrive (1 sur 3) ». Toute l'équipe
+  réunie dans le bar : un titre « L'équipe est réunie — Quel mode voulez-vous
+  jouer ? », et l'objectif devient « la borne du comptoir : Défi ou Monde
+  ouvert », puis « départ quand tous ont voté » une fois votre vote fait.
 - Le **Carnet** (le livre de FTB Quests) a un chapitre « Haven » qui coche ces
   étapes tout seul.
 - **Vos armes vous suivent de partie en partie** : ce que vous avez débloqué du
@@ -130,6 +139,9 @@ trois blocs du sol. Les voitures disparaissent au départ vers le village.
     de la carte de trafic du port : neuf blocs au-dessus de la rue (hors de la
     ville, neuf blocs au-dessus du sol). Si quelque chose bloque la montée plus
     de deux secondes, elle redescend.
+  - **Le bord de la ville se sent** : en approchant de la limite invisible de la
+    ville, la voiture ralentit doucement, sans choc, et la limite scintille devant
+    elle.
   - **La voie haute monte d'elle-même au-dessus du pont entre les deux tours.**
     Comme dans Jak 3, elle s'élève là de dix blocs, puis revient à sa hauteur
     habituelle : on traverse à pleine vitesse sans rien toucher, par n'importe
@@ -349,8 +361,8 @@ matériaux d'Apotheosis.
 
 | | Ce que vous voyez | Ce que ça vous donne |
 |---|---|---|
-| **Brume** | Brouillard pastel, on voit à 50 blocs | Les monstres perdent **70 %** de leur portée de détection. Le moment de traverser |
-| **Aurore** | Rideaux de lumière dans tout le ciel, carillon de fond | Les veines d'Arcencium proches **scintillent et carillonnent** à travers la roche. Le moment de descendre miner |
+| **Battue** | Le monde en noir et blanc, un cor, des corbeaux | Une **Proie** (cerf ou sanglier) à chasser, indiquée par la ligne « Proie » du panneau de gauche ; elle ne **brille en or qu'à moins de 24 blocs**. Elle fuit, panique quand on la touche, et **quatre gardes** l'escortent. Plus de monstres, et plus près. Le coup porté à une créature qui ne vous a pas vu est critique |
+| **Aurore** | Rideaux de lumière dans tout le ciel, carillon de fond | Les filons proches se montrent (panneau, losanges, carillon), hâte et vitesse. Mais c'est le **Grand Froid** : dehors, on gèle en 14 secondes (givre, pas ralenti, puis un cœur toutes les deux secondes). Sous un toit, sous terre ou près d'un feu (feu de camp, four allumé, lave), on se réchauffe. Le moment de descendre miner |
 
 ### Les agressives
 
@@ -419,6 +431,32 @@ l'arcencium par à-coups, jamais de bois.
 Légèrement meilleure que la netherite : **22 de protection** contre 20, même
 résistance aux enchantements. Elle est noire, parcourue de fissures qui brillent
 de toutes les couleurs.
+
+### Le bouclier d'Arcencium
+
+Le métal noir de l'armure, fissures qui changent de couleur et gemme prismatique au
+centre. Sur l'établi : `A F A / A S A / . A .` (cinq lingots d'Arcencium, une fibre de
+Prisme, un bouclier ordinaire). Par rapport au bouclier de bois :
+
+- il **pare dès qu'il est levé** (celui du jeu attend un quart de seconde) ;
+- **riposte prismatique** : un coup au corps à corps paré renvoie **un cœur** de
+  dégâts et repousse l'assaillant, au plus une fois par seconde ;
+- **deux fois plus solide**, et il se répare avec des lingots d'Arcencium. La hache le
+  désarme comme les autres.
+
+### La Forge
+
+Une Pierre de Forge et le métal du cran par tentative. Un échec ne fait jamais
+redescendre. **Jusqu'à +7**, il rend le métal ; **vers +8, +9 et +10**, le métal est
+perdu aussi. Chances vers +8, +9, +10 : **18, 9 et 4 %** ; l'Heure Dorée ajoute 15 points
+aux crans d'avant, **5 seulement** à ces trois-là.
+
+### Les ailes
+
+La spécialisation fait pousser des ailes : dès +5, maintenir Saut en l'air freine la
+chute, puis on plane. À **+20**, un appui sur Saut en l'air donne le **double saut**, et
+un appui de plus **déploie les ailes** : le vol de l'élytre, piqués, remontées sur
+l'élan et fusées comprises. On se pose au sol, dans l'eau ou en montant en selle.
 
 ### Les artefacts
 
@@ -520,12 +558,13 @@ pioche.
 la salle du trésor**, au bout du couloir qui s'ouvre au pied de la face sud de
 la pyramide. Le sommet ne porte que l'ancre : on monte pour la tenir, on
 descend pour s'équiper. Ce sont des **coffres Lootr** : chaque joueur a son
-propre tirage, personne ne se fait devancer. La richesse suit le palier de
-l'ancre — la première paie moyennement, la deuxième bien, et la troisième doit
-vous armer pour le boss : lingots par vingtaines, matériaux mythiques
-d'Apotheosis, lingot de netherite, pièces d'armure d'Arcencium, pommes d'or
-enchantées, totems, et **un à deux artefacts**. Les artefacts n'apparaissent
-qu'à partir du palier 2.
+propre tirage, personne ne se fait devancer. La richesse suit **l'avancée de la
+partie**, tirée à l'ouverture : le **premier sanctuaire visité**, quel qu'il soit,
+donne peu (un peu de fer et d'or, des plumes, du bois de Prisme) ; le **deuxième**
+paie bien (le diamant pour de bon) ; le **troisième** doit vous armer pour le boss :
+diamant, lingots de netherite et d'Arcencium, matériaux mythiques d'Apotheosis,
+parfois une pièce d'armure d'Arcencium, pommes d'or enchantées, totems. Après le boss,
+en Monde ouvert, les sanctuaires suivants paient comme le troisième.
 
 Des **gardiens** tiennent les lieux avant vous : deux par tour d'angle, d'autres
 sur le chemin de ronde et autour de la pyramide. Ils ne quittent pas le
@@ -695,7 +734,8 @@ Sur un serveur d'essai (`run-server`), chacun écrit son rapport puis arrête le
 - `EMERALDWEAPONS_AUTOTEST=vehicules ./gradlew runServer` : voitures et motos, rapport `run-server/vehicules_autotest.txt` ;
 - `EMERALDWEAPONS_AUTOTEST=invasion ./gradlew runServer` : invasion, décor destructible, bouton du QG et MSPT, rapport `run-server/invasion_autotest.txt` ;
 - `EMERALDWEAPONS_AUTOTEST=armes ./gradlew runServer` : Morph Gun (poses, confinement, tir des douze armes, munitions, décor, MSPT avec quatre tireurs), rapport `run-server/armes_autotest.txt` ;
-- `EMERALDWEAPONS_AUTOTEST=parcours ./gradlew runServer` : le parcours (fiche sur disque, arme qui suit les formes du joueur, ville paisible, bouton verrouillé, titre et objectifs du guide ; puis le lot 2 : râtelier du QG, deuxième arrivée envahie, reprise des rues, retour après la défaite, porte de la victoire ; puis les transports : les huit stations, l'arche et sa recharge, le portail des tours), rapport `run-server/parcours_autotest.txt`.
+- `EMERALDWEAPONS_AUTOTEST=parcours ./gradlew runServer` : le parcours (fiche sur disque, arme qui suit les formes du joueur, ville paisible, bouton verrouillé, titre et objectifs du guide ; puis le lot 2 : râtelier du QG, deuxième arrivée envahie, reprise des rues, retour après la défaite, porte de la victoire ; puis les transports : les huit stations, l'arche et sa recharge, le portail des tours ; puis l'agenda, l'équipe attendue au QG et la réunion), rapport `run-server/parcours_autotest.txt` ;
+- `EMERALDWEAPONS_AUTOTEST=partie ./gradlew runServer` : la partie (chances de la Forge et métal perdu, coffres des sanctuaires selon l'avancée, vol d'élytre des ailes +20, bouclier d'Arcencium, Grand Froid de l'Aurore, Proie de la Battue et sa garde), rapport `run-server/partie_autotest.txt`.
 
 Pour regarder un terrain (arbres, biomes) sans jouer : le run `photos` entre dans le monde
 jetable `run/saves/photos` ; avec `EMERALDWEAPONS_PHOTOS="nom@biome;nom@biome@hauteur"` (et
@@ -731,5 +771,5 @@ La vitesse des voitures et des motos se règle dans `VehicleSpec.MAX_SPEED_MS`.
 Pour arriver devant le bar du Hip Hog juste après la pose, sans bouger avant :
 `/tp @s ~375 ~66 ~211` — la porte est à quelques pas.
 
-Les noms de météo : `brume`, `aurore`, `nuit`, `meteores`, `dechirure`, `orage`,
+Les noms de météo : `battue`, `aurore`, `nuit`, `meteores`, `dechirure`, `orage`,
 `embellie`. L'autocomplétion les propose toutes.

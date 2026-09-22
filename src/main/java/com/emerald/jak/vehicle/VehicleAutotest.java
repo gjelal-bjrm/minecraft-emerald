@@ -358,6 +358,10 @@ public final class VehicleAutotest {
         planStreet(state, street);
         planSea(state);
         planDriverSync();
+        STEPS.add((s, l, t) -> {
+            cushion();
+            return true;
+        });
         planCollisions();
         planBalance();
         STEPS.add((s, l, t) -> {
@@ -1744,6 +1748,32 @@ public final class VehicleAutotest {
      * aller-retour sur la mer. La garde du client (JakVehicleEntity.lerpMotion) ne
      * s'essaie pas sans client.
      */
+    /**
+     * Le coussin du bord de la ville (VehiclePhysics.cushion), en calcul : une voiture a pleine
+     * vitesse qui entre dans les douze derniers blocs devant le rideau s'arrete avant lui,
+     * sans jamais perdre d'un coup assez de vitesse pour sonner un choc ; celle qui s'en
+     * eloigne ne sent rien.
+     */
+    private static void cushion() {
+        double gap = VehiclePhysics.CUSHION + 0.5;
+        double v = 2.0;
+        double worstDrop = 0.0;
+        double closest = gap;
+        for (int tick = 0; tick < 200; tick++) {
+            double next = VehiclePhysics.soften(v, gap, 1);
+            worstDrop = Math.max(worstDrop, v - next);
+            v = next;
+            gap -= v;
+            closest = Math.min(closest, gap);
+        }
+        double away = VehiclePhysics.soften(-2.0, 1.0, 1);
+        check("bord de la ville : a pleine vitesse vers le rideau, la voiture s'arrete avant lui, sans perte assez brusque"
+                        + " pour sonner un choc ; en s'eloignant, rien ne la retient",
+                closest >= 0.0 && worstDrop < VehicleImpacts.CRASH_DROP && away == -2.0,
+                String.format(Locale.ROOT, "au plus pres %.2f bloc, plus forte perte %.3f bloc/tick (seuil %.1f)",
+                        closest, worstDrop, VehicleImpacts.CRASH_DROP));
+    }
+
     private static void planDriverSync() {
         STEPS.add((s, l, t) -> {
             JakVehicleEntity c = Jak3Registry.JAK_VEHICLE.get().create(l);
@@ -1790,6 +1820,7 @@ public final class VehicleAutotest {
                 motionSent.clear();
                 emptyTicks = 0;
                 motionMismatches = 0;
+                crashesBefore = VehicleImpacts.crashes();
                 int id = c.getId();
                 witness = new ServerEntity(l, c, c.getType().updateInterval(), c.getType().trackDeltas(), packet -> {
                     if (packet instanceof ClientboundSetEntityMotionPacket motion && motion.getId() == id) {
@@ -1814,6 +1845,23 @@ public final class VehicleAutotest {
                 check("conduite par un client : le serveur lit la vitesse du conducteur dans ses positions",
                         motionMismatches == 0,
                         motionMismatches + " ticks ou serverMotion differe du deplacement recu");
+                // 22 sept. : une tique sans paquet du conducteur faisait sonner un choc en
+                // plein ciel ; c'est desormais son client qui entend les chocs
+                check("conduite par un client : aucun choc fantome quand ses paquets arrivent en desordre",
+                        VehicleImpacts.crashes() == crashesBefore,
+                        (VehicleImpacts.crashes() - crashesBefore) + " choc(s) entendus en " + DRIVER_TICKS
+                                + " ticks dont " + emptyTicks + " sans paquet");
+                // et le serveur ne la fait buter contre aucun autre vehicule (canCollideWith)
+                JakVehicleEntity probeCar = Jak3Registry.JAK_VEHICLE.get().create(l);
+                if (probeCar != null) {
+                    probeCar.setModel("cara");
+                    probeCar.moveTo(c.getX(), c.getY(), c.getZ(), 0.0F, 0.0F);
+                    check("conduite par un client : le serveur ne la fait buter contre aucun autre vehicule",
+                            !c.canCollideWith(probeCar) && !probeCar.canCollideWith(c),
+                            "voiture du joueur -> autre : " + c.canCollideWith(probeCar)
+                                    + ", autre -> voiture du joueur : " + probeCar.canCollideWith(c));
+                    probeCar.discard();
+                }
                 // un dernier paquet : la voiture a de l'elan quand le conducteur descend
                 drivenX += 2.0;
                 c.absMoveTo(drivenX, c.getY(), c.getZ(), c.getYRot(), 0.0F);

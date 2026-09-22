@@ -92,6 +92,7 @@ public class ModNetwork {
                         switch (payload.action()) {
                             case DOUBLE_JUMP -> com.emerald.artifact.ArtifactActions.doubleJump(player);
                             case RETURN -> com.emerald.artifact.ArtifactActions.returnHome(player);
+                            case WINGS_FLIGHT -> com.emerald.specialization.WingsFlight.start(player);
                         }
                     }
                 }));
@@ -120,6 +121,12 @@ public class ModNetwork {
                 com.emerald.haven.journey.HavenTitlePayload.STREAM_CODEC,
                 (payload, context) -> context.enqueueWork(
                         () -> com.emerald.client.HavenJourneyClient.accept(payload)));
+
+        // les pages de l'agenda de Haven, ouvertes dans l'ecran de livre
+        registrar.playToClient(com.emerald.haven.journey.HavenAgendaPayload.TYPE,
+                com.emerald.haven.journey.HavenAgendaPayload.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(
+                        () -> com.emerald.client.HavenAgendaClient.accept(payload)));
 
         registrar.playToClient(com.emerald.jak.gun.GunNovaPayload.TYPE,
                 com.emerald.jak.gun.GunNovaPayload.STREAM_CODEC,
@@ -152,6 +159,16 @@ public class ModNetwork {
                             && player.getVehicle() instanceof com.emerald.jak.vehicle.JakVehicleEntity car
                             && car.getControllingPassenger() == player) {
                         car.acceptDriverAttitude(payload.pitch(), payload.roll());
+                    }
+                }));
+
+        // le choc de la voiture d'un joueur, entendu par son client : le serveur le joue pour
+        // tous, seulement si l'expediteur la conduit (VehicleImpacts.reported)
+        registrar.playToServer(com.emerald.jak.vehicle.VehicleCrashPayload.TYPE,
+                com.emerald.jak.vehicle.VehicleCrashPayload.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(() -> {
+                    if (context.player() instanceof ServerPlayer player) {
+                        com.emerald.jak.vehicle.VehicleImpacts.reported(player, payload.force());
                     }
                 }));
 

@@ -7282,3 +7282,165 @@ shaders actifs) : l'anneau, le portail du warp gate, l'arche. Le joueur :
   pour les arches), quatre ou cinq cellules d'air. Verifiees en jeu (photos du 21 sept. :
   les deux arches, les plateaux du pied, de la terrasse et du sommet ; le vrai client
   passe l'arche et monte au portail). Banc `parcours` : 43 OK.
+
+## 83. Les retours du 22 septembre : agenda, Battue, Aurore, forge, coffres, bouclier, ailes, voitures
+
+> « J'ai conduit un vehicule et meme en etant dans les airs, des fois, il y avait des
+> collisions avec rien du tout [...] il y a un peu trop de messages dans le chat quand
+> j'arrive [...] j'aimerais qu'on mette en place un systeme de quete, entre guillemets
+> [...] la cible ne fuit pas du tout, et personne ne la defend [...] on voit tous les
+> monstres, un peu comme un wall hack [...] j'ai pu passer en un seul evenement mon arbre
+> de +1 a +10 [...] un bouclier avec notre nouveau materiau [...] je n'ai pas le vol en
+> mode elytra. »
+
+Choix du joueur (22 sept.) : l'Aurore devient **le Grand Froid** ; la forge prend les
+**deux options** (chances et Heure Doree, metal perdu) ; les coffres suivent **l'avancee** ;
+la barre d'objectif **reste**, reliee a l'agenda.
+
+### 83.1 L'agenda de Haven, et l'equipe au QG
+
+- **Plus de messages a l'arrivee** (`HavenArrival.arrive`) : l'appartement, la distance du
+  QG et l'etat de la ville ne s'ecrivent plus dans le chat, qui couvrait le titre du
+  centre. L'appartement et le prochain rendez-vous sont dans l'agenda ; le seul
+  avertissement qui reste (difficulte Paisible, qui empeche l'invasion) passe APRES le
+  titre, par la file des messages differes de `HavenJourney` (`later`, `AFTER_TITLE` =
+  260 tiques).
+- **L'agenda** (`HavenAgenda`, objet `haven_agenda`) : donne a la premiere arrivee A LA
+  PLACE du dictionnaire des animaux d'Alex's Mobs, rendu a chaque arrivee s'il manque.
+  Clic droit : l'ecran de livre du jeu (`HavenAgendaPayload`), deux pages -- le prochain
+  rendez-vous (« Rendez-vous au quartier general, le bar du Hip Hog, pour discuter avec
+  l'equipe », puis attendre l'equipe, choisir le mode, l'arme, la reprise) et le carnet
+  de route coche. Alex's Mobs donne son livre a la connexion si le drapeau
+  `PlayerPersisted.alexsmobs_has_book` manque : on le pose, et l'on retire le livre s'il
+  etait deja la (la pose dans l'appartement se fait une tique apres la connexion).
+- **L'equipe au QG** : dans le bar, l'objectif est « l'equipe arrive (n sur N) » (barre
+  jaune) tant que toute l'equipe n'y est pas passee dans ce lobby ; ensuite « la borne du
+  comptoir : Defi ou Monde ouvert » (barre violette), sans pousser l'un plus que l'autre.
+  Quand tous sont dans le bar ENSEMBLE (et que personne n'a vote), le titre « L'equipe est
+  reunie -- Quel mode voulez-vous jouer ? » et une ligne qui rappelle les deux vitres. On
+  compte ceux deja passes au QG, pas ceux presents : un joueur seul qui ressortait lisait
+  « l'equipe arrive (0 sur 1) » (banc parcours).
+- La borne votait deja les deux modes (vitre bleue : Monde ouvert, rouge : Defi).
+
+### 83.2 La Battue : seule la Proie brille, de pres, et elle se defend
+
+- **Plus de detourage general** : tout ce qui vivait brillait a travers les murs, en
+  blanc ou en rouge (monstres, animaux, villageois), et pendant un sanctuaire on ne
+  distinguait plus les gardes a tuer. `WeatherEffects.tickBattue` ne pose plus de lueur ;
+  `BattueScene.paint` ne range plus que la Proie, dans l'equipe d'or. Le critique
+  d'embuscade reste (le tambour le prepare) ; les monstres gardent toute leur vue (plus
+  de -70 % de portee de detection).
+- **La Proie ne brille qu'a moins de 24 blocs** d'un joueur (`BattueHunt.PREY_SIGHT`) ; son
+  nom ne s'affiche plus en permanence (il se lit en la visant) ; plus de losange a
+  l'ecran (`VeinMarkerClient` saute `KIND_PREY`). De loin, le seul repere est la ligne
+  « Proie » du panneau de gauche.
+- **Elle fuit et se defend** : 80 PV (60), fuite a 32 blocs et plus vite, PANIQUE quand
+  on la touche (PanicGoal) avec une poussee de Vitesse II a chaque coup, et une **garde
+  de quatre monstres** de la phase (vivier des sieges, equipement de phase, casque de cuir
+  contre le soleil de l'aube, sans chance de le lacher) qui la suit a dix blocs et
+  disparait a la fin.
+- **Plus de monstres, plus pres** (`Prowl`) : pendant la Battue, trois fois le vivier, a
+  24-48 blocs au lieu de 48-96, quatre poses par passe.
+- Les lueurs laissees par les anciennes Battues s'eteignent quand leur troncon se
+  recharge ; une Proie ou un garde d'une Battue finie ne revient pas (`BattueHunt.onJoin`).
+  Les yeux des Echos gardent leur lueur.
+
+### 83.3 L'Aurore : le Grand Froid
+
+Dehors (lumiere du ciel entiere) pendant l'Aurore, on gele : le gel de la neige poudreuse
+du jeu (`AuroreCold`), qui monte d'une tique toutes les deux -- quatorze secondes pour
+geler tout a fait --, avec le givre a l'ecran et le pas qui ralentit a mesure ; gele, un
+coeur toutes les deux secondes (le cuir ne protege pas). Sous un toit, sous terre, ou a
+trois blocs d'un feu (feu de camp allume, feu, lave, magma, four allume), il fond. Le
+souffle fume, et une ligne au-dessus de la barre d'objets dit ou s'abriter (a mi-gel,
+puis gele, au plus toutes les dix secondes). L'annonce : « Le Grand Froid tombe : dehors,
+on gele. Descendez miner, les filons se montrent. »
+
+### 83.4 La forge : les trois derniers crans
+
+- Chances vers +8, +9, +10 : **18, 9 et 4 %** (26, 18, 10) ; l'Heure Doree n'y ajoute plus
+  que **5 points** (15 avant, 15 toujours en dessous).
+- **Un echec vers +8, +9 ou +10 emporte le metal** (diamant, netherite, Arcencium) en plus
+  de la Pierre ; jusqu'a +7, il est toujours rendu. Message et infobulle le disent.
+- Simulation (20 000 montees ; `/arcencium upgrade sim 10` rejoue la meme loi en jeu) : un +10 en
+  partant de zero demandait 29 Pierres en mediane (18 a l'Heure Doree), 11 diamants,
+  2 netherite et 6 lingots d'Arcencium ; il en demande **47** (30 a l'Heure Doree), et en
+  moyenne **43 diamants, 22 lingots de netherite et 148 lingots d'Arcencium** (34, 14 et 67
+  a l'Heure Doree). Un +10 redevient un evenement ; si c'est trop, c'est la table ODDS et
+  `Upgrade.HARD_FROM` qu'on touche.
+
+### 83.5 Les coffres des sanctuaires suivent l'avancee
+
+Le palier d'un coffre venait de l'ordre de POSE des ancres : le premier sanctuaire visite
+pouvait etre le plus riche. Une seule table, `chests/sanctuary` (`tools/sanctuary_loot.py`),
+dont chaque tirage porte la condition `emeraldweapons:sanctuaries_taken`
+(`SanctuariesTakenCondition`) lue a l'ouverture, pour chaque joueur (Lootr) :
+
+- **aucun sanctuaire pris** : le palier MODESTE -- l'ancien palier 1, fer et or divises
+  par huit, diamant et Eclats du Destin par quatre ;
+- **un pris** : l'ancien palier 2 ; **deux ou plus** : l'ancien palier 3, le plus riche ;
+- un cycle fini du monde ouvert compte pour trois ; les anciennes tables
+  `sanctuary_tier1..3` renvoient a la nouvelle (coffres deja poses).
+
+Moyennes par coffre (banc, 400 tirages) : premier visite -- fer 0,83, or 0,26, diamant
+0,07, Eclats 1,78 (environ 23 fer, 8 or, 2 diamants et 50 Eclats par sanctuaire de 28
+coffres, contre environ 166, 66, 7 et 196) ; deuxieme -- diamant 3,4, Eclats 7,6 ;
+troisieme -- diamant 4,3, netherite 1,25, Arcencium 2,2. Les six Eclats garantis par
+coffre (12 sept.) etaient ecrits a la main dans les tables : le generateur les porte.
+
+### 83.6 Le bouclier d'Arcencium
+
+`arcencium_shield` (`ArcenciumShieldItem`) : la silhouette du bouclier du jeu en modele
+JSON (les boites de `ShieldModel` retournees comme le fait `scale(1, -1, -1)`, et les
+transformations d'affichage de `item/shield.json`), une texture de l'atlas des objets qui
+s'anime -- la matiere de l'armure (`refs/arcencium_material_ref.png`), fissures qui
+tournent, gemme prismatique au centre (`tools/shield_texture.py`). Recette : `A F A / A S A
+/ . A .` (cinq lingots, une fibre de Prisme, un bouclier ordinaire). Trois choses de plus
+que le bouclier de bois, aucune ecrasante :
+
+- **parade immediate** : il pare des qu'il est leve (le jeu attend cinq tiques ; l'usage
+  commence avec cinq tiques d'avance, `LivingEntityUseItemEvent.Start`) ;
+- **riposte prismatique** : un coup de melee pare renvoie un coeur de degats et une
+  poussee, au plus une fois par seconde ;
+- **deux fois plus solide** (672), repare a l'Arcencium. La hache le desarme comme les autres.
+
+### 83.7 Les ailes +20 : le vol d'elytre
+
+Au +20, apres le double saut, un second appui sur Saut en l'air deploie les ailes : le vrai
+vol d'elytre du jeu, fusees comprises (`ArtifactInputClient` demande `WINGS_FLIGHT`,
+`WingsFlight.start` verifie). Le jeu coupe ce vol a chaque tique si la piece de torse ne
+sait pas voler (`LivingEntity.updateFallFlying`) : `WingsFlight` le retablit a la fin de la
+tique du joueur tant qu'il est en l'air, et le laisse tomber au sol, dans l'eau, en selle
+ou en levitation. La chute reste effacee (+15). En vol, les ailes s'ouvrent en grand et
+planent sans battre. Le message du passage a +20 le dit.
+
+### 83.8 Les voitures : les chocs contre rien
+
+Enquete (agent, 22 sept.) : le seul son de choc (`VehicleImpacts.watch`) se jouait sur le
+SERVEUR, a partir du deplacement recu du conducteur, qui vaut zero sur une tique ou aucun
+paquet n'arrive (les horloges derivent) -- un choc en plein ciel, n'importe ou. Trois
+corrections :
+
+- **le client du conducteur entend les chocs de sa voiture** (`watchDriver`, sur la
+  vitesse de sa simulation) et les annonce (`VehicleCrashPayload`) ; le serveur verifie
+  qu'il conduit, borne la force et la cadence, et joue son et eclats pour tous ;
+- **cote serveur, la voiture d'un joueur ne bute plus contre les autres vehicules**
+  (`canCollideWith`) : le serveur revalidait chaque deplacement contre ses positions du
+  trafic, quelques blocs en avance sur ce que voit le client, et renvoyait la voiture en
+  arriere. Les chocs entre vehicules restent (`VehicleImpacts.vehicles`) ;
+- **le bord de la ville se sent** : le rideau de barrieres du bord de la grille arretait
+  net une voiture lancee. Dans les douze derniers blocs, la vitesse vers le rideau est
+  bornee a celle qui s'arrete pile avant lui (0,2 bloc par tique au carre, sous le seuil
+  d'un choc) et le rideau scintille devant la voiture (`VehiclePhysics.cushion`).
+
+Restent, connus et vrais : les toits pris dans la voie haute (bar du Hip Hog, plateformes
+des tours, bouts des jetees) se touchent reellement, sous le ventre de la voiture.
+
+### 83.9 Essais
+
+Nouveau banc `partie` (`ArcenciumAutotest`, serveur d'essai sans les mods du pack) :
+forge, coffres par avancee, ailes +20, bouclier (parade immediate, riposte, durabilite),
+Grand Froid (dehors, sous terre, feu de camp), Battue (lueur de pres, garde de quatre,
+fin, lueurs d'avant eteintes) : 16 OK. `parcours` : section 11 (agenda, equipe, reunion),
+48 OK. `vehicules` : aucun choc fantome sur 150 tiques de paquets en desordre, aucune
+collision serveur avec un autre vehicule, le coussin du bord en calcul.

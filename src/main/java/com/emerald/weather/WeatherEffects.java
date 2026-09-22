@@ -306,6 +306,7 @@ public final class WeatherEffects {
             // chaque Aurore reparle : ce qu'on a dit la fois d'avant est loin
             auroreTold.clear();
             auroreMined.clear();
+            AuroreCold.begin();
             veinScans.clear();
             guided.clear();
             veinJobs.clear();
@@ -582,22 +583,10 @@ public final class WeatherEffects {
         level.setDayTime(Math.min(23800L, 23000L + elapsed / 8L));
         // l'ambiance -- corbeaux, cor, hurlements, tambour, blanc/rouge -- vit
         // dans BattueScene ; ici ne reste que ce qui touche au jeu
+        // PLUS DE DETOURAGE GENERAL NI DE MONSTRES AVEUGLES (cahier §83) : « on voit tous
+        // les monstres, un peu comme un wall hack », et la chasse etait trop facile. Seule la
+        // Proie brille, de pres (BattueHunt) ; les monstres gardent toute leur vue.
         BattueScene.tick(level);
-        if (level.getGameTime() % 20 != 0) {
-            return;
-        }
-        for (ServerPlayer player : level.players()) {
-            for (Mob mob : level.getEntitiesOfClass(Mob.class,
-                    player.getBoundingBox().inflate(PRISME_RANGE), m -> m.isAlive())) {
-                if (mob.getTags().contains(BattueScene.TAG_RAVEN)) {
-                    continue;                          // les corbeaux ne sont pas du gibier
-                }
-                mob.setGlowingTag(true);
-                if (mob instanceof Enemy) {
-                    ensureModifier(mob, Attributes.FOLLOW_RANGE, BATTUE_ID, -0.7);
-                }
-            }
-        }
     }
 
     /**
@@ -611,8 +600,9 @@ public final class WeatherEffects {
     private static void unglow(ServerLevel level) {
         List<net.minecraft.world.entity.Entity> marked = new ArrayList<>();
         for (net.minecraft.world.entity.Entity entity : level.getEntities().getAll()) {
-            if (entity instanceof Mob mob && mob.hasGlowingTag()) {
-                marked.add(mob);
+            if (entity instanceof Mob mob && mob.hasGlowingTag()
+                    && !mob.getTags().contains(com.emerald.mine.Echoes.TAG_EYE)) {
+                marked.add(mob);                        // les yeux des Echos gardent leur lueur
             }
         }
         for (net.minecraft.world.entity.Entity entity : marked) {
@@ -742,6 +732,8 @@ public final class WeatherEffects {
      * Vitesse, et la faim qui descend deux fois moins vite.
      */
     private static void tickAurore(ServerLevel level) {
+        // LE GRAND FROID : dehors, on gele ; a l'abri, sous terre ou pres d'un feu, non (cahier §83)
+        AuroreCold.tick(level);
         com.emerald.mine.AuroreCaves.tick(level, WeatherManager.remainingTicks());
         advanceVeinScans(level);
         if (level.getGameTime() % 40 != 0) {

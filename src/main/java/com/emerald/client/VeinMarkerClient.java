@@ -60,6 +60,11 @@ public final class VeinMarkerClient {
         double half = Math.tan(Math.toRadians(mc.options.fov().get() / 2.0));
 
         for (int i : VeinHudClient.order()) {
+            // LA PROIE N'A PAS DE LOSANGE (cahier §83) : de loin, le panneau de gauche est le
+            // seul repere ; de pres, elle brille
+            if (VeinSyncPayload.kindAt(VeinHudClient.kinds(), i) == VeinSyncPayload.KIND_PREY) {
+                continue;
+            }
             BlockPos pos = BlockPos.of(veins.get(i));
             Vec3 delta = new Vec3(pos.getX() + 0.5 - eye.x, pos.getY() + 0.5 - eye.y,
                     pos.getZ() + 0.5 - eye.z);

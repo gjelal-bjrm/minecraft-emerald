@@ -440,22 +440,12 @@ public final class HavenArrival {
         }
         setRespawn(player, place);
 
-        BlockPos hq = rooms.hqCenter(HavenState.get(server).origin());
-        int dx = hq.getX() - feet.getX();
-        int dz = hq.getZ() - feet.getZ();
-        int distance = (int) Math.round(Math.sqrt((double) dx * dx + (double) dz * dz));
-        Component direction = Component.translatable(direction(dx, dz));
-        player.sendSystemMessage(Component.translatable("game.emeraldweapons.haven.arrival",
-                place.room().number(), distance, direction).withStyle(ChatFormatting.AQUA));
-        // la ligne au-dessus de la barre d'objets est remplacee par la barre d'objectif (HavenJourney)
-        // l'etat de la ville : envahie (on arrive en invasion) ou paisible, et le bouton qui la bascule
-        boolean invasion = com.emerald.haven.invasion.HavenInvasion.mode(server)
-                == com.emerald.haven.invasion.HavenInvasion.Mode.INVASION;
-        player.sendSystemMessage(Component.translatable(invasion
-                        ? "game.emeraldweapons.haven.invasion.arrival.on"
-                        : "game.emeraldweapons.haven.invasion.arrival.off")
-                .withStyle(invasion ? ChatFormatting.RED : ChatFormatting.GREEN));
-        com.emerald.haven.invasion.HavenInvasion.warnPeacefulDifficulty(player);
+        // PLUS DE MESSAGES A L'ARRIVEE (cahier §83) : « il y a un peu trop de messages dans le
+        // chat quand j'arrive, et ca masque le message au centre de l'ecran ». L'appartement et
+        // le prochain rendez-vous sont dans l'agenda ; l'etat de la ville se voit, et son titre
+        // le dit a la deuxieme arrivee. Seul l'avertissement de difficulte Paisible reste --
+        // rare, et il empeche l'invasion : il passe apres le titre.
+        com.emerald.haven.invasion.HavenInvasion.warnPeacefulDifficultyLater(player);
         // le parcours : le titre de la premiere arrivee, puis le guide vers le QG
         com.emerald.haven.journey.HavenJourney.onArrive(player);
     }

@@ -40,6 +40,11 @@ public class ArcenciumBowClient {
                     ResourceLocation.withDefaultNamespace("pulling"),
                     (stack, level, entity, seed) ->
                             entity != null && entity.isUsingItem() && entity.getUseItem() == stack ? 1.0F : 0.0F);
+            // le bouclier d'Arcencium leve : le jeu ne declare « blocking » que pour le sien
+            ItemProperties.register(ModItems.ARCENCIUM_SHIELD.get(),
+                    ResourceLocation.withDefaultNamespace("blocking"),
+                    (stack, level, entity, seed) ->
+                            entity != null && entity.isUsingItem() && entity.getUseItem() == stack ? 1.0F : 0.0F);
         });
     }
 }

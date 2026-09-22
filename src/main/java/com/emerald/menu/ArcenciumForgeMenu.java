@@ -177,16 +177,18 @@ public class ArcenciumForgeMenu extends AbstractContainerMenu {
         Upgrade.set(gear, after);
         this.input.setItem(SLOT_GEAR, gear);            // le nom a change : on le re-annonce
         boolean won = after > before;
+        boolean refunded = false;
         if (won) {
             com.emerald.util.Celebration.upgrade(player, after);
         } else {
-            Upgrade.refund(player, before);             // un rate ne coute que la Pierre
+            refunded = Upgrade.refund(player, before);  // jusqu'a +7, un rate ne coute que la Pierre
         }
         this.data.set(DATA_RESULT, won ? RESULT_WON : RESULT_KEPT);
         this.data.set(DATA_LEVEL, after);
         player.displayClientMessage(Component.translatable(
                         won ? "socket.emeraldweapons.upgrade.won"
-                                : "socket.emeraldweapons.upgrade.kept", after)
+                                : refunded ? "socket.emeraldweapons.upgrade.kept"
+                                : "socket.emeraldweapons.upgrade.kept.metal", after)
                 .withStyle(won ? net.minecraft.ChatFormatting.GREEN
                         : net.minecraft.ChatFormatting.GRAY), false);
         player.level().playSound(null, player.blockPosition(),

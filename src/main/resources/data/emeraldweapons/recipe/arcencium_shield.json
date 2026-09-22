@@ -1,0 +1,23 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "AFA",
+    "ASA",
+    " A "
+  ],
+  "key": {
+    "A": {
+      "item": "emeraldweapons:arcencium_ingot"
+    },
+    "F": {
+      "item": "emeraldweapons:prism_fiber"
+    },
+    "S": {
+      "item": "minecraft:shield"
+    }
+  },
+  "result": {
+    "id": "emeraldweapons:arcencium_shield"
+  }
+}

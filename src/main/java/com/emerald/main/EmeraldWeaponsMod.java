@@ -38,6 +38,7 @@ public class EmeraldWeaponsMod {
         com.emerald.menu.ModMenus.register(modEventBus);
         Jak3Registry.register(modEventBus);         // ← modBus → modEventBus
         com.emerald.world.structure.ModStructures.register(modEventBus);
+        com.emerald.game.SanctuariesTakenCondition.register(modEventBus);   // le butin suit l'avancee
         modEventBus.addListener(this::registerJak3Attributes); // ← modBus → modEventBus
     }
 

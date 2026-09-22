@@ -50,21 +50,23 @@ import java.util.UUID;
  *    sourd dont le tempo monte avec la proximite. Il se tait des qu'elle vous
  *    repere. On ENTEND l'embuscade se preparer.
  *
- * ET LE BLANC / ROUGE. Le detourage prend la couleur de l'etat de la
- * creature : BLANC, elle ne vous a pas pris pour cible -- le critique
- * d'embuscade est garanti ; ROUGE, elle vous a repere ; OR, c'est la Proie.
- * La couleur d'une lueur est celle de l'EQUIPE de scoreboard de l'entite :
- * trois equipes, et l'on y range les creatures chaque seconde. Gratuit, et
- * fiable sous n'importe quel pack de shaders.
+ * ET L'OR DE LA PROIE. La couleur d'une lueur est celle de l'EQUIPE de
+ * scoreboard de l'entite : la Proie est rangee dans l'equipe d'or. Gratuit, et
+ * fiable sous n'importe quel pack de shaders. Il y avait aussi le BLANC (elle
+ * ne vous a pas pris pour cible : le critique d'embuscade est garanti) et le
+ * ROUGE (elle vous a repere) pour tout ce qui vivait : retires le 22 sept.
+ * avec le detourage general (cahier §83). Le critique d'embuscade reste ; il
+ * ne se voit plus, il se prepare -- le tambour le dit.
  */
 public final class BattueScene {
 
     private static final org.slf4j.Logger LOGGER = com.mojang.logging.LogUtils.getLogger();
 
     public static final String TAG_RAVEN = "emeraldweapons_battue_raven";
-    /** Marque la Proie (etape suivante) : jamais rangee en blanc ni en rouge. */
+    /** Marque la Proie : la seule creature rangee dans une equipe (l'or). */
     public static final String TAG_PREY = "emeraldweapons_battue_prey";
 
+    /** Les equipes blanche et rouge d'avant le 22 sept. : on ne les vide plus qu'a la fin. */
     private static final String TEAM_WHITE = "arc_battue_white";
     private static final String TEAM_RED = "arc_battue_red";
     private static final String TEAM_GOLD = "arc_battue_gold";
@@ -319,29 +321,30 @@ public final class BattueScene {
 
     private static void teams(ServerLevel level) {
         ServerScoreboard board = level.getScoreboard();
-        team(board, TEAM_WHITE, ChatFormatting.WHITE);
-        team(board, TEAM_RED, ChatFormatting.RED);
-        team(board, TEAM_GOLD, ChatFormatting.GOLD,
-                net.minecraft.world.scores.Team.Visibility.ALWAYS);
+        // les equipes blanche et rouge d'avant se vident (clearTeams) ; seule l'or sert. Son
+        // nom reste permis : BattueHunt ne l'affiche plus en permanence, il ne se lit qu'en
+        // visant la Proie, de pres
+        team(board, TEAM_GOLD, ChatFormatting.GOLD, net.minecraft.world.scores.Team.Visibility.ALWAYS);
     }
 
-    /** Range chaque creature detouree dans l'equipe de son etat. */
+    /**
+     * LA PROIE SEULE DANS L'EQUIPE D'OR : sa lueur est doree. Plus d'equipes blanche et
+     * rouge pour le reste (cahier §83) : tout ce qui vivait brillait a travers les murs, les
+     * gardes d'un sanctuaire ne se distinguaient plus, et deux monstres d'une meme equipe
+     * se tenaient pour allies.
+     */
     private static void paint(ServerLevel level) {
         ServerScoreboard board = level.getScoreboard();
-        PlayerTeam white = team(board, TEAM_WHITE, ChatFormatting.WHITE);
-        PlayerTeam red = team(board, TEAM_RED, ChatFormatting.RED);
-        PlayerTeam gold = team(board, TEAM_GOLD, ChatFormatting.GOLD);
+        PlayerTeam gold = board.getPlayerTeam(TEAM_GOLD);
+        if (gold == null) {
+            gold = team(board, TEAM_GOLD, ChatFormatting.GOLD, net.minecraft.world.scores.Team.Visibility.ALWAYS);
+        }
         for (ServerPlayer player : level.players()) {
             for (Mob mob : level.getEntitiesOfClass(Mob.class,
-                    player.getBoundingBox().inflate(WeatherEffects.PRISME_RANGE), Mob::isAlive)) {
-                if (mob.getTags().contains(TAG_RAVEN)) {
-                    continue;                              // les corbeaux ne sont pas du gibier
-                }
-                PlayerTeam wanted = mob.getTags().contains(TAG_PREY) ? gold
-                        : mob.getTarget() instanceof Player ? red : white;
-                PlayerTeam current = board.getPlayersTeam(mob.getStringUUID());
-                if (current != wanted) {
-                    board.addPlayerToTeam(mob.getStringUUID(), wanted);
+                    player.getBoundingBox().inflate(WeatherEffects.PRISME_RANGE),
+                    m -> m.isAlive() && m.getTags().contains(TAG_PREY))) {
+                if (board.getPlayersTeam(mob.getStringUUID()) != gold) {
+                    board.addPlayerToTeam(mob.getStringUUID(), gold);
                 }
             }
         }

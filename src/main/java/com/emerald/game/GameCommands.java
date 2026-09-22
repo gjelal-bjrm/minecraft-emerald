@@ -1324,8 +1324,13 @@ public class GameCommands {
                 used++;
                 com.emerald.item.Upgrade.Cost cost = com.emerald.item.Upgrade.cost(level + 1);
                 String name = cost.material().getDescriptionId();
-                mats.merge(name, cost.amount(), Integer::sum);
-                level = com.emerald.item.Upgrade.attempt(level, random);
+                int after = com.emerald.item.Upgrade.attempt(level, random);
+                // le metal part a la reussite ; a l'echec, seulement vers +8, +9 et +10
+                // (Upgrade.refund) -- le reste revient au joueur
+                if (after > level || !com.emerald.item.Upgrade.refunds(level)) {
+                    mats.merge(name, cost.amount(), Integer::sum);
+                }
+                level = after;
             }
             stones[t] = used;
         }

@@ -53,6 +53,13 @@ public class ArtifactInputClient {
     /** En dessous, l'appui vient forcement du saut initial. */
     private static final int AIR_GRACE = 3;
 
+    /** Les conditions du jeu pour ouvrir une elytre (Player.tryToStartFallFlying), sans l'elytre. */
+    private static boolean canDeploy(LocalPlayer player) {
+        return !player.isFallFlying() && !player.isPassenger() && !player.isInWater()
+                && !player.isInLava() && !player.onClimbable()
+                && !player.hasEffect(net.minecraft.world.effect.MobEffects.LEVITATION);
+    }
+
     @EventBusSubscriber(modid = EmeraldWeaponsMod.MODID, value = Dist.CLIENT,
             bus = EventBusSubscriber.Bus.MOD)
     public static class Setup {
@@ -89,14 +96,22 @@ public class ArtifactInputClient {
             jumpAvailable = true;
         } else {
             airTicks++;
-            if (jumpDown && !jumpWasDown && jumpAvailable && airTicks > AIR_GRACE
-                    && (Artifacts.wearing(player, Artifact.BOTTES_D_ECLAIR)
-                        || WingsClient.level(player) >= com.emerald.specialization.Specialization.MAX)) {
+            boolean wings = WingsClient.level(player) >= com.emerald.specialization.Specialization.MAX;
+            boolean pressed = jumpDown && !jumpWasDown && airTicks > AIR_GRACE;
+            if (pressed && jumpAvailable
+                    && (Artifacts.wearing(player, Artifact.BOTTES_D_ECLAIR) || wings)) {
                 // un seul saut supplementaire par passage en l'air : sans ce
                 // verrou, maintenir la touche ferait voler
                 jumpAvailable = false;
                 PacketDistributor.sendToServer(new ArtifactActionPayload(
                         ArtifactActionPayload.Action.DOUBLE_JUMP));
+            } else if (pressed && !jumpAvailable && wings && canDeploy(player)) {
+                // LES AILES +20 SE DEPLOIENT : le second appui en l'air, apres le double
+                // saut, lance le vrai vol d'elytre. Le client le commence tout de suite (le
+                // mouvement est le sien), le serveur le verifie et le tient (WingsFlight).
+                player.startFallFlying();
+                PacketDistributor.sendToServer(new ArtifactActionPayload(
+                        ArtifactActionPayload.Action.WINGS_FLIGHT));
             }
         }
         jumpWasDown = jumpDown;

@@ -153,6 +153,11 @@ public final class Specialization {
             player.level().playSound(null, player.blockPosition(), SoundEvents.AMETHYST_BLOCK_CHIME,
                     SoundSource.PLAYERS, 1.2F, 0.8F);
             com.emerald.util.Celebration.specialization(player, target, points);
+            if (target == MAX) {
+                // ce que le palier ouvre : sans le dire, personne ne le trouve
+                player.sendSystemMessage(Component.translatable("wings.emeraldweapons.doublejump")
+                        .withStyle(ChatFormatting.AQUA));
+            }
             return Attempt.SUCCESS;
         }
         entry.failures++;

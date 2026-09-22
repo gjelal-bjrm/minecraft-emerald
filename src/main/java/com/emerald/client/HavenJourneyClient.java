@@ -78,7 +78,8 @@ public final class HavenJourneyClient {
             clear = 0;
             return;
         }
-        int wait = pending == HavenTitlePayload.REPRISE ? CLEAR_TICKS_REPRISE : CLEAR_TICKS;
+        int wait = pending == HavenTitlePayload.REPRISE || pending == HavenTitlePayload.REUNION
+                ? CLEAR_TICKS_REPRISE : CLEAR_TICKS;
         if (++clear < wait) {
             return;
         }
@@ -89,6 +90,7 @@ public final class HavenJourneyClient {
         String key = switch (kind) {
             case HavenTitlePayload.ENVAHIE -> "game.emeraldweapons.haven.parcours.envahie";
             case HavenTitlePayload.REPRISE -> "game.emeraldweapons.haven.parcours.reprise.titre";
+            case HavenTitlePayload.REUNION -> "game.emeraldweapons.haven.parcours.reunion.titre";
             default -> "game.emeraldweapons.haven.parcours.titre";
         };
         ChatFormatting top = switch (kind) {

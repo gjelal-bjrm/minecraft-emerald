@@ -43,6 +43,12 @@ public class ModItems {
             ITEMS.register("arcencium_bow", () ->
                     new ArcenciumBowItem(new Item.Properties().durability(1500)));
 
+    /** Le bouclier d'Arcencium : parade immediate et riposte prismatique (ArcenciumShieldItem, cahier §83). */
+    public static final DeferredItem<ArcenciumShieldItem> ARCENCIUM_SHIELD =
+            ITEMS.register("arcencium_shield", () -> new ArcenciumShieldItem(new Item.Properties()
+                    .durability(ArcenciumShieldItem.DURABILITY)
+                    .rarity(net.minecraft.world.item.Rarity.RARE)));
+
     /** Sceptre d'Arcencium -- la Concorde (voir ArcenciumScepterItem). */
     public static final DeferredItem<ArcenciumScepterItem> ARCENCIUM_SCEPTER =
             ITEMS.register("arcencium_scepter", () ->
@@ -143,6 +149,10 @@ public class ModItems {
     /** La Plume d'apparence : une apparence d'ailes, pour des ailes a +15 ou plus. */
     public static final DeferredItem<SkinFeatherItem> SKIN_FEATHER =
             ITEMS.register("skin_feather", () -> new SkinFeatherItem(new Item.Properties()));
+
+    /** L'agenda de Haven : les rendez-vous du parcours (HavenAgenda, cahier §83). */
+    public static final DeferredItem<HavenAgendaItem> HAVEN_AGENDA =
+            ITEMS.register("haven_agenda", () -> new HavenAgendaItem(new Item.Properties()));
 
     public static final DeferredItem<com.emerald.element.ElementStoneItem> ELEMENT_STONE =
             ITEMS.register("element_stone", () ->

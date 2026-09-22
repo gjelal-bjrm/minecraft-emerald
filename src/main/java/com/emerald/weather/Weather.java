@@ -43,10 +43,23 @@ public enum Weather {
      * pendant : deux minutes, le temps de repérer une bete detouree et de la
      * rejoindre, et la fenetre se refermait avant le combat. La Proie tient
      * une poursuite a elle seule ; il lui faut la duree d'une poursuite.
+     *
+     * PLUS DE DETOURAGE GENERAL (22 sept., cahier §83). Tout ce qui vivait se
+     * detourait a travers les murs, monstres, animaux et villageois : « un peu
+     * comme un wall hack », et pendant un sanctuaire on ne distinguait plus les
+     * gardes a tuer. Seule la Proie brille, en or, et de pres seulement ; de
+     * loin, le panneau de gauche est le seul repere. Les monstres gardent toute
+     * leur vue, viennent plus nombreux et plus pres, et la Proie fuit, panique
+     * et a une garde (BattueHunt).
      */
     BATTUE("battue", false, GamePhase.EXPLORATION, 300 * 20, 300 * 20, 0xC8C8C8),
     /**
      * L'AURORE : la fenetre de LA MINE. CINQ MINUTES, et c'est mesure.
+     *
+     * ET LE GRAND FROID (22 sept., cahier §83) : elle invitait sous terre sans rien
+     * reprocher a qui restait dehors. Dehors, desormais, on gele -- le gel de la neige
+     * poudreuse, jusqu'a blesser --, et l'on se rechauffe sous un toit, sous terre ou
+     * pres d'un feu (AuroreCold).
      *
      * Elle a dure deux a quatre minutes, et le joueur l'a jugee trop courte :
      * « il faut compter le temps pour descendre dans les bonnes couches, et

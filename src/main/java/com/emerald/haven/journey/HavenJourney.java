@@ -90,11 +90,23 @@ public final class HavenJourney {
     public static final int REPRISE_GOAL = 25;
 
     /** Ce que le guide demande au joueur. */
-    public enum Objective { QG, BORNE, ATTENTE, ARME, REPRISE }
+    public enum Objective { QG, EQUIPE, BORNE, ATTENTE, ARME, REPRISE }
 
     /** Un titre a jouer : a quelle tique, et lequel (HavenTitlePayload). */
     private record Title(long due, int kind) {
     }
+
+    /** Un message du chat differe : l'arrivee n'en envoie plus pendant son titre (cahier §83). */
+    private record Later(long due, Component text) {
+    }
+
+    /**
+     * Les messages de l'arrivee attendent que son titre soit passe : a la connexion, le chat
+     * se remplissait et cachait le titre (« il y a un peu trop de messages dans le chat quand
+     * j'arrive », 22 sept.). Titre : 40 tiques, puis trois secondes de monde a l'ecran chez le
+     * client, puis 130 tiques d'affichage.
+     */
+    public static final int AFTER_TITLE = 260;
 
     private static final Map<UUID, ServerBossEvent> BARS = new HashMap<>();
     private static final Map<UUID, Objective> SHOWN = new HashMap<>();
@@ -104,6 +116,10 @@ public final class HavenJourney {
     private static final Map<UUID, Double> START_DISTANCE = new HashMap<>();
     /** Les titres a jouer. */
     private static final Map<UUID, Title> TITLES = new HashMap<>();
+    /** Les messages differes, par joueur. */
+    private static final Map<UUID, List<Later>> LATER = new HashMap<>();
+    /** L'equipe s'est reunie au QG pendant ce lobby : le choix du mode a ete propose. */
+    private static boolean reunited;
     /** Les cobayes du banc : guides comme de vrais joueurs. */
     private static final Map<UUID, ServerPlayer> SUBJECTS = new LinkedHashMap<>();
 
@@ -122,6 +138,12 @@ public final class HavenJourney {
     public static void onArrive(ServerPlayer player) {
         HavenProgress.Entry entry = HavenProgress.get(player.getUUID());
         long due = player.level().getGameTime() + TITLE_DELAY;
+        // l'agenda, s'il manque ; a la premiere arrivee, il remplace le dictionnaire des animaux
+        boolean given = HavenAgenda.ensure(player, !entry.welcomed);
+        if (given) {
+            later(player, AFTER_TITLE, Component.translatable("game.emeraldweapons.haven.agenda.recu")
+                    .withStyle(ChatFormatting.GOLD));
+        }
         if (!entry.welcomed) {
             entry.welcomed = true;
             HavenProgress.save();
@@ -180,7 +202,8 @@ public final class HavenJourney {
     /**
      * L'objectif du joueur. Un vote fait : l'attente. Revenu d'un Defi sans le Scatter Gun :
      * son arme au QG ; puis, la ville envahie et les rues pas encore reprises : la reprise.
-     * Sinon le lot 1 : le QG, et au premier pas dans le Hip Hog, la borne.
+     * Sinon : le QG ; dans le Hip Hog, l'equipe a attendre ; l'equipe reunie, le choix du
+     * mode a la borne -- Defi ou Monde ouvert, sans pousser l'un plus que l'autre (§83).
      */
     public static Objective objective(ServerPlayer player) {
         UUID id = player.getUUID();
@@ -197,7 +220,36 @@ public final class HavenJourney {
         if (entry.departures > 0 && !entry.reprise && HavenInvasion.mode(player.server) == HavenInvasion.Mode.INVASION) {
             return Objective.REPRISE;
         }
-        return HQ_THIS_LOBBY.contains(id) ? Objective.BORNE : Objective.QG;
+        if (!HQ_THIS_LOBBY.contains(id)) {
+            return Objective.QG;
+        }
+        // L'EQUIPE EST ATTENDUE jusqu'a ce que chacun soit passe au QG dans ce lobby : qui en
+        // ressort ensuite garde la borne (un joueur seul qui revenait a son appartement lisait
+        // « l'equipe arrive (0 sur 1) »). Le message de la reunion, lui, attend que tous y
+        // soient ensemble (reunite).
+        return reachedHq(player.server) >= teamSize(player.server) ? Objective.BORNE : Objective.EQUIPE;
+    }
+
+    /** Les joueurs de l'equipe deja passes au QG dans ce lobby. */
+    public static int reachedHq(MinecraftServer server) {
+        int reached = 0;
+        for (ServerPlayer player : cityPlayers(server)) {
+            if (HQ_THIS_LOBBY.contains(player.getUUID())) {
+                reached++;
+            }
+        }
+        return reached;
+    }
+
+    /** Les joueurs de la ville que le guide suit (l'equipe). */
+    public static int teamSize(MinecraftServer server) {
+        return cityPlayers(server).size();
+    }
+
+    /** Un message du chat pour plus tard (dans tant de tiques). */
+    public static void later(ServerPlayer player, int delay, Component text) {
+        LATER.computeIfAbsent(player.getUUID(), k -> new ArrayList<>())
+                .add(new Later(player.level().getGameTime() + delay, text));
     }
 
     /** L'objectif affiche en ce moment, ou null s'il n'y a pas de barre. */
@@ -280,10 +332,12 @@ public final class HavenJourney {
             lobbySeen = lobby;
             HQ_THIS_LOBBY.clear();
             START_DISTANCE.clear();
+            reunited = false;
         }
         if (++ticks % EVERY != 0) {
             return;
         }
+        reunite(server);
         long now = server.overworld().getGameTime();
         List<ServerPlayer> players = new ArrayList<>(server.getPlayerList().getPlayers());
         players.addAll(SUBJECTS.values());
@@ -314,6 +368,19 @@ public final class HavenJourney {
             TITLES.remove(id);
             playTitle(player, due.kind());
         }
+        List<Later> waiting = LATER.get(id);
+        if (waiting != null) {
+            waiting.removeIf(message -> {
+                if (now < message.due()) {
+                    return false;
+                }
+                player.sendSystemMessage(message.text());
+                return true;
+            });
+            if (waiting.isEmpty()) {
+                LATER.remove(id);
+            }
+        }
         Objective objective = objective(player);
         ServerBossEvent bar = BARS.computeIfAbsent(id, k -> new ServerBossEvent(Component.empty(),
                 BossEvent.BossBarColor.BLUE, BossEvent.BossBarOverlay.PROGRESS));
@@ -326,9 +393,16 @@ public final class HavenJourney {
                 bar.setColor(BossEvent.BossBarColor.BLUE);
                 bar.setProgress((float) Math.max(0.0, Math.min(1.0, 1.0 - distance / start)));
             }
+            case EQUIPE -> {
+                int team = teamSize(player.server);
+                int in = reachedHq(player.server);
+                bar.setName(Component.translatable("game.emeraldweapons.haven.parcours.objectif.equipe", in, team));
+                bar.setColor(BossEvent.BossBarColor.YELLOW);
+                bar.setProgress(team == 0 ? 0.0F : Math.min(1.0F, in / (float) team));
+            }
             case BORNE -> {
                 bar.setName(Component.translatable("game.emeraldweapons.haven.parcours.objectif.borne"));
-                bar.setColor(BossEvent.BossBarColor.RED);
+                bar.setColor(BossEvent.BossBarColor.PURPLE);
                 bar.setProgress(1.0F);
             }
             case ATTENTE -> {
@@ -374,9 +448,43 @@ public final class HavenJourney {
             HavenProgress.save();
             award(player, "haven_qg");
         }
-        player.sendSystemMessage(Component.translatable("game.emeraldweapons.haven.parcours.qg")
-                .withStyle(ChatFormatting.GOLD));
+        // plus de message ici : la reunion de l'equipe dit ce qu'on vient faire (reunite)
         player.playNotifySound(SoundEvents.BELL_BLOCK, SoundSource.PLAYERS, 0.7F, 1.4F);
+    }
+
+    /**
+     * L'equipe au complet dans le Hip Hog : une fois par lobby, le titre « L'equipe est
+     * reunie » et, dans le chat, les deux modes a la borne -- le joueur voulait qu'on DEMANDE
+     * quel mode l'equipe veut, au lieu de pousser vers le Defi (22 sept.). Seul, on est reuni
+     * des qu'on entre.
+     */
+    private static void reunite(MinecraftServer server) {
+        if (reunited) {
+            return;
+        }
+        List<ServerPlayer> team = cityPlayers(server);
+        if (team.isEmpty()) {
+            return;
+        }
+        for (ServerPlayer player : team) {
+            if (!inHq(player) || HavenState.get(server).vote(player.getUUID()) != null) {
+                return;
+            }
+        }
+        reunited = true;
+        long now = server.overworld().getGameTime();
+        for (ServerPlayer player : team) {
+            // pas pendant un titre d'arrivee encore a jouer : il passe d'abord
+            Title pending = TITLES.get(player.getUUID());
+            long due = pending == null ? now : pending.due() + AFTER_TITLE;
+            if (pending == null) {
+                TITLES.put(player.getUUID(), new Title(now, HavenTitlePayload.REUNION));
+            }
+            LATER.computeIfAbsent(player.getUUID(), k -> new ArrayList<>())
+                    .add(new Later(due, Component.translatable("game.emeraldweapons.haven.parcours.reunion")
+                            .withStyle(ChatFormatting.AQUA)));
+        }
+        LOGGER.info("Parcours de Haven : l'equipe est reunie au QG ({} joueur(s)), choix du mode propose", team.size());
     }
 
     /**
@@ -534,8 +642,35 @@ public final class HavenJourney {
         SUBJECTS.put(player.getUUID(), player);
     }
 
+    /** Un cobaye du banc, guide comme un vrai joueur. */
+    static boolean isSubject(UUID player) {
+        return SUBJECTS.containsKey(player);
+    }
+
+    /** Pour le banc : les messages differes de ce joueur, dans l'ordre. */
+    static List<Component> laterTexts(UUID player) {
+        List<Component> out = new ArrayList<>();
+        for (Later later : LATER.getOrDefault(player, List.of())) {
+            out.add(later.text());
+        }
+        return out;
+    }
+
+    /** Pour le banc : l'echeance du premier message differe, ou -1. */
+    static long laterDue(UUID player) {
+        List<Later> list = LATER.get(player);
+        return list == null || list.isEmpty() ? -1L : list.get(0).due();
+    }
+
+    /** Pour le banc : la reunion de l'equipe, comme a la tique du serveur. */
+    static void reuniteForTest(MinecraftServer server) {
+        reunited = false;
+        reunite(server);
+    }
+
     static void removeSubject(UUID player) {
         SUBJECTS.remove(player);
+        LATER.remove(player);
         hide(player);
         TITLES.remove(player);
         HQ_THIS_LOBBY.remove(player);
@@ -544,6 +679,7 @@ public final class HavenJourney {
 
     /** Oublie ce que le lobby sait d'un joueur (remise a zero). */
     static void forgetLobby(UUID player) {
+        LATER.remove(player);
         HQ_THIS_LOBBY.remove(player);
         START_DISTANCE.remove(player);
         TITLES.remove(player);
@@ -572,6 +708,8 @@ public final class HavenJourney {
         HQ_THIS_LOBBY.clear();
         START_DISTANCE.clear();
         TITLES.clear();
+        LATER.clear();
+        reunited = false;
         SUBJECTS.clear();
         lobbySeen = Long.MIN_VALUE;
         ticks = 0;

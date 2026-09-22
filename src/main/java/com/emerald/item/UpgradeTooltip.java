@@ -54,7 +54,11 @@ public final class UpgradeTooltip {
                         Upgrade.odds(level, com.emerald.client.WeatherClient.current()
                                 == com.emerald.weather.Weather.HEURE_DOREE))
                 .withStyle(ChatFormatting.DARK_GRAY));
-        if (Upgrade.risky(level)) {
+        if (!Upgrade.refunds(level)) {
+            // vers +8, +9 et +10, un echec emporte le metal (Upgrade.refund)
+            event.getToolTip().add(Component.translatable("upgrade.emeraldweapons.risk.metal")
+                    .withStyle(ChatFormatting.DARK_RED));
+        } else if (Upgrade.risky(level)) {
             event.getToolTip().add(Component.translatable("upgrade.emeraldweapons.risk")
                     .withStyle(ChatFormatting.DARK_RED));
         }

@@ -23,6 +23,8 @@ public final class PhotoClient {
 
     private static final Set<String> TAKEN = new HashSet<>();
     private static boolean stopping;
+    /** Tiques du client avec l'ecran voulu ouvert (inventaire, livre). */
+    private static int screenTicks;
 
     private PhotoClient() {
     }
@@ -42,20 +44,39 @@ public final class PhotoClient {
         }
         String wanted = PhotoAutomaton.pending();
         if (wanted == null || mc.level == null) {
+            if (mc.options.keyUse.isDown() && !TAKEN.isEmpty()) {
+                mc.options.keyUse.setDown(false);
+            }
             return;
+        }
+        String hands = PhotoAutomaton.handsView();
+        // l'inventaire et le livre se prennent OUVERTS : leur ecran ne retient pas la prise
+        boolean wantsScreen = "inventaire".equals(hands) || "livre".equals(hands);
+        if (hands != null && mc.player != null) {
+            // LA PRISE EN MAIN : la camera, le clic tenu (bouclier leve), l'inventaire
+            boolean front = hands.startsWith("face");
+            mc.options.setCameraType(front ? net.minecraft.client.CameraType.THIRD_PERSON_FRONT
+                    : net.minecraft.client.CameraType.FIRST_PERSON);
+            mc.options.keyUse.setDown(hands.endsWith("leve"));
+            if ("inventaire".equals(hands) && mc.screen == null) {
+                mc.setScreen(new net.minecraft.client.gui.screens.inventory.InventoryScreen(mc.player));
+            }
         }
         // le terrain autour est-il entierement dessine ? (Sodium repond ici aussi) -- et le troncon
         // du joueur est-il la ? Juste apres un long teleport, rien n'est encore arrive : « tout est
         // dessine » repondait oui sous « Chargement du terrain » (photo de l'arche du 21 sept.)
         boolean here = mc.player != null && mc.level.getChunkSource().hasChunk(mc.player.getBlockX() >> 4,
                 mc.player.getBlockZ() >> 4);
-        PhotoAutomaton.clientTerrain(here && mc.screen == null && mc.levelRenderer.hasRenderedAllSections());
+        PhotoAutomaton.clientTerrain(here && (mc.screen == null || wantsScreen)
+                && mc.levelRenderer.hasRenderedAllSections());
         if (TAKEN.add(wanted)) {
             return;                       // premiere tique avec cette prise : on laisse le serveur la preparer
         }
         if (PhotoAutomaton.pendingGui() && !PhotoAutomaton.overdue()) {
-            // l'interface a l'ecran : jamais un ecran de chargement, et le titre d'accueil pendant qu'il se voit
-            if (mc.screen != null) {
+            // l'interface a l'ecran : jamais un ecran de chargement, et le titre d'accueil pendant
+            // qu'il se voit ; l'inventaire et le livre, eux, se prennent ouverts
+            if (wantsScreen ? mc.screen == null
+                    || mc.screen instanceof net.minecraft.client.gui.screens.ReceivingLevelScreen : mc.screen != null) {
                 return;
             }
             int age = HavenJourneyClient.titleAge();
@@ -63,9 +84,16 @@ public final class PhotoClient {
                 return;
             }
         }
-        if (PhotoAutomaton.readyToShoot()) {
+        // UN ECRAN QUI MET LE JEU EN PAUSE (le livre) arrete le serveur integre : il ne compte
+        // plus ses tiques et la prise attendrait toujours. Ecran ouvert depuis une seconde : on la prend.
+        screenTicks = wantsScreen && mc.screen != null ? screenTicks + 1 : 0;
+        if (PhotoAutomaton.readyToShoot() || screenTicks >= 20) {
+            screenTicks = 0;
             Screenshot.grab(mc.gameDirectory, wanted + ".png", mc.getMainRenderTarget(), message -> { });
             PhotoAutomaton.taken(wanted);
+            if (wantsScreen && mc.screen != null) {
+                mc.setScreen(null);                       // la prise suivante part sans ecran
+            }
         }
     }
 }

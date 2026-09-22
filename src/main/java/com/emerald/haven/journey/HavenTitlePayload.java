@@ -27,6 +27,8 @@ public record HavenTitlePayload(int kind) implements CustomPacketPayload {
     public static final int ENVAHIE = 1;
     /** Les rues reprises : « Les rues sont a vous ». Joue en pleine partie, sans ecran de chargement. */
     public static final int REPRISE = 2;
+    /** L'equipe reunie au QG : « L'equipe est reunie » -- quel mode voulez-vous ? (§83). */
+    public static final int REUNION = 3;
 
     public static final CustomPacketPayload.Type<HavenTitlePayload> TYPE =
             new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(EmeraldWeaponsMod.MODID, "haven_title"));

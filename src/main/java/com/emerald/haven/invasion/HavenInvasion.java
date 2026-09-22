@@ -464,6 +464,15 @@ public final class HavenInvasion {
      * ne peut pas avoir lieu. On le dit au joueur, a l'arrivee et au bouton ; seul le
      * journal le disait (spawn), et un joueur ne lit pas le journal.
      */
+    /** Le meme avertissement, apres le titre de l'arrivee (HavenJourney differe le message). */
+    public static void warnPeacefulDifficultyLater(ServerPlayer player) {
+        if (player.server.getWorldData().getDifficulty() == Difficulty.PEACEFUL) {
+            HavenJourney.later(player, HavenJourney.AFTER_TITLE + 60,
+                    Component.translatable("game.emeraldweapons.haven.invasion.peaceful_difficulty")
+                            .withStyle(ChatFormatting.YELLOW));
+        }
+    }
+
     public static void warnPeacefulDifficulty(ServerPlayer player) {
         if (player.server.getWorldData().getDifficulty() == Difficulty.PEACEFUL) {
             player.sendSystemMessage(Component.translatable("game.emeraldweapons.haven.invasion.peaceful_difficulty")
