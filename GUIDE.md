@@ -374,6 +374,20 @@ essayer ; elles se gagneront plus tard auprès des personnages de la ville) :
   le bouton, les places des voitures et des motos, le bord de la ville, et tout ce
   qui est sous la surface de l'eau. À la main, rien ne se casse.
 
+### L'équipement du dehors, en ville
+
+Dans Haven, seules comptent les armes de la ville. Les niveaux héroïques, les
+statistiques et tout l'équipement gagné dehors **n'y changent rien** :
+
+- les armes du dehors — épée, arc, sceptre, trident, sorts, potions lancées — **ne
+  blessent personne** ; le **poing** reste, mais d'un seul point, sans aucun bonus ;
+- l'**armure ne protège plus**, ni ses enchantements, et le **bouclier ne pare pas** ;
+- les **artefacts** et les **runes** de l'équipement se taisent ;
+- les **ailes** restent entières : double saut, vol plané et vol de l'élytre. Les
+  cœurs gagnés aux niveaux héroïques restent aussi.
+
+Le Morph Gun, lui, n'a jamais tenu compte des bonus du dehors.
+
 ---
 
 ## 2. Le déroulé
@@ -546,6 +560,15 @@ Prisme, un bouclier ordinaire). Par rapport au bouclier de bois :
 - **deux fois plus solide**, et il se répare avec des lingots d'Arcencium. La hache le
   désarme comme les autres.
 
+### L'usure
+
+**Un équipement ne se casse jamais** : arme, pièce d'armure ou bouclier, du mode, du
+jeu ou d'un autre mod. Son usure s'arrête à un point de la fin ; il est alors **usé**
+(un message le dit, et son infobulle en rouge) et ne garde que **le dixième de sa
+force** : le dixième de ses dégâts, de son armure, de ce qu'il pare, et le bouclier
+d'Arcencium ne riposte plus. **Réparé** — enclume, raccommodage —, il retrouve tout
+d'un coup. Les outils (pioche, pelle, houe) s'usent et se cassent comme avant.
+
 ### La Forge
 
 Une Pierre de Forge et le métal du cran par tentative. Un échec ne fait jamais
@@ -556,9 +579,20 @@ aux crans d'avant, **5 seulement** à ces trois-là.
 ### Les ailes
 
 La spécialisation fait pousser des ailes : dès +5, maintenir Saut en l'air freine la
-chute, puis on plane. À **+20**, un appui sur Saut en l'air donne le **double saut**, et
-un appui de plus **déploie les ailes** : le vol de l'élytre, piqués, remontées sur
-l'élan et fusées comprises. On se pose au sol, dans l'eau ou en montant en selle.
+chute, puis on plane. Elles grandissent jusqu'à +15, puis encore d'un cinquième
+jusqu'à +20. Elles vivent : en battant, elles plient, la pointe en retard sur
+l'épaule, et le bout des plumes frissonne, plus fort en vol. À **+20**, un appui sur Saut en l'air donne le **double saut**, et un
+appui de plus **déploie les ailes** : le vol de l'élytre, piqués, remontées sur
+l'élan et fusées comprises, avec **un élan au départ**, une demi-fusée. On se pose au
+sol, dans l'eau ou en montant en selle. Les ailes +20 portent aussi les **reflets
+d'Arcencium** sur leur bord — un fin liseré où glissent les sept couleurs, qui luit
+doucement la nuit ; la peinture des ailes garde ses couleurs — et, en vol, deux
+**rubans de lumière** suivent le bout des ailes.
+
+**Les apparences** (dès +15, clic droit avec une Plume d'ailes) ne s'obtiennent qu'en
+récompense : **une pour chaque joueur quand le Défi est gagné**, au hasard parmi
+celles qu'il n'a pas encore, et **3 % de chances** pour chacun à la prise d'un
+sanctuaire. Aucun monstre ni aucun coffre n'en donne.
 
 ### Les artefacts
 
@@ -870,7 +904,7 @@ Sur un serveur d'essai (`run-server`), chacun écrit son rapport puis arrête le
 - `EMERALDWEAPONS_AUTOTEST=parcours ./gradlew runServer` : le parcours (fiche sur disque, arme qui suit les formes du joueur, ville paisible, bouton verrouillé, titre et objectifs du guide ; puis le lot 2 : râtelier du QG, deuxième arrivée envahie, reprise des rues, retour après la défaite, porte de la victoire ; puis les transports : les huit stations, l'arche et sa recharge, le portail des tours ; puis l'agenda, l'équipe attendue au QG et la réunion), rapport `run-server/parcours_autotest.txt` ;
 - `EMERALDWEAPONS_AUTOTEST=faune ./gradlew runServer` : les animaux de la ville (carte de l'eau, places de chaque espèce, plafonds, dangers tenus au large et agressifs au large seulement, piqûre des méduses, armée de mouettes, compagnons à l'invasion), rapport `run-server/faune_autotest.txt` ; avant, `python tools/dev_mods.py --server alexsmobs aquaculture livingthings`, après, `python tools/dev_mods.py --server --clean` ;
 - `EMERALDWEAPONS_AUTOTEST=quetes ./gradlew runServer` : les quêtes des héros (le livre des quêtes, les six héros et le bateau du Pêcheur, les cartes du chat et leurs jetons, l'épreuve de tir jusqu'à la médaille, la pêche au poids, les coffres engloutis, la chasse aux mouettes, la patrouille, la tenue du port et l'invasion qui va avec, les orbes cachés, la boutique de Tess et ses sceaux, puis le ménage), rapport `run-server/quetes_autotest.txt` ; avant, `python tools/dev_mods.py --server alexsmobs aquaculture livingthings`, après, `python tools/dev_mods.py --server --clean` ;
-- `EMERALDWEAPONS_AUTOTEST=partie ./gradlew runServer` : la partie (chances de la Forge et métal perdu, coffres des sanctuaires selon l'avancée, vol d'élytre des ailes +20, bouclier d'Arcencium, Grand Froid de l'Aurore, Proie de la Battue et sa garde, arches, cycle d'ouverture des météos, Éclipse, bestiaires, garnisons et matières des trois sanctuaires, arène du boss), rapport `run-server/partie_autotest.txt`. Les épreuves 9 à 12 demandent des mods au serveur des bancs : `python tools/dev_mods.py --server graveyard alexsmobs twilightforest cataclysm irons_spellbooks undergarden eternal_starlight creeperoverhaul variantsandventures lionfishapi resourcefullib`, puis `--server --clean`.
+- `EMERALDWEAPONS_AUTOTEST=partie ./gradlew runServer` : la partie (chances de la Forge et métal perdu, coffres des sanctuaires selon l'avancée, vol d'élytre des ailes +20, bouclier d'Arcencium, plumes d'ailes en récompense, usure sans casse, Grand Froid de l'Aurore, Proie de la Battue et sa garde, arches, cycle d'ouverture des météos, Éclipse, bestiaires, garnisons et matières des trois sanctuaires, arène du boss), rapport `run-server/partie_autotest.txt`. Les épreuves 9 à 12 demandent des mods au serveur des bancs : `python tools/dev_mods.py --server graveyard alexsmobs twilightforest cataclysm irons_spellbooks undergarden eternal_starlight creeperoverhaul variantsandventures lionfishapi resourcefullib`, puis `--server --clean`.
 
 Pour regarder un terrain (arbres, biomes) sans jouer : le run `photos` entre dans le monde
 jetable `run/saves/photos` ; avec `EMERALDWEAPONS_PHOTOS="nom@biome;nom@biome@hauteur"` (et

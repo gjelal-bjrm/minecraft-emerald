@@ -89,15 +89,8 @@ public final class RuneDrops {
                     new ItemStack(com.emerald.item.ModItems.ARCENCIUM_FEATHER.get(),
                             health >= 150.0 ? 1 + random.nextInt(3) : 1)));
         }
-        // LA PLUME D'APPARENCE : sur les puissants seulement, selon leur element
-        // et la meteo du moment (voir SkinFeatherItem.pickDrop). Jamais le Rubis.
-        if (health >= 300.0 && random.nextDouble() < 0.35) {
-            event.getDrops().add(new net.minecraft.world.entity.item.ItemEntity(
-                    victim.level(), victim.getX(), victim.getY(), victim.getZ(),
-                    com.emerald.item.SkinFeatherItem.stack(
-                            com.emerald.item.SkinFeatherItem.pickDrop(victim, random),
-                            com.emerald.item.ModItems.SKIN_FEATHER.get())));
-        }
+        // (La Plume d'apparence ne tombe plus d'aucun monstre : c'est une
+        // recompense du Defi et des sanctuaires, voir SkinFeatherItem.)
 
         // LE CRISTAL DE L'ELEMENT DE LA BETE, bien plus souvent que la rune.
         //

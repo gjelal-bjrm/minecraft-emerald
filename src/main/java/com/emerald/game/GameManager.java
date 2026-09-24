@@ -1133,6 +1133,11 @@ public class GameManager {
         int reward = held <= 1 ? 10 : 12;
         for (ServerPlayer player : level.players()) {
             com.emerald.hero.HeroEvents.awardLevels(player, reward);
+            // et parfois une Plume d'ailes (cahier §96) : trois chances sur cent, pour chacun
+            if (level.random.nextFloat() < com.emerald.item.SkinFeatherItem.SANCTUARY_CHANCE) {
+                com.emerald.item.SkinFeatherItem.reward(player, com.emerald.item.SkinFeatherItem.pickReward(
+                        player, level.random), "game.emeraldweapons.wingskin.sanctuary");
+            }
         }
 
         if (state.anchorsActive() >= 3 && state.finale().equals(BlockPos.ZERO)) {

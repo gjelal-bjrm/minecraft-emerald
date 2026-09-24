@@ -53,6 +53,14 @@ public class ArtifactInputClient {
     /** En dessous, l'appui vient forcement du saut initial. */
     private static final int AIR_GRACE = 3;
 
+    /**
+     * LA POUSSEE D'ENVOL des ailes +20 (cahier §96, choix du joueur) : les premieres tiques du vol
+     * d'elytre, l'elan d'une fusee du jeu -- la moitie de sa duree, une demi-fusee. Le mouvement est
+     * celui du client : c'est lui qui pousse.
+     */
+    private static final int BOOST_TICKS = 8;
+    private static int boost;
+
     /** Les conditions du jeu pour ouvrir une elytre (Player.tryToStartFallFlying), sans l'elytre. */
     private static boolean canDeploy(LocalPlayer player) {
         return !player.isFallFlying() && !player.isPassenger() && !player.isInWater()
@@ -110,10 +118,21 @@ public class ArtifactInputClient {
                 // saut, lance le vrai vol d'elytre. Le client le commence tout de suite (le
                 // mouvement est le sien), le serveur le verifie et le tient (WingsFlight).
                 player.startFallFlying();
+                boost = BOOST_TICKS;
                 PacketDistributor.sendToServer(new ArtifactActionPayload(
                         ArtifactActionPayload.Action.WINGS_FLIGHT));
             }
         }
         jumpWasDown = jumpDown;
+        if (boost > 0) {
+            boost = player.isFallFlying() ? boost - 1 : 0;
+            if (player.isFallFlying()) {
+                // la formule de FireworkRocketEntity pour un porteur d'elytre
+                net.minecraft.world.phys.Vec3 look = player.getLookAngle();
+                net.minecraft.world.phys.Vec3 motion = player.getDeltaMovement();
+                player.setDeltaMovement(motion.add(look.x * 0.1 + (look.x * 1.5 - motion.x) * 0.5,
+                        look.y * 0.1 + (look.y * 1.5 - motion.y) * 0.5, look.z * 0.1 + (look.z * 1.5 - motion.z) * 0.5));
+            }
+        }
     }
 }

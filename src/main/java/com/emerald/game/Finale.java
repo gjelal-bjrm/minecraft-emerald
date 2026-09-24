@@ -610,9 +610,9 @@ public final class Finale {
         String time = clock(state.elapsed(level));
         // EN MONDE OUVERT, LA VICTOIRE N'EST PAS UNE FIN.
         //
-        // On garde tout ce qui la rend bonne -- le titre, les feux, la Plume du
-        // Souverain Astral -- et on retire la seule chose qui n'a pas de sens
-        // ici : l'ecran de fin. La partie ne se ferme pas, elle repart.
+        // On garde tout ce qui la rend bonne -- le titre, les feux -- et on retire
+        // la seule chose qui n'a pas de sens ici : l'ecran de fin. La partie ne se
+        // ferme pas, elle repart. (La Plume d'ailes est la recompense du Defi.)
         boolean endless = !state.timed();
         if (state.status() == GameState.Status.RUNNING && !endless) {
             state.finish(true);
@@ -633,7 +633,9 @@ public final class Finale {
                         player.getY() + 1.0, player.getZ() + (level.random.nextDouble() - 0.5) * 6.0);
             }
         }
-        awardAstralWings(level);
+        if (!endless) {
+            awardWingSkins(level);
+        }
         dissolveGuards(level);
         boolean haven = !endless && com.emerald.haven.journey.HavenReturn.onVictory(level, where);
         hintAt = endless || haven ? -1L : level.getGameTime() + 100L;
@@ -641,29 +643,15 @@ public final class Finale {
     }
 
     /**
-     * LA PLUME DU SOUVERAIN ASTRAL, et la seule facon de l'avoir.
-     *
-     * Elle ne tombe que du boss final, et seulement si les TROIS sanctuaires
-     * sont tombes -- une victoire obtenue en courant droit a l'arene ne la
-     * donne pas. Une chance sur trois : il faut donc gagner plusieurs fois, ce
-     * qui convient a des ailes qui se gardent entre les parties.
+     * LA RECOMPENSE DU DEFI REUSSI (cahier §96) : une Plume d'ailes pour chaque joueur, au
+     * hasard parmi les apparences qu'il n'a pas encore. Avec les sanctuaires (trois chances
+     * sur cent), c'est la seule facon d'en avoir. Le monde ouvert n'en donne pas a la
+     * victoire : sa partie ne finit pas, elle repart.
      */
-    private static void awardAstralWings(ServerLevel level) {
-        GameState state = GameState.get(level);
-        if (state.anchorsActive() < 3) {
-            return;
-        }
-        if (level.random.nextInt(3) != 0) {
-            return;
-        }
+    public static void awardWingSkins(ServerLevel level) {
         for (ServerPlayer player : level.players()) {
-            player.getInventory().placeItemBackInInventory(
-                    com.emerald.item.SkinFeatherItem.stack(
-                            com.emerald.specialization.WingSkin.SOUVERAIN_ASTRAL,
-                            com.emerald.item.ModItems.SKIN_FEATHER.get()));
-            player.sendSystemMessage(net.minecraft.network.chat.Component.translatable(
-                            "game.emeraldweapons.astral.won")
-                    .withStyle(net.minecraft.ChatFormatting.LIGHT_PURPLE));
+            com.emerald.item.SkinFeatherItem.reward(player,
+                    com.emerald.item.SkinFeatherItem.pickReward(player, level.random), "game.emeraldweapons.wingskin.won");
         }
     }
 

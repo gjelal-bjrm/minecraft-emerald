@@ -14,8 +14,8 @@ import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
-import net.minecraft.world.entity.EquipmentSlotGroup;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.item.ItemEntity;
@@ -28,13 +28,13 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.event.ItemAttributeModifierEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.entity.player.ItemTooltipEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 
+import javax.annotation.Nullable;
 import java.util.List;
 
 /**
@@ -55,8 +55,8 @@ public class ArtifactEvents {
         return ResourceLocation.fromNamespaceAndPath(EmeraldWeaponsMod.MODID, path);
     }
 
-    private static final ResourceLocation SPEED_ID = id("artifact_semelle");
-    private static final ResourceLocation KNOCKBACK_ID = id("artifact_lest");
+    private static final ResourceLocation SPEED_ID = id("artifact_semelle_porteur");
+    private static final ResourceLocation KNOCKBACK_ID = id("artifact_lest_porteur");
 
     private static final String TAG_PLATE_USED = "ArcenciumPlateUsed";
     private static final String TAG_RESONANCE = "ArcenciumResonance";
@@ -80,23 +80,33 @@ public class ArtifactEvents {
 
     // --------------------------------------------------------- bonus permanents
 
-    @SubscribeEvent
-    public static void onAttributes(ItemAttributeModifierEvent event) {
-        Artifact artifact = Artifacts.of(event.getItemStack());
-        if (artifact == null) {
+    /**
+     * La Semelle de Prisme (+20 % de vitesse) et le Lest de Gangue (immunite au recul) : des
+     * attributs du PORTEUR, renouveles toutes les demi-secondes, et non plus de la piece. Une
+     * piece ne sait pas qui la porte ; or en ville l'equipement du dehors ne donne rien (cahier
+     * §96) -- Artifacts.wearing le dit, pour eux comme pour les autres.
+     */
+    private static void permanentBonuses(Player player) {
+        bonus(player.getAttribute(Attributes.MOVEMENT_SPEED), SPEED_ID,
+                Artifacts.wearing(player, Artifact.SEMELLE_DE_PRISME) ? 0.20 : 0.0,
+                AttributeModifier.Operation.ADD_MULTIPLIED_BASE);
+        bonus(player.getAttribute(Attributes.KNOCKBACK_RESISTANCE), KNOCKBACK_ID,
+                Artifacts.wearing(player, Artifact.LEST_DE_GANGUE) ? 1.0 : 0.0,
+                AttributeModifier.Operation.ADD_VALUE);
+    }
+
+    private static void bonus(@Nullable AttributeInstance attribute, ResourceLocation id, double value,
+                              AttributeModifier.Operation operation) {
+        if (attribute == null) {
             return;
         }
-        switch (artifact) {
-            case SEMELLE_DE_PRISME -> event.addModifier(Attributes.MOVEMENT_SPEED,
-                    new AttributeModifier(SPEED_ID, 0.20,
-                            AttributeModifier.Operation.ADD_MULTIPLIED_BASE),
-                    EquipmentSlotGroup.FEET);
-            case LEST_DE_GANGUE -> event.addModifier(Attributes.KNOCKBACK_RESISTANCE,
-                    new AttributeModifier(KNOCKBACK_ID, 1.0,
-                            AttributeModifier.Operation.ADD_VALUE),
-                    EquipmentSlotGroup.LEGS);
-            default -> {
-            }
+        AttributeModifier had = attribute.getModifier(id);
+        if (had != null && had.amount() == value) {
+            return;
+        }
+        attribute.removeModifier(id);
+        if (value != 0.0) {
+            attribute.addTransientModifier(new AttributeModifier(id, value, operation));
         }
     }
 
@@ -118,6 +128,7 @@ public class ArtifactEvents {
         if (player.tickCount % 10 != 0) {
             return;
         }
+        permanentBonuses(player);
         if (Artifacts.wearing(player, Artifact.LENTILLE_D_AURORE)) {
             player.addEffect(effect(MobEffects.NIGHT_VISION, 400, 0));
         }

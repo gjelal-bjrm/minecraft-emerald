@@ -30,6 +30,8 @@ public class Jak3ClientEvents {
         event.registerReloadListener(com.emerald.jak.vehicle.JakVehicleModels.INSTANCE);
         // les portes de Jak 3 (cahier §95) : triangles et animation cuits par tools/jak_door.py
         event.registerReloadListener(HavenDoorModels.INSTANCE);
+        // les masques des ailes, pour les reflets des ailes +20 (cahier §96)
+        event.registerReloadListener(WingMasks.INSTANCE);
     }
 
     @SubscribeEvent

@@ -2,10 +2,13 @@ package com.emerald.game;
 
 import com.emerald.haven.HavenAutotest;
 import com.emerald.item.ArcenciumShieldItem;
+import com.emerald.item.GearWear;
 import com.emerald.item.ModItems;
+import com.emerald.item.SkinFeatherItem;
 import com.emerald.item.Upgrade;
 import com.emerald.main.EmeraldWeaponsMod;
 import com.emerald.specialization.Specialization;
+import com.emerald.specialization.WingSkin;
 import com.emerald.specialization.WingsFlight;
 import com.emerald.weather.AuroreCold;
 import com.emerald.weather.BattueHunt;
@@ -123,6 +126,8 @@ public final class ArcenciumAutotest {
             loot(server, level, spawn);
             wings(level, spawn);
             shield(level, spawn);
+            skins(level, spawn);
+            wear(level, spawn);
             cold(level, spawn);
             battue(level, spawn);
             arches(level, spawn);
@@ -763,6 +768,127 @@ public final class ArcenciumAutotest {
                 afterFirst < before && blocker.getHealth() == blockerBefore && afterSecond == afterFirst,
                 String.format(Locale.ROOT, "assaillant %.1f -> %.1f -> %.1f, porteur %.1f -> %.1f",
                         before, afterFirst, afterSecond, blockerBefore, blocker.getHealth()));
+    }
+
+    // ============================================================ 13. les plumes d'ailes
+
+    /** Cahier §96 : la plume d'apparence est une recompense, au hasard parmi celles qui manquent. */
+    private static void skins(ServerLevel level, BlockPos spawn) {
+        line("--- les plumes d'ailes : une recompense, plus un butin (cahier §96)");
+        FakePlayer fake = fake(level, "plumes", surface(level, spawn.getX() + 9, spawn.getZ() - 9));
+        com.emerald.specialization.SpecializationStore.Entry entry =
+                com.emerald.specialization.SpecializationStore.get(fake.getUUID());
+        entry.unlocked.clear();
+        try {
+            java.util.Set<WingSkin> drawn = java.util.EnumSet.noneOf(WingSkin.class);
+            for (int i = 0; i < 400; i++) {
+                drawn.add(SkinFeatherItem.pickReward(fake, level.random));
+            }
+            boolean fair = !drawn.contains(WingSkin.PRISMATIQUES) && drawn.size() == WingSkin.values().length - 1;
+            // toutes debloquees sauf le Rubis : c'est lui qui vient
+            for (WingSkin skin : WingSkin.values()) {
+                if (skin != WingSkin.RUBIS) {
+                    entry.unlocked.add(skin.id());
+                }
+            }
+            boolean missingFirst = true;
+            for (int i = 0; i < 50; i++) {
+                missingFirst &= SkinFeatherItem.pickReward(fake, level.random) == WingSkin.RUBIS;
+            }
+            SkinFeatherItem.reward(fake, WingSkin.RUBIS, "game.emeraldweapons.wingskin.won");
+            int feathers = 0;
+            for (ItemStack stack : fake.getInventory().items) {
+                if (stack.is(ModItems.SKIN_FEATHER.get()) && SkinFeatherItem.skinOf(stack) == WingSkin.RUBIS) {
+                    feathers += stack.getCount();
+                }
+            }
+            check("au hasard parmi les dix apparences, jamais le Prismatique ; d'abord celles qu'on n'a pas ;"
+                            + " la plume arrive dans le sac",
+                    fair && missingFirst && feathers == 1,
+                    "tirees " + drawn.size() + ", la manquante d'abord " + missingFirst + ", plumes " + feathers);
+            check("a la prise d'un sanctuaire : trois chances sur cent pour chacun",
+                    SkinFeatherItem.SANCTUARY_CHANCE == 0.03F, String.valueOf(SkinFeatherItem.SANCTUARY_CHANCE));
+        } finally {
+            entry.unlocked.clear();
+        }
+    }
+
+    // ============================================================ 14. l'usure sans casse
+
+    /** Cahier §96 : un equipement ne se casse plus ; use au bout, il n'a plus que le dixieme de sa force. */
+    private static void wear(ServerLevel level, BlockPos spawn) {
+        line("--- l'usure sans casse (cahier §96)");
+        BlockPos at = surface(level, spawn.getX() - 9, spawn.getZ() + 9);
+        FakePlayer fake = fake(level, "usure", at);
+        ItemStack sword = new ItemStack(Items.IRON_SWORD);
+        ItemStack chest = new ItemStack(ModItems.ARCENCIUM_CHESTPLATE.get());
+        ItemStack shield = new ItemStack(Items.SHIELD);
+        ItemStack pick = new ItemStack(Items.IRON_PICKAXE);
+        for (ItemStack stack : List.of(sword, chest, shield, pick)) {
+            stack.hurtAndBreak(100000, level, fake, item -> {
+            });
+        }
+        boolean kept = !sword.isEmpty() && !chest.isEmpty() && !shield.isEmpty()
+                && GearWear.worn(sword) && GearWear.worn(chest) && GearWear.worn(shield)
+                && sword.getDamageValue() == sword.getMaxDamage() - 1;
+        check("une epee du jeu, un plastron d'Arcencium, un bouclier : uses au bout, jamais casses ;"
+                        + " une pioche se casse encore",
+                kept && pick.isEmpty(),
+                "epee " + sword.getDamageValue() + "/" + sword.getMaxDamage() + ", plastron " + chest.getDamageValue()
+                        + "/" + chest.getMaxDamage() + ", bouclier " + shield.getDamageValue() + "/"
+                        + shield.getMaxDamage() + ", pioche " + (pick.isEmpty() ? "cassee" : "entiere"));
+        double fresh = armor(new ItemStack(ModItems.ARCENCIUM_CHESTPLATE.get()));
+        double worn = armor(chest);
+        check("un plastron use ne compte plus que le dixieme de son armure",
+                fresh > 0.0 && Math.abs(worn - fresh * GearWear.WORN) < 1.0e-6,
+                String.format(Locale.ROOT, "neuf %.2f, use %.2f", fresh, worn));
+
+        Zombie target = zombie(level, at.north(3), 0.0F);
+        Zombie blocker = zombie(level, at.east(3), 0.0F);
+        Zombie attacker = zombie(level, at.east(3).south(2), 180.0F);
+        if (target == null || blocker == null || attacker == null) {
+            check("creatures d'essai posees", false, "zombie impossible");
+            return;
+        }
+        fake.setItemInHand(InteractionHand.MAIN_HAND, sword);
+        float before = target.getHealth();
+        target.hurt(level.damageSources().playerAttack(fake), 10.0F);
+        float wornHit = before - target.getHealth();
+        target.invulnerableTime = 0;
+        sword.setDamageValue(0);                           // reparee
+        before = target.getHealth();
+        target.hurt(level.damageSources().playerAttack(fake), 10.0F);
+        float freshHit = before - target.getHealth();
+        float ratio = freshHit > 0.0F ? wornHit / freshHit : 1.0F;
+        check("une epee usee ne fait plus que le dixieme de ses degats ; reparee, tout revient",
+                !GearWear.worn(sword) && ratio > 0.08F && ratio < 0.12F && freshHit > 8.0F,
+                String.format(Locale.ROOT, "usee %.2f, reparee %.2f (rapport %.3f)", wornHit, freshHit, ratio));
+
+        ItemStack wornShield = new ItemStack(ModItems.ARCENCIUM_SHIELD.get());
+        wornShield.setDamageValue(wornShield.getMaxDamage() - 1);
+        blocker.setItemInHand(InteractionHand.OFF_HAND, wornShield);
+        blocker.startUsingItem(InteractionHand.OFF_HAND);
+        float blockerBefore = blocker.getHealth();
+        float attackerBefore = attacker.getHealth();
+        blocker.hurt(blocker.damageSources().mobAttack(attacker), 4.0F);
+        float took = blockerBefore - blocker.getHealth();
+        check("un bouclier d'Arcencium use n'arrete plus que le dixieme d'un coup, et ne riposte plus ;"
+                        + " il ne se casse pas",
+                blocker.isBlocking() && took > 3.0F && attacker.getHealth() == attackerBefore
+                        && !blocker.getItemInHand(InteractionHand.OFF_HAND).isEmpty(),
+                String.format(Locale.ROOT, "leve %s, recu %.2f sur 4, assaillant %.1f -> %.1f", blocker.isBlocking(),
+                        took, attackerBefore, attacker.getHealth()));
+    }
+
+    /** L'armure d'une piece de poitrine, telle que le jeu la compte (evenements des modificateurs compris). */
+    private static double armor(ItemStack stack) {
+        double[] total = {0.0};
+        stack.forEachModifier(net.minecraft.world.entity.EquipmentSlot.CHEST, (attribute, modifier) -> {
+            if (attribute.value() == net.minecraft.world.entity.ai.attributes.Attributes.ARMOR.value()) {
+                total[0] += modifier.amount();
+            }
+        });
+        return total[0];
     }
 
     // ================================================================ 5. le Grand Froid

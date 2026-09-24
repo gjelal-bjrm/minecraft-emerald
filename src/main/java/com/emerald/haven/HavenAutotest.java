@@ -233,6 +233,7 @@ public final class HavenAutotest {
                         + HavenCables.lines().size() + " avec leur temoin, etat " + state.cables());
 
         doors(server, level, o, state);
+        gear(level, o);
 
         curtain(level, volume, o);
 
@@ -478,6 +479,77 @@ public final class HavenAutotest {
                 placed && held == all.size() && controlled && left == 0,
                 "posee " + placed + ", " + held + "/" + all.size() + " cellules, controleur " + controlled
                         + " ; apres la casse en " + top.toShortString() + ", " + left + " cellules restent");
+    }
+
+    /**
+     * EN VILLE, L'EQUIPEMENT DU DEHORS NE SERT A RIEN (cahier §96, HavenGear). Un faux joueur est
+     * invulnerable : l'armure et le bouclier se lisent sur les evenements eux-memes, passes a la
+     * regle comme le jeu les lui passe.
+     */
+    private static void gear(ServerLevel level, BlockPos o) {
+        BlockPos street = o.offset(Haven.BAR_FRONT_CELL).south(3);
+        net.minecraft.world.entity.monster.Zombie zombie = net.minecraft.world.entity.EntityType.ZOMBIE.create(level);
+        if (zombie == null) {
+            check("equipement en ville : un zombie d'essai", false, "zombie impossible");
+            return;
+        }
+        zombie.moveTo(street.getX() + 0.5, street.getY(), street.getZ() + 0.5, 0.0F, 0.0F);
+        zombie.setNoAi(true);
+        level.addFreshEntity(zombie);
+        net.neoforged.neoforge.common.util.FakePlayer fake = new net.neoforged.neoforge.common.util.FakePlayer(level,
+                new com.mojang.authlib.GameProfile(java.util.UUID.nameUUIDFromBytes(
+                        "autotest-haven:equipement".getBytes(java.nio.charset.StandardCharsets.UTF_8)), "[Haven]"));
+        fake.moveTo(street.getX() + 2.5, street.getY(), street.getZ() + 0.5, 90.0F, 0.0F);
+        try {
+            fake.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND,
+                    new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.DIAMOND_SWORD));
+            float before = zombie.getHealth();
+            zombie.hurt(level.damageSources().playerAttack(fake), 10.0F);
+            boolean swordUseless = zombie.getHealth() == before;
+            // le poing reste : un point, jamais plus (dix demandes)
+            fake.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, net.minecraft.world.item.ItemStack.EMPTY);
+            zombie.invulnerableTime = 0;
+            float beforeFist = zombie.getHealth();
+            zombie.hurt(level.damageSources().playerAttack(fake), 10.0F);
+            float fist = beforeFist - zombie.getHealth();
+            boolean punch = fist > 0.5F && fist <= HavenGear.FIST;
+            zombie.invulnerableTime = 0;
+            net.minecraft.world.damagesource.DamageSource gun = new net.minecraft.world.damagesource.DamageSource(
+                    level.registryAccess().registryOrThrow(net.minecraft.core.registries.Registries.DAMAGE_TYPE)
+                            .getHolderOrThrow(com.emerald.jak.gun.GunImpacts.DAMAGE_TYPE), null, null, zombie.position());
+            zombie.hurt(gun, 6.0F);
+            boolean gunWorks = zombie.getHealth() < before;
+            net.neoforged.neoforge.common.damagesource.DamageContainer container =
+                    new net.neoforged.neoforge.common.damagesource.DamageContainer(
+                            level.damageSources().mobAttack(zombie), 10.0F);
+            net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent incoming =
+                    new net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent(fake, container);
+            HavenGear.onIncomingDamage(incoming);
+            container.setReduction(net.neoforged.neoforge.common.damagesource.DamageContainer.Reduction.ARMOR, 6.0F);
+            container.setReduction(net.neoforged.neoforge.common.damagesource.DamageContainer.Reduction.ENCHANTMENTS, 2.0F);
+            boolean bare = !incoming.isCanceled()
+                    && container.getReduction(net.neoforged.neoforge.common.damagesource.DamageContainer.Reduction.ARMOR) == 0.0F
+                    && container.getReduction(net.neoforged.neoforge.common.damagesource.DamageContainer.Reduction.ENCHANTMENTS) == 0.0F;
+            net.neoforged.neoforge.event.entity.living.LivingShieldBlockEvent block =
+                    new net.neoforged.neoforge.event.entity.living.LivingShieldBlockEvent(fake,
+                            new net.neoforged.neoforge.common.damagesource.DamageContainer(
+                                    level.damageSources().mobAttack(zombie), 4.0F), true);
+            HavenGear.onShield(block);
+            boolean noShield = !block.getBlocked();
+            net.minecraft.world.item.ItemStack boots =
+                    new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.DIAMOND_BOOTS);
+            com.emerald.artifact.Artifacts.set(boots, com.emerald.artifact.Artifact.BOTTES_D_ECLAIR);
+            fake.setItemSlot(net.minecraft.world.entity.EquipmentSlot.FEET, boots);
+            boolean silent = !com.emerald.artifact.Artifacts.wearing(fake, com.emerald.artifact.Artifact.BOTTES_D_ECLAIR);
+            check("en ville : une epee du dehors ne blesse pas, le poing d'un point au plus, le Morph Gun si ;"
+                            + " l'armure, ses enchantements et le bouclier ne protegent plus ; un artefact se tait",
+                    swordUseless && punch && gunWorks && bare && noShield && silent,
+                    "epee inutile " + swordUseless + ", poing " + fist + ", Morph Gun " + gunWorks + " (" + before + " -> "
+                            + zombie.getHealth() + "), armure nue " + bare + ", bouclier baisse " + noShield
+                            + ", artefact muet " + silent);
+        } finally {
+            zombie.discard();
+        }
     }
 
     private static void curtain(ServerLevel level, JakVolume volume, BlockPos o) {

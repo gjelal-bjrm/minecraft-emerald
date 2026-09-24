@@ -100,8 +100,9 @@ public class ArcenciumShieldItem extends ShieldItem {
     @SubscribeEvent
     public static void onBlock(LivingShieldBlockEvent event) {
         LivingEntity blocker = event.getEntity();
-        if (!event.getBlocked() || !(blocker.level() instanceof ServerLevel level) || !is(blocker.getUseItem())) {
-            return;
+        if (!event.getBlocked() || !(blocker.level() instanceof ServerLevel level) || !is(blocker.getUseItem())
+                || GearWear.worn(blocker.getUseItem())) {
+            return;                                     // use au bout, il ne riposte plus (GearWear)
         }
         DamageSource source = event.getDamageSource();
         Entity direct = source.getDirectEntity();

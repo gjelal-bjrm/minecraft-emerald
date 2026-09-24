@@ -995,7 +995,8 @@ public final class HavenInvasionAutotest {
         AABB around = zombie.getBoundingBox().inflate(4);
         int itemsBefore = level.getEntitiesOfClass(ItemEntity.class, around).size();
         int orbsBefore = level.getEntitiesOfClass(ExperienceOrb.class, around).size();
-        zombie.hurt(level.damageSources().playerAttack(killer), 1000.0F);
+        // au Morph Gun, comme en jeu : en ville, un coup du dehors ne blesse plus (cahier §96, HavenGear)
+        com.emerald.jak.gun.GunImpacts.hurt(killer, null, zombie, 1000.0F);
         HavenMonsterKilledEvent event = KILLS.size() > before ? KILLS.get(KILLS.size() - 1) : null;
         int items = level.getEntitiesOfClass(ItemEntity.class, around).size() - itemsBefore;
         int orbs = level.getEntitiesOfClass(ExperienceOrb.class, around).size() - orbsBefore;
@@ -1084,7 +1085,8 @@ public final class HavenInvasionAutotest {
                 "mode " + HavenInvasion.mode(server) + ", armes manquantes " + HavenProgress.missingWeapons(stranger.getUUID())
                         + ", monstres " + monsters + " -> " + HavenInvasion.monsters().size());
         Cobaye presser = COBAYES.get(0);
-        HavenProgress.temporary(presser.getUUID(), GunForm.ALL_MASK);
+        // la maitrise : toutes les armes ET les quetes des heros (lot 3, cahier §86)
+        HavenProgress.temporary(presser.getUUID(), GunForm.ALL_MASK).quests.addAll(HavenProgress.REQUIRED_QUESTS);
         presser.moveTo(pos.getX() + 0.5, pos.getY() - 1, pos.getZ() + 1.5);
         before.useWithoutItem(level, presser, new BlockHitResult(Vec3.atCenterOf(pos), Direction.UP, pos, false));
         long left = level.getEntities(net.minecraft.world.level.entity.EntityTypeTest.forClass(Mob.class),

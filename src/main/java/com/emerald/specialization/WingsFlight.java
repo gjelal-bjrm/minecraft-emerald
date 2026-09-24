@@ -75,6 +75,14 @@ public final class WingsFlight {
         }
         FLYING.add(player.getUUID());
         player.startFallFlying();
+        // la poussee d'envol (le client pousse, ArtifactInputClient) : le souffle et l'eclat, pour tous
+        player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
+                net.minecraft.sounds.SoundEvents.FIREWORK_ROCKET_LAUNCH, net.minecraft.sounds.SoundSource.PLAYERS,
+                0.8F, 1.3F);
+        if (player.level() instanceof net.minecraft.server.level.ServerLevel level) {
+            level.sendParticles(com.emerald.particles.ModParticles.PRISM_MOTE.get(), player.getX(), player.getY() + 0.8,
+                    player.getZ(), 24, 0.6, 0.3, 0.6, 0.12);
+        }
     }
 
     /** Vrai si ce joueur vole sur ses ailes +20 : pour les essais. */

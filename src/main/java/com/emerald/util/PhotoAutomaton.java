@@ -185,6 +185,11 @@ public final class PhotoAutomaton {
             return "main".equals(this.biome.getNamespace());
         }
 
+        /** Une prise des ailes du joueur, de dos ou en vol (cahier §96). */
+        boolean wings() {
+            return "ailes".equals(this.biome.getNamespace());
+        }
+
         /** Une prise d'une porte doree posee par le jeu. */
         boolean gate() {
             return "porte".equals(this.biome.getNamespace());
@@ -400,6 +405,9 @@ public final class PhotoAutomaton {
         }
         // on laisse le monde se generer et se dessiner, puis le client prend la photo
         ++waited;
+        if (shot.wings() && handsView != null && handsView.startsWith("vol")) {
+            orbit(player);
+        }
         if (waited >= pendingSettle && taken) {
             if (shot.arena() && shot.biome().getPath().startsWith("combat")) {
                 combatReport(shot);
@@ -1305,6 +1313,68 @@ public final class PhotoAutomaton {
         return true;
     }
 
+    /** Le vol des prises « ailes:vol » : un cercle au-dessus de l'estrade, a cette hauteur et de ce rayon. */
+    private static final double ORBIT_HEIGHT = 24.0;
+    private static final double ORBIT_RADIUS = 6.0;
+    /** Blocs par tique sur le cercle. */
+    private static final double ORBIT_SPEED = 0.35;
+    private static double orbitAngle;
+
+    /**
+     * LES AILES DU JOUEUR (cahier §96). « ailes:dos » : le joueur debout sur l'estrade de la
+     * vitrine, vu de dos ; « dos_nuit », « vol_nuit » : a minuit ; « vol » : en vol d'elytre, en rond
+     * au-dessus de l'estrade, le regard toujours au nord -- la camera derriere lui voit la trainee
+     * se courber a cote, et le terrain reste le meme. Le palier est la hauteur de la prise
+     * (« nom@ailes:dos@20 », +20 par defaut) ; l'apparence suit la barre (« ailes:dos/obscures »).
+     */
+    private static boolean placeWings(ServerLevel level, ServerPlayer player, Shot shot) {
+        if (stage == null) {
+            placeShowcase(level, player, new Shot(shot.name(), ResourceLocation.fromNamespaceAndPath("vitrine", "face"), 0));
+        }
+        String path = shot.biome().getPath();
+        int cut = path.indexOf('/');
+        String view = cut < 0 ? path : path.substring(0, cut);
+        com.emerald.specialization.WingSkin skin = cut < 0 ? null
+                : com.emerald.specialization.WingSkin.byId(path.substring(cut + 1));
+        if (skin == null) {
+            skin = com.emerald.specialization.WingSkin.PRISMATIQUES;
+        }
+        int wingLevel = shot.height() > 0 ? shot.height() : com.emerald.specialization.Specialization.MAX;
+        com.emerald.specialization.Specialization.set(player, wingLevel, skin);
+        run(level.getServer(), view.endsWith("nuit") ? "time set 18000" : "time set 6000");
+        player.setGameMode(GameType.SURVIVAL);
+        player.getAbilities().invulnerable = true;
+        player.onUpdateAbilities();
+        player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, net.minecraft.world.item.ItemStack.EMPTY);
+        player.setItemInHand(net.minecraft.world.InteractionHand.OFF_HAND, net.minecraft.world.item.ItemStack.EMPTY);
+        if (view.startsWith("vol")) {
+            orbitAngle = 0.0;
+            player.teleportTo(level, stage.getX() + 0.5 + ORBIT_RADIUS, stage.getY() + ORBIT_HEIGHT,
+                    stage.getZ() + 0.5, 180.0F, 0.0F);
+        } else {
+            player.teleportTo(level, stage.getX() + 0.5, stage.getY(), stage.getZ() - 2.5, 180.0F, 8.0F);
+        }
+        handsView = view;
+        pendingGui = false;
+        LOGGER.info("photos : {} (ailes +{} {}, {})", shot.name(), wingLevel, skin.id(), view);
+        return true;
+    }
+
+    /**
+     * Une tique de vol sur le cercle : le vol d'elytre des ailes +20 tenu, la vitesse TANGENTE au
+     * cercle, reguliere. (Une vitesse vers le point suivant tremblait : la position que le serveur
+     * connait a une tique de retard sur le client, le joueur roulait et la trainee zigzaguait.)
+     */
+    private static void orbit(ServerPlayer player) {
+        if (!com.emerald.specialization.WingsFlight.flying(player)) {
+            com.emerald.specialization.WingsFlight.start(player);
+        }
+        orbitAngle += ORBIT_SPEED / ORBIT_RADIUS;
+        player.setDeltaMovement(-Math.sin(orbitAngle) * ORBIT_SPEED, 0.0, Math.cos(orbitAngle) * ORBIT_SPEED);
+        player.hurtMarked = true;
+        player.connection.send(new net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket(player));
+    }
+
     /** Le joueur au-dessus du biome, sur le sol, regard vers l'est ; plonge s'il est en hauteur. */
     private static boolean place(MinecraftServer server, ServerLevel level, ServerPlayer player, Shot shot) {
         if (shot.showcase()) {
@@ -1312,6 +1382,9 @@ public final class PhotoAutomaton {
         }
         if (shot.hands()) {
             return placeHands(level, player, shot);
+        }
+        if (shot.wings()) {
+            return placeWings(level, player, shot);
         }
         if (shot.gate()) {
             return placeGate(level, player, shot);

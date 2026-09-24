@@ -10,7 +10,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -18,6 +17,7 @@ import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.Level;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -25,12 +25,18 @@ import java.util.List;
  * d'ailes. A +15 et au-dela, un clic droit debloque cette apparence (la
  * plume est consommee) ou y revient si elle l'est deja (la plume reste).
  *
- * Elle tombe des puissants -- selon leur element et la meteo du moment --
- * et se trouve dans les coffres rares. Le Rubis ne tombe d'aucun monstre.
+ * UNE RECOMPENSE, ET RIEN D'AUTRE (cahier §96, le joueur, 24 sept.) : une pour
+ * chaque joueur a la victoire du Defi, et trois chances sur cent pour chacun a la
+ * prise d'un sanctuaire. Plus aucun monstre n'en lache -- elle tombait a 35 % des
+ * monstres de trois cents points de vie, boss final compris --, et aucun coffre
+ * n'en a jamais contenu. Au hasard parmi les apparences que le joueur n'a pas
+ * encore ; le Rubis et le Souverain Astral y entrent comme les autres.
  */
 public class SkinFeatherItem extends Item {
 
     private static final String TAG_SKIN = "wing_skin";
+    /** Les chances d'une plume pour chaque joueur, a la prise d'un sanctuaire. */
+    public static final float SANCTUARY_CHANCE = 0.03F;
 
     public SkinFeatherItem(Properties properties) {
         super(properties);
@@ -72,30 +78,31 @@ public class SkinFeatherItem extends Item {
     }
 
     /**
-     * Quelle apparence un puissant lache : celle de son element quand elle
-     * existe, celle de la meteo en cours sinon, et au hasard parmi les
-     * autres autrement. Jamais le Rubis : lui ne vient que des coffres.
+     * L'apparence d'une plume de recompense : au hasard parmi celles que le joueur n'a pas
+     * encore, parmi toutes s'il les a toutes (il peut la donner). Jamais le Prismatique,
+     * qu'on a d'office.
      */
-    public static WingSkin pickDrop(LivingEntity victim, RandomSource random) {
-        com.emerald.element.Element element = com.emerald.element.Attunement.of(victim);
-        if (element == com.emerald.element.Element.OBSCUR) {
-            return WingSkin.OBSCURES;
+    public static WingSkin pickReward(Player player, RandomSource random) {
+        List<WingSkin> all = new ArrayList<>();
+        List<WingSkin> missing = new ArrayList<>();
+        for (WingSkin skin : WingSkin.values()) {
+            if (skin == WingSkin.PRISMATIQUES) {
+                continue;
+            }
+            all.add(skin);
+            if (!Specialization.unlocked(player, skin)) {
+                missing.add(skin);
+            }
         }
-        if (element == com.emerald.element.Element.EAU) {
-            return WingSkin.GIVRE;
-        }
-        com.emerald.weather.Weather weather = com.emerald.weather.WeatherManager.current();
-        if (weather == com.emerald.weather.Weather.ORAGE) {
-            return WingSkin.TEMPETE;
-        }
-        if (weather == com.emerald.weather.Weather.METEORES) {
-            return WingSkin.BRAISE;
-        }
-        // Le Souverain Astral n'est PAS dans ce vivier : il ne tombe que du boss
-        // final, trois sanctuaires pris (voir Finale.awardAstralWings). Jamais
-        // le Rubis non plus.
-        WingSkin[] pool = {WingSkin.PIERRES_PRECIEUSES, WingSkin.EMERAUDE, WingSkin.PAPILLON, WingSkin.AURORE};
-        return pool[random.nextInt(pool.length)];
+        List<WingSkin> pool = missing.isEmpty() ? all : missing;
+        return pool.get(random.nextInt(pool.size()));
+    }
+
+    /** La plume dans l'inventaire du joueur (a ses pieds s'il est plein), et son message. */
+    public static void reward(ServerPlayer player, WingSkin skin, String message) {
+        player.getInventory().placeItemBackInInventory(stack(skin, ModItems.SKIN_FEATHER.get()));
+        player.sendSystemMessage(Component.translatable(message,
+                Component.translatable("wings.emeraldweapons." + skin.id())).withStyle(ChatFormatting.LIGHT_PURPLE));
     }
 
     @Override

@@ -8677,3 +8677,144 @@ version 1 (« porte SAS deplacee, l'ancienne s'en va », « 5 portes posees ») 
   logement pour eux.
 - Petite porte, posee seule sur la rue : le modele du Hip Hog a un bloc sur
   deux, ses deux battants s'ecartent.
+
+## 96. Regles et ailes : plumes en recompense, ailes +20, l'equipement du dehors en ville, l'usure sans casse *(24 sept. 2026)*
+
+Le joueur, le 24 sept. au soir, pendant la fin du §95 : « Les objets qui
+changent l'apparence des ailes [...] il faudrait qu'on puisse les obtenir en
+recompense quand on finit le boss final ; chacun en obtient une aleatoirement
+quand le mode Defi est reussi. Sinon, 2 ou 3 % de chance quand on finit un
+sanctuaire. Mais plus dans les coffres. » -- « A partir de +15 elles ne
+changent pas ; les +20 seraient environ 20 % plus grandes, et quelque chose en
+plus, sans exagerer. » -- « Les niveaux heroiques, les statistiques et tous
+les equipements qu'on obtient en dehors de la ville n'ont aucun impact sur les
+degats des armes dans la ville ; on ne peut pas utiliser les equipements ni
+les armes dans la ville, a part les ailes. » -- « Il faut empecher la
+destruction des equipements ; uses au minimum, on les rend extremement
+nerfes, et il faut les reparer. » Choix du joueur : pour les ailes +20, les
+reflets d'Arcencium, la trainee en vol et la poussee d'envol (pas
+l'atterrissage amorti) ; l'ordre : ces regles d'abord, puis les vehicules, le
+JET-Board et les vitres.
+
+### A. Les plumes d'ailes : une recompense
+
+Ce que le joueur croyait, et ce qui etait : AUCUN coffre n'avait de plume
+d'apparence (aucune table de butin ; le §28 promettait « les coffres rares »,
+jamais branches -- le Rubis ne s'obtenait donc nulle part en survie). Elles
+tombaient a 35 % des monstres de trois cents points de vie et plus, boss final
+compris ; la victoire donnait en plus le Souverain Astral, une fois sur trois,
+a tous. Desormais
+(`SkinFeatherItem.pickReward` et `reward`) :
+- VICTOIRE DU DEFI : une plume pour chaque joueur (`Finale.awardWingSkins`), au
+  hasard parmi les apparences qu'il n'a pas encore, parmi toutes s'il les a
+  toutes (il peut la donner) ; jamais le Prismatique, qu'on a d'office. Le
+  monde ouvert n'en donne pas a la victoire : sa partie repart.
+- PRISE D'UN SANCTUAIRE : trois chances sur cent pour chacun.
+- Plus aucun monstre (`RuneDrops`).
+
+### B. Les ailes +20
+
+- PLUS GRANDES : +4 % par palier de +16 a +20, un cinquieme de plus a +20
+  (`WingsLayer.sizeFor`).
+- LES REFLETS D'ARCENCIUM, SUR LE BORD. Premier jet : les sept couleurs en
+  bandes sur toute l'aile. Invisibles de dos d'abord (decales vers le corps,
+  comme la lueur des apparences de lumiere : la matiere les cachait, seuls
+  leurs bords depassaient) ; poses des deux cotes de l'aile, ils ont recouvert
+  la peinture d'un arc-en-ciel neon. Le joueur : « ca denature totalement les
+  couleurs des ailes et leur theme ; mets-le uniquement sur les bordures ».
+  Desormais le masque de chaque apparence (`WingMasks`, refait a chaque
+  rechargement) est son LISERE : la distance de chaque pixel au bord de la
+  forme (chanfrein 3-4), blanc sur un quatre-vingt-cinquieme de la largeur,
+  fondu vers l'interieur. Les sept couleurs y glissent de la racine a la pointe,
+  une bande plus claire le parcourt, emissif (il luit la nuit, adouci apres une
+  premiere nuit trop neon). « Ca me va pour les ailes, c'est mieux comme ca. »
+- LA TRAINEE (`WingsTrail`) : en vol d'elytre, deux rubans aux couleurs de
+  l'Arcencium suivent le bout des ailes et s'effacent en une seconde. Le bout
+  vient de WingsLayer au moment ou il dessine le monde (pas l'inventaire, ni une
+  ombre de shader, a moins de huit blocs du joueur) ; les rubans font face a la
+  camera, une couleur par troncon ; un saut de plus d'un bloc et demi d'une
+  image a l'autre (un teleport, un demi-tour) coupe le ruban au lieu de le
+  tirer en travers du ciel (deuxiemes photos).
+- LA POUSSEE D'ENVOL : au deploiement, huit tiques de la formule de la fusee
+  du jeu, au client (une demi-fusee) ; au serveur, le souffle d'une fusee et un
+  eclat de prisme pour tous.
+
+### C. Des ailes vivantes
+
+« J'ai l'impression qu'elles ne sont pas vivantes, que c'est juste du papier
+qu'on a sur le dos. Est-ce qu'on pourrait legerement animer les ailes, comme
+les armes ? » Une aile etait un seul plan qui pivotait d'un bloc. Desormais
+(`WingsLayer.Shape`), une grille de dix colonnes sur six rangees : au-dela de
+la racine, chaque troncon s'incline d'une vague qui suit les ondes du battement
+et arrive a la pointe un quart de battement plus tard -- la pointe suit, comme
+un vrai battement ; l'aile est un peu bombee de haut en bas ; le bout des
+plumes frissonne, plus fort en vol. La matiere, la lueur, les reflets et la
+trainee lisent la meme forme.
+
+Verifie par des RAFALES : trente images, une toutes les deux tiques (une prise
+dont le nom finit par `_rafale`, PhotoClient). Au repos, les ailes Obscures et
+Prismatiques plient, se balancent et changent de forme d'une image a l'autre ;
+en vol, les rubans ondulent avec le frisson du bout des ailes. Une premiere
+rafale de vol faisait rouler le joueur et zigzaguer les rubans : l'essai
+dirigeait la vitesse vers le point suivant du cercle, et la position que le
+serveur connait a une tique de retard sur le client. Tangente et reguliere, le
+vol est net.
+
+### D. En ville, l'equipement du dehors ne sert a rien
+
+Deja vrai : le Morph Gun blesse sans attaquant, donc sans aucun bonus du dehors
+(`GunImpacts.source`), et les voitures aussi. Faux jusqu'ici : une epee ou un
+arc du dehors blessait les monstres de la ville, une armure protegeait. Dans
+Haven desormais (`HavenGear`) :
+- un coup porte par un joueur ne blesse personne -- arme, outil, fleche,
+  trident, sort, potion ; seul le POING reste (main vide, ou un objet qui n'est
+  ni arme ni outil), d'un point au plus, sans bonus : de quoi lever l'armee de
+  mouettes de Jak 3 (§85), pas de quoi se battre ;
+- l'armure et ses enchantements ne protegent plus un joueur, d'ou qu'elle
+  vienne ; un bouclier ne pare pas ;
+- les artefacts (`Artifacts.wearing`) et les runes (`RuneEvents.apply`) de
+  l'equipement se taisent. La Semelle de Prisme et le Lest de Gangue, qui
+  passaient par les attributs de la piece (une piece ne sait pas qui la porte),
+  deviennent des attributs du porteur, renouveles toutes les demi-secondes ;
+- restent les ailes -- double saut, vol plane, vol d'elytre, bonus
+  d'apparence -- et les coeurs des niveaux heroiques.
+
+### E. L'usure sans casse
+
+Aucun evenement de NeoForge ne retient une piece du jeu ou d'un mod qui se
+casse : le mod a son premier greffon, `mixin/ItemStackMixin` (sur
+`ItemStack.hurtAndBreak`, `emeraldweapons.mixins.json`). `GearWear` refait le
+chemin du jeu pour un EQUIPEMENT -- arme, piece d'armure, bouclier, les
+familles des etablis (`GearEligibility`) --, sans la derniere marche : l'usure
+s'arrete a un point de la fin. La, il est USE (un message, une ligne rouge dans
+l'infobulle) et ne garde que le dixieme de sa force : ses coups (au corps a
+corps, par ses fleches -- une fleche connait son arc --, par les pouvoirs qui
+passent par son porteur), son armure (ses modificateurs, bonus de rarete
+compris), ce qu'un bouclier pare ; celui d'Arcencium ne riposte plus. Repare,
+il retrouve tout. Les outils (pioche, pelle, houe) se cassent encore.
+
+### F. Verifie
+
+- Banc de la partie : 59 OK, 1 KO (l'ancien : l'arche de l'Heure Doree). Les
+  plumes : dix apparences tirees en quatre cents, jamais le Prismatique ; toutes
+  debloquees sauf le Rubis, c'est lui qui vient ; la plume arrive dans le sac ;
+  3 %. L'usure : une epee de fer a 249/250, un plastron d'Arcencium a 719/720,
+  un bouclier a 335/336, jamais casses ; une pioche se casse ; le plastron use
+  compte 0,9 d'armure au lieu de 9 ; une epee usee fait 0,94 contre 9,84 reparee
+  (rapport 0,096) ; un bouclier d'Arcencium use laisse passer 3,54 d'un coup de
+  4, sans riposte, et ne se casse pas.
+- Banc de la ville : 18 OK. En ville : l'epee ne blesse pas, le poing fait
+  0,94, le Morph Gun 20 -> 13,2 ; l'armure, ses enchantements et le bouclier ne
+  protegent plus ; un artefact se tait.
+- Banc de l'invasion : 47 OK, 1 KO (un tirage : l'apparition la plus proche a
+  24,0 blocs, pile a la limite). Deux corrections du banc lui-meme : le zombie
+  meurt au Morph Gun (un coup de joueur ne blesse plus en ville) ; le joueur du
+  bouton recoit aussi les quetes de la maitrise -- depuis le lot 3 (§86) elle
+  les demande, le bouton refusait, et six epreuves tombaient.
+- Banc de la faune : 31 OK (la mouette frappee a la main leve l'armee) ; des
+  quetes 51 OK, du parcours 51 OK, des vehicules 152 OK, des armes 178 OK.
+- Photos des ailes (`ailes:dos`, `dos_nuit`, `vol`, `vol_nuit`, l'apparence
+  apres la barre, le palier en hauteur de prise ; l'automate tourne le joueur
+  en rond au-dessus de l'estrade, le regard dans le sens du vol) : +15 contre
+  +20 (Prismatiques, Obscures) ; le lisere de jour et de nuit (Obscures,
+  Prismatiques, Braise) ; en vol, les deux rubans qui suivent la courbe.

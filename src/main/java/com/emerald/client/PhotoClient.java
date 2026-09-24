@@ -25,6 +25,11 @@ public final class PhotoClient {
     private static boolean stopping;
     /** Tiques du client avec l'ecran voulu ouvert (inventaire, livre). */
     private static int screenTicks;
+    /** La rafale en cours : l'image suivante (-1 : aucune), et les tiques ecoulees. */
+    private static int burst = -1;
+    private static int burstTicks;
+    private static final int BURST_FRAMES = 30;
+    private static final int BURST_STEP = 2;
 
     private PhotoClient() {
     }
@@ -53,11 +58,26 @@ public final class PhotoClient {
         // l'inventaire et le livre se prennent OUVERTS : leur ecran ne retient pas la prise
         boolean wantsScreen = "inventaire".equals(hands) || "livre".equals(hands);
         if (hands != null && mc.player != null) {
-            // LA PRISE EN MAIN : la camera, le clic tenu (bouclier leve), l'inventaire
+            // LA PRISE EN MAIN : la camera, le clic tenu (bouclier leve), l'inventaire ; les ailes
+            // (« dos », « vol ») se prennent de dos
             boolean front = hands.startsWith("face");
+            boolean back = hands.startsWith("dos") || hands.startsWith("vol");
             mc.options.setCameraType(front ? net.minecraft.client.CameraType.THIRD_PERSON_FRONT
+                    : back ? net.minecraft.client.CameraType.THIRD_PERSON_BACK
                     : net.minecraft.client.CameraType.FIRST_PERSON);
             mc.options.keyUse.setDown(hands.endsWith("leve"));
+            if (hands.startsWith("vol")) {
+                // le vol en rond des ailes : le regard suit la vitesse, un peu vers le bas, comme en vrai
+                net.minecraft.world.phys.Vec3 motion = mc.player.getDeltaMovement();
+                if (motion.horizontalDistanceSqr() > 1.0e-4) {
+                    // six degres par tique au plus : le cercle tourne de trois, jamais de demi-tour
+                    float yaw = (float) Math.toDegrees(Math.atan2(-motion.x, motion.z));
+                    float turn = net.minecraft.util.Mth.clamp(
+                            net.minecraft.util.Mth.wrapDegrees(yaw - mc.player.getYRot()), -6.0F, 6.0F);
+                    mc.player.setYRot(mc.player.getYRot() + turn);
+                    mc.player.setXRot(12.0F);
+                }
+            }
             if ("inventaire".equals(hands) && mc.screen == null) {
                 mc.setScreen(new net.minecraft.client.gui.screens.inventory.InventoryScreen(mc.player));
             }
@@ -91,8 +111,25 @@ public final class PhotoClient {
         // UN ECRAN QUI MET LE JEU EN PAUSE (le livre) arrete le serveur integre : il ne compte
         // plus ses tiques et la prise attendrait toujours. Ecran ouvert depuis une seconde : on la prend.
         screenTicks = wantsScreen && mc.screen != null ? screenTicks + 1 : 0;
+        if (burst >= 0) {
+            // LA RAFALE (« _rafale ») : une image toutes les deux tiques, pour voir bouger les ailes
+            if (++burstTicks % BURST_STEP == 0) {
+                Screenshot.grab(mc.gameDirectory, String.format(java.util.Locale.ROOT, "%s_%02d.png", wanted, burst),
+                        mc.getMainRenderTarget(), message -> { });
+                if (++burst >= BURST_FRAMES) {
+                    burst = -1;
+                    PhotoAutomaton.taken(wanted);
+                }
+            }
+            return;
+        }
         if (PhotoAutomaton.readyToShoot() || screenTicks >= 20) {
             screenTicks = 0;
+            if (wanted.endsWith("_rafale")) {
+                burst = 0;
+                burstTicks = BURST_STEP - 1;
+                return;
+            }
             Screenshot.grab(mc.gameDirectory, wanted + ".png", mc.getMainRenderTarget(), message -> { });
             PhotoAutomaton.taken(wanted);
             if (wantsScreen && mc.screen != null) {

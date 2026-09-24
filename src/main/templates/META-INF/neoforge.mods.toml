@@ -11,6 +11,10 @@ description='''
 Ajoute des armes en émeraude avec des effets spéciaux, particules et recettes personnalisées.
 '''
 
+# Le greffon de l'usure sans casse (cahier §96, com.emerald.mixin)
+[[mixins]]
+config="emeraldweapons.mixins.json"
+
 [[dependencies.emeraldweapons]]
 modId="neoforge"
 type="required"

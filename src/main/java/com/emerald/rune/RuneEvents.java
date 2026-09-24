@@ -83,19 +83,21 @@ public final class RuneEvents {
 
     public static void apply(Player player) {
         AttributeInstance armour = player.getAttribute(Attributes.ARMOR);
+        // en ville, les runes de l'equipement se taisent (cahier §96, HavenGear)
+        double on = com.emerald.haven.Haven.is(player.level()) ? 0.0 : 1.0;
 
         set(player.getAttribute(Attributes.ATTACK_DAMAGE), id("tranchant"),
-                Runes.total(player, Rune.TRANCHANT));
+                on * Runes.total(player, Rune.TRANCHANT));
         set(player.getAttribute(Attributes.ATTACK_SPEED), id("cadence"),
-                Runes.total(player, Rune.CADENCE));
+                on * Runes.total(player, Rune.CADENCE));
         set(player.getAttribute(Attributes.ENTITY_INTERACTION_RANGE), id("allonge"),
-                Runes.total(player, Rune.ALLONGE));
-        set(armour, id("carapace"), Runes.total(player, Rune.CARAPACE));
+                on * Runes.total(player, Rune.ALLONGE));
+        set(armour, id("carapace"), on * Runes.total(player, Rune.CARAPACE));
         set(player.getAttribute(Attributes.ARMOR_TOUGHNESS), id("absorption"),
-                Runes.total(player, Rune.ABSORPTION));
+                on * Runes.total(player, Rune.ABSORPTION));
 
         AttributeInstance health = player.getAttribute(Attributes.MAX_HEALTH);
-        set(health, id("endurance"), Runes.total(player, Rune.ENDURANCE));
+        set(health, id("endurance"), on * Runes.total(player, Rune.ENDURANCE));
         if (health != null && player.getHealth() > player.getMaxHealth()) {
             player.setHealth(player.getMaxHealth());
         }

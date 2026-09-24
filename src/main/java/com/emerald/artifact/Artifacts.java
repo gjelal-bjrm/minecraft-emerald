@@ -34,9 +34,13 @@ public final class Artifacts {
      * Vrai si l'entite porte cet artefact a l'emplacement qui lui correspond.
      *
      * On interroge l'emplacement attendu plutot que de parcourir l'equipement :
-     * un plastron range dans le sac ne doit rien accorder.
+     * un plastron range dans le sac ne doit rien accorder. En ville, aucun : l'equipement
+     * du dehors n'y donne rien (cahier §96, HavenGear).
      */
     public static boolean wearing(LivingEntity entity, Artifact artifact) {
+        if (com.emerald.haven.Haven.is(entity.level())) {
+            return false;
+        }
         EquipmentSlot slot = switch (artifact.socket()) {
             case HELMET -> EquipmentSlot.HEAD;
             case CHEST -> EquipmentSlot.CHEST;
