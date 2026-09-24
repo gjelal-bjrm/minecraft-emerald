@@ -289,6 +289,17 @@ public class ModBlocks {
      * boss du Defi tombe et ramene chacun a Haven. Sans objet : HavenReturn la pose et
      * la retire. Incassable, sans butin, non poussable, traversable.
      */
+    /**
+     * Une cellule d'une porte de Jak 3 (HavenDoorBlock, cahier §95) : posee par HavenDoors ou par les
+     * objets de porte, jamais seule. Incassable hors chantier, sans butin, non poussable.
+     */
+    public static final DeferredBlock<HavenDoorBlock> HAVEN_DOOR = registerBlockOnly("haven_door",
+            () -> new HavenDoorBlock(BlockBehaviour.Properties.of()
+                    .strength(-1.0F, 3600000.0F).noLootTable()
+                    .pushReaction(net.minecraft.world.level.material.PushReaction.BLOCK)
+                    .mapColor(MapColor.WOOD)
+                    .sound(SoundType.WOOD)));
+
     public static final DeferredBlock<HavenGateBlock> HAVEN_GATE = registerBlockOnly("haven_gate",
             () -> new HavenGateBlock(BlockBehaviour.Properties.of()
                     .strength(-1.0F, 3600000.0F).noLootTable()

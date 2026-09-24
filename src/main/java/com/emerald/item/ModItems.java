@@ -150,6 +150,14 @@ public class ModItems {
     public static final DeferredItem<SkinFeatherItem> SKIN_FEATHER =
             ITEMS.register("skin_feather", () -> new SkinFeatherItem(new Item.Properties()));
 
+    /** Les portes de Jak 3 a poser dans l'atelier (cahier §95). */
+    public static final DeferredItem<HavenDoorItem> HAVEN_DOOR_HIP = ITEMS.register("haven_door_hip",
+            () -> new HavenDoorItem(com.emerald.haven.door.HavenDoorKind.HIP, new Item.Properties()));
+    public static final DeferredItem<HavenDoorItem> HAVEN_DOOR_PETITE = ITEMS.register("haven_door_petite",
+            () -> new HavenDoorItem(com.emerald.haven.door.HavenDoorKind.PETITE, new Item.Properties()));
+    public static final DeferredItem<HavenDoorItem> HAVEN_DOOR_SAS = ITEMS.register("haven_door_sas",
+            () -> new HavenDoorItem(com.emerald.haven.door.HavenDoorKind.SAS, new Item.Properties()));
+
     /** L'agenda de Haven : les rendez-vous du parcours (HavenAgenda, cahier §83). */
     public static final DeferredItem<HavenAgendaItem> HAVEN_AGENDA =
             ITEMS.register("haven_agenda", () -> new HavenAgendaItem(new Item.Properties()));

@@ -37,7 +37,7 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * La derniere partie : l'Arc-en-ciel, son arene, son boss, et la fin.
+ * La derniere partie : le Faisceau, son arene, son boss, et la fin.
  *
  * Quand la troisieme ancre est tenue, l'arene se leve a l'ecart des
  * sanctuaires : L'ARENE DE SPARGUS de Jak 3 (cahier §91), convertie par
@@ -181,7 +181,7 @@ public final class Finale {
     // ---------------------------------------------------------- le lever
 
     /**
-     * Leve l'Arc-en-ciel. Sans site impose, l'arene se place entre deux
+     * Leve le Faisceau. Sans site impose, l'arene se place entre deux
      * sanctuaires ; sans boss impose, il est tire au sort parmi ceux qui sont
      * installes. La structure se pose ensuite sur quelques ticks, puis le boss
      * et les gardes apparaissent.
@@ -219,11 +219,11 @@ public final class Finale {
         }
 
         if (raiseArena(level, center, bossType)) {
-            LOGGER.info("Arc-en-ciel leve en {} ; boss {} ; l'arene de Spargus se pose",
+            LOGGER.info("Faisceau leve en {} ; boss {} ; l'arene de Spargus se pose",
                     center.toShortString(), EntityType.getKey(bossType));
         } else {
             populate(level, raiseKnoll(level, center), center, bossType);
-            LOGGER.info("Arc-en-ciel leve en {} ; boss {} ; sans arene",
+            LOGGER.info("Faisceau leve en {} ; boss {} ; sans arene",
                     center.toShortString(), EntityType.getKey(bossType));
         }
         return center;

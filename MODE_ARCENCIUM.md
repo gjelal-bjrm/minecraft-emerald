@@ -8412,3 +8412,268 @@ chacune sur une copie neuve du monde des photos, jetee apres.
   l'echeance (1 200 tiques), un bord de la vue incomplet. Les « Can't keep up »
   de deux a sept secondes qui restent suivent la generation des troncons d'un
   chantier neuf, pas la recherche du site.
+
+## 93. Le Faisceau d'Arcencium, apres l'arc-en-ciel et le Vortex *(24 sept. 2026)*
+
+« L'arc-en-ciel autour de l'arene n'est vraiment pas beau, ni realiste. Il
+faudrait qu'on trouve une autre idee ou un autre concept ose et innovant et qui
+donne un effet "WOWW C'est magnifique !!" -> Propose-moi des concepts. »
+
+### A. Le Vortex, rejete
+
+Quatre concepts proposes : l'aurore en vortex, le Prisme, la Couronne
+d'eclats, l'Oeil du ciel. Choix du joueur : l'AURORE EN VORTEX
+(`client/VortexSkyRenderer`, retire depuis) -- cinq rideaux d'aurore en spirale
+logarithmique a 230 blocs au-dessus de l'arene, du vert-turquoise au violet,
+un puits de lumiere dessous, le tout en ADDITIF (de la lumiere qui s'ajoute au
+ciel, `ModRenderTypes.glow`). Le nom « Aurore » etant deja une meteo du mod, le
+phenomene s'appelait le Vortex. Fait, photographie en trois series, livre sur
+photos -- et juge par le joueur : « il n'y a rien d'impressionnant, et en plus
+de jour on ne le voit meme pas, et de nuit ce n'est vraiment pas incroyable, ca
+ne donne pas envie d'y aller parce qu'on ne sait pas qu'il faut aller la-bas
+tellement c'est peu visible ». Il avait raison, et les photos le montraient :
+une lumiere qui s'ajoute a un ciel de jour deja clair ne se voit pas (la lueur
+du jour etait « discrete », ecrivais-je) ; et les dents de scie des rideaux,
+que j'avais attribuees au nombre de troncons (monte a 720 par bras), avaient
+une autre cause (voir C).
+
+### B. Le Faisceau
+
+Quatre nouveaux concepts, penses pour se voir de jour comme de nuit : le
+vaisseau des Dark Makers de Jak 3 au-dessus de l'arene, le vaisseau precurseur,
+l'oeil de la tempete, le Faisceau (les deux vaisseaux ont ete montres au joueur
+en images de controle, tires des fichiers du jeu). **Choix du joueur : le
+Faisceau d'Arcencium.** `client/ArcenciumBeamRenderer` remplace le Vortex :
+- LE COEUR : une colonne blanche de dix blocs de large dans un halo de
+  dix-huit, du sol de l'arene a neuf cents blocs, qui s'efface dans ses deux
+  cents derniers ; des bandes plus claires la remontent a vingt-quatre blocs
+  par seconde ;
+- LA SPIRALE : sept rubans des couleurs de l'Arcencium, de quatre blocs de
+  haut, enroules a treize blocs de l'axe, un tour tous les 96 blocs, qui
+  tournent : les couleurs montent ;
+- LA COURONNE : a 230 blocs au-dessus du sol de l'arene, les sept couleurs en
+  anneaux fondus du violet (dedans) au rouge (dehors), de 20 a 170 blocs de
+  l'axe, le bord efface, trois lobes plus clairs qui tournent, et toutes les
+  cinq secondes une onde blanche qui s'en echappe jusqu'a 420 blocs.
+- EN FONDU ALPHA, en couleurs pleines, et non en additif : c'est ce qui le fait
+  voir de jour (`ModRenderTypes.beam`, qui remplace `glow` : position et
+  couleur, melange translucide, sans brouillard, tri a l'envoi).
+- DE LOIN, il garde sa largeur a l'ecran : la colonne et la spirale
+  s'elargissent pour ne jamais paraitre plus etroites qu'un demi-degre.
+- VISIBLE DE PARTOUT : tout point plus loin que 0,9 fois le plan lointain
+  (quatre fois la distance de rendu) est ramene sur la sphere de ce rayon.
+- PRES DE L'ARENE, il palit jusqu'a moitie et son pied s'efface sur soixante-dix
+  blocs : il marque le chemin, il ne doit pas cacher le combat.
+- Seulement dans le monde normal, entre la levee et la fin de la partie ; la
+  ligne du panneau des objectifs retrouve les sept couleurs qui tournent.
+
+Les textes : « Le Faisceau d'Arcencium jaillit », « Quelque chose attend a son
+pied », « ... a 539 m, vers l'E : suis la lumiere », « Faisceau leve : boss » ;
+le Carnet et le guide suivent. Les cles de langue gardent leur nom
+(`game.emeraldweapons.rainbow`).
+
+### C. Un quad, une couleur
+
+Sous un shader, un triangle ne fond pas les couleurs de ses sommets : il prend
+celle d'UN seul. Un quad plus clair d'un cote que de l'autre se coupe alors en
+un triangle clair et un triangle sombre -- les dents de scie du Vortex, et
+celles de la couronne a la deuxieme serie de photos du Faisceau (zoom en
+pleine resolution : un triangle jaune, un triangle sombre, par quad). Chaque
+quad est desormais d'une couleur et d'une opacite uniformes (la moyenne de ses
+coins), et les degrades se font en decoupant plus fin : des etages de douze
+blocs, cinq anneaux par couleur.
+
+### D. Verifie
+
+Photos `arene:faisceau_*` (l'automate pose l'arene et la partie gagnee a trois
+ancres, choisit l'heure par le suffixe « @13000 » et garde la camera au-dessus
+du relief) : au pied, au bord de l'arene, a 860, 1 600 et 2 500 blocs, de jour
+et de nuit.
+- Premiere serie : la couronne en bandes tranchees a bord net faisait une cible
+  de tir a l'arc (les couleurs se fondent depuis, le bord s'efface) ; a 1 600
+  blocs la colonne n'etait plus qu'un trait sur l'horizon (la largeur minimale
+  a l'ecran) ; pres de l'arene elle palissait jusqu'au quart (jusqu'a moitie
+  depuis).
+- Deuxieme serie : les dents de scie de la couronne (C).
+- Troisieme serie, regardee en pleine resolution : plus de denture. De jour,
+  depuis le bord de l'arene, la colonne blanche monte des rochers dans sa
+  spirale de couleurs jusqu'a la couronne, bien visible sur le bleu du ciel,
+  l'onde blanche au large ; de nuit, la couronne arc-en-ciel et son onde
+  dominent tout le ciel. Du pied, la colonne file vers le haut dans sa spirale,
+  la couronne vue de dessous. A 1 600 et 2 500 blocs, de jour, une ligne de
+  couleurs se dresse au-dessus de l'horizon, dans la direction de l'arene : on
+  sait ou aller.
+
+## 94. Les cables du port : des chaines dessinees *(24 sept. 2026)*
+
+« Dans la ville Haven, les cables qui relient les tours devraient etre plus
+fins, il faudrait des barres de fer ou quelque chose de fin semblable a ca. »
+Trois matieres proposees : les chaines, les cordes de Supplementaries, les
+barreaux de fer. **Choix du joueur : les chaines.**
+
+**Le probleme.** Le voxeliseur pose les cables des tours, les deux catenaires
+et les rails de glisse en lignes de blocs pleins de la classe mur (lecon 12 de
+`jak_voxelize.py`) : des cables d'un metre d'epaisseur.
+
+**On ne touche pas au volume.** Changer `ctyport.jakv` changerait son sha1, et
+tout ce qui s'y accroche serait a refaire ou a reposer : le releve de l'atelier
+du joueur, les salles, la faune, l'invasion, et la ville deja posee dans chaque
+monde. `tools/jak_cables.py` lit le volume TEL QUEL et retrouve les cellules
+que le voxeliseur a posees le long des cables (les axes relus dans le decor
+comme au voxeliseur, les segments tires en cellules de la meme facon ; une
+cellule est un cable si le volume y a un mur qui ne tient a rien d'autre qu'a
+la ligne) : 2 240 cellules, 16 attaches gardees la ou le cable entre dans une
+tour.
+
+### A. Le premier essai, en blocs, rejete
+
+`haven/HavenCables` posait un bloc de chaine sur l'axe principal de chaque
+troncon, dans ces cellules. Livre sur photos. Le joueur, capture a l'appui :
+« elles ne sont pas reliees entre elles verticalement, on dirait qu'elles
+flottent dans le vide, ce n'est pas beau du tout ». La ou le cable monte ou
+descend, il avance en escalier : chaque marche etait un bout de chaine
+horizontal decale d'un bloc du suivant. C'etait visible sur ma propre photo, et
+je l'avais decrite comme des chaines « qui pendent dans le ciel ».
+
+### B. Des chaines le long de la vraie ligne
+
+Un bloc de chaine est droit et centre : un cable en biais ne se dessine pas
+avec. Desormais :
+1. La ville posee VIDE les cellules des cables (murs du volume et chaines du
+   premier essai) : apres chaque pose, avant les releves du joueur, et une fois
+   au demarrage sur une ville deja posee (l'etat de Haven garde la version, 2).
+2. `jak_cables.py` recoud les tubes du decor de Jak 3 bout a bout -- 12 cables
+   entiers : 6 cables des tours de 210 a 232 blocs, 6 rails de glisse (leurs
+   tubes sont separes de 1,8 a 2,2 m : recousus jusqu'a 2,5 m ; au-dela le rail
+   s'interrompt vraiment) -- et donne a chaque bout un BLOC TEMOIN, la cellule
+   pleine de la tour ou il s'accroche (`haven_cables.json`, 65 Ko).
+3. `client/HavenCableRenderer` dessine chaque cable comme le bloc de chaine de
+   Minecraft l'est -- deux plans croises de trois pixels, a sa texture -- mais le
+   long de sa ligne, en biais s'il le faut, la texture repetee a chaque bloc de
+   long, eclairee comme l'air qu'elle traverse. Un cable ne se dessine que si le
+   bloc temoin d'un de ses bouts est la chez le client (la ville est posee, son
+   troncon charge) ; au-dela de 256 blocs, une chaine de trois pixels ne fait
+   plus un pixel.
+4. Le releve de l'atelier ignore ces cellules, comme la borne et le bouton.
+Les lignes serviront au JET-Board pour glisser.
+
+### C. Verifie
+
+Banc de la ville : les 2 240 cellules sont vides apres la pose, chacun des 12
+cables a son bloc temoin, l'etat est a la version 2. Photos `haven:camera`
+(le monde des photos de Haven, ou la ville avait les chaines du premier
+essai : « 2240 cellules de cables videes, version 0 -> 2, en 676 ms » au
+demarrage) :
+- Les catenaires entre les tours : une chaine continue qui pend en courbe, sans
+  marche ; les cables qui descendent des tours : une chaine continue en biais.
+- Les rails (quatre vues, cameras posees le long de leur vrai trace) : une
+  chaine continue qui longe les murs des tours, epouse leur courbe, monte et
+  redescend sans marche. Dans l'ombre des tours elle parait bleu nuit, au
+  soleil gris clair : elle est eclairee comme l'air qu'elle traverse. La ou le
+  rail de Jak 3 longe une corniche, la chaine passe contre sa face.
+- De loin, Distant Horizons garde les lointains qu'il a calcules quand les
+  cables etaient des murs pleins, jusqu'a ce que le joueur repasse pres des
+  tours.
+
+## 95. Les portes de Jak 3 *(24 sept. 2026)*
+
+« J'aimerais implementer les portes de Jak 3 en porte Minecraft et qu'elles
+s'ouvrent de la meme facon que dans le jeu original. » Choix du joueur : les
+trois -- la porte du Hip Hog de trois sur quatre (d'office aux appartements et
+au QG, et a poser dans l'atelier), une petite porte d'un sur deux, et le grand
+sas du port.
+
+### A. Ce que fait le jeu
+
+`goal_src/jak3/engine/common-obs/airlock.gc` : une porte s'ouvre quand Jak
+arrive a quelques metres, devant ou derriere, et se referme derriere lui, deux
+fois plus vite qu'elle ne s'ouvre. `hip-door-a` : deux battants de bois dans un
+cadre, 3,45 x 4,17 m, qui coulissent de 1,57 m chacun dans le mur en 1,67 s ;
+`com-airlock-outer` : 12 x 12 m et 4 m d'epaisseur ; dans ses cinq secondes,
+les trois barres glissent en travers et tournent pendant les deux premiers
+tiers (il se deverrouille), puis les deux battants s'ecartent de 4 m chacun.
+Les positions : `ctyport-actors.json` (une porte au Hip Hog, en biais de 33,6
+degres ; une autre en (792, 66, 156), la ou le joueur a mis une porte en cuivre
+dans son atelier -- non posee ; le sas en (583, 62, 148)).
+
+### B. Ce qui est fait
+
+- `tools/jak_door.py` cuit les deux modeles (format des voitures, un atlas) et
+  ECHANTILLONNE leur animation en 24 pas : pour chaque os qui bouge, la matrice
+  qui l'amene de la porte fermee au pas voulu. Piege : OpenGOAL ecrit le repos
+  des articulations en matrice ; sans la lire, la porte fermee paraissait
+  ouverte (premiere cuisson, vue sur les images de controle).
+- `block/HavenDoorBlock` : une cellule par bloc de la porte, sur toute son
+  epaisseur (un bloc ; quatre pour le sas, qu'on ne contourne pas par le cote) ;
+  fermee, un bloc plein qui barre le passage ; ouverte, rien. Invisible : le
+  controleur (`HavenDoorBlockEntity`) porte le centre de la porte et son lacet,
+  guette les joueurs (pas les spectateurs), ouvre et referme. Casser une
+  cellule casse la porte entiere.
+- LE PASSAGE SUIT LES BATTANTS : une cellule ne s'ouvre que quand le bord des
+  battants s'en est ecarte assez pour laisser passer un joueur, et toutes se
+  referment des que la porte se referme. Le bord avance lineairement depuis la
+  course ou les battants bougent (0 pour la porte du Hip Hog, 0,66 pour le sas)
+  -- en dessous de la vraie courbe du sas, qui accelere puis ralentit : on ne
+  traverse jamais une porte qui a l'air fermee. Grand ouvert, chaque battant du
+  sas couvre encore deux metres de l'ouverture : ses deux cellules de bord de
+  chaque cote restent pleines, le passage fait huit blocs. (Premier jet : tout
+  le passage s'ouvrait a mi-course -- au sas, cela laissait traverser une porte
+  encore verrouillee ; ce sont les donnees de l'animation qui l'ont montre.)
+- `client/HavenDoorRenderer` dessine le modele, chaque triangle deplace par la
+  matrice de son os au pas de la porte (interpolee entre deux pas).
+- `haven/door/HavenDoors` pose d'office : la porte du Hip Hog aux trois
+  appartements (leurs ouvertures de 3 x 4), au bar (en biais, comme dans le
+  jeu), et le sas du port -- apres chaque pose de la ville, APRES le rejeu des
+  releves (une porte ne prend que des cellules restees libres), et une fois au
+  demarrage sur une ville deja posee (version 2 : une porte d'office qui a
+  bouge d'une version a l'autre est remplacee). Le releve de l'atelier ignore
+  ces cellules ; celles des portes que le joueur pose, il les releve.
+- LE VOLUME N'EST PAS JAK 3 AU CENTIMETRE. Au bar, le voxeliseur a pose le sol
+  une cellule au-dessus de celui du jeu (le seuil, en y 66) et l'escalier du mur
+  en biais ne laisse que 2,1 blocs libres le long de la lame, decales de 0,33 :
+  la porte s'y tient sur le seuil, au milieu de ce qui est libre, ses bords et
+  son haut dans le mur (au premier jet, elle voulait le seuil et six de ses
+  douze cellules etaient prises : elle n'etait pas posee). Au port, l'ouverture
+  du mur fait douze cellules, centree en z 148 et non 148,4 : le sas decentre
+  laissait voir le ciel sur une demi-cellule, il s'y centre.
+- Trois objets pour l'atelier : Porte du Hip Hog, Petite porte de Haven, Sas du
+  port (clic droit sur le sol : la porte se dresse de face, tournee vers le
+  joueur).
+
+### C. Verifie
+
+Banc de la ville : chaque porte d'office a son controleur, fermee, qui barre le
+passage ; le bar et le sas s'ouvrent pour qui reste devant -- tout le passage
+libre, les bords du sas pleins -- et se referment derriere lui ; une petite
+porte et une porte du Hip Hog posees a la main sur la rue tiennent toutes leurs
+cellules, et partent entieres quand on en casse une : 17 OK, 0 KO. Banc de
+l'atelier : 17 OK, 0 KO -- le releve de la ville nue reste vide, 2 870 cellules
+du mod ignorees (cables vides et portes d'office compris) ; une petite porte
+posee a la main entre au jeu d'essai : relevee (ses deux cellules, l'entite du
+controleur), puis rejouee a sa place, centre et lacet gardes, par deux poses.
+
+Photos `haven:porteN` (de face et de biais, `_dos` de derriere, `_mi` la porte
+tenue ouverte jusqu'au milieu de la course de ses battants, `_ouverte` le vrai
+joueur devant elle), sur le monde des photos qui avait les portes de la
+version 1 (« porte SAS deplacee, l'ancienne s'en va », « 5 portes posees ») :
+- Appartement : fermee, les deux battants de bois a poignees de metal dans leur
+  cadre remplissent l'ouverture ; a mi-course ils coulissent dans le mur et
+  l'appartement parait entre eux ; de l'interieur, le cadre entier et ses pieds ;
+  devant elle, le vrai joueur la fait ouvrir, le passage est libre. Aux coins du
+  haut, le cadre chanfreine du jeu laisse deux petits triangles d'ombre dans
+  l'ouverture carree.
+- Bar : la porte tient dans l'etroite ouverture du mur en biais comme si elle y
+  avait toujours ete, sur le seuil ; a mi-course elle s'ouvre sur l'interieur du
+  QG, de dedans sur la rue et ses passants.
+- Sas : centre, il remplit son ouverture ; a la premiere serie, les barres
+  glissaient et tournaient a « mi-course » mais les battants restaient fermes
+  -- c'est ainsi que le jeu l'anime, et c'est ce qui a montre que le passage
+  s'ouvrait trop tot. Corrige (la prise « _mi » tombe desormais au milieu de la
+  course des battants) : de face, les battants s'ecartent et laissent voir le
+  tunnel du port ; devant lui, le vrai joueur le fait ouvrir en grand. De
+  derriere, c'est une masse de metal de quatre metres posee contre le mur,
+  trois plaques de barres sur le dos, et ses battants glissent a l'air libre de
+  part et d'autre : le mur du volume n'a qu'un bloc d'epaisseur, pas de
+  logement pour eux.
+- Petite porte, posee seule sur la rue : le modele du Hip Hog a un bloc sur
+  deux, ses deux battants s'ecartent.

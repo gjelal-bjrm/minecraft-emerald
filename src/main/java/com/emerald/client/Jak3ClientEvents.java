@@ -28,6 +28,8 @@ public class Jak3ClientEvents {
     public static void registerReloadListeners(
             net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent event) {
         event.registerReloadListener(com.emerald.jak.vehicle.JakVehicleModels.INSTANCE);
+        // les portes de Jak 3 (cahier §95) : triangles et animation cuits par tools/jak_door.py
+        event.registerReloadListener(HavenDoorModels.INSTANCE);
     }
 
     @SubscribeEvent
@@ -50,6 +52,11 @@ public class Jak3ClientEvents {
         event.registerBlockEntityRenderer(
                 com.emerald.block.entity.ModBlockEntities.HAVEN_GUN_RACK.get(),
                 HavenGunRackRenderer::new);
+
+        // les portes de Jak 3 de la ville (cahier §95)
+        event.registerBlockEntityRenderer(
+                com.emerald.block.entity.ModBlockEntities.HAVEN_DOOR.get(),
+                HavenDoorRenderer::new);
 
         // la porte precurseur de la victoire du Defi
         event.registerBlockEntityRenderer(

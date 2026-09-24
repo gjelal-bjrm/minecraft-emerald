@@ -1,5 +1,9 @@
 package com.emerald.haven;
 
+import com.emerald.block.entity.HavenDoorBlockEntity;
+import com.emerald.haven.door.HavenDoorFrame;
+import com.emerald.haven.door.HavenDoorKind;
+import com.emerald.haven.door.HavenDoors;
 import com.emerald.haven.invasion.HavenInvasion;
 import com.emerald.jak.JakVolume;
 import com.emerald.main.EmeraldWeaponsMod;
@@ -126,6 +130,9 @@ public final class HavenAtelierAutotest {
     private static BlockPos frameCell;
     @Nullable
     private static BlockPos paintingCell;
+    /** La petite porte de Jak 3 du jeu d'essai, dans le monde : relevee et rejouee comme le reste. */
+    @Nullable
+    private static HavenDoorFrame doorFrame;
 
     private HavenAtelierAutotest() {
     }
@@ -195,7 +202,7 @@ public final class HavenAtelierAutotest {
                 check("releve de la ville nue : VIDE -- la reference et la normalisation tiennent sur toute la grille",
                         nude.ok() && nude.cells() == 0 && nude.entities() == 0,
                         nude.cells() + " cellule(s), " + nude.entities() + " decor(s), " + nude.managed()
-                                + " de la borne et du bouton ignoree(s)" + firstCells(nude.tag()));
+                                + " du mod ignoree(s) (borne, bouton, cables vides, portes d'office)" + firstCells(nude.tag()));
                 check("releve de la ville entiere en moins d'une minute et demie",
                         nude.ok() && nude.millis() < 90_000L,
                         nude.chunks() + " troncons en " + nude.millis() + " ms, " + nude.ticks() + " tiques");
@@ -330,7 +337,7 @@ public final class HavenAtelierAutotest {
                     continue;
                 }
                 boolean free = ref(o, x, y, z).isAir() && ref(o, x, y + 1, z).isAir() && solid(ref(o, x, y - 1, z));
-                if (free && floor.size() < 4 && farFrom(taken, x, y, z)) {
+                if (free && floor.size() < 5 && farFrom(taken, x, y, z)) {
                     floor.add(new BlockPos(x, y, z));
                     taken.add(new BlockPos(x, y, z));
                 }
@@ -355,7 +362,7 @@ public final class HavenAtelierAutotest {
                 }
             }
         }
-        if (floor.size() < 4 || walls.size() < 2 || carve == null) {
+        if (floor.size() < 5 || walls.size() < 2 || carve == null) {
             check("places du jeu d'essai trouvees autour du bar", false, floor.size() + " sols, " + walls.size()
                     + " murs, trou " + carve);
             end(level.getServer());
@@ -377,6 +384,17 @@ public final class HavenAtelierAutotest {
         put(level, o, carve, Blocks.AIR.defaultBlockState());
         // dans l'appartement 1
         put(level, o, ROOM_CELL, Blocks.BOOKSHELF.defaultBlockState());
+        // une petite porte de Jak 3, posee comme avec l'objet : ses deux cellules et son controleur
+        BlockPos doorCell = floor.get(4);
+        doorFrame = new HavenDoorFrame(HavenDoorKind.PETITE, o.getX() + doorCell.getX() + 0.5,
+                o.getY() + doorCell.getY(), o.getZ() + doorCell.getZ() + 0.5, 0.0F);
+        boolean door = HavenDoors.place(level, doorFrame, false);
+        for (BlockPos cell : HavenDoors.withController(doorFrame)) {
+            BlockPos local = cell.subtract(o);
+            BlockState base = JakDiff.normalize(ref(o, local.getX(), local.getY(), local.getZ()),
+                    ref(o, local.getX(), local.getY(), local.getZ()));
+            EXPECTED.put(local, JakDiff.name(JakDiff.normalize(level.getBlockState(cell), base)));
+        }
 
         frameCell = walls.get(0)[0];
         ItemFrame frame = new ItemFrame(level, o.offset(frameCell), wallFacing.get(0));
@@ -387,8 +405,8 @@ public final class HavenAtelierAutotest {
                         .getHolderOrThrow(PaintingVariants.KEBAB));
         boolean decor = level.addFreshEntity(frame) & level.addFreshEntity(painting);
         check("jeu d'essai pose : coffre garni, escalier retourne, trou bouche, bloc du mod, mur perce, appartement 1,"
-                        + " cadre garni et tableau",
-                decor && EXPECTED.size() == 6,
+                        + " petite porte de Jak 3, cadre garni et tableau",
+                decor && door && EXPECTED.size() == 8,
                 EXPECTED.size() + " cellules " + EXPECTED.keySet() + ", decors poses " + decor + " (cadre en "
                         + frameCell + " vers " + wallFacing.get(0) + ", tableau en " + paintingCell + ")");
     }
@@ -524,8 +542,14 @@ public final class HavenAtelierAutotest {
         boolean chestOk = chestCell != null && level.getBlockEntity(o.offset(chestCell)) instanceof ChestBlockEntity chest
                 && chest.getItem(0).is(Items.DIAMOND) && chest.getItem(0).getCount() == 5
                 && chest.getItem(13).is(Items.EMERALD) && chest.getItem(13).getCount() == 32;
-        check(when + "chaque retouche retrouvee, cellule par cellule, et le coffre garni",
-                wrong.isEmpty() && chestOk, EXPECTED.size() + " cellules ; ecarts " + wrong + " ; coffre " + chestOk);
+        // la porte rejouee garde son centre et son lacet : son modele se dessine la ou elle etait
+        boolean doorOk = doorFrame != null && level.getBlockEntity(doorFrame.controller()) instanceof HavenDoorBlockEntity door
+                && door.kind() == doorFrame.kind() && Math.abs(door.frame().x() - doorFrame.x()) < 1.0e-6
+                && Math.abs(door.frame().y() - doorFrame.y()) < 1.0e-6 && Math.abs(door.frame().z() - doorFrame.z()) < 1.0e-6
+                && door.frame().yaw() == doorFrame.yaw();
+        check(when + "chaque retouche retrouvee, cellule par cellule, le coffre garni et la porte a sa place",
+                wrong.isEmpty() && chestOk && doorOk, EXPECTED.size() + " cellules ; ecarts " + wrong + " ; coffre "
+                        + chestOk + " ; porte " + doorOk);
         AABB near = new AABB(o.offset(Haven.BAR_FRONT_CELL)).inflate(SEARCH + 4);
         List<Entity> decor = decorNear(level, near);
         boolean frameOk = false;

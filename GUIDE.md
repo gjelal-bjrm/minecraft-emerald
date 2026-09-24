@@ -403,11 +403,16 @@ des monstres et la qualité du butin.
 | Pression | 36-48 | Toutes les météos. **La Marée commence** |
 | Assaut | 48-60 | Uniquement les tempêtes, presque sans répit |
 
-**Pour gagner :** activer les trois ancres, faire apparaître l'Arc-en-ciel, et
-tuer le boss avant la fin du temps.
+**Pour gagner :** activer les trois ancres, faire jaillir le Faisceau
+d'Arcencium, et tuer le boss avant la fin du temps.
 
-**L'arène du boss.** Quand la troisième ancre est tenue, l'Arc-en-ciel se lève
-à l'écart des sanctuaires et **l'arène de Spargus** (celle de Jak 3) se pose en
+**L'arène du boss.** Quand la troisième ancre est tenue, **le Faisceau
+d'Arcencium** jaillit à l'écart des sanctuaires : une colonne de lumière blanche
+de dix blocs de large dans un halo de dix-huit, enlacée des sept couleurs de
+l'Arcencium qui la remontent, jusqu'à neuf cents blocs de haut, couronnée à la hauteur des nuages
+d'anneaux colorés d'où partent des ondes. On la voit de jour comme de nuit, de
+partout : on marche vers elle, et elle pâlit quand on arrive pour ne pas gêner
+le combat. À son pied, **l'arène de Spargus** (celle de Jak 3) se pose en
 une quinzaine de secondes : un sol de sable cerné de mesas de grès rouge et de
 gradins, fermé au nord par une arche de rocher. Le boss attend **au centre du
 sol** : un **géant** de neuf à dix blocs de haut (un joueur en fait 1,8), tiré au
@@ -819,6 +824,11 @@ tout cela entre dans le mod pour tous les joueurs.
 2. **Retouchez** : meubles (n'importe quel bloc, y compris ceux des autres mods du
    modpack), trous bouchés, murs, sols, escaliers, portes, lits, lanternes, coffres
    remplis, panneaux écrits, cadres, tableaux, porte-armures. Les appartements aussi.
+   Les **portes de Jak 3** sont dans l'onglet du mod : la **porte du Hip Hog** (3 × 4),
+   la **petite porte de Haven** (1 × 2) et le **sas du port** (12 × 12, quatre blocs
+   d'épaisseur). Clic droit sur le sol : la porte se dresse face à vous, et s'ouvre
+   toute seule quand on s'en approche, comme dans Jak 3. Casser un de ses blocs la
+   retire entière.
 3. **Relevez** : `/arcencium haven atelier releve` (cliquable dans le message d'arrivée).
    Toute la ville se charge puis se lit, en quelques secondes. Le relevé ne garde que ce
    qui diffère de la ville posée, et il est écrit dans `run/arcencium_jak/ville.nbt`,
@@ -836,8 +846,10 @@ tout cela entre dans le mod pour tous les joueurs.
 - Le relevé de la ville entière **remplace** les relevés d'appartements faits à part : la
   ville les contient déjà.
 - Ce qui n'est pas relevé : les monstres, les habitants et les véhicules, la borne du QG
-  et le bouton de l'invasion (le mod les pose lui-même), et tout ce qui sort de la grille
-  de la ville (1227 × 158 × 695 blocs à partir de 0, 5, 0).
+  et le bouton de l'invasion, les câbles des tours et les portes de Jak 3 posées d'office
+  (appartements, bar, sas du port) — le mod les pose lui-même —, et tout ce qui sort de
+  la grille de la ville (1227 × 158 × 695 blocs à partir de 0, 5, 0). Les portes de Jak 3
+  que vous posez, elles, sont relevées.
 - Les règles des salles valent ici aussi : portes refermées, redstone éteinte, eau qui
   coule écartée ; leviers, trappes, bougies et feux de camp gardés tels quels.
 - Un bloc d'un autre mod doit exister dans le modpack du joueur : le script signale ceux
@@ -851,7 +863,7 @@ Sur un serveur d'essai (`run-server`), chacun écrit son rapport puis arrête le
 
 - `EMERALDWEAPONS_AUTOTEST=vote ./gradlew runServer` : appartements et vote, rapport `run-server/vote_autotest.txt` ;
 - `EMERALDWEAPONS_AUTOTEST=salles ./gradlew runServer` : relevé et rejeu des salles, rapport `run-server/salles_autotest.txt` ;
-- `EMERALDWEAPONS_AUTOTEST=atelier ./gradlew runServer` : l'atelier et le relevé de la ville entière (ville nue relevée vide, retouches relevées puis rejouées par deux poses), rapport `run-server/atelier_autotest.txt` ;
+- `EMERALDWEAPONS_AUTOTEST=atelier ./gradlew runServer` : l'atelier et le relevé de la ville entière (ville nue relevée vide, retouches — dont une petite porte de Jak 3 — relevées puis rejouées par deux poses), rapport `run-server/atelier_autotest.txt` ;
 - `EMERALDWEAPONS_AUTOTEST=vehicules ./gradlew runServer` : voitures et motos, rapport `run-server/vehicules_autotest.txt` ;
 - `EMERALDWEAPONS_AUTOTEST=invasion ./gradlew runServer` : invasion, décor destructible, bouton du QG et MSPT, rapport `run-server/invasion_autotest.txt` ;
 - `EMERALDWEAPONS_AUTOTEST=armes ./gradlew runServer` : Morph Gun (poses, confinement, tir des douze armes, munitions, décor, MSPT avec quatre tireurs), rapport `run-server/armes_autotest.txt` ;

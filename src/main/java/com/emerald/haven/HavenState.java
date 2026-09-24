@@ -62,6 +62,14 @@ public final class HavenState extends SavedData {
      */
     private boolean atelier;
     /**
+     * Ce que HavenCables a deja fait des cables de la ville posee : 0 rien (les murs du volume),
+     * 1 des chaines posees en blocs (premier essai du 24 sept.), 2 vides, la chaine est dessinee
+     * par le client. Les mondes d'avant n'ont pas la cle : 0.
+     */
+    private int cables;
+    /** Les portes de Jak 3 posees d'office (HavenDoors.VERSION) ; 0 sur les mondes d'avant. */
+    private int doors;
+    /**
      * LE MODE DE JEU D'ORIGINE, PAR JOUEUR.
      *
      * Sauvegarde, parce qu'un joueur deconnecte dans la ville, un serveur qui
@@ -100,6 +108,10 @@ public final class HavenState extends SavedData {
         state.built = tag.getBoolean("Built");
         state.resetPending = tag.getBoolean("ResetPending");
         state.atelier = tag.getBoolean("Atelier");
+        // le premier essai ecrivait un booleen « Cables » : vrai = chaines en blocs
+        state.cables = tag.contains("CablesVersion") ? tag.getInt("CablesVersion")
+                : tag.getBoolean("Cables") ? 1 : 0;
+        state.doors = tag.getInt("DoorsVersion");
         state.sha1 = tag.getString("Sha1");
         if (tag.contains("Origin")) {
             state.origin = BlockPos.of(tag.getLong("Origin"));
@@ -143,6 +155,8 @@ public final class HavenState extends SavedData {
         tag.putBoolean("Built", this.built);
         tag.putBoolean("ResetPending", this.resetPending);
         tag.putBoolean("Atelier", this.atelier);
+        tag.putInt("CablesVersion", this.cables);
+        tag.putInt("DoorsVersion", this.doors);
         tag.putString("Sha1", this.sha1);
         tag.putLong("Origin", this.origin.asLong());
         tag.putInt("Width", this.width);
@@ -206,6 +220,30 @@ public final class HavenState extends SavedData {
         return this.resetPending;
     }
 
+    /** Ce que HavenCables a deja fait des cables de la ville posee (0, 1 ou 2, voir le champ). */
+    public int cables() {
+        return this.cables;
+    }
+
+    public void setCables(int cables) {
+        if (this.cables != cables) {
+            this.cables = cables;
+            setDirty();
+        }
+    }
+
+    /** Les portes d'office de la ville posee (HavenDoors.VERSION). */
+    public int doors() {
+        return this.doors;
+    }
+
+    public void setDoors(int doors) {
+        if (this.doors != doors) {
+            this.doors = doors;
+            setDirty();
+        }
+    }
+
     public String sha1() {
         return this.sha1;
     }
@@ -242,6 +280,8 @@ public final class HavenState extends SavedData {
     public void beginPose(BlockPos origin, boolean reset) {
         this.wanted = true;
         this.built = false;
+        this.cables = 0;
+        this.doors = 0;
         this.resetPending = reset;
         this.origin = origin.immutable();
         setDirty();

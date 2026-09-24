@@ -1,5 +1,10 @@
 package com.emerald.haven;
 
+import com.emerald.block.HavenDoorBlock;
+import com.emerald.block.entity.HavenDoorBlockEntity;
+import com.emerald.haven.door.HavenDoorFrame;
+import com.emerald.haven.door.HavenDoorKind;
+import com.emerald.haven.door.HavenDoors;
 import com.emerald.jak.JakBuilder;
 import com.emerald.jak.JakVolume;
 import com.emerald.main.EmeraldWeaponsMod;
@@ -14,6 +19,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunk;
@@ -190,14 +196,43 @@ public final class HavenAutotest {
 
         BlockState doorGot = level.getBlockState(o.offset(door));
         BlockState doorUp = level.getBlockState(o.offset(door.above()));
-        check("porte du bar en cellule (361, 66, 197)",
-                same(doorGot, doorWanted) && same(doorUp, doorUpWanted),
+        // au-dessus du seuil, l'air du volume -- ou la porte de Jak 3, posee d'office (cahier §95)
+        check("porte du bar en cellule (361, 66, 197) : le seuil, et au-dessus l'air ou la porte de Jak 3",
+                same(doorGot, doorWanted) && (same(doorUp, doorUpWanted)
+                        || doorUp.getBlock() instanceof HavenDoorBlock),
                 "monde " + name(doorGot) + " / " + name(doorUp) + ", volume " + name(doorWanted)
                         + " / " + name(doorUpWanted) + ", en " + o.offset(door).toShortString());
 
         long[] flowing = countFlowing(level, state);
         check("eau qui coule dans la boite juste apres la pose", flowing[0] == 0 && flowing[1] == 0,
                 flowing[0] + " blocs" + where(flowing) + ", " + flowing[1] + " troncons non charges");
+
+        // LES CABLES (cahier §94) : chaque cellule de haven_cables.json est vide apres la pose (la
+        // chaine est dessinee par le client), et chaque cable entier a un bloc temoin plein au
+        // moins, sans quoi le client ne le dessinerait jamais
+        int emptied = 0;
+        for (HavenCables.Cell cell : HavenCables.cells()) {
+            if (level.getBlockState(o.offset(cell.x(), cell.y(), cell.z())).isAir()) {
+                emptied++;
+            }
+        }
+        int seen = 0;
+        for (HavenCables.Line line : HavenCables.lines()) {
+            boolean start = line.startWitness() != null && !level.getBlockState(o.offset(line.startWitness())).isAir();
+            boolean end = line.endWitness() != null && !level.getBlockState(o.offset(line.endWitness())).isAir();
+            if (start || end) {
+                seen++;
+            }
+        }
+        check("cables : les cellules des cables sont vides, chaque cable entier a son bloc temoin, etat a la version "
+                        + HavenCables.VERSION,
+                emptied == HavenCables.cells().size() && HavenCables.cells().size() > 2000
+                        && seen == HavenCables.lines().size() && HavenCables.lines().size() >= 12
+                        && state.cables() == HavenCables.VERSION,
+                emptied + " cellules vides sur " + HavenCables.cells().size() + ", " + seen + " cables sur "
+                        + HavenCables.lines().size() + " avec leur temoin, etat " + state.cables());
+
+        doors(server, level, o, state);
 
         curtain(level, volume, o);
 
@@ -308,6 +343,143 @@ public final class HavenAutotest {
      * voient. On lit le monde a chaque cellule du pourtour ou le volume met une
      * barriere : elle doit y etre, et porter de l'eau source.
      */
+    /**
+     * LES PORTES DE JAK 3 (cahier §95). Chaque porte d'office a son controleur, de la bonne sorte,
+     * fermee, et ses cellules barrent le passage. Le bar (en biais) et le sas s'ouvrent pour
+     * quelqu'un qui reste devant, liberent leur passage -- les bords du sas restent pleins -- et
+     * se referment quand il s'en va. Une porte posee a la main sur la rue tient toutes ses
+     * cellules ; en casser une emporte la porte entiere.
+     */
+    private static void doors(MinecraftServer server, ServerLevel level, BlockPos o, HavenState state) {
+        List<HavenDoorFrame> frames = HavenDoors.defaults(server);
+        int doors = 0;
+        int closedCells = 0;
+        int cells = 0;
+        StringBuilder missing = new StringBuilder();
+        List<HavenDoorBlockEntity> entities = new ArrayList<>();
+        for (int i = 0; i < frames.size(); i++) {
+            HavenDoorFrame frame = frames.get(i);
+            if (HavenDoors.controllerAt(level, o, frame) instanceof HavenDoorBlockEntity entity
+                    && entity.kind() == frame.kind() && !entity.target() && entity.progress() == 0.0F
+                    && !entity.cellsOpen()) {
+                doors++;
+                entities.add(entity);
+            } else {
+                missing.append(' ').append(i);
+                entities.add(null);
+            }
+            for (BlockPos cell : frame.moved(o.getX(), o.getY(), o.getZ()).cells()) {
+                BlockState got = level.getBlockState(cell);
+                if (got.getBlock() instanceof HavenDoorBlock) {
+                    cells++;
+                    if (!got.getCollisionShape(level, cell).isEmpty()) {
+                        closedCells++;
+                    }
+                }
+            }
+        }
+        check("portes de Jak 3 : les trois appartements, le bar et le sas ont leur porte, fermee, qui barre le passage",
+                doors == frames.size() && frames.size() >= 5 && cells > 0 && closedCells == cells
+                        && state.doors() == HavenDoors.VERSION,
+                doors + " portes sur " + frames.size() + (missing.length() > 0 ? " (manquent :" + missing + ")" : "")
+                        + ", " + closedCells + " cellules fermees sur " + cells + ", etat " + state.doors());
+
+        // le bar et le sas, les deux dernieres portes d'office : ouvrir, puis laisser se refermer
+        for (int i = frames.size() - 2; i < frames.size(); i++) {
+            HavenDoorBlockEntity entity = entities.get(i);
+            if (entity == null) {
+                check("porte d'office " + i + " : s'ouvre et se referme", false, "pas de porte");
+                continue;
+            }
+            cycle(level, i, entity);
+        }
+
+        // a la main, sur la rue devant le bar : la petite porte et celle du Hip Hog
+        BlockPos street = o.offset(Haven.BAR_FRONT_CELL);
+        HavenDoorFrame small = new HavenDoorFrame(HavenDoorKind.PETITE, street.getX() + 0.5, street.getY(),
+                street.getZ() + 0.5, 0.0F);
+        HavenDoorFrame hip = new HavenDoorFrame(HavenDoorKind.HIP, street.getX() - 3.5, street.getY(),
+                street.getZ() + 0.5, 0.0F);
+        for (HavenDoorFrame frame : List.of(small, hip)) {
+            placeAndBreak(level, frame);
+        }
+    }
+
+    /** Une porte d'office : quelqu'un reste devant jusqu'a ce qu'elle soit grande ouverte, puis s'en va. */
+    private static void cycle(ServerLevel level, int index, HavenDoorBlockEntity entity) {
+        HavenDoorFrame frame = entity.frame();
+        BlockPos at = entity.getBlockPos();
+        // les cellules que la porte tient (au bar, le linteau garde les siennes)
+        List<BlockPos> held = new ArrayList<>();
+        for (BlockPos cell : frame.cells()) {
+            if (level.getBlockState(cell).getBlock() instanceof HavenDoorBlock) {
+                held.add(cell);
+            }
+        }
+        for (int t = 0; t < entity.kind().duration + 5; t++) {
+            entity.trigger(level);
+            HavenDoorBlockEntity.serverTick(level, at, level.getBlockState(at), entity);
+        }
+        int passable = 0;
+        int clear = 0;
+        int solidEdges = 0;
+        int edges = 0;
+        for (BlockPos cell : held) {
+            boolean empty = level.getBlockState(cell).getCollisionShape(level, cell).isEmpty();
+            if (frame.clearWhenOpen(cell)) {
+                clear++;
+                passable += empty ? 1 : 0;
+            } else {
+                edges++;
+                solidEdges += empty ? 0 : 1;
+            }
+        }
+        boolean opened = entity.target() && entity.progress() == 1.0F && entity.cellsOpen();
+        for (int t = 0; t < 2 * entity.kind().duration; t++) {
+            HavenDoorBlockEntity.serverTick(level, at, level.getBlockState(at), entity);
+        }
+        int closed = 0;
+        for (BlockPos cell : held) {
+            closed += level.getBlockState(cell).getCollisionShape(level, cell).isEmpty() ? 0 : 1;
+        }
+        boolean shut = !entity.target() && entity.progress() == 0.0F && !entity.cellsOpen();
+        check("porte d'office " + index + " (" + entity.kind() + ") : grande ouverte pour qui reste devant, "
+                        + "puis refermee derriere lui",
+                opened && clear > 0 && passable == clear && solidEdges == edges && shut && closed == held.size(),
+                "ouverte " + opened + ", passage " + passable + "/" + clear + " cellules libres, bords "
+                        + solidEdges + "/" + edges + " pleins ; refermee " + shut + ", " + closed + "/"
+                        + held.size() + " cellules pleines");
+    }
+
+    /** Une porte posee a la main (comme l'objet de l'atelier) : toutes ses cellules, puis cassee par le haut. */
+    private static void placeAndBreak(ServerLevel level, HavenDoorFrame frame) {
+        boolean placed = HavenDoors.place(level, frame, false);
+        List<BlockPos> all = HavenDoors.withController(frame);
+        int held = 0;
+        for (BlockPos cell : all) {
+            held += level.getBlockState(cell).getBlock() instanceof HavenDoorBlock ? 1 : 0;
+        }
+        boolean controlled = level.getBlockEntity(frame.controller()) instanceof HavenDoorBlockEntity entity
+                && entity.kind() == frame.kind();
+        // la cellule la plus haute, au bout de la largeur : la plus loin du controleur
+        BlockPos top = all.get(0);
+        for (BlockPos cell : all) {
+            if (cell.getY() > top.getY() || (cell.getY() == top.getY() && cell.getX() > top.getX())) {
+                top = cell;
+            }
+        }
+        level.setBlock(top, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
+        int left = 0;
+        for (BlockPos cell : all) {
+            left += level.getBlockState(cell).isAir() ? 0 : 1;
+        }
+        check("porte " + frame.kind() + " posee a la main sur la rue : " + all.size()
+                        + " cellules et son controleur ; cassee par le haut, elle part entiere",
+                placed && held == all.size() && controlled && left == 0,
+                "posee " + placed + ", " + held + "/" + all.size() + " cellules, controleur " + controlled
+                        + " ; apres la casse en " + top.toShortString() + ", " + left + " cellules restent");
+    }
+
     private static void curtain(ServerLevel level, JakVolume volume, BlockPos o) {
         int w = volume.width();
         int d = volume.depth();

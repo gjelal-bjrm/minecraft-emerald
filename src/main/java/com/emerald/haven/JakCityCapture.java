@@ -401,6 +401,11 @@ public final class JakCityCapture {
             int x = wx - this.origin.getX();
             int y = wy - this.origin.getY();
             int z = wz - this.origin.getZ();
+            if (HavenCables.isCable(x, y, z)
+                    || com.emerald.haven.door.HavenDoors.isDefaultCell(this.server, x, y, z)) {
+                this.managedCells++;          // un cable vide ou une porte d'office : le mod, pas le joueur
+                return;
+            }
             CompoundTag cell = new CompoundTag();
             cell.put("pos", new IntArrayTag(new int[]{x, y, z}));
             cell.putInt("base", this.palette.computeIfAbsent(base, s -> this.palette.size()));
@@ -481,7 +486,7 @@ public final class JakCityCapture {
                     + " troncons lus en " + millis + " ms (" + this.ticks + " tiques)");
             text.add(this.cells.size() + " cellule(s) changee(s), dont " + this.blockEntities
                     + " avec entite de bloc ; " + entities.size() + " decor(s) ; " + this.managedCells
-                    + " cellule(s) de la borne et du bouton ignoree(s)");
+                    + " cellule(s) du mod ignoree(s) (borne, bouton, cables vides, portes d'office)");
             text.add("Par bloc :");
             this.perBlock.entrySet().stream()
                     .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())

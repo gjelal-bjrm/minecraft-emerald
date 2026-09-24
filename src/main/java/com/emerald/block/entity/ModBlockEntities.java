@@ -43,6 +43,11 @@ public class ModBlockEntities {
                     () -> BlockEntityType.Builder.of(EclipsePortalBlockEntity::new,
                             ModBlocks.ECLIPSE_PORTAL.get()).build(null));
 
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<HavenDoorBlockEntity>>
+            HAVEN_DOOR = BLOCK_ENTITIES.register("haven_door",
+                    () -> BlockEntityType.Builder.of(HavenDoorBlockEntity::new,
+                            ModBlocks.HAVEN_DOOR.get()).build(null));
+
     public static void register(IEventBus eventBus) {
         BLOCK_ENTITIES.register(eventBus);
     }

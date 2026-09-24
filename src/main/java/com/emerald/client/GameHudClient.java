@@ -60,7 +60,7 @@ public class GameHudClient {
     private static int anchors;
     private static java.util.List<Long> anchorPositions = java.util.List.of();
     private static int heldMask;
-    /** L'arene finale, ou 0 tant que l'Arc-en-ciel n'est pas leve. */
+    /** L'arene finale, ou 0 tant que le Faisceau n'est pas leve. */
     private static long finalePos;
 
     public static void accept(GameSyncPayload payload) {
@@ -173,7 +173,7 @@ public class GameHudClient {
             }
         }
         if (finalePos != 0L && current == GameState.Status.RUNNING) {
-            rows++;                                   // la ligne de l'Arc-en-ciel
+            rows++;                                   // la ligne du Faisceau
         }
         int weatherY = y + PANEL_H + 2 + (rows > 0 ? rows * 10 + 4 : 0);
         weatherPanel(graphics, mc, x, weatherY);
@@ -251,12 +251,13 @@ public class GameHudClient {
         int rows = todo.size() + (arena ? 1 : 0);
         graphics.fill(x, y, x + PANEL_W, y + 2 + rows * 10, 0x8C060608);
         if (arena) {
-            // l'Arc-en-ciel en derniere ligne, dans sa couleur qui tourne : c'est l'objectif
+            // le Faisceau en derniere ligne, dans sa couleur qui tourne : c'est l'objectif
             net.minecraft.core.BlockPos pos = net.minecraft.core.BlockPos.of(finalePos);
             double dx = pos.getX() - mc.player.getX();
             double dz = pos.getZ() - mc.player.getZ();
             int distance = (int) Math.sqrt(dx * dx + dz * dz);
             long time = mc.level == null ? 0L : mc.level.getGameTime();
+            // les sept couleurs du Faisceau, qui tournent
             int color = 0xFF000000 | java.awt.Color.HSBtoRGB((time % 120L) / 120F, 0.55F, 1.0F);
             String label = String.format(Locale.ROOT, "%s %s  %dm", "◈", cardinal(dx, dz), distance);
             graphics.drawString(mc.font, label, x + 4, y + 2 + (rows - 1) * 10, color, false);

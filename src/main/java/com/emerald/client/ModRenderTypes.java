@@ -55,6 +55,27 @@ public final class ModRenderTypes extends RenderType {
         return RIM.apply(texture);
     }
 
+    /**
+     * LE FAISCEAU DE L'ARENE (cahier §93) : des couleurs pleines en FONDU ALPHA, pas en additif --
+     * une lumiere qui s'ajoute a un ciel de jour deja clair ne se voit pas (le Vortex d'avant).
+     * Sans brouillard (le nuanceur position_color n'en applique pas) : a deux mille blocs, les
+     * couleurs restent pleines. Sans ecriture de profondeur mais avec son test : le relief cache
+     * ce qui est derriere lui, et les couches du faisceau ne se cachent pas entre elles ; triees
+     * a l'envoi, du plus loin au plus pres.
+     */
+    private static final RenderType BEAM = create("emeraldweapons_beam", DefaultVertexFormat.POSITION_COLOR,
+            VertexFormat.Mode.QUADS, 1536, false, true, CompositeState.builder()
+                    .setShaderState(POSITION_COLOR_SHADER)
+                    .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
+                    .setCullState(NO_CULL)
+                    .setDepthTestState(LEQUAL_DEPTH_TEST)
+                    .setWriteMaskState(COLOR_WRITE)
+                    .createCompositeState(false));
+
+    public static RenderType beam() {
+        return BEAM;
+    }
+
     /** Le meme tampon, les faces retournees : ce qui etait devant passe derriere. */
     public static VertexConsumer flipped(VertexConsumer inner) {
         return new Flipped(inner);

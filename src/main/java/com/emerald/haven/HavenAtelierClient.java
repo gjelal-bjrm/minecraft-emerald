@@ -36,6 +36,8 @@ public final class HavenAtelierClient {
         LOGGER.info("atelier : releve automatique termine, fermeture du client");
         // la sauvegarde du monde de l'atelier passe d'abord : quatre-vingt-dix secondes avant
         // tout arret force (AutomatonExit)
-        com.emerald.client.AutomatonExit.stop("atelier", 90);
+        // vingt secondes : la sauvegarde passe en moins d'une ; a quatre-vingt-dix, le joueur
+        // a eu le temps de voir la fenetre noire et de la tuer lui-meme (24 sept.)
+        com.emerald.client.AutomatonExit.stop("atelier", 20);
     }
 }

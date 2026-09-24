@@ -78,7 +78,7 @@ import java.util.Objects;
  * depuis la cour, ou au pied de la tour sud-ouest. Mode eteint : la garnison reste a son
  * poste et le spectateur ne la derange pas.
  *
- * L'ARENE DU BOSS (« nom@arene:vol », « sol », « gradins », « lave », cahier §91) : l'Arc-en-ciel
+ * L'ARENE DU BOSS (« nom@arene:vol », « sol », « gradins », « lave », cahier §91) : le Faisceau
  * se leve pour de vrai a cinq cents blocs a l'est (Finale.begin, avec Ignis), l'arene de
  * Spargus se pose ; puis le spectateur vient au-dessus et l'on attend quarante-cinq secondes,
  * comme pour les sanctuaires. Les vues : d'en haut, depuis le sol face au boss, depuis les
@@ -110,7 +110,11 @@ import java.util.Objects;
  * spectateur et en vision nocturne, a la place et dans l'axe de
  * EMERALDWEAPONS_PHOTOS_CAMERA (« x,y,z,lacet,tangage », en cellules du volume ;
  * plusieurs places separees par « | », prises « camera0 », « camera1 »...), pour
- * regarder un coin sombre de la ville, interface masquee. Il faut un monde ou la
+ * regarder un coin sombre de la ville, interface masquee. « porteN » regarde la porte de Jak 3
+ * numero N (HavenDoors.defaults : les appartements, le bar, le sas), fermee, de biais ; « _dos »
+ * de derriere ; « _mi » la tient ouverte les dernieres tiques, la photo part a mi-course ;
+ * « porteN_ouverte » met le vrai joueur debout devant elle, et elle s'ouvre pour lui ;
+ * « porte_petite » pose une petite porte sur la rue devant le bar. Il faut un monde ou la
  * ville est posee et le lobby ouvert (EMERALDWEAPONS_PHOTOS_MONDE choisit la sauvegarde
  * du run « photos »).
  */
@@ -214,7 +218,7 @@ public final class PhotoAutomaton {
             if ("accueil".equals(path) || "envahie".equals(path)) {
                 return 30;
             }
-            return "arche".equals(path) ? 200 : 140;
+            return "arche".equals(path) ? 200 : HAVEN_SETTLE;
         }
 
         /**
@@ -233,6 +237,12 @@ public final class PhotoAutomaton {
 
     /** Une prise de Haven attend au plus une minute que le joueur soit arrive. */
     private static final int HAVEN_MAX_WAIT = 1200;
+    /** Les tiques d'une prise de Haven ordinaire, une fois le joueur place. */
+    private static final int HAVEN_SETTLE = 140;
+    /** La porte que la prise « _mi » tient ouverte, et la tique d'ou elle la tient. */
+    @Nullable
+    private static BlockPos heldDoor;
+    private static int heldFrom;
     private static int havenWait;
     /** La prise en cours montre l'interface (prises de Haven). */
     private static volatile boolean pendingGui;
@@ -739,14 +749,21 @@ public final class PhotoAutomaton {
     private static boolean arenaSettling;
     private static int arenaWait;
     /** Les vues de l'arene : l'oeil puis le point vise, par rapport au centre de son sol. */
-    private static final java.util.Map<String, double[]> ARENA_VIEWS = java.util.Map.of(
-            "vol", new double[]{0, 44, 22, 0, 0, -28},
-            "sol", new double[]{0, 2.6, 46, 0, 5, 0},
-            "gradins", new double[]{-50, 12, 30, 0, 2, 0},
-            "lave", new double[]{31, 5.5, 38, 22, 0, 22},
-            "dehors", new double[]{-150, 32, 125, 0, 12, 0},
-            "tailles", new double[]{0, 5, 44, 0, 4, 18},
-            "geants", new double[]{0, 8, 50, 0, 7, 18});
+    private static final java.util.Map<String, double[]> ARENA_VIEWS = java.util.Map.ofEntries(
+            java.util.Map.entry("vol", new double[]{0, 44, 22, 0, 0, -28}),
+            java.util.Map.entry("sol", new double[]{0, 2.6, 46, 0, 5, 0}),
+            java.util.Map.entry("gradins", new double[]{-50, 12, 30, 0, 2, 0}),
+            java.util.Map.entry("lave", new double[]{31, 5.5, 38, 22, 0, 22}),
+            java.util.Map.entry("dehors", new double[]{-150, 32, 125, 0, 12, 0}),
+            // le Faisceau (cahier §93) : a son pied dans l'arene, du bord, a huit cents, seize cents et
+            // deux mille cinq cents blocs
+            java.util.Map.entry("faisceau_pied", new double[]{0, 3, 40, 0, 160, 0}),
+            java.util.Map.entry("faisceau_bord", new double[]{-160, 40, 220, 0, 200, 0}),
+            java.util.Map.entry("faisceau_loin", new double[]{-700, 45, 500, 0, 250, 0}),
+            java.util.Map.entry("faisceau_horizon", new double[]{-1300, 40, 900, 0, 300, 0}),
+            java.util.Map.entry("faisceau_tres_loin", new double[]{-2100, 40, 1400, 0, 300, 0}),
+            java.util.Map.entry("tailles", new double[]{0, 5, 44, 0, 4, 18}),
+            java.util.Map.entry("geants", new double[]{0, 8, 50, 0, 7, 18}));
     /**
      * LE COMBAT (« nom@arene:combat0 », « combat1 »...) : le vrai joueur, en survie, face a un
      * boss de l'arene -- le boss numero N/2, a sa taille d'origine si N est pair, geant sinon.
@@ -764,7 +781,7 @@ public final class PhotoAutomaton {
     private static int combatHits;
 
     /**
-     * L'arene est-elle posee ? Le premier appel leve l'Arc-en-ciel a cinq cents blocs a l'est,
+     * L'arene est-elle posee ? Le premier appel leve le Faisceau a cinq cents blocs a l'est,
      * le spectateur au loin ; quand le dernier bloc est pose, il vient au-dessus du sol et l'on
      * attend (voir les sanctuaires).
      */
@@ -836,8 +853,16 @@ public final class PhotoAutomaton {
                 });
             }
         }
+        // l'heure de la prise : midi, ou celle qu'elle demande (« @13000 » : la nuit)
+        run(level.getServer(), "time set " + (shot.height() > 0 ? shot.height() : 6000));
         net.minecraft.world.phys.Vec3 base = net.minecraft.world.phys.Vec3.atBottomCenterOf(arenaCentre);
         net.minecraft.world.phys.Vec3 eye = base.add(view[0], view[1], view[2]);
+        // loin de l'arene, la camera reste au-dessus du relief du lieu
+        int surface = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING,
+                (int) Math.floor(eye.x), (int) Math.floor(eye.z));
+        if (eye.y < surface + 3) {
+            eye = new net.minecraft.world.phys.Vec3(eye.x, surface + 3, eye.z);
+        }
         net.minecraft.world.phys.Vec3 target = base.add(view[3], view[4], view[5]);
         double dx = target.x - eye.x;
         double dz = target.z - eye.z;
@@ -849,7 +874,7 @@ public final class PhotoAutomaton {
         return true;
     }
 
-    /** Le boss de l'Arc-en-ciel, son Sculk, le rang d'avant : l'arene videe de ses monstres. */
+    /** Le boss du Faisceau, son Sculk, le rang d'avant : l'arene videe de ses monstres. */
     private static void clearArena(ServerLevel level) {
         for (net.minecraft.world.entity.Entity e : level.getEntities((net.minecraft.world.entity.Entity) null,
                 new net.minecraft.world.phys.AABB(arenaCentre).inflate(90), e -> e instanceof net.minecraft.world.entity.Mob)) {
@@ -892,6 +917,66 @@ public final class PhotoAutomaton {
         }
         pendingSettle = COMBAT;
         LOGGER.info("photos : {} ({} {}) face au joueur", shot.name(), id, giant ? "geant" : "a sa taille d'origine");
+        return true;
+    }
+
+    /**
+     * Une porte de Jak 3 (cahier §95). « porte2 » : la troisieme porte d'office, fermee, vue par un
+     * spectateur a une fois et demie sa hauteur, un quart de biais ; « _dos » : de derriere ;
+     * « _mi » : la meme vue, la porte tenue ouverte les dernieres tiques de la prise, qui part a
+     * mi-course ; « _ouverte » : le vrai joueur debout au bord de la zone qui l'ouvre -- elle
+     * s'ouvre pour lui. « porte_petite » : une petite porte posee sur la rue devant le bar, pour
+     * la voir a sa taille.
+     */
+    private static boolean doorShot(MinecraftServer server, ServerPlayer player, Shot shot, String rest) {
+        boolean open = rest.endsWith("_ouverte");
+        String what = open ? rest.substring(0, rest.length() - "_ouverte".length()) : rest;
+        boolean half = what.endsWith("_mi");
+        what = half ? what.substring(0, what.length() - "_mi".length()) : what;
+        boolean back = what.endsWith("_dos");
+        what = back ? what.substring(0, what.length() - "_dos".length()) : what;
+        ServerLevel level = (ServerLevel) player.level();
+        BlockPos o = com.emerald.haven.HavenState.get(server).origin();
+        com.emerald.haven.door.HavenDoorFrame door;
+        if ("_petite".equals(what)) {
+            BlockPos street = o.offset(com.emerald.haven.Haven.BAR_FRONT_CELL);
+            door = new com.emerald.haven.door.HavenDoorFrame(com.emerald.haven.door.HavenDoorKind.PETITE,
+                    street.getX() + 0.5, street.getY(), street.getZ() + 0.5, 0.0F);
+            if (PREPARED.add("porte_petite")) {
+                LOGGER.info("photos : petite porte posee sur la rue : {}",
+                        com.emerald.haven.door.HavenDoors.place(level, door, false));
+            }
+        } else {
+            List<com.emerald.haven.door.HavenDoorFrame> doors = com.emerald.haven.door.HavenDoors.defaults(server);
+            int index = Integer.parseInt(what);
+            if (index < 0 || index >= doors.size()) {
+                LOGGER.warn("photos : pas de porte d'office numero {}", index);
+                return false;
+            }
+            door = doors.get(index).moved(o.getX(), o.getY(), o.getZ());
+        }
+        com.emerald.haven.door.HavenDoorKind kind = door.kind();
+        double side = back ? -1.0 : 1.0;
+        double away = open ? kind.trigger - 0.5 : kind.depth / 2.0 + kind.height * 1.1 + 1.5;
+        double across = open ? 0.0 : away * 0.25;
+        double x = door.x() + side * door.frontX() * away + door.lateralX() * across;
+        double z = door.z() + side * door.frontZ() * away + door.lateralZ() * across;
+        double eye = door.y() + (open ? 1.62 : Math.max(1.62, kind.height * 0.45));
+        double lookY = door.y() + kind.height * (open ? 0.35 : 0.5);
+        double dx = door.x() - x;
+        double dz = door.z() - z;
+        float yaw = (float) Math.toDegrees(Math.atan2(-dx, dz));
+        float pitch = (float) -Math.toDegrees(Math.atan2(lookY - eye, Math.sqrt(dx * dx + dz * dz)));
+        player.setGameMode(open ? GameType.ADVENTURE : GameType.SPECTATOR);
+        player.teleportTo(level, x, eye - player.getEyeHeight(), z, yaw, pitch);
+        if (half) {
+            // tenue ouverte les dernieres tiques : a la photo, les battants sont a mi-course (le
+            // sas se deverrouille d'abord, ses battants ne bougent qu'au dernier tiers)
+            heldDoor = door.controller();
+            heldFrom = HAVEN_SETTLE - Math.round(kind.duration * (kind.openFrom + (1.0F - kind.openFrom) * 0.5F));
+        }
+        LOGGER.info("photos : {} (porte {}, {}{}) joueur en {} {} {}", shot.name(), kind,
+                open ? "ouverte" : half ? "a mi-course" : "fermee", back ? ", de dos" : "", x, eye, z);
         return true;
     }
 
@@ -938,7 +1023,12 @@ public final class PhotoAutomaton {
             return;
         }
         ++waited;
+        if (heldDoor != null && waited >= heldFrom
+                && player.level().getBlockEntity(heldDoor) instanceof com.emerald.block.entity.HavenDoorBlockEntity door) {
+            door.trigger(player.level());
+        }
         if (waited >= pendingSettle && taken) {
+            heldDoor = null;
             LOGGER.info("photos : prise {} faite apres {} tiques, en {} {} {}, lacet {}, tangage {}", shot.name(), waited,
                     Math.round(player.getX() * 10) / 10.0, Math.round(player.getY() * 10) / 10.0,
                     Math.round(player.getZ() * 10) / 10.0, Math.round(player.getYRot()), Math.round(player.getXRot()));
@@ -1024,6 +1114,9 @@ public final class PhotoAutomaton {
                 com.emerald.haven.journey.HavenRack.take(player, rack);
             }
             return faceRack(server, player, rack);
+        }
+        if (shot.biome().getPath().startsWith("porte")) {
+            return doorShot(server, player, shot, shot.biome().getPath().substring("porte".length()));
         }
         if (shot.biome().getPath().startsWith("camera")) {
             // « camera2 » : la troisieme place de EMERALDWEAPONS_PHOTOS_CAMERA (« place|place|... »)
