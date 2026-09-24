@@ -65,8 +65,12 @@ public final class PhotoClient {
         // le terrain autour est-il entierement dessine ? (Sodium repond ici aussi) -- et le troncon
         // du joueur est-il la ? Juste apres un long teleport, rien n'est encore arrive : « tout est
         // dessine » repondait oui sous « Chargement du terrain » (photo de l'arche du 21 sept.)
-        boolean here = mc.player != null && mc.level.getChunkSource().hasChunk(mc.player.getBlockX() >> 4,
-                mc.player.getBlockZ() >> 4);
+        //
+        // ET TOUT LE TOUR, PAS SEULEMENT SON TRONCON. Apres un saut de cinq cents blocs, les troncons
+        // du premier plan n'etaient pas encore arrives quand « tout est dessine » repondait oui : les
+        // lointains de Distant Horizons remplissaient le trou, et le bas des photos des sanctuaires
+        // montrait le dessous du terrain (24 sept.). On attend donc tous ceux a neuf troncons.
+        boolean here = mc.player != null && aroundLoaded(mc);
         PhotoAutomaton.clientTerrain(here && (mc.screen == null || wantsScreen)
                 && mc.levelRenderer.hasRenderedAllSections());
         if (TAKEN.add(wanted)) {
@@ -95,5 +99,19 @@ public final class PhotoClient {
                 mc.setScreen(null);                       // la prise suivante part sans ecran
             }
         }
+    }
+
+    /** Tous les troncons a neuf troncons du joueur sont-ils arrives chez le client ? */
+    private static boolean aroundLoaded(Minecraft mc) {
+        int cx = mc.player.getBlockX() >> 4;
+        int cz = mc.player.getBlockZ() >> 4;
+        for (int dx = -9; dx <= 9; dx++) {
+            for (int dz = -9; dz <= 9; dz++) {
+                if (dx * dx + dz * dz <= 81 && !mc.level.getChunkSource().hasChunk(cx + dx, cz + dz)) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 }

@@ -523,7 +523,9 @@ public class GameManager {
                     + random.nextIntBetweenInclusive(-GameState.ANCHOR_JITTER, GameState.ANCHOR_JITTER);
             int z = center.getZ() + (int) Math.round(Math.sin(angle) * distance)
                     + random.nextIntBetweenInclusive(-GameState.ANCHOR_JITTER, GameState.ANCHOR_JITTER);
-            anchors.add(WorldSetup.findOpenGround(level, new BlockPos(x, 0, z), 16));
+            // LE SITE LE PLUS PLAT a portee, au sol median (cahier §92) : le raccord au terrain
+            // en sera doux, et aucun troncon n'est genere pour le trouver
+            anchors.add(Sanctuary.site(level, x, z).ground());
         }
         org.slf4j.LoggerFactory.getLogger(EmeraldWeaponsMod.MODID).info(
                 "Ancres posees a {} du village {} (tour {}) : {}", distance, center,

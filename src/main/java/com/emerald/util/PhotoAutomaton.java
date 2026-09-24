@@ -644,8 +644,12 @@ public final class PhotoAutomaton {
     private static com.emerald.game.Sanctuary.Job sanctuaryJob;
     @Nullable
     private static BlockPos sanctuaryGround;
-    /** Le chantier des photos va plus vite que celui de la partie : personne ne joue. */
-    private static final long SANCTUARY_BUDGET = 40_000_000L;
+    /**
+     * Le chantier des photos va un peu plus vite que celui de la partie -- personne ne joue --,
+     * sans prendre tout le fil serveur : a quarante millisecondes, avec la generation du terrain
+     * autour, le client a cesse de repondre (24 sept.).
+     */
+    private static final long SANCTUARY_BUDGET = 20_000_000L;
     /** Tiques d'attente apres le chantier, le spectateur au-dessus de la cour. */
     private static final int SANCTUARY_SETTLE = 900;
     private static int sanctuaryWait;
@@ -673,7 +677,7 @@ public final class PhotoAutomaton {
             }
             int x = from.getX() + 500 * (SANCTUARIES.size() + 1);
             int z = from.getZ();
-            sanctuaryGround = new BlockPos(x, com.emerald.game.WorldSetup.surfaceY(level, x, z) - 1, z);
+            sanctuaryGround = com.emerald.game.Sanctuary.site(level, x, z).ground();
             // LE SPECTATEUR RESTE AU LOIN pendant le chantier : pose sous ses yeux, chaque bloc
             // partait vers le client, qui rebatissait ses troncons sans fin -- la fenetre a gele
             // et Windows l'a fermee (24 sept.). Il recoit ensuite les troncons finis.
@@ -740,6 +744,7 @@ public final class PhotoAutomaton {
             "sol", new double[]{0, 2.6, 46, 0, 5, 0},
             "gradins", new double[]{-50, 12, 30, 0, 2, 0},
             "lave", new double[]{31, 5.5, 38, 22, 0, 22},
+            "dehors", new double[]{-150, 32, 125, 0, 12, 0},
             "tailles", new double[]{0, 5, 44, 0, 4, 18},
             "geants", new double[]{0, 8, 50, 0, 7, 18});
     /**
@@ -765,7 +770,14 @@ public final class PhotoAutomaton {
      */
     private static boolean arenaRaised(ServerLevel level, ServerPlayer player) {
         if (arenaCentre == null) {
-            BlockPos site = player.blockPosition().offset(500, 0, 0);
+            // le site le plus plat a quarante-huit blocs et plus, loin des sanctuaires des prises,
+            // comme en partie (cahier §92) : un point fixe tombait dans un lac, et sans distance
+            // imposee l'arene s'est collee aux Braises
+            com.emerald.game.SiteTerrain.Site flat = com.emerald.game.SiteTerrain.flattest(level,
+                    player.getBlockX() + 500, player.getBlockZ(), com.emerald.game.Finale.ARENA_HALF, 48,
+                    (x, z) -> SANCTUARIES.values().stream().allMatch(s -> Math.hypot(s.getX() - x, s.getZ() - z)
+                            >= com.emerald.game.Finale.KEEP_FROM_ANCHORS));
+            BlockPos site = new BlockPos(flat.x(), 0, flat.z());
             arenaCentre = com.emerald.game.Finale.begin(level, site, "cataclysm:ignis");
             if (arenaCentre == null) {
                 arenaCentre = BlockPos.ZERO;

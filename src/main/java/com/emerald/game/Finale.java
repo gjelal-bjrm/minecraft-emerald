@@ -74,8 +74,22 @@ public final class Finale {
 
     /** L'arene se leve a cette distance du village, entre deux sanctuaires. */
     private static final int ARENA_DISTANCE = 300;
-    /** Jamais plus pres que cela d'un sanctuaire. */
-    private static final int KEEP_FROM_ANCHORS = 200;
+    /**
+     * Jamais plus pres que cela d'un sanctuaire. Deux cents suffisaient a l'ancienne enceinte de
+     * soixante-sept blocs ; le sanctuaire en fait deux cent dix, talus compris il deborde de cent
+     * cinquante-quatre blocs de son centre, l'arene de cent vingt-cinq (cahier §92).
+     */
+    public static final int KEEP_FROM_ANCHORS = 300;
+    /**
+     * Ni plus pres que cela du village : la recherche du site peut deriver jusqu'a 256 blocs, et
+     * un village est pose sur du plat et du sec -- le site reve. Son rayon, plus l'arene et ses
+     * talus.
+     */
+    private static final int KEEP_FROM_VILLAGE = 240;
+    /** Le demi-cote de l'arene pour chercher son site (le volume fait 170 x 159). */
+    public static final int ARENA_HALF = 85;
+    /** La largeur maximale des talus autour de l'arene. */
+    private static final int ARENA_TALUS = 40;
     /** Le volume de l'arene et ses reperes (data/emeraldweapons/jak/arene_spargus.jakv et .json). */
     static final String ARENA_VOLUME = "arene_spargus";
     /**
@@ -115,6 +129,11 @@ public final class Finale {
     /** L'arene en train de se poser, ou null. */
     @Nullable
     private static com.emerald.jak.JakBuilder.Job arenaJob;
+    /** Avant elle, le terrain : son emprise videe et fondee, les talus autour (cahier §92). */
+    @Nullable
+    private static SiteTerrain.Blend arenaGround;
+    @Nullable
+    private static com.emerald.jak.JakBuilder.Plan arenaPlan;
     /** Le rappel de fin de partie, quelques secondes apres le titre. */
     private static long hintAt = -1L;
     /** En monde ouvert : quand relancer le cycle, une fois la victoire savouree. */
@@ -176,9 +195,12 @@ public final class Finale {
         if (bossType == null) {
             return null;
         }
-        BlockPos center = site != null ? site : chooseSite(level, state);
-        center = new BlockPos(center.getX(), WorldSetup.surfaceY(level, center.getX(), center.getZ()),
-                center.getZ());
+        // LE SITE LE PLUS PLAT a portee, au sol median (cahier §92) ; un site impose (la commande,
+        // l'automate de photos) garde sa place et ne prend que la hauteur mediane
+        BlockPos wanted = site != null ? site : chooseSite(level, state);
+        SiteTerrain.Site flat = SiteTerrain.flattest(level, wanted.getX(), wanted.getZ(), ARENA_HALF,
+                site != null ? 0 : 48, (x, z) -> farEnough(state, x, z));
+        BlockPos center = new BlockPos(flat.x(), flat.y() + 1, flat.z());
         state.beginFinale(center, EntityType.getKey(bossType).toString(), level.getGameTime());
 
         GameManager.announce(level, "game.emeraldweapons.rainbow",
@@ -271,26 +293,72 @@ public final class Finale {
                 center.getZ() - marks.centre().getZ());
         BlockPos perch = origin.offset(marks.centre());
         List<BlockPos> posts = marks.guards().stream().map(origin::offset).toList();
-        net.minecraft.world.level.block.state.BlockState rock = Blocks.TERRACOTTA.defaultBlockState();
-        net.minecraft.world.level.block.state.BlockState air = Blocks.AIR.defaultBlockState();
-        com.emerald.jak.JakBuilder.Job job = com.emerald.jak.JakBuilder.start(
-                new com.emerald.jak.JakBuilder.Plan(level, volume, origin)
-                        .baseline(y -> y < floorY ? rock : air)
-                        .awaitEntities(true)
-                        .beforePlace(world -> clearBox(world, origin, volume))
-                        .clearFluidTicks(true)
-                        .label("arene du boss")
-                        .onDone(report -> {
-                            arenaJob = null;
-                            LOGGER.info("Arene de Spargus posee en {} s ; boss en {}", report.seconds(),
-                                    perch.toShortString());
-                            spawnBoss(level, perch, bossType);
-                            spawnGuardsAt(level, posts, GUARDS_AT_START);
-                        }));
-        if (job == null) {
+        // LE TERRAIN D'ABORD (cahier §92). La boite n'est plus remise a plat d'un bord a
+        // l'autre -- terre cuite dessous, air dessus, des bords droits : seules les colonnes de
+        // l'arene sont videes et fondees, et le terrain autour se raccorde en pente douce au pied
+        // de ses rochers, un bloc sous son sol.
+        int talus = ARENA_TALUS;
+        int w = volume.width() + 2 * talus;
+        int d = volume.depth() + 2 * talus;
+        java.util.BitSet inside = new java.util.BitSet(w * d);
+        int[] row = new int[volume.width()];
+        for (int y = 0; y < volume.height(); y++) {
+            for (int z = 0; z < volume.depth(); z++) {
+                volume.row(y, z, 0, volume.width(), row);
+                for (int x = 0; x < volume.width(); x++) {
+                    if (row[x] != 0) {
+                        inside.set((x + talus) + (z + talus) * w);
+                    }
+                }
+            }
+        }
+        arenaGround = new SiteTerrain.Blend(level, origin.getX() - talus, origin.getZ() - talus, w, d, inside,
+                floorY - 1, talus, origin.getY() - 1);
+        arenaPlan = new com.emerald.jak.JakBuilder.Plan(level, volume, origin)
+                .clear(false)
+                .awaitEntities(true)
+                .beforePlace(world -> clearBox(world, origin, volume))
+                .clearFluidTicks(true)
+                .label("arene du boss")
+                .onDone(report -> {
+                    arenaJob = null;
+                    LOGGER.info("Arene de Spargus posee en {} s ; boss en {}", report.seconds(),
+                            perch.toShortString());
+                    spawnBoss(level, perch, bossType);
+                    spawnGuardsAt(level, posts, GUARDS_AT_START);
+                });
+        return true;
+    }
+
+    /** Le terrain de l'arene par bouchees, puis sa pose. */
+    private static void tickArenaGround(ServerLevel level) {
+        SiteTerrain.Blend ground = arenaGround;
+        if (ground == null || !ground.step(System.nanoTime() + 15_000_000L)) {
+            return;
+        }
+        LOGGER.info("Arene : {} colonnes du terrain videes, fondees ou raccordees", ground.moved());
+        arenaGround = null;
+        com.emerald.jak.JakBuilder.Plan plan = arenaPlan;
+        arenaPlan = null;
+        if (plan != null) {
+            arenaJob = com.emerald.jak.JakBuilder.start(plan);
+            if (arenaJob == null) {
+                LOGGER.warn("La pose de l'arene attend : un autre chantier occupe la place");
+            }
+        }
+    }
+
+    /** Un centre d'arene assez loin de tous les sanctuaires, et du village. */
+    private static boolean farEnough(GameState state, int x, int z) {
+        BlockPos village = state.village();
+        if (!village.equals(BlockPos.ZERO) && Math.hypot(village.getX() - x, village.getZ() - z) < KEEP_FROM_VILLAGE) {
             return false;
         }
-        arenaJob = job;
+        for (BlockPos anchor : state.anchors()) {
+            if (Math.hypot(anchor.getX() - x, anchor.getZ() - z) < KEEP_FROM_ANCHORS) {
+                return false;
+            }
+        }
         return true;
     }
 
@@ -331,7 +399,7 @@ public final class Finale {
 
     /** L'arene est-elle encore en train de se poser ? (l'automate de photos attend la fin) */
     public static boolean arenaRising() {
-        return arenaJob != null;
+        return arenaGround != null || arenaJob != null;
     }
 
     // ---------------------------------------------------------- le boss
@@ -475,6 +543,7 @@ public final class Finale {
                 || !level.dimension().equals(Level.OVERWORLD)) {
             return;
         }
+        tickArenaGround(level);
         // LE CYCLE SUIVANT, en monde ouvert : trois nouveaux sanctuaires.
         if (cycleAt >= 0L && level.getGameTime() >= cycleAt) {
             cycleAt = -1L;
@@ -618,6 +687,11 @@ public final class Finale {
 
     /** Un arret de partie abandonne l'arene en cours de pose. */
     public static void clear() {
+        if (arenaGround != null) {
+            arenaGround.release();
+            arenaGround = null;
+            arenaPlan = null;
+        }
         if (arenaJob != null) {
             com.emerald.jak.JakBuilder.cancel(arenaJob);
             arenaJob = null;

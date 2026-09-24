@@ -628,8 +628,13 @@ Vous pouvez donc vous répartir sur la carte.
 ### Le Sanctuaire
 
 Chaque ancre est au **sommet d'une pyramide**, dans une place forte : muraille
-de 67 blocs de côté avec chemin de ronde et créneaux, quatre tours d'angle, et
-un corps de garde au sud fermé par une **herse**.
+de près de 200 blocs de côté avec chemin de ronde et créneaux, quatre tours
+d'angle, et un corps de garde sur chaque face, fermé par une **herse**.
+
+La place forte s'installe sur **l'endroit le plus plat** des environs, et le
+terrain autour est remodelé en **pentes douces** dans la matière du lieu (herbe,
+sable, neige) : plus de colline tranchée net ni de socle de briques. L'arène du
+boss fait de même.
 
 Chaque porte est une **Porte du Sceau** (celle de Cataclysm, 5 blocs de large
 sur 8 de haut). Elle est fermée à l'arrivée. On l'ouvre en tournant la

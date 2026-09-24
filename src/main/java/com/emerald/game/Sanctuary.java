@@ -130,6 +130,41 @@ public final class Sanctuary {
         return theme;
     }
 
+    /** La largeur maximale des talus qui raccordent le sanctuaire au terrain (cahier §92). */
+    private static final int TALUS = 48;
+    /**
+     * Le demi-cote du carre ou l'emprise se tient : les tours d'angle et leur marge debordent de
+     * dix blocs et demi des coins. Le deblaiement s'arretait a neuf : la pointe de chaque tour
+     * gardait son terrain, un pilier de sable colle a une tour des Braises (24 sept.).
+     */
+    private static final int FOOTPRINT_HALF = HALF + TOWER_RADIUS + 2;
+
+    /**
+     * L'EMPRISE du sanctuaire, relative a son centre : la cour et ses murs, les quatre tours
+     * d'angle (centrees sur les coins), les tourelles des portes (centrees sur la ligne
+     * exterieure du mur) et le porche. Dedans, le chantier aplanit ; dehors, le terrain se
+     * raccorde en pente (SiteTerrain).
+     */
+    static boolean inFootprint(int dx, int dz) {
+        int ax = Math.abs(dx);
+        int az = Math.abs(dz);
+        if (ax <= HALF + 1 && az <= HALF + 1) {
+            return true;
+        }
+        if (Math.hypot(ax - HALF, az - HALF) <= TOWER_RADIUS + 1.5) {
+            return true;
+        }
+        // les portes : tourelles de rayon six a GATE_HALF + 6 de l'axe, porche jusqu'a quatre dehors
+        int along = ax > HALF ? az : ax;
+        int out = Math.max(ax, az) - HALF;
+        return out <= 4 && along <= GATE_HALF + 3 || Math.hypot(along - (GATE_HALF + 6), out) <= 7.5;
+    }
+
+    /** Le site d'un sanctuaire autour de la place prevue : le plus plat, au sol median (SiteTerrain). */
+    public static SiteTerrain.Site site(ServerLevel level, int x, int z) {
+        return SiteTerrain.flattest(level, x, z, HALF + TOWER_RADIUS, 72, null);
+    }
+
     /** On pose l'enceinte : l'arcencium y prend l'accent du theme (SanctuaryTheme.shell). */
     private static boolean inShell;
 
@@ -306,8 +341,20 @@ public final class Sanctuary {
         }
         private String worstName = "?";
 
+        /** Une bouchee de raccord ; on se represente tant qu'il en reste. */
+        private void blend() {
+            if (!talus.step(System.nanoTime() + 8_000_000L)) {
+                steps.addFirst(new Step("raccord", this::blend, true));
+            } else {
+                org.slf4j.LoggerFactory.getLogger(EmeraldWeaponsMod.MODID).info(
+                        "Sanctuaire : {} colonnes raccordees au terrain", talus.moved());
+            }
+        }
+
         private int apex = -1;
         private boolean pyramidOk = true;
+        /** Les talus autour de l'enceinte, poses par bouchees. */
+        private SiteTerrain.Blend talus;
         private int repainted;
         /** Le faite du batiment, mesure une fois avant les bandes de rhabillage. */
         private int crest;
@@ -393,10 +440,10 @@ public final class Sanctuary {
             // joueur -- avec les apparitions et les entites de bloc d'un gros
             // modpack -- couterait sans doute plus cher que le pic qu'on
             // supprime.
-            int cFrom = (cx - HALF - TOWER_RADIUS) >> 4;
-            int cTo = (cx + HALF + TOWER_RADIUS) >> 4;
-            int kFrom = (cz - HALF - TOWER_RADIUS) >> 4;
-            int kTo = (cz + HALF + TOWER_RADIUS) >> 4;
+            int cFrom = (cx - FOOTPRINT_HALF) >> 4;
+            int cTo = (cx + FOOTPRINT_HALF) >> 4;
+            int kFrom = (cz - FOOTPRINT_HALF) >> 4;
+            int kTo = (cz + FOOTPRINT_HALF) >> 4;
             // ON NE GENERE PLUS RIEN SUR LE FIL SERVEUR : ON LE DEMANDE.
             //
             // Chaque `getChunk(..., true)` BLOQUAIT le fil serveur le temps de
@@ -430,8 +477,8 @@ public final class Sanctuary {
             steps.add(new Step("prechargement attente", this::awaitChunks, true));
             // LE DEBLAIEMENT, EN BANDES. C'est la partie la plus lourde du
             // chantier : deux colonnes par etape, cent six etapes.
-            int from = -HALF - TOWER_RADIUS;
-            int to = HALF + TOWER_RADIUS;
+            int from = -FOOTPRINT_HALF;
+            int to = FOOTPRINT_HALF;
             for (int band = from; band <= to; band += CLEAR_BAND) {
                 final int a = band;
                 final int b = Math.min(to, band + CLEAR_BAND - 1);
@@ -494,6 +541,19 @@ public final class Sanctuary {
             });
             // LE CALQUE EN DERNIER : il rejoue, telles quelles, les corrections
             // relevees a la Sonde, et ecrase ce qui le gene.
+            // LE RACCORD AU TERRAIN (cahier §92), avant le calque du joueur qui garde le dernier mot
+            int reach = HALF + TOWER_RADIUS + TALUS;
+            java.util.BitSet inside = new java.util.BitSet();
+            for (int gz = 0; gz <= 2 * reach; gz++) {
+                for (int gx = 0; gx <= 2 * reach; gx++) {
+                    if (inFootprint(gx - reach, gz - reach)) {
+                        inside.set(gx + gz * (2 * reach + 1));
+                    }
+                }
+            }
+            talus = new SiteTerrain.Blend(level, cx - reach, cz - reach, 2 * reach + 1, 2 * reach + 1,
+                    inside, y, TALUS, -1);
+            steps.add(new Step("raccord", this::blend, true));
             add("calque", () -> calque = SanctuaryOverlay.apply(level, cx, y, cz));
             add("liaisons", () -> {
                 // L'INSTANTANE NE SE PREND QU'EN TEST : quatre millions de
@@ -926,14 +986,19 @@ public final class Sanctuary {
     private static final int RESKIN_BAND = 8;
 
     private static void clearSite(ServerLevel level, int cx, int y, int cz, int[] keep) {
-        clearSite(level, cx, y, cz, keep, -HALF - TOWER_RADIUS, HALF + TOWER_RADIUS);
+        clearSite(level, cx, y, cz, keep, -FOOTPRINT_HALF, FOOTPRINT_HALF);
     }
 
     private static void clearSite(ServerLevel level, int cx, int y, int cz, int[] keep,
                                   int fromDx, int toDx) {
         SanctuaryLedger.part("clearSite");
         for (int dx = fromDx; dx <= toDx; dx++) {
-            for (int dz = -HALF - TOWER_RADIUS; dz <= HALF + TOWER_RADIUS; dz++) {
+            for (int dz = -FOOTPRINT_HALF; dz <= FOOTPRINT_HALF; dz++) {
+                // L'EMPRISE SEULE (cahier §92) : autour, le terrain se raccorde en pente au lieu
+                // d'un carre tranche a la verticale et comble de briques a bords droits.
+                if (!inFootprint(dx, dz)) {
+                    continue;
+                }
                 // ON DEBLAIE AUSSI SOUS LA PYRAMIDE.
                 //
                 // L'emprise du monument etait epargnee « pour ne jamais raser

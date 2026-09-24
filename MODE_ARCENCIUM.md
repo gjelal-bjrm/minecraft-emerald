@@ -8310,3 +8310,105 @@ en dur. Trois essais :
 Banc de la partie, epreuve 12 : les quatre boss agrandis comme en partie font
 huit blocs de haut au moins et six cents PV. 53 OK, 1 KO (l'arche de l'Heure
 Doree du village, l'ancien echec, qui passe une fois sur deux).
+
+## 92. Des chantiers poses dans le paysage *(24 sept. 2026)*
+
+« Il s'agit de la structure sur laquelle on pose nos sanctuaires. [...] Ils ne
+sont pas vraiment integres dans le decor. Ils ecrasent le decor, ca ne fait
+pas du tout naturel, ce n'est pas beau. » Puis, pour l'arene : « fais-le aussi
+si c'est necessaire ».
+
+**La cause.** Le chantier aplanissait un carre de 210 blocs : il tranchait la
+colline a la verticale jusqu'au ciel, et comblait le creux, sur douze blocs,
+d'un socle de briques du theme a bords droits -- le grand bloc orange ou noir
+des photos. L'arene faisait pareil sur sa boite de 170 x 159 : terre cuite
+dessous, air dessus, d'un bord a l'autre.
+
+**Choix du joueur** : un BON SITE et des TALUS NATURELS (`game/SiteTerrain`).
+
+1. **Le site.** Autour de la place prevue -- a 72 blocs pour un sanctuaire, 48
+   pour l'arene, loin des sanctuaires et du village (point 7) --, l'endroit le
+   plus plat. Les hauteurs se lisent au GENERATEUR (`getBaseHeight`), sans generer
+   un seul troncon ; chaque candidat est note par l'ecart moyen a sa mediane,
+   l'eau sous son emprise et un peu sa distance. Le sol du chantier se pose a
+   la hauteur MEDIANE du terrain : on tranche autant qu'on comble. La commande
+   d'essai garde la place du joueur.
+2. **L'emprise seule est aplanie** : la cour et ses murs, les tours d'angle, les
+   tourelles et le porche des portes (`Sanctuary.inFootprint`) ; pour l'arene,
+   les colonnes ou son volume a un bloc -- videes au-dessus de sa base, fondees
+   dessous dans la roche du lieu.
+3. **Le raccord.** Autour, le terrain est remodele en pente douce, de la hauteur
+   du chantier au pied des murs (un bloc sous le sol de l'arene, au pied de ses
+   rochers) jusqu'au terrain d'origine. La largeur de la pente suit la
+   denivelee -- un sur deux au plus, six blocs au moins, 48 blocs au plus (40
+   pour l'arene) --, et le bord ondule. Chaque colonne garde ses matieres :
+   son dessus (herbe, sable, neige), sa sous-couche, sa roche, et ce qui y
+   poussait ; un peu d'herbe sur l'herbe. On ne creuse jamais sous l'eau.
+4. **Par paquets de douze troncons.** Le premier essai tenait d'un coup les
+   quatre cents troncons d'un raccord : leur generation simultanee a sature la
+   machine et le client de photos a cesse de repondre. Un joueur l'aurait senti
+   au debut de la partie. Le raccord en demande douze a la fois, et seulement
+   ceux ou il a quelque chose a faire.
+5. **Au bord de l'eau** (deuxieme serie de photos). Un point mouille comptait
+   pour le FOND du lac : l'arene des photos, posee a une place imposee, a ete
+   batie noyee. Il compte pour la SURFACE : le chantier se pose au moins a fleur
+   d'eau. Et sur l'eau, la pente vise la surface, pas le fond : seule la BERGE
+   qui en sort est comblee, des matieres de la TERRE FERME d'alentour (le dessus
+   sec le plus courant, compte a une premiere lecture de chaque paquet) ; le
+   reste du lac, du ruisseau, reste tel quel. Comblee avec les matieres du fond
+   -- gravier, argile, pierre --, une berge faisait des gradins gris au bord du
+   lac du Givre ; visant le fond d'un ruisseau, la pente portait bien plus loin
+   que celle de ses rives, et une rigole a parois droites entaillait le talus
+   devant une tour des Sables.
+6. **Un pilier de sable** colle a une tour des Braises : l'emprise des tours
+   d'angle deborde de dix blocs et demi des coins, le deblaiement s'arretait a
+   neuf. La pointe de chaque tour gardait son terrain. Il couvre desormais toute
+   l'emprise (`FOOTPRINT_HALF`).
+7. **Plus loin si tout est mouille.** L'automate de photos choisit desormais le
+   site de l'arene comme en partie -- et la troisieme serie l'a dressee en
+   pleine mer, sur un anneau de sable : a 48 blocs, tous les sites etaient dans
+   l'eau. Tant que le meilleur site a plus d'un cinquieme d'eau sous son
+   emprise, le rayon double, jusqu'a 256 blocs ; au-dela, on garde le moins
+   mouille. L'arene reste a 300 blocs au moins des sanctuaires (200 suffisaient
+   a l'ancienne enceinte de 67 blocs ; talus compris, un sanctuaire deborde de
+   154 blocs de son centre, l'arene de 125) et a 240 du village, plat et sec,
+   le site reve.
+8. **Une lecture par point, en parallele.** Mesure dans le journal : une
+   hauteur lue au generateur coute deux millisecondes et demie avec les mods de
+   terrain. Deux lectures par point tous les seize blocs figeaient le serveur
+   2,6 s par site (3,8 s pour le premier), trois fois au debut d'une partie, et
+   5,4 s pour l'arene quand la recherche s'elargissait. L'eau se deduit du niveau
+   de la mer, la grille est de trente-deux blocs, les hauteurs deja lues ne se
+   relisent pas, et les points se lisent sur tous les coeurs a la fois (le
+   generateur le permet : il sert deja aux fils de la generation). 121 hauteurs
+   en 50 a 190 ms ; 289 en 104 ms pour l'arene cherchee a 192 blocs.
+
+### Verifie
+
+Six series de photos (`sanctuaire:*_vol`, `*_tour`, `arene:dehors`, `vol`),
+chacune sur une copie neuve du monde des photos, jetee apres.
+
+- **Deuxieme serie** (la premiere a gele le client, point 4) : plus de socle,
+  la foret et l'herbe viennent jusqu'aux murs. Restaient les gradins gris du
+  Givre, le pilier des Braises et l'arene noyee (points 5 a 7).
+- **Troisieme a sixieme** : chaque correction a ete vue. Sites retenus a la
+  derniere : Sables (7636, 70, -5396), 10 958 colonnes raccordees ; Givre
+  (8486, 78, -5320), sur une butte d'herbe entre deux lacs restes intacts ;
+  Braises (9804, 69, -5244), dans le desert au pied des collines rocheuses ;
+  arene (9994, 64, -4912), a 249 blocs de la place prevue et 8 % d'eau,
+  24 333 colonnes preparees, posee en une seconde, sur la terre ferme.
+- Recherches de site : 121 hauteurs en 50 a 326 ms (la premiere de la partie
+  paie le demarrage du generateur), 289 en 149 ms pour l'arene.
+- **Une rigole** entaille encore le talus devant une tour des Sables : un
+  ravin d'origine, a moitie comble. La pente d'un creux profond porte plus loin
+  que celle de ses bords, et le comble donc davantage ; une largeur commune aux
+  voisines le rendrait plus profond pres des murs, pas moins. Garde tel quel.
+- Banc de la partie : 53 OK, 1 KO (l'arche de l'Heure Doree, l'ancien echec).
+- Les avertissements « Tried to load a DUMMY block entity » du journal viennent
+  de la generation (Alex's Mobs) : deja la sans raccord, plus nombreux parce que
+  plus de troncons sont generes.
+- Automate de photos : le client attend les troncons a neuf troncons du
+  joueur, le premier plan n'est plus casse ; `sables_vol` part encore parfois a
+  l'echeance (1 200 tiques), un bord de la vue incomplet. Les « Can't keep up »
+  de deux a sept secondes qui restent suivent la generation des troncons d'un
+  chantier neuf, pas la recherche du site.
