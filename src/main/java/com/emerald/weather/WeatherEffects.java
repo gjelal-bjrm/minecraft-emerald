@@ -440,12 +440,12 @@ public final class WeatherEffects {
             }
             int wanted = 2 + level.random.nextInt(3);
             for (int i = 0; i < wanted && nearby + i < PRESSURE_CAP; i++) {
-                spawnStormMob(level, player, tier);
+                spawnStormMob(level, player, tier, weather);
             }
         }
     }
 
-    private static void spawnStormMob(ServerLevel level, ServerPlayer player, int tier) {
+    private static void spawnStormMob(ServerLevel level, ServerPlayer player, int tier, Weather weather) {
         double angle = level.random.nextDouble() * Math.PI * 2;
         double dist = 22 + level.random.nextDouble() * 14;
         int x = (int) Math.round(player.getX() + Math.cos(angle) * dist);
@@ -454,7 +454,7 @@ public final class WeatherEffects {
         if (!level.isLoaded(spot)) {
             return;                            // jamais de generation forcee
         }
-        EntityType<?> type = pickStormType(level, tier);
+        EntityType<?> type = pickStormType(level, tier, weather);
         if (type == null) {
             return;
         }
@@ -471,7 +471,15 @@ public final class WeatherEffects {
     }
 
     @javax.annotation.Nullable
-    private static EntityType<?> pickStormType(ServerLevel level, int tier) {
+    private static EntityType<?> pickStormType(ServerLevel level, int tier, Weather weather) {
+        // CHAQUE TEMPETE A SES MONSTRES (cahier §89) : deux fois sur trois le bestiaire de
+        // la meteo (les morts pour la Nuit, le feu pour les Meteores, le vide pour la
+        // Dechirure, golems et mages pour l'Orage), une fois sur trois le vivier commun.
+        List<EntityType<?>> themed = com.emerald.game.Bestiary.resolve(
+                com.emerald.game.Bestiary.forWeather(weather, tier));
+        if (!themed.isEmpty() && level.random.nextInt(3) != 0) {
+            return themed.get(level.random.nextInt(themed.size()));
+        }
         List<EntityType<?>> pool = new ArrayList<>();
         for (String id : SiegeRoster.forTier(tier)) {
             EntityType.byString(id).ifPresent(pool::add);

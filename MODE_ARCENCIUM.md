@@ -8038,3 +8038,46 @@ qu'elles ont corrige :
 4. le brouillard noir sur nuit noire ne cachait rien : gris-violet, plus
    epais.
 La fumee qui tourne dans le vide ne ressort pas sous Complementary.
+
+## 89. Un bestiaire par meteo, sans horreur *(24 sept. 2026)*
+
+« J'aimerais aussi qu'on augmente la variete de monstres. » Puis, a la
+proposition : « est-ce que c'est des monstres d'horreur ? Je n'ai pas envie
+qu'on mette des monstres d'horreur en dehors de la meteo d'horreur. »
+
+**La cause mesuree.** La Traque et les quatre meteos agressives piochaient
+toutes dans les trois memes listes (`SiegeRoster.forTier`, 8 a 12 monstres),
+alors que le profil compte quelque deux cent vingt creatures dans dix-huit
+mods.
+
+**Ce qui change** (`game/Bestiary`) :
+
+| meteo | theme | exemples |
+| --- | --- | --- |
+| Nuit d'Arcencium | les morts | draugr, druide squelette, pourrissants de l'Undergarden, necromancien |
+| Meteores | le ciel qui brule | creteors, revenants et berserkers embrases, blazes |
+| Dechirure | le vide | endermapteres, enderiophages, golem de l'End |
+| Orage | golems et mages | golems de carminite, cryomancien, chevalier antique, archevoker |
+| Battue | les betes | loups de brume et d'hiver, araignees de Twilight, ours-gouttes, centipedes |
+
+Deux fois sur trois, une tempete pioche dans son theme, une fois sur trois
+dans le vivier commun. La Battue ajoute ses betes, comptees double, au vivier
+de la Traque. Partout ailleurs, une fois sur quatre, la Traque pose la
+VARIANTE DU BIOME : le creeper de Creeper Overhaul du lieu (jungle, bambou,
+desert, badlands, savane, champignons, marais, neige, plage, taiga, bouleau,
+foret noire, collines, cavernes, grottes a stalactites) ou le zombie ou
+squelette de Variants & Ventures (gele, marecageux, sylvestre, verdoyant).
+Rien de ce qui est spectre, loup-garou, esprit ou sculk ; et tout type du tag
+`eclipse_horrors` est ecarte au tirage.
+
+**Banc** (epreuve 10, serveur des bancs avec les onze mods concernes, plus
+LionfishAPI et ResourcefulLib que Cataclysm et Creeper Overhaul demandent sans
+le declarer) : 75 monstres sur 75 presents, tous ennemis, aucune horreur.
+Le premier passage en a ecarte quatre, neutres (rat zombifie, golem de pierre
+sombre, serpent a sonnette, brute de l'Undergarden), et corrige deux
+identifiants : `alexsmobs:centipede_head` et `irons_spellbooks:citadel_keeper`.
+
+**A signaler, non corrige** : le vivier du siege (`SiegeRoster.forTier(2)`)
+cite `irons_spellbooks:keeper`, qui n'existe pas -- le Chevalier antique n'y
+est donc jamais apparu. Le siege a ete equilibre sans lui ; on ne le corrige
+qu'avec l'accord du joueur.

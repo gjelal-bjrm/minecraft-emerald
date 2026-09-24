@@ -152,7 +152,13 @@ public final class Prowl {
         if (want <= 0) {
             return;
         }
-        List<String> roster = SiegeRoster.forTier(tier(phase));
+        List<String> roster = new java.util.ArrayList<>(SiegeRoster.forTier(tier(phase)));
+        if (battue) {
+            // LA BATTUE CHASSE DES BETES (cahier §89) : le bestiaire des betes, compte double
+            List<String> beasts = Bestiary.forWeather(com.emerald.weather.Weather.BATTUE, tier(phase));
+            roster.addAll(beasts);
+            roster.addAll(beasts);
+        }
         if (roster.isEmpty()) {
             return;
         }
@@ -250,7 +256,17 @@ public final class Prowl {
         if (at == null) {
             return false;
         }
-        EntityType<?> type = EntityType.byString(roster.get(level.random.nextInt(roster.size())))
+        String id = roster.get(level.random.nextInt(roster.size()));
+        // UNE FOIS SUR QUATRE, LE MONSTRE DU LIEU (cahier §89) : le creeper de la jungle dans
+        // la jungle, le zombie gele sur la neige (Creeper Overhaul, Variants & Ventures).
+        if (!battue && level.random.nextInt(4) == 0) {
+            String local = Bestiary.biomeVariant(level, at, level.random.nextBoolean());
+            if (local != null && EntityType.byString(local).isPresent()) {
+                id = local;
+            }
+        }
+        EntityType<?> type = EntityType.byString(id)
+                .filter(t -> !t.is(com.emerald.weather.Eclipse.HORRORS))
                 .orElse(null);
         if (type == null) {
             return false;

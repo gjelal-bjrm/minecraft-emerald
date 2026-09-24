@@ -74,7 +74,9 @@ import java.util.UUID;
  *      d'Arcencium, dans cet ordre, sauvegarde avec la partie, puis le tirage au sort ;
  *   9. l'Eclipse (cahier §88) : le verrou des horreurs, trois portails, leur vague, la
  *      fermeture contre des Eclats, l'implosion et la dissolution a la fin. Demande
- *      The Graveyard et Alex's Mobs au serveur des bancs (tools/dev_mods.py --server).
+ *      The Graveyard et Alex's Mobs au serveur des bancs (tools/dev_mods.py --server) ;
+ *  10. les bestiaires des meteos (cahier §89) : chaque monstre cite est-il la, hostile, et
+ *      jamais une horreur de l'Eclipse ? (avec les mods des bestiaires au serveur des bancs).
  * Rapport dans partie_autotest.txt, puis arret.
  */
 @EventBusSubscriber(modid = EmeraldWeaponsMod.MODID)
@@ -117,6 +119,7 @@ public final class ArcenciumAutotest {
             arches(level, spawn);
             opening(level);
             eclipse(level, spawn);
+            bestiary(level);
         } catch (RuntimeException e) {
             LOGGER.error("autotest partie : exception", e);
             check("deroulement sans exception", false, e.toString());
@@ -301,6 +304,49 @@ public final class ArcenciumAutotest {
         check("fin de l'Eclipse : les " + left + " portails restants implosent sans rien laisser, les horreurs se dissolvent",
                 gone && horrorsLeft == 0 && loose == 0 && !com.emerald.weather.Eclipse.active(),
                 "blocs retires " + gone + ", horreurs restantes " + horrorsLeft + ", Eclats au sol " + loose);
+    }
+
+    // ============================================================ 10. les bestiaires
+
+    private static void bestiary(ServerLevel level) {
+        line("--- les bestiaires des meteos : presents, hostiles, jamais d'horreur");
+        List<String> absent = new ArrayList<>();
+        List<String> passive = new ArrayList<>();
+        List<String> horror = new ArrayList<>();
+        int present = 0;
+        List<String> ids = Bestiary.allIds();
+        for (String id : ids) {
+            java.util.Optional<net.minecraft.world.entity.EntityType<?>> type =
+                    net.minecraft.world.entity.EntityType.byString(id);
+            if (type.isEmpty()) {
+                absent.add(id);
+                continue;
+            }
+            present++;
+            if (type.get().is(com.emerald.weather.Eclipse.HORRORS)) {
+                horror.add(id);
+            }
+            net.minecraft.world.entity.Entity made = type.get().create(level);
+            if (!(made instanceof net.minecraft.world.entity.monster.Enemy)) {
+                passive.add(id + (made == null ? " (ne se cree pas)" : " (" + made.getClass().getSimpleName() + ")"));
+            }
+            if (made != null) {
+                made.discard();
+            }
+        }
+        line("presents " + present + " / " + ids.size() + " ; absents : " + (absent.isEmpty() ? "aucun" : String.join(", ", absent)));
+        check("aucune horreur de l'Eclipse dans les bestiaires", horror.isEmpty(), String.join(", ", horror));
+        check("chaque monstre present est un ennemi (Enemy), aucun marchand ni animal neutre",
+                passive.isEmpty(), passive.isEmpty() ? present + " ennemis" : String.join(", ", passive));
+        for (com.emerald.weather.Weather w : new com.emerald.weather.Weather[]{com.emerald.weather.Weather.NUIT,
+                com.emerald.weather.Weather.METEORES, com.emerald.weather.Weather.DECHIRURE,
+                com.emerald.weather.Weather.ORAGE, com.emerald.weather.Weather.BATTUE}) {
+            StringBuilder sizes = new StringBuilder();
+            for (int tier = 1; tier <= 3; tier++) {
+                sizes.append(tier == 1 ? "" : " / ").append(Bestiary.resolve(Bestiary.forWeather(w, tier)).size());
+            }
+            line(w.id() + " : " + sizes + " monstres par palier");
+        }
     }
 
     // ================================================================ 2. les coffres
