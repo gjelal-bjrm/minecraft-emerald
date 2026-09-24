@@ -8192,3 +8192,79 @@ quatre series. Ce qu'elles ont corrige :
    Distant Horizons -- la foret d'avant le chantier -- recouvraient la cour.
    La camera reste au loin pendant le chantier, puis attend quarante-cinq
    secondes au-dessus de la cour.
+
+## 91. L'arene du boss : Spargus *(24 sept. 2026)*
+
+« Une fois qu'on a fini les trois sanctuaires, on a un autre probleme, c'est
+le boss. Il apparait sur une zone qui est un pilier de un de largeur et qui
+est tres haut dans le ciel, ce n'est pas du tout logique ni realiste.
+Peut-etre que nous devrions faire une vraie arene pour le boss. Par exemple,
+l'arene de Jak 3 avec la lave. »
+
+**La cause.** L'arene etait la Prison Givree de Cataclysm (§ du 12 sept.) et
+`Finale.summitOf` posait le boss sur le point le plus haut pres de son centre :
+une fleche. **Choix du joueur** : l'arene de Spargus de Jak 3 (niveau
+`wasstada`), SOL PRATICABLE avec fosses et rigoles de lave (pas la fosse a
+plates-formes du jeu), les murs invisibles et les echafaudages de WASSTADB
+retires ; le boss toujours tire au sort (Ignis, Gardien de l'Ender, Liche).
+
+### A. La conversion (`tools/jak_arena.py`)
+
+1. La collision de WASSTADA, a deux metres par bloc : deux cents metres de sol,
+   cent quarante blocs de diametre. Rien de WASSTADB.
+2. Les murs invisibles retires : on ne garde de la collision que ce qui est a
+   moins d'une cellule du decor visuel (6 115 voxels retires, des parois de
+   cent trente metres devant les rochers et les gradins).
+3. **Le decor aussi.** Le premier essai, collision seule, donnait un sol et des
+   gradins en etageres flottantes : la couronne de mesas qui ferme l'arene n'a
+   pas de collision -- les murs invisibles empechent Jak d'y monter. Le decor
+   visuel (`wasstada-background.glb`) est pose avec elle : c'est lui qui fait
+   l'arene, jusqu'a soixante-dix blocs de haut, avec l'arche de rocher du nord.
+4. Un bloc par surface : un plat de la collision est un SOL (gres clair : le
+   sable de l'arene, les gradins), un plat du decor seul un TOIT (gres rouge :
+   le dessus des mesas), le reste un MUR (terre cuite).
+5. L'assise : tout est plein sous le sol de l'arene ; a la pose, la boite est
+   remplie de terre cuite sous le niveau du sol et videe au-dessus.
+6. La lave : un ANNEAU de rigoles a 46 % du rayon, un bloc et demi de large,
+   coupe de quatre passages de six blocs aux quatre points cardinaux (on marche
+   droit de la porte au boss) ; HUIT FOSSES rondes a 74 % du rayon, entre les
+   passages, sauf ou elles toucheraient un rocher. Une rigole est une tranchee
+   d'un bloc, la lave au fond : on la voit briller, on l'enjambe. Le centre,
+   dans le tiers du rayon, reste libre.
+7. Le volume (`data/emeraldweapons/jak/arene_spargus.jakv`, 170 x 72 x 159
+   cellules, 100 Ko) et ses reperes (`arene_spargus.json` : niveau du sol,
+   place du boss, seize places de gardes, sha1 du volume).
+
+### B. En partie (`Finale`)
+
+La troisieme ancre tenue, l'Arc-en-ciel se leve comme avant (a 300 blocs du
+village, entre deux sanctuaires) ; l'arene se pose par le chantier des
+quartiers (`JakBuilder`), le centre de son sol sur le sol du monde, en une
+quinzaine de secondes (100 000 blocs, 3,3 s de fil serveur etalees sur 230
+tiques). Les betes et les objets de la boite sont retires avant la pose. Le
+boss nait AU CENTRE DU SOL, dix gardes du Sculk aux places de la couronne ; les
+renforts du Sculk ne naissent jamais dans une rigole. Sans le volume (ou s'il
+ne correspond pas a ses reperes), la butte de secours d'avant.
+
+### C. Verifie
+
+**Banc de la partie**, epreuve 12 : le volume et ses reperes vont ensemble (meme
+sha1) ; le boss nait sur le gres du sol, a l'air libre, la lave la plus proche
+a 23 blocs ; les 626 blocs de lave sont tenus (ni air a cote ni dessous) ; les
+quinze places de gardes sont sur le sol degage ; on marche de la porte sud au
+boss sans lave. Le premier passage a vu deux fautes : la lave posee sous chaque
+colonne a sa propre hauteur -- le sol ondule d'un bloc -- touchait l'air de la
+tranchee voisine et aurait coule au ras du sol (chaque rigole et chaque fosse a
+maintenant une seule nappe, sous sa plus basse colonne) ; une place de garde
+tombait sur un eclat du decor. Tout le banc : 53 OK, 0 KO -- l'arche de
+l'Heure Doree du village passe aussi, maintenant que les dalles de l'essai des
+arches ne s'empilent plus.
+
+Acces : depuis le centre, on sort a pied de tous les cotes (645 cellules du
+bord atteintes), par les trouees entre les mesas.
+
+**Photos** (automate, prises « arene:vol|sol|gradins|lave », l'Arc-en-ciel leve
+pour de vrai avec Ignis) : deux series. La premiere, collision seule, montrait
+les gradins en etageres flottantes et un sol de gres rouge ou la lave se
+perdait : d'ou le decor visuel et le sol clair, sur lequel les rigoles
+brillent.

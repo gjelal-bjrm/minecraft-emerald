@@ -73,6 +73,12 @@ COLORS = [
     ("wood", (115, 85, 50)),
     ("mud", (140, 106, 80)),
     ("stone_tile", (130, 130, 130)),
+    # l'arene de Spargus (tools/jak_arena.py)
+    ("smooth_red_sandstone", (181, 98, 31)),
+    ("smooth_sandstone", (223, 214, 170)),
+    ("nether_bricks", (44, 21, 26)),
+    ("terracotta", (152, 94, 67)),
+    ("lava", (255, 120, 20)),
 ]
 
 OPEN_AIR = (250, 214, 60)       # air a ciel ouvert, dans une tranche

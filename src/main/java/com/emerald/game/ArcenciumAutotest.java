@@ -81,7 +81,10 @@ import java.util.UUID;
  *      hostiles, quatre especes au moins a chaque palier ; trois matieres qui gardent la forme des
  *      blocs ; les themes
  *      tires au sort, un par ancre, sauvegardes avec les paliers de garnison ; des gardes du
- *      bon theme, et coiffes s'ils brulent au soleil (memes mods que le banc 10).
+ *      bon theme, et coiffes s'ils brulent au soleil (memes mods que le banc 10) ;
+ *  12. l'arene du boss (cahier §91) : le volume de Spargus et ses reperes vont ensemble, le boss
+ *      nait sur le sol loin de la lave, les gardes jamais dans une rigole, toute la lave est
+ *      tenue (ni air a cote ni dessous), et l'on marche de la porte sud au boss sans lave.
  * Rapport dans partie_autotest.txt, puis arret.
  */
 @EventBusSubscriber(modid = EmeraldWeaponsMod.MODID)
@@ -126,6 +129,7 @@ public final class ArcenciumAutotest {
             eclipse(level, spawn);
             bestiary(level);
             sanctuaries(level, spawn);
+            arena(server);
         } catch (RuntimeException e) {
             LOGGER.error("autotest partie : exception", e);
             check("deroulement sans exception", false, e.toString());
@@ -540,6 +544,74 @@ public final class ArcenciumAutotest {
                 guards + " gardes" + (strangers.isEmpty() ? "" : " ; etrangers : " + String.join(", ", strangers)));
         check("un garde mort-vivant est coiffe : il ne brule pas a midi sur sa tour", bare.isEmpty(),
                 bare.isEmpty() ? "-" : String.join(", ", bare));
+    }
+
+    // ============================================================ 12. l'arene du boss
+
+    /**
+     * « L'arene de Jak 3 avec la lave », a sol praticable (choix du joueur) : on lit le volume
+     * que Finale pose, sans le poser -- ou nait le boss, ou vont les gardes, ou coule la lave.
+     */
+    private static void arena(MinecraftServer server) {
+        line("--- l'arene du boss : Spargus, sa lave, ses places");
+        com.emerald.jak.JakVolume volume = com.emerald.jak.JakVolume.load(server, Finale.ARENA_VOLUME);
+        Finale.ArenaMarks marks = Finale.ArenaMarks.load(server);
+        check("le volume de l'arene et ses reperes sont la, du meme sha1",
+                volume != null && marks != null && marks.sha1().equals(volume.sha1()),
+                (volume == null ? "volume absent" : volume.width() + "x" + volume.height() + "x" + volume.depth())
+                        + (marks == null ? ", reperes absents" : ", " + marks.guards().size() + " gardes"));
+        if (volume == null || marks == null) {
+            return;
+        }
+        BlockPos c = marks.centre();
+        boolean standing = volume.stateAt(c.getX(), c.getY(), c.getZ()).isAir()
+                && volume.stateAt(c.getX(), c.getY() + 1, c.getZ()).isAir()
+                && volume.stateAt(c.getX(), c.getY() - 1, c.getZ()).is(Blocks.SMOOTH_SANDSTONE);
+        int nearest = Integer.MAX_VALUE;
+        int lava = 0;
+        List<String> leaks = new ArrayList<>();
+        for (int y = 0; y < volume.height(); y++) {
+            for (int z = 0; z < volume.depth(); z++) {
+                for (int x = 0; x < volume.width(); x++) {
+                    if (!volume.stateAt(x, y, z).is(Blocks.LAVA)) {
+                        continue;
+                    }
+                    lava++;
+                    nearest = Math.min(nearest, Math.max(Math.abs(x - c.getX()), Math.abs(z - c.getZ())));
+                    int[][] around = {{1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1}, {0, -1, 0}};
+                    for (int[] d : around) {
+                        int nx = x + d[0], ny = y + d[1], nz = z + d[2];
+                        boolean inside = nx >= 0 && ny >= 0 && nz >= 0 && nx < volume.width() && nz < volume.depth();
+                        // sous le sol, l'air du volume devient la terre cuite du socle (Finale) : il tient
+                        boolean held = inside && (ny < marks.floor() || !volume.stateAt(nx, ny, nz).isAir());
+                        if (!held && leaks.size() < 5) {
+                            leaks.add(x + "," + y + "," + z);
+                        }
+                    }
+                }
+            }
+        }
+        check("le boss nait sur le gres du sol, a l'air libre, a plus de dix blocs de toute lave",
+                standing && nearest > 10, "centre " + c.toShortString() + ", lave la plus proche a " + nearest);
+        check("la lave coule dans ses rigoles et ses fosses : rien ne fuit, ni de cote ni dessous",
+                lava >= 400 && leaks.isEmpty(), lava + " blocs de lave" + (leaks.isEmpty() ? "" : " ; fuites en " + leaks));
+        List<String> wet = new ArrayList<>();
+        for (BlockPos g : marks.guards()) {
+            if (!volume.stateAt(g.getX(), g.getY(), g.getZ()).isAir()
+                    || !volume.stateAt(g.getX(), g.getY() - 1, g.getZ()).is(Blocks.SMOOTH_SANDSTONE)) {
+                wet.add(g.toShortString());
+            }
+        }
+        check("les gardes se postent sur le sol, jamais dans une rigole", !marks.guards().isEmpty() && wet.isEmpty(),
+                marks.guards().size() + " places" + (wet.isEmpty() ? "" : " ; mauvaises : " + wet));
+        boolean path = true;
+        for (int z = c.getZ(); z < volume.depth(); z++) {
+            if (volume.stateAt(c.getX(), c.getY() - 2, z).is(Blocks.LAVA)
+                    || volume.stateAt(c.getX(), c.getY() - 3, z).is(Blocks.LAVA)) {
+                path = false;
+            }
+        }
+        check("de la porte sud au boss, on marche sans enjamber de lave (le passage de l'anneau)", path, "-");
     }
 
     // ================================================================ 2. les coffres

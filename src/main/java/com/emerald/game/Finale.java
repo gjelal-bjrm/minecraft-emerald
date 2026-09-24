@@ -4,11 +4,9 @@ import com.emerald.main.EmeraldWeaponsMod;
 import it.unimi.dsi.fastutil.ints.IntList;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.SectionPos;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
@@ -25,14 +23,8 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.FireworkExplosion;
 import net.minecraft.world.item.component.Fireworks;
-import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.chunk.ChunkGenerator;
-import net.minecraft.world.level.levelgen.Heightmap;
-import net.minecraft.world.level.levelgen.structure.BoundingBox;
-import net.minecraft.world.level.levelgen.structure.Structure;
-import net.minecraft.world.level.levelgen.structure.StructureStart;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
@@ -40,7 +32,6 @@ import net.neoforged.neoforge.event.tick.LevelTickEvent;
 import org.joml.Vector3f;
 
 import javax.annotation.Nullable;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -49,16 +40,21 @@ import java.util.Locale;
  * La derniere partie : l'Arc-en-ciel, son arene, son boss, et la fin.
  *
  * Quand la troisieme ancre est tenue, l'arene se leve a l'ecart des
- * sanctuaires : la Prison Givree de Cataclysm, posee par le meme chemin que
- * la commande /place -- ses pieces s'assemblent toutes seules, avec leurs
- * draugr. Elle se pose PAR MORCEAUX, quelques chunks par tick : d'un seul
- * coup, ses cent trois pieces figeaient le serveur cinq secondes. Un boss
- * tire au sort en garde le sommet, le Sculk grouille autour, et la Maree se
- * recentre sur l'arene : c'est la que tout se referme.
+ * sanctuaires : L'ARENE DE SPARGUS de Jak 3 (cahier §91), convertie par
+ * tools/jak_arena.py -- un sol de sable praticable cerne de mesas et de gradins,
+ * un anneau de rigoles de lave coupe de quatre passages, des fosses. Elle
+ * se pose par le chantier des quartiers (JakBuilder), etalee sur les ticks. Le
+ * boss tire au sort nait AU CENTRE DU SOL, le Sculk garde la couronne entre
+ * l'anneau et les fosses, et la Maree se recentre sur l'arene : c'est la que
+ * tout se referme.
+ *
+ * Elle remplace la Prison Givree de Cataclysm : son boss naissait sur la plus
+ * haute fleche, un pilier d'un bloc en plein ciel -- « ce n'est pas du tout
+ * logique ni realiste » (le joueur, 24 sept.).
  *
  * Les identifiants des autres mods sont cites en texte et resolus a
- * l'execution : sans Cataclysm, le boss est un Wither sur une butte, et le
- * mode demarre quand meme.
+ * l'execution : sans eux, le boss est un Wither sur une butte, et le mode
+ * demarre quand meme.
  *
  * Victoire : le boss meurt. Defaite : le temps s'ecoule, la Maree a tout
  * recouvert (GameTicker). Les deux se disent en plein ecran, une fois.
@@ -80,7 +76,8 @@ public final class Finale {
     private static final int ARENA_DISTANCE = 300;
     /** Jamais plus pres que cela d'un sanctuaire. */
     private static final int KEEP_FROM_ANCHORS = 200;
-    private static final String ARENA_STRUCTURE = "cataclysm:frosted_prison";
+    /** Le volume de l'arene et ses reperes (data/emeraldweapons/jak/arene_spargus.jakv et .json). */
+    static final String ARENA_VOLUME = "arene_spargus";
     private static final String[] BOSSES = {
             "cataclysm:ignis",
             "cataclysm:ender_guardian",
@@ -98,14 +95,12 @@ public final class Finale {
     private static final int GUARDS_AT_START = 10;
     private static final int GUARD_CAP = 10;
     private static final int PRESSURE_EVERY = 900;
-    /** Chunks de l'arene poses par tick : cent vingt chunks en une seconde environ. */
-    private static final int CHUNKS_PER_TICK = 6;
     /** Les titres de fin restent cinq secondes : on doit avoir le temps de les lire. */
     private static final int END_TITLE_STAY = 100;
 
-    /** L'arene en train de se poser, chunk par chunk. */
+    /** L'arene en train de se poser, ou null. */
     @Nullable
-    private static Pending pending;
+    private static com.emerald.jak.JakBuilder.Job arenaJob;
     /** Le rappel de fin de partie, quelques secondes apres le titre. */
     private static long hintAt = -1L;
     /** En monde ouvert : quand relancer le cycle, une fois la victoire savouree. */
@@ -113,8 +108,38 @@ public final class Finale {
     /** Le temps qu'on laisse au joueur entre le boss abattu et les trois suivants. */
     private static final int CYCLE_DELAY = 20 * 20;
 
-    private record Pending(StructureStart start, ChunkGenerator generator, ArrayDeque<ChunkPos> chunks,
-                           BoundingBox box, BlockPos center, EntityType<?> bossType) {
+    /**
+     * Les reperes de l'arene, en cellules du volume : le niveau du sol, la place du boss et
+     * celles des gardes, et le sha1 du volume dont ils sont tires (tools/jak_arena.py).
+     */
+    record ArenaMarks(int floor, BlockPos centre, List<BlockPos> guards, String sha1) {
+
+        @Nullable
+        static ArenaMarks load(net.minecraft.server.MinecraftServer server) {
+            ResourceLocation key = ResourceLocation.fromNamespaceAndPath(EmeraldWeaponsMod.MODID,
+                    "jak/" + ARENA_VOLUME + ".json");
+            java.util.Optional<net.minecraft.server.packs.resources.Resource> found =
+                    server.getResourceManager().getResource(key);
+            if (found.isEmpty()) {
+                return null;
+            }
+            try (java.io.Reader reader = found.get().openAsReader()) {
+                com.google.gson.JsonObject json = com.google.gson.JsonParser.parseReader(reader).getAsJsonObject();
+                List<BlockPos> guards = new ArrayList<>();
+                for (com.google.gson.JsonElement spot : json.getAsJsonArray("gardes")) {
+                    guards.add(cell(spot.getAsJsonArray()));
+                }
+                return new ArenaMarks(json.get("sol").getAsInt(), cell(json.getAsJsonArray("centre")), guards,
+                        json.get("sha1").getAsString());
+            } catch (java.io.IOException | RuntimeException e) {
+                LOGGER.error("reperes de l'arene illisibles", e);
+                return null;
+            }
+        }
+
+        private static BlockPos cell(com.google.gson.JsonArray xyz) {
+            return new BlockPos(xyz.get(0).getAsInt(), xyz.get(1).getAsInt(), xyz.get(2).getAsInt());
+        }
     }
 
     private Finale() {
@@ -157,12 +182,9 @@ public final class Finale {
             player.playNotifySound(SoundEvents.BEACON_ACTIVATE, SoundSource.MASTER, 1.0F, 0.8F);
         }
 
-        Pending prepared = prepareArena(level, center, bossType);
-        if (prepared != null) {
-            pending = prepared;                     // la pose continue au tick
-            LOGGER.info("Arc-en-ciel leve en {} ; boss {} ; arene de {} pieces sur {} chunks",
-                    center.toShortString(), EntityType.getKey(bossType),
-                    prepared.start().getPieces().size(), prepared.chunks().size());
+        if (raiseArena(level, center, bossType)) {
+            LOGGER.info("Arc-en-ciel leve en {} ; boss {} ; l'arene de Spargus se pose",
+                    center.toShortString(), EntityType.getKey(bossType));
         } else {
             populate(level, raiseKnoll(level, center), center, bossType);
             LOGGER.info("Arc-en-ciel leve en {} ; boss {} ; sans arene",
@@ -213,88 +235,67 @@ public final class Finale {
     }
 
     /**
-     * Assemble la Prison Givree comme le ferait /place structure, sans encore
-     * la poser : la structure choisit ses pieces, on note les chunks a remplir.
+     * Pose l'arene de Spargus autour du site : le centre de son sol sur le sol du monde. Tout
+     * ce que la boite contient sous ce niveau devient de la terre cuite -- la pierre des
+     * gradins -- et tout ce qui est au-dessus de l'air : l'arene se pose sur un socle plat,
+     * sans arbre dans ses gradins ni vide sous ses rigoles. Le boss et le Sculk viennent
+     * quand le dernier bloc est pose.
      *
-     * @return ce qu'il reste a poser, ou null si la structure n'existe pas ou
-     *         refuse le site
+     * @return faux si le volume manque, ne correspond pas a ses reperes, ou si un autre
+     *         chantier occupe deja la place : on se rabat alors sur la butte
      */
-    @Nullable
-    private static Pending prepareArena(ServerLevel level, BlockPos center, EntityType<?> bossType) {
-        Structure structure = level.registryAccess().registryOrThrow(Registries.STRUCTURE)
-                .get(ResourceLocation.parse(ARENA_STRUCTURE));
-        if (structure == null) {
-            return null;
+    private static boolean raiseArena(ServerLevel level, BlockPos center, EntityType<?> bossType) {
+        com.emerald.jak.JakVolume volume = com.emerald.jak.JakVolume.load(level.getServer(), ARENA_VOLUME);
+        ArenaMarks marks = ArenaMarks.load(level.getServer());
+        if (volume == null || marks == null || !marks.sha1().equals(volume.sha1())) {
+            LOGGER.warn("Arene de Spargus absente ou sans ses reperes (volume {}, reperes {})",
+                    volume == null ? "absent" : volume.sha1(), marks == null ? "absents" : marks.sha1());
+            return false;
         }
-        ChunkGenerator generator = level.getChunkSource().getGenerator();
-        BlockPos[] tries = {center, center.offset(48, 0, 0), center.offset(0, 0, 48),
-                center.offset(-48, 0, 0), center.offset(0, 0, -48)};
-        for (BlockPos attempt : tries) {
-            StructureStart start = structure.generate(level.registryAccess(), generator,
-                    generator.getBiomeSource(), level.getChunkSource().randomState(),
-                    level.getStructureManager(), level.getSeed(), new ChunkPos(attempt), 0,
-                    level, biome -> true);
-            if (!start.isValid()) {
-                continue;
-            }
-            BoundingBox box = start.getBoundingBox();
-            ChunkPos from = new ChunkPos(SectionPos.blockToSectionCoord(box.minX()),
-                    SectionPos.blockToSectionCoord(box.minZ()));
-            ChunkPos to = new ChunkPos(SectionPos.blockToSectionCoord(box.maxX()),
-                    SectionPos.blockToSectionCoord(box.maxZ()));
-            ArrayDeque<ChunkPos> chunks = new ArrayDeque<>();
-            ChunkPos.rangeClosed(from, to).forEach(chunks::add);
-            return new Pending(start, generator, chunks, box, center, bossType);
-        }
-        LOGGER.warn("La Prison Givree refuse de se poser pres de {}", center.toShortString());
-        return null;
-    }
-
-    /** Quelques chunks de l'arene par tick ; le boss vient quand tout est pose. */
-    private static void tickPlacement(ServerLevel level) {
-        Pending job = pending;
+        int floorY = center.getY() - 1;                  // le sol du monde, ou le sol de l'arene se pose
+        BlockPos origin = new BlockPos(center.getX() - marks.centre().getX(), floorY - marks.floor(),
+                center.getZ() - marks.centre().getZ());
+        BlockPos perch = origin.offset(marks.centre());
+        List<BlockPos> posts = marks.guards().stream().map(origin::offset).toList();
+        net.minecraft.world.level.block.state.BlockState rock = Blocks.TERRACOTTA.defaultBlockState();
+        net.minecraft.world.level.block.state.BlockState air = Blocks.AIR.defaultBlockState();
+        com.emerald.jak.JakBuilder.Job job = com.emerald.jak.JakBuilder.start(
+                new com.emerald.jak.JakBuilder.Plan(level, volume, origin)
+                        .baseline(y -> y < floorY ? rock : air)
+                        .awaitEntities(true)
+                        .beforePlace(world -> clearBox(world, origin, volume))
+                        .clearFluidTicks(true)
+                        .label("arene du boss")
+                        .onDone(report -> {
+                            arenaJob = null;
+                            LOGGER.info("Arene de Spargus posee en {} s ; boss en {}", report.seconds(),
+                                    perch.toShortString());
+                            spawnBoss(level, perch, bossType);
+                            spawnGuardsAt(level, posts, GUARDS_AT_START);
+                        }));
         if (job == null) {
-            return;
+            return false;
         }
-        for (int i = 0; i < CHUNKS_PER_TICK && !job.chunks().isEmpty(); i++) {
-            ChunkPos chunk = job.chunks().poll();
-            level.getChunk(chunk.x, chunk.z);        // force le chargement, comme /place
-            job.start().placeInChunk(level, level.structureManager(), job.generator(),
-                    level.getRandom(),
-                    new BoundingBox(chunk.getMinBlockX(), level.getMinBuildHeight(),
-                            chunk.getMinBlockZ(), chunk.getMaxBlockX(),
-                            level.getMaxBuildHeight(), chunk.getMaxBlockZ()), chunk);
-        }
-        if (!job.chunks().isEmpty()) {
-            return;
-        }
-        pending = null;
-        LOGGER.info("Prison Givree posee, emprise {}", job.box());
-        populate(level, summitOf(level, job.box()), job.center(), job.bossType());
+        arenaJob = job;
+        return true;
     }
 
-    /** Le boss a sa place, le Sculk autour. */
+    /** Ce qui vivait dans la boite -- arbres abattus, betes, objets -- ne reste pas mure dans les gradins. */
+    private static void clearBox(ServerLevel level, BlockPos origin, com.emerald.jak.JakVolume volume) {
+        net.minecraft.world.phys.AABB box = new net.minecraft.world.phys.AABB(origin.getX(), origin.getY(),
+                origin.getZ(), origin.getX() + volume.width(), origin.getY() + volume.height(),
+                origin.getZ() + volume.depth());
+        for (Entity entity : level.getEntities((Entity) null, box,
+                e -> e instanceof Mob || e instanceof net.minecraft.world.entity.item.ItemEntity)) {
+            entity.discard();
+        }
+    }
+
+    /** Le boss a sa place, le Sculk autour : sur la butte, quand l'arene manque. */
     private static void populate(ServerLevel level, BlockPos perch, BlockPos center,
                                  EntityType<?> bossType) {
         spawnBoss(level, perch, bossType);
         spawnGuards(level, center, GUARDS_AT_START);
-    }
-
-    /** Le point le plus haut de l'arene, pres de son centre : la place du boss. */
-    private static BlockPos summitOf(ServerLevel level, BoundingBox box) {
-        int cx = box.getCenter().getX();
-        int cz = box.getCenter().getZ();
-        BlockPos best = null;
-        for (int dx = -20; dx <= 20; dx += 2) {
-            for (int dz = -20; dz <= 20; dz += 2) {
-                int x = cx + dx, z = cz + dz;
-                int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z);
-                if (best == null || y > best.getY()) {
-                    best = new BlockPos(x, y, z);
-                }
-            }
-        }
-        return best == null ? box.getCenter() : best;
     }
 
     /** Sans structure : une butte de pierre pour que le boss ne naisse pas dans un arbre. */
@@ -312,6 +313,11 @@ public final class Finale {
             }
         }
         return center.above();
+    }
+
+    /** L'arene est-elle encore en train de se poser ? (l'automate de photos attend la fin) */
+    public static boolean arenaRising() {
+        return arenaJob != null;
     }
 
     // ---------------------------------------------------------- le boss
@@ -362,8 +368,18 @@ public final class Finale {
         }
     }
 
+    /** Le Sculk aux places de la couronne, la sentinelle d'abord. */
+    private static void spawnGuardsAt(ServerLevel level, List<BlockPos> posts, int count) {
+        List<BlockPos> shuffled = new ArrayList<>(posts);
+        java.util.Collections.shuffle(shuffled, new java.util.Random(level.random.nextLong()));
+        for (int i = 0; i < Math.min(count, shuffled.size()); i++) {
+            spawnGuard(level, shuffled.get(i), i == 0 ? sentinelType(level) : guardType(level));
+        }
+    }
+
     private static void spawnGuard(ServerLevel level, BlockPos spot, @Nullable EntityType<?> type) {
-        if (type == null || !level.isLoaded(spot)) {
+        // jamais dans une rigole : la surface d'une colonne de lave est la lave elle-meme
+        if (type == null || !level.isLoaded(spot) || !level.getFluidState(spot.below()).isEmpty()) {
             return;
         }
         Entity guard = type.spawn(level, spot, MobSpawnType.EVENT);
@@ -406,7 +422,6 @@ public final class Finale {
                 || !level.dimension().equals(Level.OVERWORLD)) {
             return;
         }
-        tickPlacement(level);
         // LE CYCLE SUIVANT, en monde ouvert : trois nouveaux sanctuaires.
         if (cycleAt >= 0L && level.getGameTime() >= cycleAt) {
             cycleAt = -1L;
@@ -550,7 +565,10 @@ public final class Finale {
 
     /** Un arret de partie abandonne l'arene en cours de pose. */
     public static void clear() {
-        pending = null;
+        if (arenaJob != null) {
+            com.emerald.jak.JakBuilder.cancel(arenaJob);
+            arenaJob = null;
+        }
         hintAt = -1L;
         cycleAt = -1L;
     }

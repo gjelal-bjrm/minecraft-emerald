@@ -78,6 +78,12 @@ import java.util.Objects;
  * depuis la cour, ou au pied de la tour sud-ouest. Mode eteint : la garnison reste a son
  * poste et le spectateur ne la derange pas.
  *
+ * L'ARENE DU BOSS (« nom@arene:vol », « sol », « gradins », « lave », cahier §91) : l'Arc-en-ciel
+ * se leve pour de vrai a cinq cents blocs a l'est (Finale.begin, avec Ignis), l'arene de
+ * Spargus se pose ; puis le spectateur vient au-dessus et l'on attend quarante-cinq secondes,
+ * comme pour les sanctuaires. Les vues : d'en haut, depuis le sol face au boss, depuis les
+ * gradins, et de pres sur une rigole de lave.
+ *
  * L'ECLIPSE (« nom@eclipse:portail », « vague », « brume », cahier §88) : l'Eclipse se
  * leve pour de vrai la ou se tient le joueur, un portail s'ouvre a une dizaine de blocs,
  * et la camera le regarde de face (« portail »), puis quand sa vague est sortie
@@ -181,6 +187,11 @@ public final class PhotoAutomaton {
         /** Une prise de l'Eclipse. */
         boolean eclipse() {
             return "eclipse".equals(this.biome.getNamespace());
+        }
+
+        /** Une prise de l'arene du boss, levee pour elle. */
+        boolean arena() {
+            return "arene".equals(this.biome.getNamespace());
         }
 
         /** Une prise d'un sanctuaire bati pour elle. */
@@ -359,6 +370,9 @@ public final class PhotoAutomaton {
         Shot shot = SHOTS.get(index);
         if (pending == null && shot.sanctuary() && !sanctuaryBuilt(overworld, player, shot)) {
             return;                       // le chantier avance ; la prise attend qu'il soit fini
+        }
+        if (pending == null && shot.arena() && !arenaRaised(overworld, player)) {
+            return;                       // l'arene se pose ; la prise attend
         }
         if (pending == null) {
             if (!place(server, overworld, player, shot)) {
@@ -709,6 +723,67 @@ public final class PhotoAutomaton {
         return true;
     }
 
+    /** Le centre de l'arene levee pour les prises, ou null avant. */
+    @Nullable
+    private static BlockPos arenaCentre;
+    private static boolean arenaSettling;
+    private static int arenaWait;
+    /** Les vues de l'arene : l'oeil puis le point vise, par rapport au centre de son sol. */
+    private static final java.util.Map<String, double[]> ARENA_VIEWS = java.util.Map.of(
+            "vol", new double[]{0, 44, 22, 0, 0, -28},
+            "sol", new double[]{0, 2.6, 46, 0, 5, 0},
+            "gradins", new double[]{-50, 12, 30, 0, 2, 0},
+            "lave", new double[]{31, 5.5, 38, 22, 0, 22});
+
+    /**
+     * L'arene est-elle posee ? Le premier appel leve l'Arc-en-ciel a cinq cents blocs a l'est,
+     * le spectateur au loin ; quand le dernier bloc est pose, il vient au-dessus du sol et l'on
+     * attend (voir les sanctuaires).
+     */
+    private static boolean arenaRaised(ServerLevel level, ServerPlayer player) {
+        if (arenaCentre == null) {
+            BlockPos site = player.blockPosition().offset(500, 0, 0);
+            arenaCentre = com.emerald.game.Finale.begin(level, site, "cataclysm:ignis");
+            if (arenaCentre == null) {
+                arenaCentre = BlockPos.ZERO;
+            }
+            LOGGER.info("photos : arene levee en {}", arenaCentre);
+            return false;
+        }
+        if (com.emerald.game.Finale.arenaRising()) {
+            return false;
+        }
+        if (!arenaSettling) {
+            arenaSettling = true;
+            player.setGameMode(GameType.SPECTATOR);
+            player.teleportTo(level, arenaCentre.getX() + 0.5, arenaCentre.getY() + 60, arenaCentre.getZ() + 50.5,
+                    180.0F, 45.0F);
+            arenaWait = SANCTUARY_SETTLE;
+            return false;
+        }
+        return --arenaWait <= 0;
+    }
+
+    /** La camera dans l'arene : d'en haut, sur le sol face au boss, dans les gradins, pres d'une rigole. */
+    private static boolean placeArena(ServerLevel level, ServerPlayer player, Shot shot) {
+        double[] view = ARENA_VIEWS.get(shot.biome().getPath());
+        if (arenaCentre == null || arenaCentre.equals(BlockPos.ZERO) || view == null) {
+            LOGGER.warn("photos : pas d'arene, ou vue inconnue {}", shot.biome().getPath());
+            return false;
+        }
+        net.minecraft.world.phys.Vec3 base = net.minecraft.world.phys.Vec3.atBottomCenterOf(arenaCentre);
+        net.minecraft.world.phys.Vec3 eye = base.add(view[0], view[1], view[2]);
+        net.minecraft.world.phys.Vec3 target = base.add(view[3], view[4], view[5]);
+        double dx = target.x - eye.x;
+        double dz = target.z - eye.z;
+        float yaw = (float) Math.toDegrees(Math.atan2(-dx, dz));
+        float pitch = (float) -Math.toDegrees(Math.atan2(target.y - eye.y, Math.sqrt(dx * dx + dz * dz)));
+        player.setGameMode(GameType.SPECTATOR);
+        player.teleportTo(level, eye.x, eye.y - player.getEyeHeight(), eye.z, yaw, pitch);
+        LOGGER.info("photos : {} (arene, {}) camera en {}", shot.name(), shot.biome().getPath(), eye);
+        return true;
+    }
+
     /** Une prise du parcours de Haven : attendre le bon moment, puis la laisser au client, interface visible. */
     private static void havenShot(MinecraftServer server, ServerPlayer player, Shot shot) {
         if (pending == null) {
@@ -1022,6 +1097,9 @@ public final class PhotoAutomaton {
         }
         if (shot.sanctuary()) {
             return placeSanctuary(level, player, shot);
+        }
+        if (shot.arena()) {
+            return placeArena(level, player, shot);
         }
         BlockPos from = player.blockPosition();
         if (!ORIGIN.isEmpty()) {

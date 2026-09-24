@@ -404,7 +404,17 @@ des monstres et la qualité du butin.
 | Assaut | 48-60 | Uniquement les tempêtes, presque sans répit |
 
 **Pour gagner :** activer les trois ancres, faire apparaître l'Arc-en-ciel, et
-tuer le boss à son sommet avant la fin du temps.
+tuer le boss avant la fin du temps.
+
+**L'arène du boss.** Quand la troisième ancre est tenue, l'Arc-en-ciel se lève
+à l'écart des sanctuaires et **l'arène de Spargus** (celle de Jak 3) se pose en
+une quinzaine de secondes : un sol de sable cerné de mesas de grès rouge et de
+gradins, fermé au nord par une arche de rocher. Le boss, tiré au sort (Ignis,
+le Gardien de l'Ender ou la Liche), attend **au centre du sol** ; le Sculk
+garde la couronne autour de lui. **Un anneau de lave** court dans le sol,
+coupé de quatre passages aux quatre points cardinaux, et des fosses de lave
+creusent le pourtour : on les voit briller, on les enjambe — mais on n'y tombe
+pas deux fois.
 
 ---
 
@@ -841,7 +851,7 @@ Sur un serveur d'essai (`run-server`), chacun écrit son rapport puis arrête le
 - `EMERALDWEAPONS_AUTOTEST=parcours ./gradlew runServer` : le parcours (fiche sur disque, arme qui suit les formes du joueur, ville paisible, bouton verrouillé, titre et objectifs du guide ; puis le lot 2 : râtelier du QG, deuxième arrivée envahie, reprise des rues, retour après la défaite, porte de la victoire ; puis les transports : les huit stations, l'arche et sa recharge, le portail des tours ; puis l'agenda, l'équipe attendue au QG et la réunion), rapport `run-server/parcours_autotest.txt` ;
 - `EMERALDWEAPONS_AUTOTEST=faune ./gradlew runServer` : les animaux de la ville (carte de l'eau, places de chaque espèce, plafonds, dangers tenus au large et agressifs au large seulement, piqûre des méduses, armée de mouettes, compagnons à l'invasion), rapport `run-server/faune_autotest.txt` ; avant, `python tools/dev_mods.py --server alexsmobs aquaculture livingthings`, après, `python tools/dev_mods.py --server --clean` ;
 - `EMERALDWEAPONS_AUTOTEST=quetes ./gradlew runServer` : les quêtes des héros (le livre des quêtes, les six héros et le bateau du Pêcheur, les cartes du chat et leurs jetons, l'épreuve de tir jusqu'à la médaille, la pêche au poids, les coffres engloutis, la chasse aux mouettes, la patrouille, la tenue du port et l'invasion qui va avec, les orbes cachés, la boutique de Tess et ses sceaux, puis le ménage), rapport `run-server/quetes_autotest.txt` ; avant, `python tools/dev_mods.py --server alexsmobs aquaculture livingthings`, après, `python tools/dev_mods.py --server --clean` ;
-- `EMERALDWEAPONS_AUTOTEST=partie ./gradlew runServer` : la partie (chances de la Forge et métal perdu, coffres des sanctuaires selon l'avancée, vol d'élytre des ailes +20, bouclier d'Arcencium, Grand Froid de l'Aurore, Proie de la Battue et sa garde), rapport `run-server/partie_autotest.txt`.
+- `EMERALDWEAPONS_AUTOTEST=partie ./gradlew runServer` : la partie (chances de la Forge et métal perdu, coffres des sanctuaires selon l'avancée, vol d'élytre des ailes +20, bouclier d'Arcencium, Grand Froid de l'Aurore, Proie de la Battue et sa garde, arches, cycle d'ouverture des météos, Éclipse, bestiaires, garnisons et matières des trois sanctuaires, arène du boss), rapport `run-server/partie_autotest.txt`. Les épreuves 9 à 12 demandent des mods au serveur des bancs : `python tools/dev_mods.py --server graveyard alexsmobs twilightforest cataclysm irons_spellbooks undergarden eternal_starlight creeperoverhaul variantsandventures lionfishapi resourcefullib`, puis `--server --clean`.
 
 Pour regarder un terrain (arbres, biomes) sans jouer : le run `photos` entre dans le monde
 jetable `run/saves/photos` ; avec `EMERALDWEAPONS_PHOTOS="nom@biome;nom@biome@hauteur"` (et
