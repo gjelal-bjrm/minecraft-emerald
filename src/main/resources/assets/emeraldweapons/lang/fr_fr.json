@@ -1012,5 +1012,10 @@
   "weather.emeraldweapons.eclipse.sub": "Des portails s'ouvrent dans le noir. Refermez-les.",
   "weather.emeraldweapons.omen.eclipse": "Les oiseaux se taisent.",
   "eclipse.emeraldweapons.closed": "Portail refermé : +%s Éclats du Destin",
-  "block.emeraldweapons.eclipse_portal": "Portail de l'Éclipse"
+  "block.emeraldweapons.eclipse_portal": "Portail de l'Éclipse",
+  "game.emeraldweapons.sanctuaire.theme.sables": "Sanctuaire des Sables",
+  "game.emeraldweapons.sanctuaire.theme.givre": "Sanctuaire du Givre",
+  "game.emeraldweapons.sanctuaire.theme.braises": "Sanctuaire des Braises",
+  "game.emeraldweapons.sanctuaire.approche": "Garnison du palier %s",
+  "game.emeraldweapons.sanctuaire.renfort": "Des renforts du palier %s sont arrivés au sanctuaire."
 }

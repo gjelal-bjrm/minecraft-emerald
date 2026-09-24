@@ -655,6 +655,25 @@ Des **gardiens** tiennent les lieux avant vous : deux par tour d'angle, d'autres
 sur le chemin de ronde et autour de la pyramide. Ils ne quittent pas le
 sanctuaire. Comptez-les avant d'entrer.
 
+**Trois sanctuaires, trois mondes.** Les trois ancres d'une partie ne se
+ressemblent pas, et l'on ne sait pas d'avance laquelle est laquelle : le sort
+les distribue à chaque partie.
+
+| | Matière | Gardiens |
+| --- | --- | --- |
+| **Sanctuaire des Sables** | grès clair et grès rouge, pilastres et bagues d'or | momifiés, squelettes, araignées, kobolds et koboletons ; puis wadjets, druides squelettes, gusters, marcheurs de la soif ; au troisième palier, le kobolédiateur et le nécromancien |
+| **Sanctuaire du Givre** | glace, ardoise et neige, pyramide givrée | vagabonds, gélides, draugrs, gardiens des neiges ; puis draugrs d'élite, loups d'hiver, cryomanciens, cœurs de glace ; au troisième palier, le draugr royal, l'aptrgangr et le yéti |
+| **Sanctuaire des Braises** | pierre noire, magma, brique du Nether rouge | cubes de magma, scarabées de feu, petits créteors, moustiques pourpres ; puis revenants embrasés, blazes, zoglins, créteors, vautours des âmes ; au troisième palier, le berserker embrasé et les Wither squelettes |
+
+Son nom s'affiche quand vous l'approchez. Le **siège de l'ancre** lance les
+monstres du sanctuaire. La difficulté suit toujours **l'ordre de prise** : le
+premier sanctuaire pris est le plus facile, quel qu'il soit, et **chacun est plus
+dur que le précédent**. Tous se bâtissent au début de la partie avec une
+garnison du premier palier ; si vous en abordez un après en avoir pris
+d'autres, **des renforts** l'ont rejoint : 28 gardes du palier 2 au deuxième,
+42 du palier 3 au troisième, armés et cuirassés comme les vagues de siège de
+leur palier. L'or des Sables est un décor : il ne se revend pas.
+
 **Où est l'ancre :** au sommet de la pyramide, sur un parvis à quatre
 obélisques. Deux façons de la trouver :
 
@@ -707,7 +726,7 @@ Toutes commencent par `/arcencium` et demandent le niveau opérateur.
 | `weather stop` | Arrête la météo en cours |
 | `skip <minutes>` | Avance le chronomètre — pour voir la Marée sans jouer 36 minutes |
 | `find` | Donne les coordonnées de la Lame du Serment |
-| `sanctuary [1-3]` | Bâtit un Sanctuaire d'Ancre là où vous êtes, au palier demandé (butin plus riche au 3) |
+| `sanctuary [1-3] [sables\|givre\|braises]` | Bâtit un Sanctuaire d'Ancre là où vous êtes, au palier demandé (butin plus riche au 3), dans le thème demandé (tiré au sort sans thème) |
 | `anchor` | Vous téléporte à l'ancre du sanctuaire le plus proche et dit si le bloc y est |
 | `mode off` | **Éteint le mode** : plus de confinement, ni météo, ni Marée, ni chronomètre. Le monde redevient un Minecraft ordinaire, nos blocs compris — pour explorer et bâtir tranquillement. Les **rituels d'ancre restent jouables** : c'est le bac à sable où l'on essaie un sanctuaire |
 | `mode on` | Le rallume |

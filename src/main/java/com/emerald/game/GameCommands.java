@@ -429,13 +429,25 @@ public class GameCommands {
                         .executes(ctx -> placeJak(ctx.getSource(),
                                 StringArgumentType.getString(ctx, "quartier")))));
 
+        // /arcencium sanctuary [palier] [theme] : sans theme, tire au sort comme en partie
         root.then(Commands.literal("sanctuary")
                 .then(Commands.argument("palier",
                                 com.mojang.brigadier.arguments.IntegerArgumentType.integer(1, 3))
+                        .then(Commands.argument("theme", StringArgumentType.word())
+                                .suggests((ctx, builder) -> {
+                                    for (SanctuaryTheme theme : SanctuaryTheme.values()) {
+                                        builder.suggest(theme.id);
+                                    }
+                                    return builder.buildFuture();
+                                })
+                                .executes(ctx -> buildSanctuary(ctx.getSource(),
+                                        com.mojang.brigadier.arguments.IntegerArgumentType
+                                                .getInteger(ctx, "palier"),
+                                        StringArgumentType.getString(ctx, "theme"))))
                         .executes(ctx -> buildSanctuary(ctx.getSource(),
                                 com.mojang.brigadier.arguments.IntegerArgumentType
-                                        .getInteger(ctx, "palier"))))
-                .executes(ctx -> buildSanctuary(ctx.getSource(), 1)));
+                                        .getInteger(ctx, "palier"), null)))
+                .executes(ctx -> buildSanctuary(ctx.getSource(), 1, null)));
 
 
         // Retrouver l'ancre du sanctuaire le plus proche, et s'y rendre.
@@ -905,15 +917,21 @@ public class GameCommands {
         return 1;
     }
 
-    private static int buildSanctuary(CommandSourceStack source, int tier) {
+    private static int buildSanctuary(CommandSourceStack source, int tier, @javax.annotation.Nullable String themeId) {
         ServerLevel level = source.getServer().overworld();
+        if (themeId != null && java.util.Arrays.stream(SanctuaryTheme.values()).noneMatch(t -> t.id.equals(themeId))) {
+            source.sendFailure(Component.literal("Theme inconnu : " + themeId + " (sables, givre, braises)"));
+            return 0;
+        }
+        SanctuaryTheme theme = themeId != null ? SanctuaryTheme.byId(themeId)
+                : SanctuaryTheme.values()[level.random.nextInt(SanctuaryTheme.values().length)];
         var pos = net.minecraft.core.BlockPos.containing(source.getPosition());
         var ground = new net.minecraft.core.BlockPos(pos.getX(),
                 WorldSetup.surfaceY(level, pos.getX(), pos.getZ()) - 1, pos.getZ());
-        var anchor = Sanctuary.build(level, source, ground, tier);
+        var anchor = Sanctuary.build(level, source, ground, tier, theme);
         source.sendSuccess(() -> Component.translatable(
                 "command.emeraldweapons.sanctuary",
-                anchor.getX(), anchor.getY(), anchor.getZ()), true);
+                anchor.getX(), anchor.getY(), anchor.getZ()).append(" — ").append(theme.displayName()), true);
         source.sendSuccess(() -> Component.translatable(
                 "command.emeraldweapons.sanctuary.hint"), false);
         return 1;
@@ -995,9 +1013,10 @@ public class GameCommands {
         if (source.getEntity() instanceof net.minecraft.server.level.ServerPlayer player) {
             player.teleportTo(anchor.getX() + 2.5, anchor.getY() + 1, anchor.getZ() + 0.5);
         }
+        SanctuaryTheme theme = GameState.get(source.getServer().overworld()).themeAt(index - 1);
         source.sendSuccess(() -> Component.translatable(
                 "game.emeraldweapons.anchor.at", index,
-                anchor.getX(), anchor.getY(), anchor.getZ()), false);
+                anchor.getX(), anchor.getY(), anchor.getZ()).append(" — ").append(theme.displayName()), false);
         return 1;
     }
 

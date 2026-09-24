@@ -86,6 +86,9 @@ public class Siege {
 
     private int wave;
     private int gap = 3 * 20;          // un temps de respiration avant la premiere vague
+    /** Le vivier propre a ce siege (le theme d'un sanctuaire, cahier §90), ou null. */
+    @javax.annotation.Nullable
+    private List<String> themed;
     private boolean done;
     private boolean won;
 
@@ -104,6 +107,12 @@ public class Siege {
         for (ServerPlayer player : level.players()) {
             this.bar.addPlayer(player);
         }
+    }
+
+    /** Les vagues puisent dans ce vivier : les monstres du sanctuaire dont on tient l'ancre. */
+    public Siege themed(List<String> ids) {
+        this.themed = ids;
+        return this;
     }
 
     /** Ce que chaque joueur SUPPLEMENTAIRE ajoute a chaque vague. */
@@ -379,8 +388,8 @@ public class Siege {
      */
     private EntityType<?>[] roster() {
         List<EntityType<?>> pool = new ArrayList<>();
-        List<String> ids = this.failure == Failure.VILLAGERS
-                ? SiegeRoster.prologue() : SiegeRoster.forTier(this.tier);
+        List<String> ids = this.themed != null ? this.themed
+                : this.failure == Failure.VILLAGERS ? SiegeRoster.prologue() : SiegeRoster.forTier(this.tier);
         for (String id : ids) {
             EntityType.byString(id).ifPresent(pool::add);
         }

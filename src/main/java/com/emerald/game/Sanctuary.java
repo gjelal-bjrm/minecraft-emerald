@@ -118,6 +118,58 @@ public final class Sanctuary {
     private Sanctuary() {
     }
 
+    /**
+     * LE THEME DU CHANTIER EN COURS (cahier §90) : la matiere dans laquelle chaque pose est
+     * traduite. Un seul chantier avance a la fois (GameManager.tickBuilds, ou la commande qui
+     * bat d'une traite) : le Job le pose au debut de chaque bouchee.
+     */
+    private static SanctuaryTheme theme = SanctuaryTheme.SABLES;
+
+    /** Le theme du sanctuaire qu'on bat en ce moment. */
+    public static SanctuaryTheme currentTheme() {
+        return theme;
+    }
+
+    /** On pose l'enceinte : l'arcencium y prend l'accent du theme (SanctuaryTheme.shell). */
+    private static boolean inShell;
+
+    /** Muraille, tours d'angle, portes : l'enceinte, qui porte l'accent de son theme. */
+    private static void enclosure(Runnable part) {
+        inShell = true;
+        try {
+            part.run();
+        } finally {
+            inShell = false;
+        }
+    }
+
+    /**
+     * Les renforts d'un sanctuaire deja bati, retrouve par son ANCRE : elle coiffe la pyramide
+     * a trois blocs au nord du centre (apexZ), et la cour se lit au sol, entre la pyramide et
+     * les tours d'angle -- la hauteur la plus commune des coins qu'on a sous la main.
+     *
+     * @return le nombre de gardes poses
+     */
+    public static int reinforce(ServerLevel level, BlockPos anchor, SanctuaryTheme theme, int rank) {
+        int cx = anchor.getX();
+        int cz = anchor.getZ() + (PYRAMID_CZ - 44);
+        java.util.Map<Integer, Integer> seen = new java.util.HashMap<>();
+        for (int sx = -1; sx <= 1; sx += 2) {
+            for (int sz = -1; sz <= 1; sz += 2) {
+                int x = cx + sx * 70;
+                int z = cz + sz * 70;
+                if (level.isLoaded(new BlockPos(x, 0, z))) {
+                    seen.merge(level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z) - 1, 1, Integer::sum);
+                }
+            }
+        }
+        if (seen.isEmpty()) {
+            return 0;
+        }
+        int y = java.util.Collections.max(seen.entrySet(), java.util.Map.Entry.comparingByValue()).getKey();
+        return SanctuaryGarrison.reinforce(level, new BlockPos(cx, y, cz), HALF, WALK, TOWER_TOP, theme, rank);
+    }
+
     // ------------------------------------------------------------ materiaux
 
     private static BlockState body() {
@@ -219,6 +271,7 @@ public final class Sanctuary {
         private final int y;
         private final int cz;
         private final int rank;
+        private final SanctuaryTheme theme;
         private final int[] bounds;
         /** Une etape et SON NOM : sans le nom, « pire etape 1148 ms » ne dit pas laquelle. */
         private record Step(String name, Runnable run, boolean closesTick) {
@@ -265,10 +318,11 @@ public final class Sanctuary {
         private long worstNanos;
 
         private Job(ServerLevel level, @Nullable CommandSourceStack source,
-                    BlockPos ground, int tier) {
+                    BlockPos ground, int tier, SanctuaryTheme theme) {
             this.level = level;
             this.source = source;
             this.rank = Math.max(1, Math.min(3, tier));
+            this.theme = theme;
             this.cx = ground.getX();
             // ET JAMAIS AU-DESSUS DU MONDE. Une pyramide monte de quarante-deux
             // blocs : plantee a y = 322 elle demande des blocs au-dela du
@@ -406,21 +460,21 @@ public final class Sanctuary {
             for (int band = -HALF; band <= HALF; band += WALL_BAND) {
                 final int a = band;
                 final int b = Math.min(HALF, band + WALL_BAND - 1);
-                add("muraille", () -> curtainWall(level, cx, y, cz, a, b));
+                add("muraille", () -> enclosure(() -> curtainWall(level, cx, y, cz, a, b)));
             }
             for (int sx = -1; sx <= 1; sx += 2) {
                 for (int sz = -1; sz <= 1; sz += 2) {
                     final int fx = sx;
                     final int fz = sz;
-                    add("tour", () -> cornerTower(level, cx, cz, cx + fx * HALF, y,
-                            cz + fz * HALF, rank));
+                    add("tour", () -> enclosure(() -> cornerTower(level, cx, cz, cx + fx * HALF, y,
+                            cz + fz * HALF, rank)));
                 }
             }
             // QUATRE portes, une par cote : la pyramide est posee par la
             // commande du jeu, qui choisit elle-meme sa rotation.
             for (int side = 0; side < 4; side++) {
                 final int face = side;
-                add("porte", () -> gatehouse(level, cx, y, cz, face, rank));
+                add("porte", () -> enclosure(() -> gatehouse(level, cx, y, cz, face, rank)));
             }
             add("sommet", () -> {
                 // Le sommet du modele n'est pas au milieu de son emprise : il
@@ -435,7 +489,7 @@ public final class Sanctuary {
                 tombEntrance(level, cx, y, cz, rank, anchor);
                 causewayRamps(level, cx, y, cz);
                 summitStair(level, cx, y, cz, apexZ, summit);
-                SanctuaryMist.register(new BlockPos(cx, y, cz), HALF, anchor);
+                SanctuaryMist.register(new BlockPos(cx, y, cz), HALF, anchor, theme);
                 SanctuaryLedger.part("fini");
             });
             // LE CALQUE EN DERNIER : il rejoue, telles quelles, les corrections
@@ -452,7 +506,7 @@ public final class Sanctuary {
             // La garnison EN DERNIER, quand plus un bloc ne bouge : posee avant
             // le parvis, l'escalier et le couloir, ces trois-la l'etouffaient.
             add("garnison", () -> SanctuaryGarrison.populate(level, new BlockPos(cx, y, cz),
-                    HALF, WALK, TOWER_TOP));
+                    HALF, WALK, TOWER_TOP, theme, 1));
             add("compte rendu", this::report);
         }
 
@@ -516,6 +570,7 @@ public final class Sanctuary {
          */
         public void advance(long budgetNanos) {
             long start = System.nanoTime();
+            Sanctuary.theme = this.theme;     // chaque pose de cette bouchee se traduit dans sa matiere
             do {
                 Step step = steps.poll();
                 if (step == null) {
@@ -538,8 +593,8 @@ public final class Sanctuary {
 
     /** Le chantier d'un sanctuaire, a faire avancer tique par tique. */
     public static Job job(ServerLevel level, @Nullable CommandSourceStack source,
-                          BlockPos ground, int tier) {
-        return new Job(level, source, ground, tier);
+                          BlockPos ground, int tier, SanctuaryTheme theme) {
+        return new Job(level, source, ground, tier, theme);
     }
 
     /**
@@ -553,8 +608,8 @@ public final class Sanctuary {
      * @return la position de l'ancre
      */
     public static BlockPos build(ServerLevel level, CommandSourceStack source,
-                                 BlockPos ground, int tier) {
-        Job job = job(level, source, ground, tier);
+                                 BlockPos ground, int tier, SanctuaryTheme theme) {
+        Job job = job(level, source, ground, tier, theme);
         while (!job.done()) {
             job.advance(Long.MAX_VALUE);
         }
@@ -713,7 +768,8 @@ public final class Sanctuary {
         // voisinage, comme partout ailleurs dans cette classe
         boolean placed = found.get().placeInWorld(level, at, at,
                 new net.minecraft.world.level.levelgen.structure.templatesystem
-                        .StructurePlaceSettings(), level.random, 2);
+                        .StructurePlaceSettings().addProcessor(new SanctuaryThemeProcessor(theme)),
+                level.random, 2);
         if (!placed) {
             org.slf4j.LoggerFactory.getLogger(EmeraldWeaponsMod.MODID)
                     .warn("Pose refusee pour {} en {}", key, at);
@@ -956,7 +1012,7 @@ public final class Sanctuary {
                 for (int dy = 0; dy >= -12; dy--) {
                     BlockPos pos = new BlockPos(cx + dx, y + dy, cz + dz);
                     if (level.getBlockState(pos).isAir() || !level.getFluidState(pos).isEmpty()) {
-                        level.setBlock(pos, base(), 2);
+                        level.setBlock(pos, theme.apply(base()), 2);
                     }
                 }
             }
@@ -1354,7 +1410,7 @@ public final class Sanctuary {
                     }
                     BlockState skin = skinFor(state, (dy - y) / (double) span, ridge);
                     if (skin != null) {
-                        level.setBlock(pos, skin, 2);
+                        level.setBlock(pos, theme.skin(skin), 2);
                         painted++;
                         painted_total++;
                     }
@@ -1391,7 +1447,9 @@ public final class Sanctuary {
         }
         boolean skin = id.contains("sandstone") || id.contains("sand")
                 || id.contains("chiseled") || id.contains("smooth")
-                || id.contains("cut_");
+                || id.contains("cut_")
+                // la pyramide d'un autre theme a deja quitte le gres a la pose
+                || theme.isPyramidMaterial(state.getBlock());
         if (!skin) {
             return null;
         }
@@ -1843,7 +1901,7 @@ public final class Sanctuary {
             // ressortait sans avoir combattu -- le joueur a trouve la faille en
             // une partie. Le rayon de cinq le garde a son etage : il ne descend
             // pas rejoindre la cour, et il ne peut pas etre attire dehors.
-            SanctuaryGarrison.postGuard(level, new BlockPos(tx, floorY, tz), 5);
+            SanctuaryGarrison.postGuard(level, new BlockPos(tx, floorY, tz), 5, theme);
 
             int reach = (int) inner - 1;
             for (int i = 0; i < storey; i++) {
@@ -2416,7 +2474,7 @@ public final class Sanctuary {
         lootChest(level, cx, y + 1, z + 2, sanctuaryTable(rank), Direction.SOUTH);
         // la salle du tresor est le meilleur lot du sanctuaire : trois gardiens
         for (int i = 0; i < 3; i++) {
-            SanctuaryGarrison.postGuard(level, new BlockPos(cx, y + 1, z), 6);
+            SanctuaryGarrison.postGuard(level, new BlockPos(cx, y + 1, z), 6, theme);
         }
     }
 
@@ -2711,7 +2769,7 @@ public final class Sanctuary {
 
     private static void setWall(ServerLevel level, int x, int y, int z) {
         BlockPos pos = new BlockPos(x, y, z);
-        level.setBlock(pos, merlon(), 2);
+        level.setBlock(pos, theme.apply(merlon()), 2);
         SanctuaryLedger.record(x, y, z, merlon());
         walls.add(pos);
     }
@@ -2720,7 +2778,7 @@ public final class Sanctuary {
     private static void linkWalls(ServerLevel level) {
         for (BlockPos pos : walls) {
             BlockState state = level.getBlockState(pos);
-            if (!state.is(ModBlocks.GANGUE_BRICK_WALL.get())) {
+            if (!(state.getBlock() instanceof net.minecraft.world.level.block.WallBlock)) {
                 continue;                      // casse ou recouvert depuis
             }
             level.setBlock(pos, Block.updateFromNeighbourShapes(state, level, pos), 2);
@@ -2732,7 +2790,9 @@ public final class Sanctuary {
         // drapeau 2 : on previent le client sans declencher de mise a jour de
         // voisinage -- sur cent mille blocs, les cascades couteraient bien plus
         // cher que la pose elle-meme
-        level.setBlock(new BlockPos(x, y, z), state, 2);
+        level.setBlock(new BlockPos(x, y, z), inShell ? theme.shell(state) : theme.apply(state), 2);
+        // LE REGISTRE GARDE LE BLOC CANONIQUE (cahier §90) : une correction relevee dans un
+        // sanctuaire de glace vaut ainsi pour les trois matieres.
         // et l'on note QUI vient de poser ce bloc : c'est le seul point de
         // passage des poses, donc le seul endroit ou l'on ne peut oublier
         // personne -- une routine ajoutee demain sera enregistree sans qu'on

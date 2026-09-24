@@ -1012,5 +1012,10 @@
   "weather.emeraldweapons.eclipse.sub": "Portals open in the dark. Close them.",
   "weather.emeraldweapons.omen.eclipse": "The birds fall silent.",
   "eclipse.emeraldweapons.closed": "Portal closed: +%s Fate Shards",
-  "block.emeraldweapons.eclipse_portal": "Eclipse Portal"
+  "block.emeraldweapons.eclipse_portal": "Eclipse Portal",
+  "game.emeraldweapons.sanctuaire.theme.sables": "Sanctuary of Sands",
+  "game.emeraldweapons.sanctuaire.theme.givre": "Sanctuary of Frost",
+  "game.emeraldweapons.sanctuaire.theme.braises": "Sanctuary of Embers",
+  "game.emeraldweapons.sanctuaire.approche": "Tier %s garrison",
+  "game.emeraldweapons.sanctuaire.renfort": "Tier %s reinforcements have reached the sanctuary."
 }

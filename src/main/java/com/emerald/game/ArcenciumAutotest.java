@@ -76,7 +76,12 @@ import java.util.UUID;
  *      fermeture contre des Eclats, l'implosion et la dissolution a la fin. Demande
  *      The Graveyard et Alex's Mobs au serveur des bancs (tools/dev_mods.py --server) ;
  *  10. les bestiaires des meteos (cahier §89) : chaque monstre cite est-il la, hostile, et
- *      jamais une horreur de l'Eclipse ? (avec les mods des bestiaires au serveur des bancs).
+ *      jamais une horreur de l'Eclipse ? (avec les mods des bestiaires au serveur des bancs) ;
+ *  11. les trois sanctuaires (cahier §90) : trois garnisons sans monstre commun, presentes et
+ *      hostiles, quatre especes au moins a chaque palier ; trois matieres qui gardent la forme des
+ *      blocs ; les themes
+ *      tires au sort, un par ancre, sauvegardes avec les paliers de garnison ; des gardes du
+ *      bon theme, et coiffes s'ils brulent au soleil (memes mods que le banc 10).
  * Rapport dans partie_autotest.txt, puis arret.
  */
 @EventBusSubscriber(modid = EmeraldWeaponsMod.MODID)
@@ -120,6 +125,7 @@ public final class ArcenciumAutotest {
             opening(level);
             eclipse(level, spawn);
             bestiary(level);
+            sanctuaries(level, spawn);
         } catch (RuntimeException e) {
             LOGGER.error("autotest partie : exception", e);
             check("deroulement sans exception", false, e.toString());
@@ -347,6 +353,193 @@ public final class ArcenciumAutotest {
             }
             line(w.id() + " : " + sizes + " monstres par palier");
         }
+    }
+
+    // ============================================================ 11. les sanctuaires
+
+    /**
+     * « Chaque sanctuaire devrait etre different, au moins au niveau des monstres et au mieux
+     * aussi au niveau du visuel. » On lit les trois garnisons, on traduit des blocs dans les
+     * trois matieres, et l'on tire les themes d'une partie A PART (celle du monde d'essai
+     * n'est pas touchee).
+     */
+    private static void sanctuaries(ServerLevel level, BlockPos spawn) {
+        line("--- les trois sanctuaires : trois garnisons, trois matieres, tires au sort");
+        List<String> absent = new ArrayList<>();
+        List<String> passive = new ArrayList<>();
+        List<String> horror = new ArrayList<>();
+        List<String> thin = new ArrayList<>();
+        List<String> shared = new ArrayList<>();
+        List<String> flat = new ArrayList<>();
+        int cited = 0;
+        for (int tier = 1; tier <= 3; tier++) {
+            Map<String, String> owner = new HashMap<>();
+            for (SanctuaryTheme theme : SanctuaryTheme.values()) {
+                int resolved = 0;
+                for (String id : theme.monsters(tier)) {
+                    cited++;
+                    String before = owner.put(id, theme.id);
+                    if (before != null && !before.equals(theme.id)) {
+                        shared.add(id + " (" + before + " et " + theme.id + ", palier " + tier + ")");
+                    }
+                    java.util.Optional<EntityType<?>> type = EntityType.byString(id);
+                    if (type.isEmpty()) {
+                        absent.add(id);
+                        continue;
+                    }
+                    resolved++;
+                    if (type.get().is(com.emerald.weather.Eclipse.HORRORS)) {
+                        horror.add(id);
+                    }
+                    Entity made = type.get().create(level);
+                    if (!(made instanceof net.minecraft.world.entity.monster.Enemy)) {
+                        passive.add(id + (made == null ? " (ne se cree pas)" : " (" + made.getClass().getSimpleName() + ")"));
+                    }
+                    if (made != null) {
+                        made.discard();
+                    }
+                }
+                if (resolved < 4) {
+                    thin.add(theme.id + " palier " + tier + " : " + resolved);
+                }
+            }
+        }
+        for (SanctuaryTheme theme : SanctuaryTheme.values()) {
+            if (new java.util.HashSet<>(theme.monsters(1)).equals(new java.util.HashSet<>(theme.monsters(3)))) {
+                flat.add(theme.id);
+            }
+        }
+        line(cited + " monstres cites ; absents : " + (absent.isEmpty() ? "aucun" : String.join(", ", absent)));
+        check("chaque monstre des garnisons est charge (sinon : les mods du banc 10 au serveur des bancs)",
+                absent.isEmpty(), absent.isEmpty() ? cited + " presents" : String.join(", ", absent));
+        check("chaque garde est un ennemi, jamais une horreur de l'Eclipse",
+                passive.isEmpty() && horror.isEmpty(), passive.isEmpty() && horror.isEmpty() ? "-"
+                        : String.join(", ", passive) + " ; horreurs : " + String.join(", ", horror));
+        check("de la variete : quatre especes au moins par theme et par palier", thin.isEmpty(),
+                thin.isEmpty() ? "-" : String.join(", ", thin));
+        check("aucun monstre commun a deux sanctuaires au meme palier", shared.isEmpty(),
+                shared.isEmpty() ? "-" : String.join(", ", shared));
+        check("chaque garnison change entre le premier et le troisieme palier", flat.isEmpty(),
+                flat.isEmpty() ? "-" : String.join(", ", flat));
+
+        // LES MATIERES : trois briques differentes, la forme gardee, l'ancre intacte
+        java.util.Set<net.minecraft.world.level.block.Block> bricks = new java.util.HashSet<>();
+        List<String> shape = new ArrayList<>();
+        net.minecraft.world.level.block.state.BlockState stair = com.emerald.block.ModBlocks.GANGUE_BRICK_STAIRS.get()
+                .defaultBlockState()
+                .setValue(net.minecraft.world.level.block.StairBlock.FACING, net.minecraft.core.Direction.EAST)
+                .setValue(net.minecraft.world.level.block.StairBlock.HALF,
+                        net.minecraft.world.level.block.state.properties.Half.TOP);
+        net.minecraft.world.level.block.state.BlockState slab = com.emerald.block.ModBlocks.GANGUE_BRICK_SLAB.get()
+                .defaultBlockState().setValue(net.minecraft.world.level.block.SlabBlock.TYPE,
+                        net.minecraft.world.level.block.state.properties.SlabType.TOP);
+        net.minecraft.world.level.block.state.BlockState anchor = com.emerald.block.ModBlocks.PRISMATIC_ANCHOR.get()
+                .defaultBlockState();
+        for (SanctuaryTheme theme : SanctuaryTheme.values()) {
+            bricks.add(theme.apply(com.emerald.block.ModBlocks.GANGUE_BRICKS.get().defaultBlockState()).getBlock());
+            net.minecraft.world.level.block.state.BlockState s = theme.apply(stair);
+            if (!(s.getBlock() instanceof net.minecraft.world.level.block.StairBlock)
+                    || s.getValue(net.minecraft.world.level.block.StairBlock.FACING) != net.minecraft.core.Direction.EAST
+                    || s.getValue(net.minecraft.world.level.block.StairBlock.HALF)
+                    != net.minecraft.world.level.block.state.properties.Half.TOP
+                    || s.getBlock() == stair.getBlock()) {
+                shape.add(theme.id + " escalier -> " + s);
+            }
+            net.minecraft.world.level.block.state.BlockState h = theme.apply(slab);
+            if (!(h.getBlock() instanceof net.minecraft.world.level.block.SlabBlock)
+                    || h.getValue(net.minecraft.world.level.block.SlabBlock.TYPE)
+                    != net.minecraft.world.level.block.state.properties.SlabType.TOP) {
+                shape.add(theme.id + " dalle -> " + h);
+            }
+            if (!(theme.apply(com.emerald.block.ModBlocks.GANGUE_BRICK_WALL.get().defaultBlockState()).getBlock()
+                    instanceof net.minecraft.world.level.block.WallBlock)) {
+                shape.add(theme.id + " muret");
+            }
+            if (theme.apply(anchor) != anchor) {
+                shape.add(theme.id + " touche a l'ancre");
+            }
+        }
+        bricks.remove(com.emerald.block.ModBlocks.GANGUE_BRICKS.get());
+        line("briques de la muraille : " + bricks.stream().map(b -> BuiltInRegistries.BLOCK.getKey(b).getPath())
+                .sorted().toList());
+        check("trois matieres : la brique de gangue devient trois blocs differents", bricks.size() == 3,
+                bricks.size() + " blocs");
+        check("la traduction garde la forme (escalier tourne et haut, dalle haute, muret) et laisse l'ancre",
+                shape.isEmpty(), shape.isEmpty() ? "-" : String.join(" ; ", shape));
+        boolean pyramid = SanctuaryTheme.SABLES.apply(Blocks.SANDSTONE.defaultBlockState()).is(Blocks.SANDSTONE)
+                && !SanctuaryTheme.GIVRE.apply(Blocks.SANDSTONE.defaultBlockState()).is(Blocks.SANDSTONE)
+                && !SanctuaryTheme.BRAISES.apply(Blocks.SANDSTONE.defaultBlockState()).is(Blocks.SANDSTONE);
+        check("la pyramide garde son gres aux Sables, le quitte au Givre et aux Braises", pyramid, "-");
+
+        // LE TIRAGE, sur une partie a part
+        GameState trial = new GameState();
+        List<BlockPos> ring = List.of(spawn.offset(450, 0, 0), spawn.offset(-225, 0, 390), spawn.offset(-225, 0, -390));
+        trial.setAnchors(ring);
+        trial.assignThemes(level.random);
+        java.util.Set<SanctuaryTheme> drawn = java.util.EnumSet.noneOf(SanctuaryTheme.class);
+        for (int i = 0; i < 3; i++) {
+            drawn.add(trial.themeAt(i));
+        }
+        check("trois ancres, trois themes", drawn.size() == 3, drawn.toString());
+        SanctuaryTheme second = trial.themeAt(1);
+        List<BlockPos> raised = new ArrayList<>(ring);
+        raised.set(1, ring.get(1).above(42));
+        trial.setAnchors(raised);                     // l'ancre monte coiffer sa pyramide
+        trial.setGarrisonRank(2, 3);
+        GameState back = GameState.load(trial.save(new net.minecraft.nbt.CompoundTag(), level.registryAccess()),
+                level.registryAccess());
+        check("l'ancre montee au faite garde son theme ; themes et paliers de garnison sauvegardes",
+                trial.themeOf(raised.get(1)) == second && back.themeAt(0) == trial.themeAt(0)
+                        && back.themeAt(1) == second && back.themeAt(2) == trial.themeAt(2)
+                        && back.garrisonRank(2) == 3 && back.garrisonRank(0) == 1,
+                "releve : " + back.themeAt(0) + ", " + back.themeAt(1) + ", " + back.themeAt(2)
+                        + " ; paliers " + back.garrisonRank(0) + " / " + back.garrisonRank(2));
+        int[][] seen = new int[3][3];
+        for (int game = 0; game < 90; game++) {
+            trial.assignThemes(level.random);
+            for (int i = 0; i < 3; i++) {
+                seen[i][trial.themeAt(i).ordinal()]++;
+            }
+        }
+        boolean mixed = true;
+        StringBuilder grid = new StringBuilder();
+        for (int i = 0; i < 3; i++) {
+            grid.append(i == 0 ? "" : " | ").append("ancre ").append(i + 1).append(" :");
+            for (int t = 0; t < 3; t++) {
+                mixed &= seen[i][t] >= 10;
+                grid.append(' ').append(seen[i][t]);
+            }
+        }
+        check("tires au sort : sur 90 parties, chaque theme tombe sur chaque ancre", mixed, grid.toString());
+
+        // LES GARDES : du theme demande, et coiffes s'ils brulent au soleil
+        BlockPos post = spawn.above(2);
+        List<String> strangers = new ArrayList<>();
+        List<String> bare = new ArrayList<>();
+        int guards = 0;
+        for (SanctuaryTheme theme : SanctuaryTheme.values()) {
+            for (int i = 0; i < 8; i++) {
+                SanctuaryGarrison.postGuard(level, post, 3, theme);
+            }
+            for (Entity guard : level.getEntities((Entity) null, new net.minecraft.world.phys.AABB(post).inflate(6),
+                    e -> e.getTags().contains(SanctuaryGarrison.TAG_GUARD))) {
+                guards++;
+                String id = BuiltInRegistries.ENTITY_TYPE.getKey(guard.getType()).toString();
+                if (!theme.monsters(1).contains(id)) {
+                    strangers.add(theme.id + " : " + id);
+                }
+                if (guard.getType().is(net.minecraft.tags.EntityTypeTags.UNDEAD)
+                        && guard instanceof net.minecraft.world.entity.Mob mob
+                        && mob.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.HEAD).isEmpty()) {
+                    bare.add(id);
+                }
+                guard.discard();
+            }
+        }
+        check("les gardes postes viennent du premier palier de leur theme", guards >= 18 && strangers.isEmpty(),
+                guards + " gardes" + (strangers.isEmpty() ? "" : " ; etrangers : " + String.join(", ", strangers)));
+        check("un garde mort-vivant est coiffe : il ne brule pas a midi sur sa tour", bare.isEmpty(),
+                bare.isEmpty() ? "-" : String.join(", ", bare));
     }
 
     // ================================================================ 2. les coffres
@@ -581,7 +774,18 @@ public final class ArcenciumAutotest {
     private static void arches(ServerLevel level, BlockPos spawn) {
         line("--- les arches d'Arcencium : porte doree, brumes de l'Aurore");
         // une arche posee a la main sur une dalle degagee : ou elle emporte, ou non
-        BlockPos base = surface(level, spawn.getX() + 20, spawn.getZ() + 20).above(30);
+        //
+        // LES DALLES DES BANCS PRECEDENTS D'ABORD. La dalle n'etait jamais retiree : chaque passage
+        // posait la sienne trente blocs au-dessus de la precedente, et la septieme tombait hors du
+        // monde (void_air, KO du 24 sept.). On les retire, et la notre a la fin.
+        int archX = spawn.getX() + 20;
+        int archZ = spawn.getZ() + 20;
+        for (BlockPos top = surface(level, archX, archZ);
+             level.getBlockState(top.below()).is(net.minecraft.world.level.block.Blocks.SMOOTH_STONE);
+             top = surface(level, archX, archZ)) {
+            clearSlab(level, top.below());
+        }
+        BlockPos base = surface(level, archX, archZ).above(30);
         for (int dx = -3; dx <= 3; dx++) {
             for (int dz = -3; dz <= 3; dz++) {
                 level.setBlock(base.offset(dx, -1, dz), net.minecraft.world.level.block.Blocks.SMOOTH_STONE.defaultBlockState(), 3);
@@ -613,6 +817,7 @@ public final class ArcenciumAutotest {
                         + ", devant " + before + ", derriere " + behind);
         com.emerald.block.ArcPortals.remove(level, base);
         check("retiree : plus de bloc", level.getBlockState(base).isAir(), level.getBlockState(base).toString());
+        clearSlab(level, base.below());
 
         // la porte doree du village : a cote de l'atelier, jamais sur ses etablis
         GameState state = GameState.get(level);
@@ -697,6 +902,18 @@ public final class ArcenciumAutotest {
     }
 
     // ================================================================ outils
+
+    /** La dalle de sept sur sept de l'essai des arches, rendue a l'air. */
+    private static void clearSlab(ServerLevel level, BlockPos centre) {
+        for (int dx = -3; dx <= 3; dx++) {
+            for (int dz = -3; dz <= 3; dz++) {
+                BlockPos p = centre.offset(dx, 0, dz);
+                if (level.getBlockState(p).is(net.minecraft.world.level.block.Blocks.SMOOTH_STONE)) {
+                    level.setBlock(p, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
+                }
+            }
+        }
+    }
 
     private static BlockPos surface(ServerLevel level, int x, int z) {
         level.getChunkAt(new BlockPos(x, 0, z));

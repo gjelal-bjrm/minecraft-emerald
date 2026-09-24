@@ -26,8 +26,18 @@ public class ModStructures {
             CENTERED_TEMPLATE_PIECE = STRUCTURE_PIECES.register("centered_template",
                     () -> (StructurePieceType.StructureTemplateType) CenteredTemplatePiece::new);
 
+    public static final DeferredRegister<net.minecraft.world.level.levelgen.structure.templatesystem.StructureProcessorType<?>>
+            PROCESSORS = DeferredRegister.create(Registries.STRUCTURE_PROCESSOR, EmeraldWeaponsMod.MODID);
+
+    /** La matiere d'un sanctuaire, appliquee a la Pyramide Maudite des sa pose (cahier §90). */
+    public static final DeferredHolder<net.minecraft.world.level.levelgen.structure.templatesystem.StructureProcessorType<?>,
+            net.minecraft.world.level.levelgen.structure.templatesystem.StructureProcessorType<com.emerald.game.SanctuaryThemeProcessor>>
+            SANCTUARY_THEME = PROCESSORS.register("sanctuary_theme",
+                    () -> () -> com.emerald.game.SanctuaryThemeProcessor.CODEC);
+
     public static void register(IEventBus eventBus) {
         STRUCTURE_TYPES.register(eventBus);
         STRUCTURE_PIECES.register(eventBus);
+        PROCESSORS.register(eventBus);
     }
 }

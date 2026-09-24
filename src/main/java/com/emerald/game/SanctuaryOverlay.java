@@ -156,7 +156,7 @@ public final class SanctuaryOverlay {
             try {
                 var parsed = BlockStateParser.parseForBlock(
                         BuiltInRegistries.BLOCK.asLookup(), cell[3], false);
-                level.setBlock(at, parsed.blockState(), 2);
+                level.setBlock(at, Sanctuary.currentTheme().apply(parsed.blockState()), 2);
                 SanctuaryLedger.record(at.getX(), at.getY(), at.getZ(), parsed.blockState());
                 posed++;
             } catch (com.mojang.brigadier.exceptions.CommandSyntaxException bad) {

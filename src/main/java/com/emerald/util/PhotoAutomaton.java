@@ -70,6 +70,14 @@ import java.util.Objects;
  * Doree se leve pour de vrai (GoldenGate), et la camera cadre l'arche du village, l'atelier
  * derriere elle -- pour voir OU elle se pose, et non plus seulement a quoi elle ressemble.
  *
+ * LES SANCTUAIRES (« nom@sanctuaire:givre_vol », « _porte », « _cour », « _tour », cahier §90) :
+ * chaque theme demande est bati une fois, par le chantier de la partie (a la tique, pas
+ * d'une traite), a cinq cents blocs a l'est du precedent, le spectateur au loin ; puis il
+ * vient au-dessus de la cour et l'on attend quarante-cinq secondes (troncons recus, lointains
+ * de Distant Horizons refaits) ; la camera le regarde alors d'en haut, depuis la porte sud,
+ * depuis la cour, ou au pied de la tour sud-ouest. Mode eteint : la garnison reste a son
+ * poste et le spectateur ne la derange pas.
+ *
  * L'ECLIPSE (« nom@eclipse:portail », « vague », « brume », cahier §88) : l'Eclipse se
  * leve pour de vrai la ou se tient le joueur, un portail s'ouvre a une dizaine de blocs,
  * et la camera le regarde de face (« portail »), puis quand sa vague est sortie
@@ -173,6 +181,18 @@ public final class PhotoAutomaton {
         /** Une prise de l'Eclipse. */
         boolean eclipse() {
             return "eclipse".equals(this.biome.getNamespace());
+        }
+
+        /** Une prise d'un sanctuaire bati pour elle. */
+        boolean sanctuary() {
+            return "sanctuaire".equals(this.biome.getNamespace());
+        }
+
+        /** Le theme d'une prise de sanctuaire : « givre » dans « givre_vol ». */
+        String sanctuaryTheme() {
+            String path = this.biome.getPath();
+            int cut = path.indexOf('_');
+            return cut < 0 ? path : path.substring(0, cut);
         }
 
         /** Tiques d'attente d'une prise de Haven : le titre visible, ou deja parti ; le bout de la ville, charge. */
@@ -337,6 +357,9 @@ public final class PhotoAutomaton {
             return;
         }
         Shot shot = SHOTS.get(index);
+        if (pending == null && shot.sanctuary() && !sanctuaryBuilt(overworld, player, shot)) {
+            return;                       // le chantier avance ; la prise attend qu'il soit fini
+        }
         if (pending == null) {
             if (!place(server, overworld, player, shot)) {
                 LOGGER.warn("photos : biome {} introuvable, prise {} sautee", shot.biome(), shot.name());
@@ -592,6 +615,97 @@ public final class PhotoAutomaton {
         player.setGameMode(GameType.SPECTATOR);
         player.teleportTo(level, eye.x, eye.y - player.getEyeHeight(), eye.z, yaw, pitch);
         LOGGER.info("photos : {} (Eclipse, {}) camera en {}", shot.name(), view, eye);
+        return true;
+    }
+
+    /** Les sanctuaires batis pour les prises : le centre de leur cour, par theme. */
+    private static final java.util.Map<String, BlockPos> SANCTUARIES = new java.util.HashMap<>();
+    @Nullable
+    private static com.emerald.game.Sanctuary.Job sanctuaryJob;
+    @Nullable
+    private static BlockPos sanctuaryGround;
+    /** Le chantier des photos va plus vite que celui de la partie : personne ne joue. */
+    private static final long SANCTUARY_BUDGET = 40_000_000L;
+    /** Tiques d'attente apres le chantier, le spectateur au-dessus de la cour. */
+    private static final int SANCTUARY_SETTLE = 900;
+    private static int sanctuaryWait;
+    /** Les vues d'un sanctuaire : l'oeil puis le point vise, par rapport au centre de la cour. */
+    private static final java.util.Map<String, double[]> SANCTUARY_VIEWS = java.util.Map.of(
+            "vol", new double[]{-120, 85, 150, 0, 12, -10},
+            "porte", new double[]{10, 4, 150, 0, 20, 70},
+            "cour", new double[]{62, 2.6, 78, 0, 18, 0},
+            "tour", new double[]{-150, 25, 140, -96, 25, 96});
+
+    /**
+     * Le sanctuaire du theme de la prise est-il debout ? Sinon, son chantier avance d'une
+     * bouchee -- le premier appel le lance, a cinq cents blocs a l'est du precedent.
+     */
+    private static boolean sanctuaryBuilt(ServerLevel level, ServerPlayer player, Shot shot) {
+        String theme = shot.sanctuaryTheme();
+        if (SANCTUARIES.containsKey(theme)) {
+            return true;
+        }
+        if (sanctuaryJob == null && sanctuaryWait <= 0) {
+            BlockPos from = player.blockPosition();
+            if (!ORIGIN.isEmpty()) {
+                String[] xz = ORIGIN.split(",");
+                from = new BlockPos(Integer.parseInt(xz[0].trim()), 64, Integer.parseInt(xz[1].trim()));
+            }
+            int x = from.getX() + 500 * (SANCTUARIES.size() + 1);
+            int z = from.getZ();
+            sanctuaryGround = new BlockPos(x, com.emerald.game.WorldSetup.surfaceY(level, x, z) - 1, z);
+            // LE SPECTATEUR RESTE AU LOIN pendant le chantier : pose sous ses yeux, chaque bloc
+            // partait vers le client, qui rebatissait ses troncons sans fin -- la fenetre a gele
+            // et Windows l'a fermee (24 sept.). Il recoit ensuite les troncons finis.
+            sanctuaryJob = com.emerald.game.Sanctuary.job(level, null, sanctuaryGround, 1,
+                    com.emerald.game.SanctuaryTheme.byId(theme));
+            LOGGER.info("photos : sanctuaire {} en chantier en {}", theme, sanctuaryGround);
+            return false;
+        }
+        if (sanctuaryJob != null) {
+            sanctuaryJob.advance(SANCTUARY_BUDGET);
+            if (!sanctuaryJob.done()) {
+                return false;
+            }
+            LOGGER.info("photos : sanctuaire {} bati, cour en {}, ancre en {}", theme, sanctuaryGround,
+                    sanctuaryJob.anchor());
+            sanctuaryJob = null;
+            // PUIS LE SPECTATEUR ARRIVE, et l'on attend : le client recoit les troncons finis, et
+            // Distant Horizons refait ses lointains. Sans cette attente, la foret d'avant le
+            // chantier -- les lointains de DH, calcules sur le terrain vierge -- recouvrait la
+            // cour et la pyramide sur les photos.
+            player.setGameMode(GameType.SPECTATOR);
+            player.teleportTo(level, sanctuaryGround.getX() + 0.5, sanctuaryGround.getY() + 70,
+                    sanctuaryGround.getZ() + 60.5, 180.0F, 45.0F);
+            sanctuaryWait = SANCTUARY_SETTLE;
+            return false;
+        }
+        if (--sanctuaryWait > 0) {
+            return false;
+        }
+        SANCTUARIES.put(theme, sanctuaryGround);
+        return true;
+    }
+
+    /** La camera devant un sanctuaire bati : d'en haut, a la porte, dans la cour ou au pied d'une tour. */
+    private static boolean placeSanctuary(ServerLevel level, ServerPlayer player, Shot shot) {
+        BlockPos centre = SANCTUARIES.get(shot.sanctuaryTheme());
+        String path = shot.biome().getPath();
+        double[] view = SANCTUARY_VIEWS.get(path.substring(path.indexOf('_') + 1));
+        if (centre == null || view == null) {
+            LOGGER.warn("photos : vue de sanctuaire inconnue {}", path);
+            return false;
+        }
+        net.minecraft.world.phys.Vec3 base = net.minecraft.world.phys.Vec3.atBottomCenterOf(centre.above());
+        net.minecraft.world.phys.Vec3 eye = base.add(view[0], view[1], view[2]);
+        net.minecraft.world.phys.Vec3 target = base.add(view[3], view[4], view[5]);
+        double dx = target.x - eye.x;
+        double dz = target.z - eye.z;
+        float yaw = (float) Math.toDegrees(Math.atan2(-dx, dz));
+        float pitch = (float) -Math.toDegrees(Math.atan2(target.y - eye.y, Math.sqrt(dx * dx + dz * dz)));
+        player.setGameMode(GameType.SPECTATOR);
+        player.teleportTo(level, eye.x, eye.y - player.getEyeHeight(), eye.z, yaw, pitch);
+        LOGGER.info("photos : {} (sanctuaire {}) camera en {}", shot.name(), path, eye);
         return true;
     }
 
@@ -905,6 +1019,9 @@ public final class PhotoAutomaton {
         }
         if (shot.eclipse()) {
             return placeEclipse(level, player, shot);
+        }
+        if (shot.sanctuary()) {
+            return placeSanctuary(level, player, shot);
         }
         BlockPos from = player.blockPosition();
         if (!ORIGIN.isEmpty()) {

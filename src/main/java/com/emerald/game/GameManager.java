@@ -129,6 +129,7 @@ public class GameManager {
             dissolveCeremonial(level);
         }
         tickBuilds(level);
+        tickSanctuaryApproach(level);
         if (prologue != null) {
             sustainOath(level);
             prologue.tick();
@@ -179,7 +180,8 @@ public class GameManager {
             // manquants, et « trois moins ce qui reste » aurait alors donne le
             // palier trois au premier venu.
             int index = GameState.get(level).anchors().indexOf(siteAt);
-            site = Sanctuary.job(level, null, siteAt, index >= 0 ? index + 1 : 1);
+            site = Sanctuary.job(level, null, siteAt, index >= 0 ? index + 1 : 1,
+                    GameState.get(level).themeAt(index));
             return;                       // le chantier commence a la tique suivante
         }
         site.advance(BUILD_BUDGET_NANOS);
@@ -209,6 +211,78 @@ public class GameManager {
                 state.setAnchors(updated);
             }
         }
+    }
+
+    /** Qui a deja ete accueilli a quel sanctuaire, dans cette session : le nom ne se dit qu'une fois. */
+    private static final java.util.Set<String> GREETED = new java.util.HashSet<>();
+    /** On aborde un sanctuaire a cette distance de son ancre : ses tours sont en vue. */
+    private static final double APPROACH = 150.0;
+
+    /**
+     * L'APPROCHE D'UN SANCTUAIRE (cahier §90).
+     *
+     * Son nom s'affiche une fois, a qui arrive -- « le Sanctuaire du Givre ». Et s'il est encore
+     * garni au palier d'un rang deja depasse -- tous se batissent au debut de la partie, avant
+     * qu'on en ait pris un seul --, ses renforts arrivent : des gardes du palier du prochain
+     * rang de prise, sur les tours, le chemin de ronde et dans la cour.
+     */
+    private static void tickSanctuaryApproach(ServerLevel level) {
+        if (level.getGameTime() % 40 != 0) {
+            return;
+        }
+        GameState state = GameState.get(level);
+        if (state.status() != GameState.Status.RUNNING) {
+            return;
+        }
+        List<BlockPos> anchors = state.anchors();
+        for (int i = 0; i < anchors.size(); i++) {
+            BlockPos anchor = anchors.get(i);
+            if (state.isActivated(anchor) || !state.wasBuilt(anchor)) {
+                continue;
+            }
+            SanctuaryTheme theme = state.themeAt(i);
+            boolean near = false;
+            for (ServerPlayer player : level.players()) {
+                double dx = player.getX() - anchor.getX();
+                double dz = player.getZ() - anchor.getZ();
+                if (dx * dx + dz * dz > APPROACH * APPROACH || player.isSpectator()) {
+                    continue;
+                }
+                near = true;
+                if (GREETED.add(player.getUUID() + "/" + state.cycle() + "/" + i)) {
+                    int rank = Math.min(3, state.anchorsActive() + 1);
+                    player.connection.send(new ClientboundSetTitlesAnimationPacket(
+                            10, 60, 20));
+                    player.connection.send(new ClientboundSetSubtitleTextPacket(
+                            Component.translatable("game.emeraldweapons.sanctuaire.approche", rank)
+                                    .withStyle(ChatFormatting.GRAY)));
+                    player.connection.send(new ClientboundSetTitleTextPacket(
+                            theme.displayName().copy().withStyle(style -> style.withColor(color(theme)))));
+                }
+            }
+            int wanted = Math.min(3, state.anchorsActive() + 1);
+            if (near && wanted > state.garrisonRank(i)) {
+                int posted = Sanctuary.reinforce(level, anchor, theme, wanted);
+                state.setGarrisonRank(i, wanted);
+                org.slf4j.LoggerFactory.getLogger(EmeraldWeaponsMod.MODID).info(
+                        "Sanctuaire {} ({}) : {} renforts du palier {}", i + 1, theme, posted, wanted);
+                for (ServerPlayer player : level.players()) {
+                    if (player.distanceToSqr(anchor.getX(), player.getY(), anchor.getZ()) <= APPROACH * APPROACH) {
+                        player.displayClientMessage(Component.translatable("game.emeraldweapons.sanctuaire.renfort",
+                                wanted).withStyle(ChatFormatting.RED), true);
+                    }
+                }
+            }
+        }
+    }
+
+    /** La couleur du nom d'un sanctuaire : or, bleu pale, rouge braise. */
+    private static int color(SanctuaryTheme theme) {
+        return switch (theme) {
+            case SABLES -> 0xF2C866;
+            case GIVRE -> 0xBFE6FF;
+            case BRAISES -> 0xFF6A3D;
+        };
     }
 
     private static void tickAnchorSieges(ServerLevel level) {
@@ -402,6 +476,7 @@ public class GameManager {
 
         List<BlockPos> anchors = ring(level, ground, GameState.ANCHOR_DISTANCE);
         state.setAnchors(anchors);
+        state.assignThemes(level.random);        // Sables, Givre, Braises : tires au sort (cahier §90)
         state.returnToLobby();
         WorldSetup.clearHostiles(level, ground);
         seizeTheSky(level);
@@ -785,8 +860,9 @@ public class GameManager {
         int index = 1;
         for (BlockPos anchor : state.anchors()) {
             net.minecraft.network.chat.Component line = net.minecraft.network.chat.Component
-                    .translatable("game.emeraldweapons.anchor.at", index++,
+                    .translatable("game.emeraldweapons.anchor.at", index,
                             anchor.getX(), anchor.getY(), anchor.getZ())
+                    .append(" — ").append(state.themeAt(index++ - 1).displayName())
                     .withStyle(net.minecraft.ChatFormatting.AQUA);
             for (ServerPlayer player : level.players()) {
                 player.sendSystemMessage(line);
@@ -822,6 +898,7 @@ public class GameManager {
         int distance = GameState.ANCHOR_DISTANCE + Math.min(3, state.cycle() - 1) * 60;
         List<BlockPos> anchors = ring(level, village, distance);
         state.setAnchors(anchors);
+        state.assignThemes(level.random);
         pending.clear();
         pending.addAll(anchors);
         announce(level, Component.translatable("game.emeraldweapons.cycle.next", state.cycle())
@@ -830,8 +907,9 @@ public class GameManager {
                         .withStyle(ChatFormatting.GRAY));
         int index = 1;
         for (BlockPos anchor : anchors) {
-            Component line = Component.translatable("game.emeraldweapons.anchor.at", index++,
+            Component line = Component.translatable("game.emeraldweapons.anchor.at", index,
                     anchor.getX(), anchor.getY(), anchor.getZ())
+                    .append(" — ").append(state.themeAt(index++ - 1).displayName())
                     .withStyle(ChatFormatting.AQUA);
             for (ServerPlayer player : level.players()) {
                 player.sendSystemMessage(line);
@@ -1003,10 +1081,11 @@ public class GameManager {
         // la herse tombe : on est enferme avec ce qui arrive, ce qui est tout
         // le propos d'un siege
         SanctuaryGate.closeNearest(level, pos);
+        // LES VAGUES DU SANCTUAIRE : les monstres de son theme, au palier du rang de prise
         anchorSieges.put(pos, new Siege(level, pos, tier, WAVES[tier - 1],
                 Component.translatable("game.emeraldweapons.siege.anchor", tier),
                 tier >= 3 ? BossEvent.BossBarColor.PURPLE : BossEvent.BossBarColor.BLUE,
-                Siege.Failure.DEFENDERS));
+                Siege.Failure.DEFENDERS).themed(state.themeOf(pos).monsters(tier)));
 
         level.playSound(null, pos, SoundEvents.RESPAWN_ANCHOR_CHARGE, SoundSource.PLAYERS, 1.2F, 1.0F);
         announce(level, "game.emeraldweapons.ritual_begun",

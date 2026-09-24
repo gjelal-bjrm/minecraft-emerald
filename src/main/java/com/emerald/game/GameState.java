@@ -114,6 +114,14 @@ public class GameState extends SavedData {
     /** Vrai des que le monde a ete prepare : la mise en place ne se joue qu'une fois. */
     private boolean prepared;
     private final List<BlockPos> anchors = new ArrayList<>();
+    /**
+     * LE THEME DE CHAQUE ANCRE, dans l'ordre des ancres (cahier §90) : Sables, Givre, Braises,
+     * tires au sort a chaque partie. Suit l'INDICE de l'ancre, qui ne change pas quand
+     * l'ancre monte coiffer sa pyramide.
+     */
+    private final List<String> themes = new ArrayList<>();
+    /** Le palier auquel chaque sanctuaire est garni : 1 au chantier, releve par les renforts. */
+    private final List<Integer> garrisonRanks = new ArrayList<>();
     private final List<BlockPos> activated = new ArrayList<>();
     /**
      * Les sites DEJA DRESSES, qu'on ne rebatira pas.
@@ -152,7 +160,8 @@ public class GameState extends SavedData {
                 new Factory<>(GameState::new, GameState::load), KEY);
     }
 
-    private static GameState load(CompoundTag tag, HolderLookup.Provider registries) {
+    /** Relit une partie sauvegardee -- le banc s'en sert aussi, sur une partie a part (ArcenciumAutotest). */
+    static GameState load(CompoundTag tag, HolderLookup.Provider registries) {
         GameState state = new GameState();
         state.status = Status.values()[Math.floorMod(tag.getInt("Status"), Status.values().length)];
         state.mode = Mode.values()[Math.floorMod(tag.getInt("Mode"), Mode.values().length)];
@@ -178,6 +187,12 @@ public class GameState extends SavedData {
         }
         for (long packed : tag.getLongArray("Built")) {
             state.built.add(BlockPos.of(packed));
+        }
+        for (var entry : tag.getList("AnchorThemes", net.minecraft.nbt.Tag.TAG_STRING)) {
+            state.themes.add(entry.getAsString());
+        }
+        for (int rank : tag.getIntArray("GarrisonRanks")) {
+            state.garrisonRanks.add(rank);
         }
         for (var entry : tag.getList("Vaults", net.minecraft.nbt.Tag.TAG_COMPOUND)) {
             CompoundTag vault = (CompoundTag) entry;
@@ -219,6 +234,12 @@ public class GameState extends SavedData {
             vaultsTag.add(vault);
         }
         tag.put("Vaults", vaultsTag);
+        net.minecraft.nbt.ListTag themesTag = new net.minecraft.nbt.ListTag();
+        for (String theme : this.themes) {
+            themesTag.add(net.minecraft.nbt.StringTag.valueOf(theme));
+        }
+        tag.put("AnchorThemes", themesTag);
+        tag.putIntArray("GarrisonRanks", this.garrisonRanks.stream().mapToInt(Integer::intValue).toArray());
         return tag;
     }
 
@@ -312,6 +333,7 @@ public class GameState extends SavedData {
         this.cycle++;
         this.anchorsActive = 0;
         this.anchorsInProgress = 0;
+        this.garrisonRanks.clear();
         this.activated.clear();
         this.built.clear();
         this.vaults.clear();
@@ -530,6 +552,7 @@ public class GameState extends SavedData {
         this.opening = 0;
         this.anchorsActive = 0;
         this.anchorsInProgress = 0;
+        this.garrisonRanks.clear();
         this.activated.clear();
         this.built.clear();
         this.vaults.clear();
@@ -564,6 +587,47 @@ public class GameState extends SavedData {
         setDirty();
     }
 
+    /** Tire au sort le theme de chaque ancre : a chaque partie, et a chaque cycle du monde ouvert. */
+    public void assignThemes(net.minecraft.util.RandomSource random) {
+        this.themes.clear();
+        this.garrisonRanks.clear();
+        List<SanctuaryTheme> order = SanctuaryTheme.shuffled(random);
+        for (int i = 0; i < this.anchors.size(); i++) {
+            this.themes.add(order.get(i % order.size()).id);
+        }
+        setDirty();
+    }
+
+    /**
+     * Le theme de l'ancre de cet indice. Une partie commencee avant les themes n'en a pas
+     * retenu : l'ordre du tableau lui en donne un, toujours le meme.
+     */
+    public SanctuaryTheme themeAt(int index) {
+        if (index >= 0 && index < this.themes.size()) {
+            return SanctuaryTheme.byId(this.themes.get(index));
+        }
+        SanctuaryTheme[] all = SanctuaryTheme.values();
+        return all[Math.floorMod(index, all.length)];
+    }
+
+    /** Le theme du sanctuaire de cette ancre. */
+    public SanctuaryTheme themeOf(BlockPos anchor) {
+        return themeAt(this.anchors.indexOf(anchor));
+    }
+
+    /** Le palier auquel ce sanctuaire est garni (1 tant qu'aucun renfort n'est venu). */
+    public int garrisonRank(int index) {
+        return index >= 0 && index < this.garrisonRanks.size() ? this.garrisonRanks.get(index) : 1;
+    }
+
+    public void setGarrisonRank(int index, int rank) {
+        while (this.garrisonRanks.size() <= index) {
+            this.garrisonRanks.add(1);
+        }
+        this.garrisonRanks.set(index, rank);
+        setDirty();
+    }
+
     /** Avance l'horloge de la partie : l'outil de test des phases et de la Maree. */
     public void skip(long ticks) {
         this.startTick -= ticks;
@@ -592,6 +656,8 @@ public class GameState extends SavedData {
         this.anchorsActive = 0;
         this.anchorsInProgress = 0;
         this.anchors.clear();
+        this.themes.clear();
+        this.garrisonRanks.clear();
         this.activated.clear();
         this.built.clear();
         this.vaults.clear();

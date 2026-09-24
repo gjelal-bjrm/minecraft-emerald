@@ -8081,3 +8081,114 @@ identifiants : `alexsmobs:centipede_head` et `irons_spellbooks:citadel_keeper`.
 cite `irons_spellbooks:keeper`, qui n'existe pas -- le Chevalier antique n'y
 est donc jamais apparu. Le siege a ete equilibre sans lui ; on ne le corrige
 qu'avec l'accord du joueur.
+
+## 90. Trois sanctuaires *(24 sept. 2026)*
+
+« Peu importe si c'est le premier ou le deuxieme ou le troisieme, les monstres
+sont toujours les memes. Chaque sanctuaire devrait etre different, au moins au
+niveau des monstres et au mieux aussi au niveau du visuel. [...] Il faut
+absolument qu'on traite cet aspect-la. » Puis : « N'hesite pas a augmenter la
+variete de monstres selon les differents sanctuaires. Et bien sur, chaque
+sanctuaire doit etre plus difficile que le precedent. »
+
+**La cause mesuree.** Les trois garnisons piochaient dans la meme liste
+(`SiegeRoster.forTier(2)`), les trois sieges d'ancre aussi (au palier pres),
+et les trois forteresses posaient les memes briques de gangue autour de la
+meme Pyramide maudite.
+
+**Choix du joueur** : meme plan, trois matieres, trois garnisons ; les themes
+tires au sort a chaque partie, la difficulte suivant le rang de prise.
+
+### A. Les trois themes (`game/SanctuaryTheme`)
+
+| | Sables | Givre | Braises |
+| --- | --- | --- | --- |
+| muraille | gres clair, pilastres d'or | glace tassee, pilastres de glace bleue | pierre noire polie, pilastres de magma |
+| tours | gres rouge baguees d'or | ardoise baguees de glace bleue | pierre noire baguees de magma |
+| cour | damier gres clair et gres rouge | damier neige et ardoise | damier basalte lisse et pierre noire |
+| pyramide dehors | gres rouge au pied, gres clair au faite | pierre givree de Cataclysm, chapeau de quartz | pierre noire, aretes de brique rouge |
+| pyramide dedans | son gres | calcite, diorite, glace | pierre noire, magma a la place des pieges de feu |
+| brume | poussiere doree, sable qui tombe | blanc bleute, cendre blanche | rouge braise, gouttes de lave |
+
+Les garnisons (61 monstres cites, aucun commun a deux sanctuaires au meme
+palier, quatre especes au moins par palier) :
+
+| palier | Sables | Givre | Braises |
+| --- | --- | --- | --- |
+| 1 | momifie, squelette, araignee, kobold, koboleton, pourrissant | vagabond, gelide, draugr, Freeze, gardien des neiges | cube de magma, scarabee de feu, petit creteor, moustique pourpre |
+| 2 | momifie, koboleton, wadjet, kobold, druide squelette, squelette de Lonestar, guster, marcheur de la soif | draugr, draugr d'elite, vagabond, loup d'hiver, cryomancien, gardien des neiges, Freeze, coeur de glace | revenant embrase, blaze, zoglin, cube de magma, scarabee de feu, creteor, vautour des ames, moustique pourpre |
+| 3 | kobolediateur, wadjet, koboleton, marcheur de la soif, druide squelette, necromancien, bete pourrie | draugr royal, draugr d'elite, aptrgangr, loup d'hiver, cryomancien, yeti, gardien des neiges, coeur de glace | berserker embrase, revenant embrase, blaze, Wither squelette, zoglin, creteor, vautour des ames |
+
+Ecartes : les creepers (ils feraient sauter la forteresse), les brutes piglins
+(elles deviennent des piglins zombifies, neutres, dans l'Overworld), le Sculk
+(reserve a l'arene finale), toute horreur de l'Eclipse, et le froststalker
+d'Alex's Mobs, neutre (le banc l'a vu).
+
+**La matiere passe par une table.** Le chantier pose toujours ses blocs
+canoniques, et chaque pose est traduite au dernier moment : `Sanctuary.set`,
+le rhabillage, le calque du joueur, et la pyramide elle-meme par un processeur
+de structure (`SanctuaryThemeProcessor`, pas de second passage sur ses sept
+cent mille cases). Le registre de la Sonde garde le bloc canonique : une
+correction relevee dans un sanctuaire de glace vaut pour les trois. Deux
+tables plus etroites : la PEAU de la pyramide (sinon elle prendrait la pierre
+de la muraille) et l'ENCEINTE -- muraille, tours, portes --, ou l'arcencium
+des pilastres et des bagues prend l'accent du theme. La couronne de l'ancre,
+le tombeau et l'escalier du faite gardent l'arcencium : c'est la marque du
+mode. L'or des Sables est celui des decors du Crepuscule
+(`twilightforest:fake_gold`) : il brille comme l'autre et ne rend rien a la
+pioche -- une muraille d'or vrai se serait demontee lingot par lingot. Rien de
+glissant ni de brulant la ou l'on marche : la glace et le magma restent aux
+parois.
+
+### B. Le tirage, les rangs et les renforts
+
+A la mise en place (et a chaque cycle du Monde ouvert), chaque ancre recoit
+un theme, les trois dans un ordre tire au sort (`GameState.assignThemes`,
+cles `AnchorThemes` et `GarrisonRanks`). Le theme suit l'INDICE de l'ancre,
+qui ne change pas quand l'ancre monte coiffer sa pyramide.
+
+Tous les sanctuaires se batissent au debut de la partie, avant qu'on en ait
+pris un seul : ils sont garnis au premier palier, sans equipement. A
+l'approche (150 blocs de l'ancre), le nom s'affiche une fois --
+« Sanctuaire du Givre », « Garnison du palier 2 » -- et si des ancres ont ete
+prises depuis, des RENFORTS du palier du prochain rang arrivent : vingt-huit
+au deuxieme (tours, chemin de ronde, cour), quarante-deux au troisieme, tous
+ARMES comme les vagues de siege de leur palier (`MobGear`). Un renfort ne
+charge pas de chunk. Chaque sanctuaire pris est donc plus dur que le
+precedent : meme garnison de depart, plus nombreuse et mieux armee a chaque
+rang, et un siege d'ancre qui puise dans les monstres du theme au palier du
+rang de prise (`Siege.themed`). Les gardes morts-vivants sont coiffes : sans
+casque, les vagabonds et les gelides du Givre brulaient a midi sur leurs
+tours.
+
+La liste des ancres dit le nom du sanctuaire (« Ancre 2 -- x, y, z --
+Sanctuaire des Braises »). A l'essai : `/arcencium sanctuary <palier>
+[sables|givre|braises]` (sans theme, tire au sort).
+
+### C. Verifie
+
+**Banc de la partie**, epreuve 11 (memes mods que l'epreuve 10) : 61 monstres
+presents et ennemis, aucune horreur, quatre especes au moins par palier, aucun
+monstre commun a deux sanctuaires au meme palier ; la brique de gangue devient
+trois blocs, la forme des escaliers, dalles et murets est gardee, l'ancre non
+touchee ; trois ancres, trois themes, gardes apres la montee de l'ancre et au
+rechargement avec les paliers de garnison ; sur 90 parties, chaque theme tombe
+sur chaque ancre ; les gardes viennent de leur theme, les morts-vivants sont
+coiffes. 47 OK, 1 KO (l'arche de l'Heure Doree du village, deja en echec
+avant). Corrige au passage : l'essai des arches laissait sa dalle en l'air, et
+chaque passage posait la sienne trente blocs plus haut -- apres six bancs,
+hors du monde. Vu une fois, pas reproduit : la vague d'un portail de l'Eclipse
+tuee sans que le portail se referme (selon les horreurs tirees).
+
+**Photos** (automate, prises « sanctuaire:<theme>_vol|porte|cour|tour ») :
+quatre series. Ce qu'elles ont corrige :
+1. les pilastres et les bagues gardaient l'arcencium gris fonce sur les trois
+   matieres, et les Sables n'avaient pas d'or : table de l'enceinte ;
+2. la cour des Sables etait une etendue claire uniforme : tours et second
+   dallage en gres rouge, damier clair et rouge ;
+3. la pyramide du Givre etait noire : table de la peau, pierre givree et quartz ;
+4. l'automate lui-meme : bati sous la camera, le client recevait chaque bloc et
+   la fenetre a gele (Windows l'a fermee) ; bati au loin, les lointains de
+   Distant Horizons -- la foret d'avant le chantier -- recouvraient la cour.
+   La camera reste au loin pendant le chantier, puis attend quarante-cinq
+   secondes au-dessus de la cour.
