@@ -8818,3 +8818,86 @@ il retrouve tout. Les outils (pioche, pelle, houe) se cassent encore.
   en rond au-dessus de l'estrade, le regard dans le sens du vol) : +15 contre
   +20 (Prismatiques, Obscures) ; le lisere de jour et de nuit (Obscures,
   Prismatiques, Braise) ; en vol, les deux rubans qui suivent la courbe.
+
+## 97. Chaque apparence d'ailes s'anime, et la lueur se voit de dos *(24 sept. 2026)*
+
+Le joueur, sur les photos du §96 C : « C'est deja pas mal pour les ailes. Mais
+tu as anime le squelette. Moi, je voulais que tu animes chaque skin des ailes,
+un peu comme on a anime avec des frames l'epee. » Et, a la question sur la
+lueur des apparences de lumiere, cachee de dos : « Oui, qu'elle se voie de
+dos. » Le battement souple du §96 C reste ; la peinture de chaque apparence
+s'anime par-dessus.
+
+### A. Vingt images par apparence
+
+`tools/wing_anim.py` fait, pour chacune des onze apparences, une bande de vingt
+images (256 x 256 chacune, `textures/wings/anim/<apparence>.png`) de ce qui
+BOUGE dans sa peinture, tire de la peinture elle-meme -- ses parties claires,
+ses couleurs, ses cristaux, ses veines --, a ses couleurs : rien ne denature
+une apparence (le refus du §96 B). Comme la vague de l'epee, ce qui court va
+de la racine vers la pointe. Les recettes :
+
+- Prismatiques et Rubis : un reflet qui balaie l'aile en diagonale, des eclats
+  qui scintillent chacun a son tour ;
+- Aurore : deux vagues de teinte qui courent le long des voiles, en sens
+  contraire de couleur, des eclats ;
+- Pierres precieuses : un eclat d'or qui court sur le filigrane, les pierres
+  qui s'allument tour a tour ;
+- Braise : les flammes qui vacillent (deux bruits doux qui montent vers la
+  pointe), une braise qui court de l'omoplate a la pointe, des escarbilles qui
+  s'envolent en s'eteignant ;
+- Tempete : un reflet froid, trois eclairs par boucle qui claquent en double
+  coup sur les traits clairs et rayonnent, des etincelles ;
+- Emeraude : une lueur verte qui court vers la pointe, des eclats ;
+- Obscures : deux ondes a la fois dans les veines, un coeur qui bat ;
+- Givre : un reflet de glace, du givre qui scintille ;
+- Papillon : un reflet nacre, une irisation, quelques points qui brillent ;
+- Souverain Astral : les nervures d'or qui s'allument en onde, la nebuleuse
+  qui change de teinte, les etoiles qui scintillent.
+
+Chaque effet porte sur toute l'aile -- un plancher sur la forme, plus fort sur
+ses parties --, avec un halo, et rien ne deborde de la forme. PREMIERE97
+
+### B. Au jeu : comme une texture animee fondue
+
+Une peinture d'ailes n'est pas dans l'atlas des objets : le jeu ne l'anime
+pas de lui-meme (le `.mcmeta` de l'epee ne sert qu'aux sprites de l'atlas).
+`WingAnims` fait ce que fait le jeu pour une texture animee fondue : a chaque
+tique, l'image du moment et la suivante, melangees d'un tiers, dans une
+texture a part (trois tiques par image, une boucle de trois secondes). Le
+melange suit l'opacite -- une etincelle qui s'eteint palit, elle ne noircit
+pas --, et un pixel transparent sort noir. La bande se charge a sa premiere
+apparition a l'ecran, se relit a chaque rechargement des ressources.
+
+`WingsLayer` la pose des deux cotes de l'aile, sur la meme forme que la
+peinture (elle plie et frissonne avec elle) : en lumiere pour les apparences
+de lumiere, elle luit la nuit ; eclairee par le monde pour les Obscures et le
+Papillon, comme leur peinture.
+
+### C. La lueur de dos
+
+La passe de lueur des apparences de lumiere etait decalee vers le corps : de
+dos -- la vue de tout le monde en troisieme personne --, la matiere la
+cachait. Elle se pose maintenant des deux cotes, comme les reflets (§96 B).
+
+### D. Verifie
+
+- Trois series de rafales de dos (automate, Complementary actif, trente
+  images a deux tiques d'ecart) : la premiere, effets trop sages ; la
+  deuxieme, visibles, balayages trop blancs sur les ailes claires ; la
+  troisieme, gardee : Braise, Tempete, Obscures, Souverain Astral, Aurore,
+  Prismatiques, Emeraude de jour ; Braise, Souverain Astral, Emeraude,
+  Obscures de nuit ; Prismatiques +20 de nuit. On y voit les flammes, les
+  veines, la vague verte, les etoiles et les eclats bouger pendant que l'aile
+  bat.
+- La lueur de dos : de nuit, vues de dos, les apparences de lumiere luisent
+  (Braise, Emeraude, Souverain Astral, Prismatiques +20), la ou elles etaient
+  sombres ; de jour, elles sont aussi un peu plus claires de dos -- comme
+  elles l'etaient de face. Les Obscures restent sombres la nuit, comme leur
+  peinture.
+- En vol d'elytre, la camera voit les ailes par la tranche : ces rafales ne
+  montrent pas la peinture.
+- Une premultiplication de la couleur (le remede du §88) a ete essayee puis
+  retiree : le lisere des ailes +20, blanc jusque dans ses pixels
+  transparents, reste net sous Complementary -- le piege du §88 ne touche pas
+  ce rendu --, et premultiplier eteignait les halos.

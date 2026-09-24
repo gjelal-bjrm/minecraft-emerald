@@ -32,6 +32,13 @@ import org.joml.Vector3f;
  * comme un vrai battement --, elle est un peu BOMBEE de haut en bas, et les
  * plumes du bout FRISSONNENT, plus fort en vol, dans le vent. Voir Shape.
  *
+ * ET CHAQUE APPARENCE S'ANIME (cahier §97, le joueur : « je voulais que tu
+ * animes chaque skin des ailes, comme on a anime avec des frames l'epee ») :
+ * par-dessus la peinture fixe, la bande d'images de ce qui bouge en elle --
+ * veines, flammes, cristaux, eclairs, etoiles (WingAnims, tools/wing_anim.py).
+ * Elle luit la nuit pour les apparences de lumiere ; pour les autres, elle
+ * prend la lumiere du monde, comme leur peinture.
+ *
  * La taille suit le palier : de deux moignons a +1 a l'envergure pleine a
  * +15, puis encore un cinquieme de plus jusqu'a +20 (cahier §96 : « les ailes
  * +20 seraient environ 20 % plus grandes »).
@@ -146,8 +153,19 @@ public class WingsLayer<T extends AbstractClientPlayer, M extends PlayerModel<T>
         drawWings(pose, buffer.getBuffer(RenderType.entityCutoutNoCull(skin.texture())),
                 shapes, light, flap, lift, 1.0F, 255, 0.0F);
         if (skin.emissive) {
-            drawWings(pose, buffer.getBuffer(RenderType.entityTranslucentEmissive(skin.texture())),
-                    shapes, LightTexture.FULL_BRIGHT, flap, lift, skin.tint, glowAlpha, -0.004F);
+            // DES DEUX COTES DE L'AILE, comme les reflets : decalee vers le corps seulement, la
+            // lueur ne se voyait que de face -- de dos, la matiere la cachait (cahier §97)
+            VertexConsumer glow = buffer.getBuffer(RenderType.entityTranslucentEmissive(skin.texture()));
+            drawWings(pose, glow, shapes, LightTexture.FULL_BRIGHT, flap, lift, skin.tint, glowAlpha, -0.004F);
+            drawWings(pose, glow, shapes, LightTexture.FULL_BRIGHT, flap, lift, skin.tint, glowAlpha, 0.004F);
+        }
+        net.minecraft.resources.ResourceLocation frame = WingAnims.frame(skin, player.level().getGameTime());
+        if (frame != null) {
+            VertexConsumer anim = buffer.getBuffer(skin.emissive ? RenderType.entityTranslucentEmissive(frame)
+                    : RenderType.entityTranslucent(frame));
+            int animLight = skin.emissive ? LightTexture.FULL_BRIGHT : light;
+            drawWings(pose, anim, shapes, animLight, flap, lift, 1.0F, 255, -0.005F);
+            drawWings(pose, anim, shapes, animLight, flap, lift, 1.0F, 255, 0.005F);
         }
         if (level >= Specialization.MAX) {
             net.minecraft.resources.ResourceLocation mask = WingMasks.of(skin);

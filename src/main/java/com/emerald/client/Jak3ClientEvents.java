@@ -32,6 +32,8 @@ public class Jak3ClientEvents {
         event.registerReloadListener(HavenDoorModels.INSTANCE);
         // les masques des ailes, pour les reflets des ailes +20 (cahier §96)
         event.registerReloadListener(WingMasks.INSTANCE);
+        // les bandes animees de chaque apparence d'ailes, relues au prochain affichage (cahier §97)
+        event.registerReloadListener(WingAnims.INSTANCE);
     }
 
     @SubscribeEvent

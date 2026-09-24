@@ -581,7 +581,10 @@ aux crans d'avant, **5 seulement** à ces trois-là.
 La spécialisation fait pousser des ailes : dès +5, maintenir Saut en l'air freine la
 chute, puis on plane. Elles grandissent jusqu'à +15, puis encore d'un cinquième
 jusqu'à +20. Elles vivent : en battant, elles plient, la pointe en retard sur
-l'épaule, et le bout des plumes frissonne, plus fort en vol. À **+20**, un appui sur Saut en l'air donne le **double saut**, et un
+l'épaule, et le bout des plumes frissonne, plus fort en vol. Chaque **apparence s'anime** aussi,
+comme l'épée : une vague de lumière la parcourt de l'épaule à la pointe, ses flammes vacillent,
+ses éclairs claquent, ses veines battent, ses cristaux et ses étoiles scintillent ; celles de
+lumière luisent la nuit, de dos comme de face. À **+20**, un appui sur Saut en l'air donne le **double saut**, et un
 appui de plus **déploie les ailes** : le vol de l'élytre, piqués, remontées sur
 l'élan et fusées comprises, avec **un élan au départ**, une demi-fusée. On se pose au
 sol, dans l'eau ou en montant en selle. Les ailes +20 portent aussi les **reflets
@@ -940,6 +943,10 @@ config d'origine ; cahier §78.6).
 
 Les chiffres de tir des armes sont dans `jak/gun/GunSpec.java` ; les textures des particules
 et la planche de contrôle (`build/jak/gun/planche-tir.png`) sortent de `python tools/gun_particles.py`.
+
+Les animations des apparences d'ailes (vingt images chacune, `textures/wings/anim/`) sortent de
+`python tools/wing_anim.py` (`--apercu` : un GIF de contrôle par apparence dans `build/wings/`) ;
+un rechargement des ressources (F3+T) les relit en jeu.
 
 La vitesse des voitures et des motos se règle dans `VehicleSpec.MAX_SPEED_MS`.
 
