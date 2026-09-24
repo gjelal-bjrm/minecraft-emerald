@@ -78,11 +78,25 @@ public final class Finale {
     private static final int KEEP_FROM_ANCHORS = 200;
     /** Le volume de l'arene et ses reperes (data/emeraldweapons/jak/arene_spargus.jakv et .json). */
     static final String ARENA_VOLUME = "arene_spargus";
-    private static final String[] BOSSES = {
-            "cataclysm:ignis",
-            "cataclysm:ender_guardian",
-            "twilightforest:lich",
+    /**
+     * LES CINQ BOSS, ET LEUR ECHELLE : tous vers neuf ou dix blocs de haut (cahier §91).
+     *
+     * « Celui-ci me parait vraiment petit. [...] Compare a l'arene, il parait vraiment
+     * ridicule » (le joueur, 24 sept.). Mesure : Ignis fait 3,5 blocs de haut, le Gardien de
+     * l'Ender 3,8, la Liche 2,5 -- a taille humaine, avec cent points de vie --, dans une
+     * arene de cent quarante blocs. Choix du joueur : des boss GEANTS tires au sort, les
+     * deux colosses de Cataclysm (Monstruosite de Netherite, Reste Ancien) en plus, tous
+     * agrandis par l'attribut d'echelle du jeu, et six cents points de vie au moins -- puis
+     * « supprime la liche de la liste des boss ».
+     */
+    private static final String[][] BOSSES = {
+            {"cataclysm:ignis", "2.5"},
+            {"cataclysm:ender_guardian", "2.5"},
+            {"cataclysm:netherite_monstrosity", "1.7"},
+            {"cataclysm:ancient_remnant", "1.8"},
     };
+    /** Aucun boss sous ce nombre de points de vie (le Gardien de l'Ender n'en a que 333). */
+    private static final double BOSS_HEALTH_FLOOR = 600.0;
     /** Le Sculk, reserve a l'arene finale (cahier, section 5). */
     private static final String[] GUARDS = {
             "deeperdarker:sculk_snapper",
@@ -328,10 +342,46 @@ public final class Finale {
             return EntityType.byString(forced).orElse(null);
         }
         List<EntityType<?>> pool = new ArrayList<>();
-        for (String id : BOSSES) {
-            EntityType.byString(id).ifPresent(pool::add);
+        for (String[] boss : BOSSES) {
+            EntityType.byString(boss[0]).ifPresent(pool::add);
         }
         return pool.isEmpty() ? EntityType.WITHER : pool.get(level.random.nextInt(pool.size()));
+    }
+
+    /** Les identifiants des boss de l'arene. */
+    public static List<String> bosses() {
+        List<String> ids = new ArrayList<>();
+        for (String[] boss : BOSSES) {
+            ids.add(boss[0]);
+        }
+        return ids;
+    }
+
+    /** L'echelle d'un boss de l'arene ; 1 pour un boss hors de la liste (impose par la commande). */
+    public static double scaleOf(String id) {
+        for (String[] boss : BOSSES) {
+            if (boss[0].equals(id)) {
+                return Double.parseDouble(boss[1]);
+            }
+        }
+        return 1.0;
+    }
+
+    /**
+     * Fait d'un boss un geant : son echelle, et six cents points de vie au moins, a plein.
+     * L'attribut d'echelle agrandit la boite, le modele et la portee de ses coups.
+     */
+    public static void giant(LivingEntity boss) {
+        double scale = scaleOf(EntityType.getKey(boss.getType()).toString());
+        var size = boss.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.SCALE);
+        if (size != null && scale != 1.0) {
+            size.setBaseValue(scale);
+        }
+        var health = boss.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH);
+        if (health != null && health.getBaseValue() < BOSS_HEALTH_FLOOR) {
+            health.setBaseValue(BOSS_HEALTH_FLOOR);
+        }
+        boss.setHealth(boss.getMaxHealth());
     }
 
     private static void spawnBoss(ServerLevel level, BlockPos perch, EntityType<?> type) {
@@ -345,6 +395,9 @@ public final class Finale {
             return;
         }
         boss.addTag(TAG_BOSS);
+        if (boss instanceof LivingEntity living) {
+            giant(living);
+        }
         if (boss instanceof Mob mob) {
             mob.setPersistenceRequired();
         }

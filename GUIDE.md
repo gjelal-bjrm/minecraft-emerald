@@ -409,9 +409,11 @@ tuer le boss avant la fin du temps.
 **L'arène du boss.** Quand la troisième ancre est tenue, l'Arc-en-ciel se lève
 à l'écart des sanctuaires et **l'arène de Spargus** (celle de Jak 3) se pose en
 une quinzaine de secondes : un sol de sable cerné de mesas de grès rouge et de
-gradins, fermé au nord par une arche de rocher. Le boss, tiré au sort (Ignis,
-le Gardien de l'Ender ou la Liche), attend **au centre du sol** ; le Sculk
-garde la couronne autour de lui. **Un anneau de lave** court dans le sol,
+gradins, fermé au nord par une arche de rocher. Le boss attend **au centre du
+sol** : un **géant** de neuf à dix blocs de haut (un joueur en fait 1,8), tiré au
+sort entre Ignis, le Gardien de l'Ender, la Monstruosité de Netherite et le Reste
+Ancien, avec 600 points de vie au moins ; le Sculk garde la couronne autour de
+lui. **Un anneau de lave** court dans le sol,
 coupé de quatre passages aux quatre points cardinaux, et des fosses de lave
 creusent le pourtour : on les voit briller, on les enjambe — mais on n'y tombe
 pas deux fois.

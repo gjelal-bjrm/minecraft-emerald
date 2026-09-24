@@ -78,13 +78,14 @@ import java.util.UUID;
  *  10. les bestiaires des meteos (cahier §89) : chaque monstre cite est-il la, hostile, et
  *      jamais une horreur de l'Eclipse ? (avec les mods des bestiaires au serveur des bancs) ;
  *  11. les trois sanctuaires (cahier §90) : trois garnisons sans monstre commun, presentes et
- *      hostiles, quatre especes au moins a chaque palier ; trois matieres qui gardent la forme des
- *      blocs ; les themes
- *      tires au sort, un par ancre, sauvegardes avec les paliers de garnison ; des gardes du
- *      bon theme, et coiffes s'ils brulent au soleil (memes mods que le banc 10) ;
+ *      hostiles, quatre especes au moins a chaque palier ; trois matieres qui gardent la forme
+ *      des blocs ; les themes tires au sort, un par ancre, sauvegardes avec les paliers de
+ *      garnison ; des gardes du bon theme, et coiffes s'ils brulent au soleil (memes mods que le
+ *      banc 10) ;
  *  12. l'arene du boss (cahier §91) : le volume de Spargus et ses reperes vont ensemble, le boss
  *      nait sur le sol loin de la lave, les gardes jamais dans une rigole, toute la lave est
- *      tenue (ni air a cote ni dessous), et l'on marche de la porte sud au boss sans lave.
+ *      tenue (ni air a cote ni dessous), l'on marche de la porte sud au boss sans lave, et les
+ *      quatre boss sont des geants (leur combat contre le vrai joueur : l'automate de photos).
  * Rapport dans partie_autotest.txt, puis arret.
  */
 @EventBusSubscriber(modid = EmeraldWeaponsMod.MODID)
@@ -612,6 +613,27 @@ public final class ArcenciumAutotest {
             }
         }
         check("de la porte sud au boss, on marche sans enjamber de lave (le passage de l'anneau)", path, "-");
+        // LES BOSS GEANTS (le joueur, 24 sept.) : chacun agrandi comme en partie, puis mesure
+        ServerLevel overworld = server.overworld();
+        List<String> sizes = new ArrayList<>();
+        boolean giants = true;
+        for (String id : Finale.bosses()) {
+            java.util.Optional<EntityType<?>> type = EntityType.byString(id);
+            Entity made = type.isEmpty() ? null : type.get().create(overworld);
+            if (!(made instanceof net.minecraft.world.entity.LivingEntity boss)) {
+                giants = false;
+                sizes.add(id + " absent");
+                continue;
+            }
+            Finale.giant(boss);
+            boss.refreshDimensions();
+            giants &= boss.getBbHeight() >= 8.0F && boss.getMaxHealth() >= 600.0F;
+            sizes.add(String.format(Locale.ROOT, "%s %.1f x %.1f, %.0f PV", id.substring(id.indexOf(':') + 1),
+                    boss.getBbWidth(), boss.getBbHeight(), boss.getMaxHealth()));
+            boss.discard();
+        }
+        check("quatre boss geants : huit blocs de haut au moins (un joueur en fait 1,8), six cents PV au moins",
+                giants && sizes.size() == 4, String.join(" ; ", sizes));
     }
 
     // ================================================================ 2. les coffres

@@ -82,7 +82,9 @@ import java.util.Objects;
  * se leve pour de vrai a cinq cents blocs a l'est (Finale.begin, avec Ignis), l'arene de
  * Spargus se pose ; puis le spectateur vient au-dessus et l'on attend quarante-cinq secondes,
  * comme pour les sanctuaires. Les vues : d'en haut, depuis le sol face au boss, depuis les
- * gradins, et de pres sur une rigole de lave.
+ * gradins, et de pres sur une rigole de lave ; « tailles » et « geants » alignent les boss a
+ * cote d'un mannequin de la taille d'un joueur, a leur taille d'origine puis agrandis ;
+ * « combat0 », « combat1 »... mettent le vrai joueur, en survie, face a chacun (voir COMBAT).
  *
  * L'ECLIPSE (« nom@eclipse:portail », « vague », « brume », cahier §88) : l'Eclipse se
  * leve pour de vrai la ou se tient le joueur, un portail s'ouvre a une dizaine de blocs,
@@ -388,7 +390,11 @@ public final class PhotoAutomaton {
         }
         // on laisse le monde se generer et se dessiner, puis le client prend la photo
         ++waited;
-        if (waited >= SETTLE && taken) {
+        if (waited >= pendingSettle && taken) {
+            if (shot.arena() && shot.biome().getPath().startsWith("combat")) {
+                combatReport(shot);
+                pendingSettle = SETTLE;
+            }
             LOGGER.info("photos : prise {} faite apres {} tiques{}", shot.name(), waited,
                     waited >= MAX_WAIT ? " (terrain pas entierement dessine)" : "");
             pending = null;
@@ -733,7 +739,24 @@ public final class PhotoAutomaton {
             "vol", new double[]{0, 44, 22, 0, 0, -28},
             "sol", new double[]{0, 2.6, 46, 0, 5, 0},
             "gradins", new double[]{-50, 12, 30, 0, 2, 0},
-            "lave", new double[]{31, 5.5, 38, 22, 0, 22});
+            "lave", new double[]{31, 5.5, 38, 22, 0, 22},
+            "tailles", new double[]{0, 5, 44, 0, 4, 18},
+            "geants", new double[]{0, 8, 50, 0, 7, 18});
+    /**
+     * LE COMBAT (« nom@arene:combat0 », « combat1 »...) : le vrai joueur, en survie, face a un
+     * boss de l'arene -- le boss numero N/2, a sa taille d'origine si N est pair, geant sinon.
+     * Un golem de fer ne servait a rien : trois boss sur quatre ne le regardaient meme pas. Et
+     * mille points de vie ne protegeaient pas le joueur -- Ignis l'a tue en moins de vingt
+     * secondes, les boss de Cataclysm frappent en proportion de la vie de leur cible. Chaque
+     * coup recu est donc COMPTE PUIS ANNULE : le joueur garde ses vingt points de vie, ne meurt
+     * pas, ne recule pas. La prise se fait apres vingt secondes, et le journal dit ce qu'il a
+     * encaisse.
+     */
+    private static final int COMBAT = 400;
+    /** Le combat en cours : ce que le joueur a encaisse, et en combien de coups. */
+    private static boolean combatActive;
+    private static float combatDamage;
+    private static int combatHits;
 
     /**
      * L'arene est-elle posee ? Le premier appel leve l'Arc-en-ciel a cinq cents blocs a l'est,
@@ -766,10 +789,40 @@ public final class PhotoAutomaton {
 
     /** La camera dans l'arene : d'en haut, sur le sol face au boss, dans les gradins, pres d'une rigole. */
     private static boolean placeArena(ServerLevel level, ServerPlayer player, Shot shot) {
+        if (shot.biome().getPath().startsWith("combat")) {
+            return placeCombat(level, player, shot);
+        }
         double[] view = ARENA_VIEWS.get(shot.biome().getPath());
         if (arenaCentre == null || arenaCentre.equals(BlockPos.ZERO) || view == null) {
             LOGGER.warn("photos : pas d'arene, ou vue inconnue {}", shot.biome().getPath());
             return false;
+        }
+        String lineupView = shot.biome().getPath();
+        if (("tailles".equals(lineupView) || "geants".equals(lineupView)) && PREPARED.add(lineupView)) {
+            boolean giants = "geants".equals(lineupView);
+            List<String> lineup = new ArrayList<>(com.emerald.game.Finale.bosses());
+            lineup.add(0, "minecraft:armor_stand");       // un mannequin de la taille d'un joueur
+            int step = giants ? 13 : 8;
+            clearArena(level);
+            for (int i = 0; i < lineup.size(); i++) {
+                final int slot = i;
+                net.minecraft.world.entity.EntityType.byString(lineup.get(i)).ifPresent(type -> {
+                    BlockPos at = arenaCentre.offset(-(lineup.size() - 1) * step / 2 + slot * step, 0, 18);
+                    net.minecraft.world.entity.Entity e = type.spawn(level, at, net.minecraft.world.entity.MobSpawnType.COMMAND);
+                    if (e != null) {
+                        e.setYRot(0.0F);
+                        e.setYHeadRot(0.0F);
+                        if (giants && slot > 0 && e instanceof net.minecraft.world.entity.LivingEntity living) {
+                            com.emerald.game.Finale.giant(living);
+                        }
+                        if (e instanceof net.minecraft.world.entity.Mob mob) {
+                            mob.setNoAi(true);
+                            mob.setPersistenceRequired();
+                            mob.setYBodyRot(0.0F);
+                        }
+                    }
+                });
+            }
         }
         net.minecraft.world.phys.Vec3 base = net.minecraft.world.phys.Vec3.atBottomCenterOf(arenaCentre);
         net.minecraft.world.phys.Vec3 eye = base.add(view[0], view[1], view[2]);
@@ -782,6 +835,72 @@ public final class PhotoAutomaton {
         player.teleportTo(level, eye.x, eye.y - player.getEyeHeight(), eye.z, yaw, pitch);
         LOGGER.info("photos : {} (arene, {}) camera en {}", shot.name(), shot.biome().getPath(), eye);
         return true;
+    }
+
+    /** Le boss de l'Arc-en-ciel, son Sculk, le rang d'avant : l'arene videe de ses monstres. */
+    private static void clearArena(ServerLevel level) {
+        for (net.minecraft.world.entity.Entity e : level.getEntities((net.minecraft.world.entity.Entity) null,
+                new net.minecraft.world.phys.AABB(arenaCentre).inflate(90), e -> e instanceof net.minecraft.world.entity.Mob)) {
+            e.discard();
+        }
+    }
+
+    /**
+     * Le combat numero N : l'arene videe, le joueur en survie avec mille points de vie a huit blocs
+     * au sud du centre, le boss N/2 face a lui, a sa taille d'origine ou geant, et pour cible.
+     */
+    private static boolean placeCombat(ServerLevel level, ServerPlayer player, Shot shot) {
+        int n = Integer.parseInt(shot.biome().getPath().substring("combat".length()));
+        List<String> bosses = com.emerald.game.Finale.bosses();
+        if (arenaCentre == null || arenaCentre.equals(BlockPos.ZERO) || n / 2 >= bosses.size()) {
+            return false;
+        }
+        String id = bosses.get(n / 2);
+        boolean giant = n % 2 == 1;
+        clearArena(level);
+        player.setGameMode(GameType.SURVIVAL);
+        player.removeAllEffects();
+        player.clearFire();
+        player.setHealth(player.getMaxHealth());
+        combatActive = true;
+        combatDamage = 0.0F;
+        combatHits = 0;
+        player.teleportTo(level, arenaCentre.getX() + 0.5, arenaCentre.getY(), arenaCentre.getZ() + 8.5, 180.0F, -8.0F);
+        net.minecraft.world.entity.Entity e = net.minecraft.world.entity.EntityType.byString(id)
+                .map(type -> type.spawn(level, arenaCentre.offset(0, 0, -6), net.minecraft.world.entity.MobSpawnType.EVENT))
+                .orElse(null);
+        if (e instanceof net.minecraft.world.entity.LivingEntity living) {
+            if (giant) {
+                com.emerald.game.Finale.giant(living);
+            }
+            if (living instanceof net.minecraft.world.entity.Mob mob) {
+                mob.setPersistenceRequired();
+                mob.setTarget(player);
+            }
+        }
+        pendingSettle = COMBAT;
+        LOGGER.info("photos : {} ({} {}) face au joueur", shot.name(), id, giant ? "geant" : "a sa taille d'origine");
+        return true;
+    }
+
+    /** Apres la prise d'un combat : ce que le joueur a encaisse. */
+    private static void combatReport(Shot shot) {
+        int n = Integer.parseInt(shot.biome().getPath().substring("combat".length()));
+        List<String> bosses = com.emerald.game.Finale.bosses();
+        String id = n / 2 < bosses.size() ? bosses.get(n / 2) : "?";
+        combatActive = false;
+        LOGGER.info("photos : COMBAT {} {} : {} coups, {} PV encaisses en {} s", id, n % 2 == 1 ? "geant" : "d'origine",
+                combatHits, Math.round(combatDamage), COMBAT / 20);
+    }
+
+    /** Pendant un combat, chaque coup que recoit le joueur est compte, puis annule. */
+    @SubscribeEvent
+    public static void onIncomingDamage(net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent event) {
+        if (combatActive && event.getEntity() instanceof ServerPlayer) {
+            combatDamage += event.getAmount();
+            combatHits++;
+            event.setCanceled(true);
+        }
     }
 
     /** Une prise du parcours de Haven : attendre le bon moment, puis la laisser au client, interface visible. */

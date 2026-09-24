@@ -8206,7 +8206,8 @@ l'arene de Jak 3 avec la lave. »
 une fleche. **Choix du joueur** : l'arene de Spargus de Jak 3 (niveau
 `wasstada`), SOL PRATICABLE avec fosses et rigoles de lave (pas la fosse a
 plates-formes du jeu), les murs invisibles et les echafaudages de WASSTADB
-retires ; le boss toujours tire au sort (Ignis, Gardien de l'Ender, Liche).
+retires ; le boss toujours tire au sort (Ignis, Gardien de l'Ender, Liche --
+revu plus bas : des geants, sans la Liche).
 
 ### A. La conversion (`tools/jak_arena.py`)
 
@@ -8268,3 +8269,44 @@ pour de vrai avec Ignis) : deux series. La premiere, collision seule, montrait
 les gradins en etageres flottantes et un sol de gres rouge ou la lave se
 perdait : d'ou le decor visuel et le sol clair, sur lequel les rigoles
 brillent.
+
+### D. Les boss geants
+
+« Celui-ci me parait vraiment petit. Est-ce que c'est vraiment un boss ?
+Quelle est sa taille reelle par rapport aux joueurs ? [...] Compare a l'arene,
+il parait vraiment ridicule. » Mesure au serveur des bancs (boite de
+collision, points de vie) : joueur 0,6 x 1,8 ; Ignis 2,25 x 3,5, 450 PV ;
+Gardien de l'Ender 2,5 x 3,8, 333 PV ; Liche 0,8 x 2,5, 100 PV ; Monstruosite
+de Netherite 3 x 5,75, 600 PV ; Reste Ancien 4,35 x 5, 450 PV ; Yeti alpha
+3,8 x 5, 200 PV. Plus grands, l'Hydre (16 x 12) et l'Ur-Ghast (14 x 18) sont
+lies a leur repaire (corps en pieces ancrees, vol) ; le Leviathan veut de
+l'eau.
+
+**Choix du joueur** : des boss GEANTS tires au sort, les deux colosses de
+Cataclysm en plus -- puis « supprime la liche de la liste des boss ». Quatre
+boss, agrandis par l'attribut d'echelle du jeu (`Finale.giant`) : Ignis x2,5
+(8,8 blocs de haut), Gardien de l'Ender x2,5 (9,5), Monstruosite de Netherite
+x1,7 (9,8), Reste Ancien x1,8 (9 blocs, 7,8 de large) ; six cents points de
+vie au moins. Les modeles de Cataclysm suivent l'agrandissement (photos
+« arene:tailles » et « arene:geants » : le rang des boss a cote d'un mannequin
+de la taille d'un joueur).
+
+**Verifie que les geants frappent encore.** L'agrandissement grossit la boite,
+le modele et la portee, mais les attaques de Cataclysm partent de points ecrits
+en dur. Trois essais :
+1. contre un golem de fer (banc serveur) : inutilisable -- trois boss sur quatre
+   ne le regardent meme pas, a leur taille d'origine non plus (ils dorment tant
+   qu'aucun joueur n'approche) ; banc retire ;
+2. contre le vrai joueur du client de dev, mille points de vie : Ignis a sa
+   taille d'origine l'a tue en moins de vingt secondes -- les boss de Cataclysm
+   frappent en proportion de la vie de leur cible ;
+3. contre le vrai joueur, chaque coup compte puis annule (prises
+   « arene:combat0 » a « combat7 ») : en vingt secondes, Ignis 7 coups (143 PV)
+   a sa taille d'origine, 9 (190) geant ; Gardien de l'Ender 10 (204), 14 (216) ;
+   Monstruosite 36 (534), 26 (515) ; Reste Ancien 22 (403), 8 (290). Les quatre
+   geants touchent. A noter : les deux colosses frappent deux a trois fois plus
+   fort qu'Ignis ; l'equilibrage se jugera en partie.
+
+Banc de la partie, epreuve 12 : les quatre boss agrandis comme en partie font
+huit blocs de haut au moins et six cents PV. 53 OK, 1 KO (l'arche de l'Heure
+Doree du village, l'ancien echec, qui passe une fois sur deux).
