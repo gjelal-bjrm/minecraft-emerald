@@ -30,6 +30,7 @@ import net.neoforged.neoforge.client.settings.KeyConflictContext;
 import net.neoforged.neoforge.network.PacketDistributor;
 import org.lwjgl.glfw.GLFW;
 
+import javax.annotation.Nullable;
 import java.util.ArrayDeque;
 import java.util.Deque;
 
@@ -85,8 +86,46 @@ public final class JakVehicleClient {
             "key.categories.emeraldweapons");
 
     public static final float CAMERA_DISTANCE = 9.0F;
+    /**
+     * La carrosserie reste sous le regard du conducteur d'au moins dix degres : de l'oeil d'un
+     * joueur assis, le long capot de cara ne descendait qu'a deux degres sous l'horizon et
+     * cachait toute la route ; a huit, on voyait le paysage mais pas encore la route (photos).
+     */
+    private static final double COCKPIT_SIGHT = Math.tan(Math.toRadians(10.0));
 
     private JakVehicleClient() {
+    }
+
+    /** Celui qui regarde est a bord de cette voiture (pas d'une moto), en premiere personne. */
+    public static boolean inCockpit(JakVehicleEntity car) {
+        Minecraft mc = Minecraft.getInstance();
+        Entity viewer = mc.getCameraEntity();
+        return viewer != null && viewer.getVehicle() == car && !car.spec().isBike()
+                && mc.options.getCameraType().isFirstPerson();
+    }
+
+    /**
+     * LA VUE DU CONDUCTEUR, en premiere personne a bord d'une voiture (cahier §98). Sa voiture
+     * est dessinee de niveau (JakVehicleRenderer) ; si la carrosserie devant lui monte encore
+     * trop pres de son regard -- le long capot de cara, la traverse du toit de carc --, la camera
+     * monte, a l'aplomb de ses yeux, juste assez pour la garder sous COCKPIT_SIGHT : d'un tiers
+     * de bloc environ. Null quand rien ne gene, a moto et a pied. CameraMixin ne
+     * l'appelle qu'en premiere personne.
+     */
+    @Nullable
+    public static Vec3 cockpit(Entity viewer, Vec3 eye) {
+        if (!(viewer.getVehicle() instanceof JakVehicleEntity car) || car.spec().isBike()) {
+            return null;
+        }
+        JakVehicleModel model = JakVehicleModels.get(car.model());
+        int seat = car.seatOf(viewer);
+        if (model == null || seat < 0) {
+            return null;
+        }
+        VehicleSpec spec = car.spec();
+        double lift = model.eyeClearing(spec.seat(seat, 0), spec.seat(seat, 2), COCKPIT_SIGHT)
+                - (spec.seat(seat, 1) + VehicleSpec.EYE_ABOVE_SEAT);
+        return lift > 0.0 ? eye.add(0.0, lift, 0.0) : null;
     }
 
     /** Envoie au serveur l'equilibre de la voiture que ce client conduit (JakVehicleEntity.publishAttitude). */
@@ -136,8 +175,18 @@ public final class JakVehicleClient {
         }
         Component zone = Component.translatable(VehicleDynamics.isHigh(car.mode())
                 ? "hud.emeraldweapons.vehicle.zone_high" : "hud.emeraldweapons.vehicle.zone_low");
+        // l'etat du vehicule, en couleur (cahier §98) : ce que dit aussi sa fumee
+        VehicleDamage.State state = car.state();
+        int color = switch (state) {
+            case PARFAIT -> 0xFF7CFC8A;
+            case BON -> 0xFFC8F07A;
+            case MOYEN -> 0xFFFFD75E;
+            case MAL, DETRUIT -> 0xFFFF6A5A;
+        };
         Component hint = Component.translatable("hud.emeraldweapons.vehicle.hover_hint",
-                HOVER_KEY.getTranslatedKeyMessage(), zone);
+                HOVER_KEY.getTranslatedKeyMessage(), zone).copy().append(" · ")
+                .append(Component.translatable("hud.emeraldweapons.vehicle.state." + state.id())
+                        .withStyle(style -> style.withColor(color & 0xFFFFFF)));
         int width = mc.font.width(hint);
         int x = (graphics.guiWidth() - width) / 2;
         int y = graphics.guiHeight() - 80;

@@ -227,6 +227,9 @@ public class GunNukeEntity extends Projectile {
         for (Mob mob : targets) {
             GunImpacts.hurt(owner, this, mob, GunSpec.NOVA_DAMAGE);
         }
+        // les vehicules qu'elle souffle sont detruits (cahier §98)
+        com.emerald.jak.vehicle.VehicleDamage.explosion(level, at, com.emerald.jak.vehicle.VehicleImpacts.BLAST_NOVA_RADIUS,
+                com.emerald.jak.vehicle.VehicleDamage.NOVA, owner);
         this.struck = targets.size();
         GunEco.logExplosion(owner, at, broken, targets.size());
     }

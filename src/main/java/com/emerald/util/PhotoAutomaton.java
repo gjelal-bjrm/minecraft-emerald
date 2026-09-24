@@ -200,6 +200,11 @@ public final class PhotoAutomaton {
             return "eclipse".equals(this.biome.getNamespace());
         }
 
+        /** Une prise d'un vehicule de Haven, le joueur au volant (cahier §98). */
+        boolean vehicle() {
+            return "vehicule".equals(this.biome.getNamespace());
+        }
+
         /** Une prise de l'arene du boss, levee pour elle. */
         boolean arena() {
             return "arene".equals(this.biome.getNamespace());
@@ -407,6 +412,10 @@ public final class PhotoAutomaton {
         ++waited;
         if (shot.wings() && handsView != null && handsView.startsWith("vol")) {
             orbit(player);
+        }
+        if (explosionTarget != null && burstStarted) {
+            com.emerald.jak.vehicle.VehicleDamage.damage(explosionTarget, com.emerald.jak.vehicle.VehicleDamage.NOVA);
+            explosionTarget = null;
         }
         if (waited >= pendingSettle && taken) {
             if (shot.arena() && shot.biome().getPath().startsWith("combat")) {
@@ -1327,6 +1336,80 @@ public final class PhotoAutomaton {
      * se courber a cote, et le terrain reste le meme. Le palier est la hauteur de la prise
      * (« nom@ailes:dos@20 », +20 par defaut) ; l'apparence suit la barre (« ailes:dos/obscures »).
      */
+    /** La voiture a faire exploser au debut de la rafale (« dos_explosion »), serveur. */
+    @Nullable
+    private static com.emerald.jak.vehicle.JakVehicleEntity explosionTarget;
+    /** Le client a commence une rafale (PhotoClient). */
+    private static volatile boolean burstStarted;
+
+    /** Le client commence une rafale : ce qui doit s'y passer part maintenant. */
+    public static void burstStarted() {
+        burstStarted = true;
+    }
+
+    /**
+     * UN VEHICULE DE HAVEN, LE JOUEUR AU VOLANT (cahier §98). « vehicule:carc/conducteur » : la
+     * vue du conducteur, en premiere personne -- pour le capot ; « /dos » : la camera des
+     * vehicules, derriere ; « _nuit » a la fin : a minuit ; « /dos_explosion » : une carb posee
+     * a cote explose au debut de la rafale. Le palier de la prise est la sante, en
+     * centiemes (« vehicule:cara/dos@40 » : MAL, et sa fumee). Le vehicule est pose sur
+     * l'estrade, le nez au nord, et le joueur y monte ; ceux des prises d'avant sont retires.
+     */
+    private static boolean placeVehicle(ServerLevel level, ServerPlayer player, Shot shot) {
+        if (stage == null) {
+            placeShowcase(level, player, new Shot(shot.name(), ResourceLocation.fromNamespaceAndPath("vitrine", "face"), 0));
+        }
+        String path = shot.biome().getPath();
+        int cut = path.indexOf('/');
+        String model = cut < 0 ? path : path.substring(0, cut);
+        String view = cut < 0 ? "conducteur" : path.substring(cut + 1);
+        if (!com.emerald.jak.vehicle.JakVehicleEntity.isModel(model)) {
+            return false;
+        }
+        player.stopRiding();
+        for (com.emerald.jak.vehicle.JakVehicleEntity old : level.getEntitiesOfClass(
+                com.emerald.jak.vehicle.JakVehicleEntity.class, new net.minecraft.world.phys.AABB(stage).inflate(48.0))) {
+            old.ejectPassengers();
+            old.discard();
+        }
+        com.emerald.jak.vehicle.JakVehicleEntity car = com.emerald.init.Jak3Registry.JAK_VEHICLE.get().create(level);
+        if (car == null) {
+            return false;
+        }
+        car.setModel(model);
+        car.moveTo(stage.getX() + 0.5, stage.getY() + com.emerald.jak.vehicle.JakVehicleEntity.bottom(model),
+                stage.getZ() + 0.5, 180.0F, 0.0F);
+        if (shot.height() > 0) {
+            car.setHealth(shot.height() / 100.0F);
+        }
+        level.addFreshEntity(car);
+        explosionTarget = null;
+        burstStarted = false;
+        if (view.contains("explosion")) {
+            com.emerald.jak.vehicle.JakVehicleEntity target = com.emerald.init.Jak3Registry.JAK_VEHICLE.get().create(level);
+            if (target != null) {
+                target.setModel("carb");
+                // a cote, sur l'estrade (quinze blocs sur dix) : posee devant, elle tombait dans le vide
+                target.moveTo(stage.getX() + 0.5 - 6.0, stage.getY() + com.emerald.jak.vehicle.JakVehicleEntity.bottom("carb"),
+                        stage.getZ() + 0.5 - 1.0, 180.0F, 0.0F);
+                level.addFreshEntity(target);
+                explosionTarget = target;
+            }
+        }
+        run(level.getServer(), view.endsWith("nuit") ? "time set 18000" : "time set 6000");
+        player.setGameMode(GameType.SURVIVAL);
+        player.getAbilities().invulnerable = true;
+        player.onUpdateAbilities();
+        player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, net.minecraft.world.item.ItemStack.EMPTY);
+        player.teleportTo(level, car.getX(), car.getY() + 1.0, car.getZ(), 180.0F, 6.0F);
+        player.startRiding(car, true);
+        handsView = view;
+        // au volant, l'interface a l'ecran : l'indice du conducteur dit la zone et l'etat
+        pendingGui = view.startsWith("conducteur");
+        LOGGER.info("photos : {} (vehicule {}, {})", shot.name(), model, view);
+        return true;
+    }
+
     private static boolean placeWings(ServerLevel level, ServerPlayer player, Shot shot) {
         if (stage == null) {
             placeShowcase(level, player, new Shot(shot.name(), ResourceLocation.fromNamespaceAndPath("vitrine", "face"), 0));
@@ -1385,6 +1468,9 @@ public final class PhotoAutomaton {
         }
         if (shot.wings()) {
             return placeWings(level, player, shot);
+        }
+        if (shot.vehicle()) {
+            return placeVehicle(level, player, shot);
         }
         if (shot.gate()) {
             return placeGate(level, player, shot);

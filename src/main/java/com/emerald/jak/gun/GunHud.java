@@ -48,7 +48,8 @@ public final class GunHud {
         Minecraft mc = Minecraft.getInstance();
         LocalPlayer player = mc.player;
         if (player == null || mc.level == null || mc.options.hideGui || !Haven.is(mc.level)
-                || player.isPassenger() || player.isSpectator()) {
+                || (player.isPassenger() && !(player.getVehicle() instanceof com.emerald.jak.vehicle.JakVehicleEntity))
+                || player.isSpectator()) {
             return;
         }
         ItemStack stack = player.getMainHandItem();

@@ -62,7 +62,8 @@ public final class GunClient {
             since = 0;
             return;
         }
-        boolean want = holding(mc) && !mc.player.isPassenger() && mc.screen == null && mc.getOverlay() == null
+        boolean want = holding(mc) && (!mc.player.isPassenger()
+                || mc.player.getVehicle() instanceof com.emerald.jak.vehicle.JakVehicleEntity) && mc.screen == null && mc.getOverlay() == null
                 && mc.options.keyAttack.isDown();
         since++;
         if (want != sent || (want && since >= GunSpec.TRIGGER_KEEPALIVE)) {

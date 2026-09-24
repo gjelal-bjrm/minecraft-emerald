@@ -8901,3 +8901,134 @@ cachait. Elle se pose maintenant des deux cotes, comme les reflets (§96 B).
   retiree : le lisere des ailes +20, blanc jusque dans ses pixels
   transparents, reste net sous Complementary -- le piege du §88 ne touche pas
   ce rendu --, et premultiplier eteignait les halos.
+
+## 98. Les vehicules s'abiment, explosent, et l'on tire de son siege *(24 sept. 2026)*
+
+Le joueur, le 24 sept. au soir : des etats pour les vehicules -- « parfait,
+bon, moyen, mal, detruit » --, de la fumee des « moyen », de plus en plus
+noire, et une explosion ; « la destruction aussi par les coups et les armes » ;
+« pouvoir utiliser les armes en conduisant » ; « en premiere personne, dans les
+gros vehicules, le capot bouche la vue ». Jusqu'ici, tous les vehicules etaient
+indestructibles (`hurt` rendait faux), et on ne tirait pas a bord. Tout est
+repris de Jak 3 (le code GOAL : vehicle.gc, vehicle-util.gc, vehicle-states.gc,
+vehicle-effects.gc, hvehicle.gc).
+
+### A. La sante et les etats
+
+`VehicleDamage` : la sante est une part, de 1 (neuve) a 0, comme dans le jeu.
+Chaque coup en retire ses points de Jak divises par ceux du vehicule -- 24
+pour une voiture, 15 pour une moto --, et un quart de moins quand un joueur
+conduit. Les etats : PARFAIT (neuve), BON (des 0,75), MOYEN (0,5 a 0,75), MAL
+(sous 0,5), DETRUIT (0). Ils se lisent a la fumee (`VehicleDamageClient`, les
+deux points du jeu, a l'arriere d'une voiture, a l'avant d'une moto) :
+- MOYEN : des bouffees blanches de temps en temps ;
+- MAL : une fumee grise continue, qui noircit avec les degats ; sous 0,25, le
+  feu -- la flamme du jeu, en grand, qui vire a l'orange puis au noir --, une
+  fumee presque noire et, parfois, des etincelles electriques qui gresillent ;
+- et, au volant, l'indice du conducteur dit l'etat, en couleur.
+Pas de reparation : le jeu n'en a pas. La sante se sauvegarde (« Sante »).
+
+### B. Ce qui abime
+
+- LES CHOCS : la vitesse perdue d'un coup (`VehicleImpacts.crash`, le seul
+  point ou passent tous les chocs qui s'entendent), remise a l'echelle du jeu
+  -- Jak 3 compte la vitesse changee, rebond compris --, puis les paliers du
+  jeu : sous 25 m/s presque rien, 25 cinq points, 32 dix, 70 la mort. Un mur
+  pris a pleine vitesse vaut dix points : trois ou quatre pour la voiture d'un
+  joueur.
+- LES COUPS : un coup de poing, quatre points, un toutes les demi-secondes, et
+  seulement a mains nues -- en ville, rien du dehors ne blesse (`HavenGear`,
+  §96). Un coup sur une des boites de la voiture est un coup sur elle.
+- LES ARMES : les points de chaque tir, les memes que contre un monstre -- ce
+  sont ceux du jeu (Blaster 2, Scatter Gun 3 de pres, Vulcan Fury 2, Beam
+  Reflexor 1,5, Gyro Burster 2, Peacemaker 16) --, sauf la ou Jak 3 compte
+  autrement : la grenade Plasmite detruit d'un coup (36), l'onde du Wave
+  Concussor vaut 8 fois sa charge, l'Arc Wielder 5 par accroche, la Super Nova
+  detruit tout ce qu'elle souffle. Les rayons s'arretent sur un vehicule, le
+  Beam Reflexor aussi ; les explosions abiment ce qu'elles soufflent
+  (`VehicleImpacts.blast`, memes rayons).
+
+### C. Detruit
+
+Sous zero : les occupants sautent (2,5 blocs), le pilote du trafic
+disparait, le vehicule tombe ; sa sante coule d'une demi-part par seconde et
+il EXPLOSE a -0,25 -- tout de suite apres un coup mortel. L'explosion (7,5 m
+pour une voiture, 5,6 pour une moto) blesse ce qui est pres de deux points de
+Jak -- un quart de sa vie pour un joueur, comme Jak --, repousse, et souffle et
+abime les autres vehicules : les explosions en chaine sont possibles.
+L'epave, noircie au quart de ses couleurs, saute, tourne, retombe, brule et
+fume noir cinq secondes, puis disparait ; une voiture d'appartement revient
+alors neuve a sa place (`HavenCars`, a la verification suivante). On ne monte
+pas dans une epave, et elle ne revient pas a sa place si elle tombe a l'eau.
+
+### D. On tire de son siege
+
+Le Morph Gun marche a bord d'un vehicule de Haven, au volant comme passager
+(`GunClient`, `GunFire.refusal`, la barre des munitions) ; sur tout le reste
+(cheval, bateau), toujours pas. Ses propres tirs ne touchent jamais le
+vehicule ou l'on est (vehicle.gc:1140-1145) : ni ses rayons, ni ses
+projectiles, ni ses explosions, et la grenade Plasmite ne se declenche plus
+sur lui.
+
+### E. La vue du conducteur
+
+Premieres photos (`vehicule:<modele>/conducteur`, nouvelle prise de
+l'automate, joueur assis) : la coque de cara remplissait l'ecran, la traverse
+du toit de carc le barrait ; carb genait a moitie, les motos pas du tout. Ce
+n'etait pas seulement le capot : la camera ne penche pas avec la voiture, et
+la voiture penchee vers le poids du conducteur lui montait devant les yeux.
+Desormais, en premiere personne, depuis une voiture :
+- sa voiture est dessinee DE NIVEAU (`JakVehicleRenderer`) ; les autres
+  joueurs et la troisieme personne la voient toujours pencher ;
+- la camera monte, a l'aplomb des yeux, juste assez pour que la carrosserie
+  devant reste dix degres sous le regard (`JakVehicleClient.cockpit`, le
+  second greffon du mod, `CameraMixin`) : un tiers de bloc environ. A huit
+  degres, on voyait le paysage mais pas la route (photos).
+Un premier essai -- ne pas dessiner ce qui passe au-dessus du regard -- ne
+suffisait pas : le long capot de cara ne monte pas jusqu'a l'oeil, il cache la
+route jusqu'a deux degres sous l'horizon, et la traverse de carc a une
+doublure plus basse. Les motos ne changent pas.
+
+### F. Verifie
+
+- Banc des vehicules : 162 OK. Nouvelles epreuves : les etats ; un tir de
+  Blaster sur une des boites (sante 0,9167, deux points sur vingt-quatre) ; un
+  rayon d'arme s'arrete sur la voiture, un occupant ne vise pas la sienne ; les
+  coups de poing (quatre points, un seul par demi-seconde, rien avec une epee) ;
+  les paliers des chocs (0,23 -- 5 -- 10 points) ; la destruction (l'occupant
+  saute, l'explosion apres huit tiques, l'epave) ; l'explosion blesse un husk a
+  cinq blocs et demi (7,9 PV : huit, moins son armure) et abime la voiture
+  voisine de deux points ; l'epave disparait apres 99 tiques ; la grenade
+  Plasmite detruit d'un coup ; la sante se sauvegarde et se relit ; le mur pris
+  a pleine vitesse retire dix points (etat MOYEN).
+  Le premier passage : 147 OK, 15 KO. Les essais de physique (murs, virage
+  serre, plafond, montee) reprenaient le meme vehicule, que leurs chocs
+  abimaient jusqu'a le detruire -- et l'epave, qui ne butait qu'avec sa boite
+  centrale, entrait dans les murs : chaque essai de physique part desormais
+  d'un vehicule neuf, et l'epave bute avec toutes ses boites, en sous-pas
+  (`VehiclePhysics.move`). Le coup de poing etait refuse : voir plus bas. Le
+  husk : un monstre de l'invasion hors de la grille est retire a la
+  demi-seconde (`HavenInvasion.sweep`), le premier cobaye avait disparu avant
+  l'explosion.
+- UN DEFAUT D'AVANT, TROUVE LA : `now - Long.MIN_VALUE` deborde en negatif.
+  Depuis le 22 sept. (§83), tous les chocs annonces par le client du
+  conducteur etaient refuses (`VehicleImpacts.reported`, garde de quatre
+  tiques) : la voiture d'un joueur ne faisait ni fracas ni eclats pour les
+  autres. Les deux gardes (choc annonce, coup de poing) partent maintenant de
+  `Long.MIN_VALUE / 2`.
+- Banc des armes : 178 OK (les rayons, le Blaster, le Reflexor, la grenade qui
+  voient les vehicules). Banc de la ville : 18 OK (la regle du poing, partagee).
+- Photos (`vehicule:cara/dos@<sante>`, Complementary actif) : les cinq etats,
+  de jour et de nuit ; l'explosion en rafale (`/dos_explosion`, une carb posee
+  a cote -- posee devant, au-dela de l'estrade de quinze blocs sur dix, elle
+  tombait dans le vide avant la rafale) : la carb noircit, saute, tourne,
+  retombe sur le flanc, brule et fume ; la voiture d'a cote est repoussee. La
+  fumee, d'abord opaque et grossissant de 3,5 % par tique, faisait un gros
+  nuage de paves sur l'arriere : elle est a demi transparente, grossit a peine
+  et monte en deux colonnes ; le feu, fait de volutes teintees, faisait des
+  taches jaunes, puis trop petit se perdait derriere la fumee : c'est la
+  flamme du jeu, plus grande, dessinee apres la fumee. La vue du conducteur :
+  avant et apres, les trois voitures.
+- L'automate de photos : une rafale suivie d'une prise simple repartait pour
+  un tour et prenait le nom de la suivante (`PhotoClient`, la rafale finie ne
+  repart plus).

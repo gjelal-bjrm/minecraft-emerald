@@ -364,6 +364,7 @@ public final class VehicleAutotest {
         });
         planCollisions();
         planBalance();
+        planDamage();
         STEPS.add((s, l, t) -> {
             // hors du pont, rien ne change : la bosse du carrefour ouest (+8 dans la carte du jeu) ne degage rien
             // dans notre ville, seul le trafic la suit
@@ -1321,6 +1322,12 @@ public final class VehicleAutotest {
             check("choc contre un mur : la vitesse perdue d'un coup est reconnue comme un choc (son et eclats)",
                     VehicleImpacts.crashes() > crashesBefore,
                     "chocs comptes " + crashesBefore + " -> " + VehicleImpacts.crashes());
+            // et il abime la voiture, cinq ou dix points de Jak sur vingt-quatre (cahier §98), sans la detruire
+            float lost = (1.0F - car.health()) * VehicleDamage.CAR_HIT_POINTS;
+            check("choc contre un mur : la voiture perd cinq a dix points de Jak (paliers du jeu), et reste entiere",
+                    lost >= VehicleDamage.SMALL_POINTS - 0.01F && lost <= 2.0F * VehicleDamage.BIG_POINTS + 0.5F
+                            && car.health() > 0.0F,
+                    String.format(Locale.ROOT, "sante %.3f, %.2f points perdus, etat %s", car.health(), lost, car.state()));
             car.setAutotestInput(null);
             return true;
         });
@@ -1703,6 +1710,171 @@ public final class VehicleAutotest {
         level.addFreshEntity(c);
         SPAWNED.add(c);
         return c;
+    }
+
+    // ------------------------------------------------------------- degats (cahier §98)
+
+    private static JakVehicleEntity doomed;
+    private static JakVehicleEntity neighbour;
+    private static Mob blastVictim;
+    private static float blastVictimHealth;
+    private static ArmorStand doomedRider;
+    private static int explosionsBefore;
+
+    /**
+     * La sante des vehicules : les etats, un tir, un rayon, les coups de poing, les paliers des
+     * chocs, la destruction -- l'occupant qui saute, l'explosion qui blesse un monstre et abime la
+     * voiture d'a cote, l'epave qui disparait --, la grenade Plasmite, et la sauvegarde.
+     */
+    private static void planDamage() {
+        STEPS.add((s, l, t) -> {
+            check("degats : les etats -- parfait a 1, bon a 0,8, moyen a 0,6, mal a 0,3, detruit a 0",
+                    VehicleDamage.State.of(1.0F) == VehicleDamage.State.PARFAIT
+                            && VehicleDamage.State.of(0.8F) == VehicleDamage.State.BON
+                            && VehicleDamage.State.of(0.6F) == VehicleDamage.State.MOYEN
+                            && VehicleDamage.State.of(0.3F) == VehicleDamage.State.MAL
+                            && VehicleDamage.State.of(0.0F) == VehicleDamage.State.DETRUIT,
+                    "VehicleDamage.State.of");
+            JakVehicleEntity c = spawnSea("cara", 60.0);
+            JakVehicleEntity d = spawnSea("carb", 90.0);
+            if (c == null || d == null) {
+                return true;
+            }
+            doomed = c;
+            neighbour = d;
+            net.neoforged.neoforge.common.util.FakePlayer f = net.neoforged.neoforge.common.util.FakePlayerFactory.getMinecraft(l);
+            // un tir de Blaster sur une des boites de la voiture : deux points de Jak sur vingt-quatre
+            boolean shot = com.emerald.jak.gun.GunImpacts.hurt(f, null, (Entity) c.getParts()[1],
+                    com.emerald.jak.gun.GunSpec.BLASTER_DAMAGE);
+            float afterShot = c.health();
+            check("degats : un tir de Blaster sur une boite de la voiture lui retire deux points de Jak sur vingt-quatre",
+                    shot && Math.abs(afterShot - (1.0F - 2.0F / 24.0F)) < 1.0E-4F,
+                    String.format(Locale.ROOT, "sante %.4f (attendu %.4f), etat %s", afterShot, 1.0F - 2.0F / 24.0F, c.state()));
+            // un rayon d'arme s'arrete sur la voiture ; un passager ne vise pas la sienne
+            Vec3 from = new Vec3(c.getX(), c.getY() + 0.5, c.getZ() - 12.0);
+            com.emerald.jak.gun.GunImpacts.Ray ray = com.emerald.jak.gun.GunImpacts.ray(l, f, from, new Vec3(0.0, 0.0, 1.0),
+                    24.0, 0.1F);
+            ArmorStand stand = new ArmorStand(l, c.getX(), c.getY() + 1.0, c.getZ());
+            l.addFreshEntity(stand);
+            SPAWNED.add(stand);
+            boolean seated = stand.startRiding(c, true);
+            doomedRider = stand;
+            check("degats : un rayon d'arme s'arrete sur la voiture ; un occupant ne vise pas la sienne",
+                    VehicleDamage.vehicleOf(ray.target()) == c && seated && !VehicleDamage.shootable(c, stand)
+                            && VehicleDamage.shootable(c, f),
+                    "rayon sur " + (ray.target() == null ? "rien" : ray.target().getClass().getSimpleName())
+                            + String.format(Locale.ROOT, " a %.1f bloc(s)", ray.end().distanceTo(from)) + ", occupant assis " + seated);
+            // les coups de poing : quatre points a mains nues, un par demi-seconde ; rien avec une epee
+            net.minecraft.world.damagesource.DamageSource fist = l.damageSources().playerAttack(f);
+            boolean first = c.hurt(fist, 1.0F);
+            boolean again = c.hurt(fist, 1.0F);
+            float afterPunch = c.health();
+            f.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND,
+                    new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.DIAMOND_SWORD));
+            boolean sword = d.hurt(l.damageSources().playerAttack(f), 7.0F);
+            f.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, net.minecraft.world.item.ItemStack.EMPTY);
+            check("degats : un coup de poing retire quatre points, un seul par demi-seconde ; une epee du dehors, rien",
+                    first && !again && Math.abs(afterShot - afterPunch - 4.0F / 24.0F) < 1.0E-4F && !sword
+                            && d.health() == 1.0F,
+                    String.format(Locale.ROOT, "premier coup %s, second %s, sante %.4f -> %.4f ; epee %s, carb %.3f",
+                            first, again, afterShot, afterPunch, sword, d.health()));
+            // les paliers d'un choc, sur la voiture d'a cote : presque rien, cinq, dix
+            float h0 = d.health();
+            VehicleDamage.collision(d, 0.0);
+            float h1 = d.health();
+            VehicleDamage.collision(d, 0.05);
+            float h2 = d.health();
+            VehicleDamage.collision(d, 0.35);
+            float h3 = d.health();
+            check("degats : les paliers d'un choc -- un choc tout juste audible presque rien, puis cinq, puis dix points",
+                    (h0 - h1) * 24.0F < 0.5F && Math.abs((h1 - h2) * 24.0F - 5.0F) < 1.0E-3F
+                            && Math.abs((h2 - h3) * 24.0F - 10.0F) < 1.0E-3F,
+                    String.format(Locale.ROOT, "points retires %.2f, %.2f, %.2f", (h0 - h1) * 24.0F, (h1 - h2) * 24.0F,
+                            (h2 - h3) * 24.0F));
+            d.setHealth(1.0F);
+            // la voiture d'a cote vient se ranger a cinq blocs, le monstre a trois
+            d.moveTo(c.getX(), c.getY(), c.getZ() + 5.5, -90.0F, 0.0F);
+            // a cote de la voiture, hors de ses boites : dedans, elle l'aurait ecarte. Un husk
+            // ordinaire : un monstre de l'invasion, hors de la grille, est retire a la demi-seconde
+            // (HavenInvasion.sweep) -- le premier essai l'avait perdu avant l'explosion --, et un
+            // zombie brulerait au soleil
+            Mob zombie = EntityType.HUSK.create(l);
+            if (zombie != null) {
+                zombie.moveTo(c.getX(), c.getY(), c.getZ() - 4.0, 0.0F, 0.0F);
+                zombie.setNoAi(true);
+                zombie.setNoGravity(true);
+                l.addFreshEntity(zombie);
+                SPAWNED.add(zombie);
+                blastVictimHealth = zombie.getHealth();
+            }
+            blastVictim = zombie;
+            explosionsBefore = VehicleDamage.explosions();
+            // la derniere goutte : detruite
+            c.setHealth(0.05F);
+            VehicleDamage.damage(c, 2.0F);
+            return true;
+        });
+        STEPS.add((s, l, t) -> {
+            if (doomed == null) {
+                return true;
+            }
+            if (VehicleDamage.explosions() == explosionsBefore && t < 40) {
+                return false;
+            }
+            float zombieLost = blastVictim == null ? -1.0F : blastVictimHealth - blastVictim.getHealth();
+            check("destruction : l'occupant saute, la voiture explose en moins d'une demi-seconde et devient une epave",
+                    VehicleDamage.explosions() == explosionsBefore + 1 && doomed.wrecked() && doomed.health() <= 0.0F
+                            && doomedRider != null && !doomedRider.isPassenger() && t <= 12,
+                    "explosion apres " + t + " tique(s), epave " + doomed.wrecked() + ", occupant a bord "
+                            + (doomedRider != null && doomedRider.isPassenger()));
+            check("destruction : l'explosion blesse le monstre a quatre blocs (deux points de Jak) et abime la voiture a cinq",
+                    // huit PV, moins ce que retient l'armure naturelle du husk
+                    zombieLost > 7.0F && neighbour.health() < 1.0F && neighbour.health() > 0.9F,
+                    String.format(Locale.ROOT, "monstre -%.1f PV a %.1f bloc(s), voiture voisine %.3f", zombieLost,
+                            blastVictim == null ? -1.0 : blastVictim.position().distanceTo(doomed.position()), neighbour.health()));
+            return true;
+        });
+        STEPS.add((s, l, t) -> {
+            if (doomed == null) {
+                return true;
+            }
+            if (!doomed.isRemoved() && t < VehicleDamage.WRECK_TICKS + 40) {
+                return false;
+            }
+            check("destruction : l'epave disparait apres cinq secondes",
+                    doomed.isRemoved() && t >= VehicleDamage.WRECK_TICKS - 15,
+                    "retiree apres " + t + " tiques");
+            // la grenade Plasmite detruit d'un coup ; la sante se sauvegarde
+            JakVehicleEntity g = spawnSea("cara", 140.0);
+            if (g == null) {
+                return true;
+            }
+            int hit = VehicleDamage.explosion(l, g.position(), VehicleImpacts.BLAST_PLASMITE_RADIUS, VehicleDamage.PLASMITE, null);
+            neighbour.setHealth(0.5F);
+            net.minecraft.nbt.CompoundTag tag = new net.minecraft.nbt.CompoundTag();
+            neighbour.saveWithoutId(tag);
+            JakVehicleEntity copy = Jak3Registry.JAK_VEHICLE.get().create(l);
+            if (copy != null) {
+                copy.load(tag);
+            }
+            check("degats : la grenade Plasmite detruit une voiture d'un coup ; la sante se sauvegarde et se relit",
+                    hit == 1 && g.health() <= 0.0F && copy != null && Math.abs(copy.health() - 0.5F) < 1.0E-6F,
+                    String.format(Locale.ROOT, "vehicules touches %d, sante %.2f ; relue %.2f", hit, g.health(),
+                            copy == null ? Float.NaN : copy.health()));
+            return true;
+        });
+        STEPS.add((s, l, t) -> {
+            for (Entity e : SPAWNED) {
+                if (!e.isRemoved() && (e instanceof JakVehicleEntity || e instanceof ArmorStand || e instanceof Mob)) {
+                    e.discard();
+                }
+            }
+            doomed = null;
+            neighbour = null;
+            blastVictim = null;
+            doomedRider = null;
+            return true;
+        });
     }
 
     private static void planCollisionCleanup() {
@@ -2372,6 +2544,9 @@ public final class VehicleAutotest {
 
     /** Pose le vehicule a l'arret, ou lance a la vitesse maximale, gaz et moteur a fond. */
     private static void launch(JakVehicleEntity c, double x, double y, double z, float yaw, boolean fullSpeed) {
+        // un essai de physique part d'un vehicule neuf : les chocs des essais d'avant l'abimaient
+        // jusqu'a le detruire, et une epave ne vole plus (cahier §98)
+        c.setHealth(1.0F);
         c.resetFlight();
         c.moveTo(x, y, z, yaw, 0.0F);
         if (fullSpeed) {

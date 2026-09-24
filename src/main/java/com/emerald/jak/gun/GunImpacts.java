@@ -110,6 +110,11 @@ public final class GunImpacts {
      * @return vrai si le coup a porte
      */
     public static boolean hurt(ServerPlayer shooter, @Nullable Entity direct, Entity target, float jakDamage) {
+        // un vehicule de Haven : les memes points, sur sa sante (cahier §98) -- jamais le sien
+        com.emerald.jak.vehicle.JakVehicleEntity car = com.emerald.jak.vehicle.VehicleDamage.vehicleOf(target);
+        if (car != null) {
+            return com.emerald.jak.vehicle.VehicleDamage.shot(car, shooter, jakDamage);
+        }
         if (!isTarget(target) || !(target instanceof LivingEntity living)) {
             return false;
         }
@@ -132,9 +137,9 @@ public final class GunImpacts {
      *
      * @param end    la fin du rayon (point touche, ou portee)
      * @param block  le bloc touche, ou null
-     * @param target la cible touchee (avant le bloc), ou null
+     * @param target la cible touchee (avant le bloc) -- un monstre, ou un vehicule (cahier §98) --, ou null
      */
-    public record Ray(Vec3 end, @Nullable BlockPos block, @Nullable Mob target) {
+    public record Ray(Vec3 end, @Nullable BlockPos block, @Nullable Entity target) {
         public int flag() {
             return this.target != null ? GunTracePayload.TARGET : this.block != null ? GunTracePayload.BLOCK : GunTracePayload.MISS;
         }
@@ -142,19 +147,21 @@ public final class GunImpacts {
 
     /**
      * Un rayon : les blocs d'abord (collision, l'eau ne l'arrete pas), puis la
-     * cible la plus proche sur le segment, boite gonflee de `inflate`.
+     * cible la plus proche sur le segment, boite gonflee de `inflate`. Un vehicule arrete le
+     * rayon comme un monstre (cahier §98), sauf celui ou est le tireur.
      */
     public static Ray ray(ServerLevel level, Entity shooter, Vec3 from, Vec3 direction, double range, float inflate) {
         Vec3 to = from.add(direction.scale(range));
         BlockHitResult block = level.clip(new ClipContext(from, to, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE,
                 shooter));
         Vec3 stop = block.getType() == HitResult.Type.MISS ? to : block.getLocation();
-        Predicate<Entity> filter = GunImpacts::isTarget;
+        Predicate<Entity> filter = e -> isTarget(e) || com.emerald.jak.vehicle.VehicleDamage.shootable(e, shooter);
         EntityHitResult entity = ProjectileUtil.getEntityHitResult(level, shooter, from, stop,
                 new AABB(from, stop).inflate(1.0 + inflate), filter, inflate);
-        if (entity != null && entity.getEntity() instanceof Mob mob) {
-            Vec3 at = mob.getBoundingBox().inflate(inflate).clip(from, stop).orElse(center(mob));
-            return new Ray(at, null, mob);
+        if (entity != null) {
+            Entity hit = entity.getEntity();
+            Vec3 at = hit.getBoundingBox().inflate(inflate).clip(from, stop).orElse(center(hit));
+            return new Ray(at, null, hit);
         }
         if (block.getType() == HitResult.Type.BLOCK) {
             return new Ray(stop, block.getBlockPos(), null);

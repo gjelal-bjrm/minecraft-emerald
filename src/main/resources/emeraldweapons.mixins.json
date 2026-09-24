@@ -6,6 +6,9 @@
   "mixins": [
     "ItemStackMixin"
   ],
+  "client": [
+    "CameraMixin"
+  ],
   "injectors": {
     "defaultRequire": 1
   }

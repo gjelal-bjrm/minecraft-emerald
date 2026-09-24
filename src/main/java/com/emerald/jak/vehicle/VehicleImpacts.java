@@ -331,7 +331,7 @@ public final class VehicleImpacts {
      * tiendrait plus -- c'est la meme raison qu'au Morph Gun (GunImpacts.source). Le
      * credit de la mise a mort, lui, revient bien au conducteur.
      */
-    private static DamageSource source(ServerLevel level, JakVehicleEntity car) {
+    static DamageSource source(ServerLevel level, JakVehicleEntity car) {
         return new DamageSource(level.registryAccess().registryOrThrow(Registries.DAMAGE_TYPE)
                 .getHolderOrThrow(DAMAGE_TYPE), null, null, car.position());
     }
@@ -518,9 +518,10 @@ public final class VehicleImpacts {
         crash(level, car, Math.min(1.0, force));
     }
 
-    /** Le son et les eclats d'un choc, pour tous ceux qui sont pres. */
+    /** Le son et les eclats d'un choc, pour tous ceux qui sont pres ; et ce qu'il abime (VehicleDamage). */
     private static void crash(ServerLevel level, JakVehicleEntity car, double force) {
         crashes++;
+        VehicleDamage.collision(car, force);
         Vec3 at = car.position().add(0.0, car.spec().boxTop * 0.5, 0.0);
         SoundEvent sound = force > 0.5 ? SoundEvents.ANVIL_LAND : SoundEvents.IRON_GOLEM_DAMAGE;
         level.playSound(null, at.x, at.y, at.z, sound, SoundSource.NEUTRAL,

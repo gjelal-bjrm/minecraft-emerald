@@ -79,6 +79,8 @@ public final class VehicleSpec {
      * une boite qui le couvrirait capterait son viseur en permanence.
      */
     public static final double BOX_ABOVE_SEAT = 0.9;
+    /** L'oeil d'un joueur assis, au-dessus de son siege : attache de vehicule a 0,6, oeil a 1,62. */
+    public static final double EYE_ABOVE_SEAT = 1.02;
     /** Les parties de collision le long du vehicule (JakVehicleEntity.PART_COUNT). */
     public static final int PARTS = 3;
 

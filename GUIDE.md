@@ -154,8 +154,29 @@ trois blocs du sol. Les voitures disparaissent au départ vers le village.
   - Un nouvel appui sur Espace la fait redescendre jusqu'au sol.
 - Un rappel s'affiche à l'écran pendant qu'on conduit. En vue à la troisième
   personne, la caméra recule pour montrer toute la voiture.
-- Les voitures sont **indestructibles et solides** : on s'y cogne, et elles
-  écartent ceux qu'elles recouvrent.
+- Les voitures sont **solides** : on s'y cogne, et elles écartent ceux qu'elles
+  recouvrent.
+- **Elles s'abîment, comme dans Jak 3.** Les chocs, les coups et les armes les
+  usent ; leur état se lit à la fumée et dans le rappel du conducteur :
+  **parfait**, **bon**, **moyen** (des bouffées blanches), **mal** (une fumée
+  grise continue, de plus en plus noire, puis le feu et des étincelles),
+  **détruit**. Une voiture tient 24 points de Jak, une moto 15, et un quart de
+  plus quand un joueur conduit. Un mur pris à pleine vitesse en retire 10, un
+  choc plus mou 5 ; un coup de poing 4 (à mains nues seulement, un par
+  demi-seconde) ; un tir, les points de l'arme (Blaster 2, Peace Maker 16…) ; une
+  grenade Plasmite ou la Super Nova détruisent d'un coup. Rien ne répare : une
+  voiture abîmée le reste.
+- **Détruite, elle explose.** Ceux qui sont à bord sautent, la voiture tombe et
+  explose une demi-seconde plus tard. L'explosion blesse ce qui est à moins de
+  7 blocs et demi (5 et demi pour une moto) — un quart de sa vie pour un joueur —,
+  repousse, et abîme les véhicules voisins, qui peuvent exploser à leur tour.
+  L'épave brûle cinq secondes puis disparaît, et la voiture de l'appartement
+  revient **neuve** à sa place.
+- **On tire depuis son siège.** Le Morph Gun marche à bord, au volant comme
+  passager ; vos tirs ne touchent jamais le véhicule où vous êtes.
+- **En première personne**, votre voiture ne penche plus sous vos yeux et la vue
+  passe juste au-dessus du capot : la route se voit. Les autres joueurs la voient
+  toujours pencher.
 - **Les chocs entre véhicules.** Celui qui percute donne son élan à l'autre :
   c'est la masse et la vitesse qui décident, comme dans Jak 3. À égalité (deux
   voitures), le percuté part avec les sept dixièmes de la vitesse d'approche et
@@ -172,7 +193,7 @@ trois blocs du sol. Les voitures disparaissent au départ vers le village.
   pilote.
 - **Les murs se sentent.** Toute vitesse perdue d'un coup — un mur, un véhicule,
   une pile de monstres — fait un fracas de tôle et des éclats, d'autant plus forts
-  que le choc est violent.
+  que le choc est violent, et abîme le véhicule.
 - **L'équilibre, comme dans Jak 3.** Votre poids penche le véhicule : dans un
   virage, il se couche du côté où vous tournez — une vingtaine de degrés pour une
   voiture, une quarantaine pour une moto, plus légère — et se redresse quand vous
@@ -181,8 +202,8 @@ trois blocs du sol. Les voitures disparaissent au départ vers le village.
   pique du nez ; heurté de biais, il **vrille** et repart dans l'angle du rebond.
   Les autres joueurs voient votre véhicule pencher comme vous le voyez.
 - **Le souffle des explosions.** Le Plasmite RPG, le Peace Maker et la Super Nova
-  poussent, soulèvent et font gîter les véhicules proches ; un véhicule du trafic
-  soufflé perd le volant un moment.
+  poussent, soulèvent, font gîter et abîment les véhicules proches ; un véhicule du
+  trafic soufflé perd le volant un moment.
 - **Vous êtes plus rapide qu'eux.** Votre véhicule monte à 40 m/s ; le trafic de la
   ville croise entre 15 et 19 m/s, comme dans Jak 3. Vous doublez donc tout le
   monde — et à pleine vitesse, c'est vous qui avez l'avantage dans un choc.
@@ -206,9 +227,9 @@ zone de survol exactement comme une voiture (mêmes touches, Espace compris), à
 - Elle plane à environ trois blocs du sol, et s'abaisse à deux blocs et demi
   quand on la pilote, comme dans Jak 3. Elle prend la même voie haute que les
   voitures. Pas de saut : celui des motos de Jak 3 n'est pas repris.
-- Comme les voitures, les motos sont indestructibles et solides, reviennent sur
-  leur place si elles tombent à l'eau ou sortent de la ville, et disparaissent
-  au départ vers le village.
+- Comme les voitures, les motos sont solides, s'abîment et explosent (15 points de
+  Jak), reviennent sur leur place si elles tombent à l'eau ou sortent de la ville,
+  et disparaissent au départ vers le village.
 
 ### L'invasion
 
@@ -901,7 +922,7 @@ Sur un serveur d'essai (`run-server`), chacun écrit son rapport puis arrête le
 - `EMERALDWEAPONS_AUTOTEST=vote ./gradlew runServer` : appartements et vote, rapport `run-server/vote_autotest.txt` ;
 - `EMERALDWEAPONS_AUTOTEST=salles ./gradlew runServer` : relevé et rejeu des salles, rapport `run-server/salles_autotest.txt` ;
 - `EMERALDWEAPONS_AUTOTEST=atelier ./gradlew runServer` : l'atelier et le relevé de la ville entière (ville nue relevée vide, retouches — dont une petite porte de Jak 3 — relevées puis rejouées par deux poses), rapport `run-server/atelier_autotest.txt` ;
-- `EMERALDWEAPONS_AUTOTEST=vehicules ./gradlew runServer` : voitures et motos, rapport `run-server/vehicules_autotest.txt` ;
+- `EMERALDWEAPONS_AUTOTEST=vehicules ./gradlew runServer` : voitures et motos (dont leurs dégâts, leur destruction et leur explosion), rapport `run-server/vehicules_autotest.txt` ;
 - `EMERALDWEAPONS_AUTOTEST=invasion ./gradlew runServer` : invasion, décor destructible, bouton du QG et MSPT, rapport `run-server/invasion_autotest.txt` ;
 - `EMERALDWEAPONS_AUTOTEST=armes ./gradlew runServer` : Morph Gun (poses, confinement, tir des douze armes, munitions, décor, MSPT avec quatre tireurs), rapport `run-server/armes_autotest.txt` ;
 - `EMERALDWEAPONS_AUTOTEST=parcours ./gradlew runServer` : le parcours (fiche sur disque, arme qui suit les formes du joueur, ville paisible, bouton verrouillé, titre et objectifs du guide ; puis le lot 2 : râtelier du QG, deuxième arrivée envahie, reprise des rues, retour après la défaite, porte de la victoire ; puis les transports : les huit stations, l'arche et sa recharge, le portail des tours ; puis l'agenda, l'équipe attendue au QG et la réunion), rapport `run-server/parcours_autotest.txt` ;
@@ -930,7 +951,11 @@ d'objectif (ces deux-là gardent l'interface, les autres la masquent).
 La vitrine (`nom@vitrine:face`, `biais`, `proche0`...) montre les blocs de
 `EMERALDWEAPONS_PHOTOS_VITRINE` sur une estrade dans le ciel ; pour de grands objets,
 `EMERALDWEAPONS_PHOTOS_VITRINE_PAS` (écart), `_RECUL` et `_HAUTEUR` ; `nom@vitrine:face@18000` la
-prend de nuit. Toujours une `EMERALDWEAPONS_PHOTOS_ORIGINE` neuve (le monde garde les estrades
+prend de nuit. Un véhicule, le joueur au volant : `nom@vehicule:carc/conducteur` (la vue du
+conducteur), `/dos` (la caméra de derrière), `_nuit` à la fin pour minuit, `/dos_explosion` (une
+voiture posée devant explose au début d'une rafale) ; la hauteur de prise est la santé en
+centièmes (`nom@vehicule:cara/dos@40` : l'état « mal » et sa fumée).
+Toujours une `EMERALDWEAPONS_PHOTOS_ORIGINE` neuve (le monde garde les estrades
 d'avant), et une première prise de rodage : juste après le téléport, le terrain n'est pas encore là.
 Pour photographier des animaux ou des blocs, un datapack jetable dans `run/saves/photos/datapacks/`
 peut les poser devant la caméra : l'automate place le joueur 200 tiques après son arrivée, une

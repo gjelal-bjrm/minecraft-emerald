@@ -150,6 +150,18 @@ public class GunShockwaveEntity extends Entity {
     private void strike(ServerLevel level, ServerPlayer shooter, double inner, double outer) {
         Vec3 center = this.position();
         AABB box = new AABB(center, center).inflate(outer + 1.0, GunSpec.WAVE_HEIGHT + 2.0, outer + 1.0);
+        // les vehicules dans l'anneau : huit points a pleine charge, une fois chacun (cahier §98)
+        for (com.emerald.jak.vehicle.JakVehicleEntity car : level.getEntitiesOfClass(com.emerald.jak.vehicle.JakVehicleEntity.class,
+                box.inflate(com.emerald.jak.vehicle.VehicleImpacts.SEARCH), c -> com.emerald.jak.vehicle.VehicleDamage.shootable(c, shooter))) {
+            double flat = Math.hypot(car.getX() - center.x, car.getZ() - center.z);
+            double half = car.spec().boxSide * 0.5;
+            if (this.struck.contains(car.getId()) || flat - half > outer || (flat + half <= inner && inner > 0.0)
+                    || Math.abs(car.getY() - center.y) > GunSpec.WAVE_HEIGHT + 2.0) {
+                continue;
+            }
+            this.struck.add(car.getId());
+            com.emerald.jak.vehicle.VehicleDamage.shot(car, shooter, com.emerald.jak.vehicle.VehicleDamage.WAVE * (float) this.intensityAt(Math.max(0.0, flat - half)));
+        }
         for (Mob mob : level.getEntitiesOfClass(Mob.class, box, GunImpacts::isTarget)) {
             if (this.struck.contains(mob.getId())) {
                 continue;

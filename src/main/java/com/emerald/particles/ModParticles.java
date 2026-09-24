@@ -175,4 +175,12 @@ public class ModParticles {
 
     public static final DeferredHolder<ParticleType<?>, SimpleParticleType> JAK_VEHICLE_SPARK =
             PARTICLES.register("jak_vehicle_spark", () -> new SimpleParticleType(true));
+
+    // La fumee et le feu d'un vehicule abime (cahier §98, VehicleDamageClient) : les volutes
+    // du feu de camp du jeu, teintees par la sante du vehicule.
+
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> JAK_VEHICLE_SMOKE =
+            PARTICLES.register("jak_vehicle_smoke", () -> new SimpleParticleType(false));
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> JAK_VEHICLE_FIRE =
+            PARTICLES.register("jak_vehicle_fire", () -> new SimpleParticleType(false));
 }

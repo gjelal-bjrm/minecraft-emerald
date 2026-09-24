@@ -255,7 +255,10 @@ public class GunGrenadeEntity extends Projectile {
         AABB path = new AABB(from, to).inflate(GunSpec.PLASMITE_TOUCH + 0.5);
         Vec3 best = null;
         double bestDistance = Double.MAX_VALUE;
-        for (Entity entity : level.getEntities(this, path.inflate(VehicleImpacts.SEARCH), GunGrenadeEntity::someone)) {
+        // jamais le vehicule du lanceur : il tire de son siege (cahier §98)
+        Entity thrower = this.getOwner();
+        for (Entity entity : level.getEntities(this, path.inflate(VehicleImpacts.SEARCH),
+                e -> someone(e) && (thrower == null || thrower.getRootVehicle() != e))) {
             List<AABB> boxes = entity instanceof JakVehicleEntity car ? car.collisionBoxes() : List.of(entity.getBoundingBox());
             for (AABB box : boxes) {
                 AABB grown = box.inflate(GunSpec.PLASMITE_TOUCH);
@@ -284,6 +287,7 @@ public class GunGrenadeEntity extends Projectile {
             GunImpacts.hurt(owner, this, mob, GunSpec.PLASMITE_DAMAGE);
         }
         VehicleImpacts.blast(level, at, VehicleImpacts.BLAST_PLASMITE_RADIUS, VehicleImpacts.BLAST_PLASMITE);
+        com.emerald.jak.vehicle.VehicleDamage.explosion(level, at, VehicleImpacts.BLAST_PLASMITE_RADIUS, com.emerald.jak.vehicle.VehicleDamage.PLASMITE, owner);
         level.sendParticles(ModParticles.GUN_PLASMITE_BLAST.get(), at.x, at.y, at.z, 1, 0.0, 0.0, 0.0, 0.0);
         level.sendParticles(ModParticles.GUN_PLASMITE_TRAIL.get(), at.x, at.y, at.z, 60, 1.2, 1.2, 1.2, 0.45);
         level.playSound(null, at.x, at.y, at.z, SoundEvents.GENERIC_EXPLODE.value(), SoundSource.PLAYERS, 1.6F, 0.7F);

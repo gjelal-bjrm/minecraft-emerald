@@ -202,7 +202,19 @@ public final class GunReflexor {
                     shot.shooter));
             Vec3 stop = block.getType() == HitResult.Type.MISS ? to : block.getLocation();
             EntityHitResult hit = ProjectileUtil.getEntityHitResult(level, shot.shooter, from, stop,
-                    new AABB(from, stop).inflate(1.5), e -> GunImpacts.isTarget(e) && !shot.ignored.containsKey(e.getId()), 0.3F);
+                    new AABB(from, stop).inflate(1.5), e -> (GunImpacts.isTarget(e)
+                            || com.emerald.jak.vehicle.VehicleDamage.shootable(e, shot.shooter)) && !shot.ignored.containsKey(e.getId()), 0.3F);
+            com.emerald.jak.vehicle.JakVehicleEntity car = hit != null ? com.emerald.jak.vehicle.VehicleDamage.vehicleOf(hit.getEntity()) : null;
+            if (car != null) {
+                // un vehicule arrete le rayon, et en prend les points (cahier §98)
+                Vec3 at = hit.getEntity().getBoundingBox().inflate(0.3).clip(from, stop).orElse(hit.getLocation());
+                shot.position = at;
+                points.add(point(at, GunTracePayload.TARGET));
+                com.emerald.jak.vehicle.VehicleDamage.shot(car, shot.shooter, GunSpec.REFLEXOR_DAMAGE);
+                GunFire.sparks(level, at, GunFire.Sparks.REFLEXOR);
+                shot.dead = true;
+                break;
+            }
             if (hit != null && hit.getEntity() instanceof Mob mob) {
                 Vec3 at = mob.getBoundingBox().inflate(0.3).clip(from, stop).orElse(GunImpacts.center(mob));
                 remaining -= at.distanceTo(from);

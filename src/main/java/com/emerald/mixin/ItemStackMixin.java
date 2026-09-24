@@ -14,7 +14,7 @@ import javax.annotation.Nullable;
 import java.util.function.Consumer;
 
 /**
- * Le seul greffon du mod (cahier §96) : un equipement s'use sans jamais se casser. NeoForge laisse
+ * Le premier greffon du mod (cahier §96) : un equipement s'use sans jamais se casser. NeoForge laisse
  * un objet du mode ajuster son usure (damageItem), mais aucun evenement ne retient une piece du jeu
  * ou du modpack qui se casse ; GearWear refait donc le chemin d'ItemStack.hurtAndBreak pour les
  * equipements, sans la derniere marche.

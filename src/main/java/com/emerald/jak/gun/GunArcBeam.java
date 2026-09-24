@@ -129,11 +129,16 @@ final class GunArcBeam {
         return best;
     }
 
-    private static boolean strike(ServerPlayer shooter, Mob mob, Map<Integer, Long> gate, long now) {
-        if (gate.containsKey(mob.getId())) {
+    /** Une accroche : un monstre, ou un vehicule -- cinq points du jeu, une fois par vehicule (cahier §98). */
+    private static boolean strike(ServerPlayer shooter, net.minecraft.world.entity.Entity target, Map<Integer, Long> gate,
+                                  long now) {
+        com.emerald.jak.vehicle.JakVehicleEntity car = com.emerald.jak.vehicle.VehicleDamage.vehicleOf(target);
+        int key = car != null ? car.getId() : target.getId();
+        if (gate.containsKey(key)) {
             return false;
         }
-        gate.put(mob.getId(), now + GunSpec.ARC_HIT_TICKS);
-        return GunImpacts.hurt(shooter, null, mob, GunSpec.ARC_DAMAGE);
+        gate.put(key, now + GunSpec.ARC_HIT_TICKS);
+        return car != null ? com.emerald.jak.vehicle.VehicleDamage.shot(car, shooter, com.emerald.jak.vehicle.VehicleDamage.ARC)
+                : GunImpacts.hurt(shooter, null, target, GunSpec.ARC_DAMAGE);
     }
 }

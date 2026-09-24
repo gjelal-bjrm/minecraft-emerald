@@ -43,8 +43,8 @@ public final class HavenGear {
     private HavenGear() {
     }
 
-    /** Un coup de la main nue : au corps a corps, sans arme ni outil en main. */
-    private static boolean fist(DamageSource source) {
+    /** Un coup de la main nue : au corps a corps, sans arme ni outil en main (aussi sur un vehicule, VehicleDamage). */
+    public static boolean fist(DamageSource source) {
         return source.is(DamageTypes.PLAYER_ATTACK) && source.getDirectEntity() instanceof Player player
                 && !player.getMainHandItem().isDamageableItem();
     }

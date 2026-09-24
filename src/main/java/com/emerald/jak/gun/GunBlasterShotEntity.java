@@ -129,7 +129,8 @@ public class GunBlasterShotEntity extends Projectile {
             return;
         }
         EntityHitResult hit = ProjectileUtil.getEntityHitResult(server, this, from, stop,
-                this.getBoundingBox().expandTowards(motion).inflate(1.0), GunImpacts::isTarget, 0.3F);
+                this.getBoundingBox().expandTowards(motion).inflate(1.0),
+                e -> GunImpacts.isTarget(e) || com.emerald.jak.vehicle.VehicleDamage.shootable(e, owner), 0.3F);
         if (hit != null) {
             Vec3 at = hit.getEntity().getBoundingBox().inflate(0.3).clip(from, stop).orElse(hit.getLocation());
             GunImpacts.hurt(owner, this, hit.getEntity(), GunSpec.BLASTER_DAMAGE);

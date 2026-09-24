@@ -232,6 +232,9 @@ public class GunPeaceBallEntity extends Projectile {
         // les vehicules proches sont souffles et desequilibres
         com.emerald.jak.vehicle.VehicleImpacts.blast(level, at, com.emerald.jak.vehicle.VehicleImpacts.BLAST_PEACE_RADIUS,
                 com.emerald.jak.vehicle.VehicleImpacts.BLAST_PEACE);
+        // et abimes : seize points, ceux du jeu (cahier §98)
+        com.emerald.jak.vehicle.VehicleDamage.explosion(level, at, com.emerald.jak.vehicle.VehicleImpacts.BLAST_PEACE_RADIUS,
+                GunSpec.PEACE_DAMAGE, owner);
         level.sendParticles(ModParticles.GUN_PEACE_BLAST.get(), at.x, at.y, at.z, 1, 0.0, 0.0, 0.0, 0.0);
         level.sendParticles(ModParticles.GUN_PEACE_MOTE.get(), at.x, at.y, at.z, 36, 0.6, 0.6, 0.6, 0.3);
         level.playSound(null, at.x, at.y, at.z, SoundEvents.GENERIC_EXPLODE.value(), SoundSource.PLAYERS, 1.0F, 1.6F);

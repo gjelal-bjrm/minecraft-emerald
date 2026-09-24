@@ -24,6 +24,13 @@ import net.minecraft.resources.ResourceLocation;
  * dans le glb (alphaMode MASK, doubleSided) : entityCutoutNoCull. Un triangle
  * marque BLEND passerait en entityTranslucent ; aucun des six vehicules n'en a
  * (mesure, tools/jak_vehicle.py).
+ *
+ * EN PREMIERE PERSONNE, A BORD D'UNE VOITURE, ELLE EST DESSINEE DE NIVEAU (cahier §98, le
+ * joueur : « dans les gros vehicules, le capot bouche la vue »). La camera ne penche pas avec
+ * la voiture : penchee vers le poids du conducteur, la coque de cara lui montait devant les
+ * yeux (premieres photos). De niveau, la camera n'a plus qu'a monter un peu, la ou le capot
+ * cache encore la route (JakVehicleClient.cockpit). Les autres joueurs, la troisieme personne
+ * et les motos voient toujours la voiture pencher.
  */
 public class JakVehicleRenderer extends EntityRenderer<JakVehicleEntity> {
 
@@ -51,11 +58,16 @@ public class JakVehicleRenderer extends EntityRenderer<JakVehicleEntity> {
             // positif, passe donc en -a. ZP leve la gauche (+x) : un roulis negatif (virage
             // a gauche) abaisse la gauche du modele.
             poseStack.pushPose();
-            PivotTilt.apply(poseStack, entity.spec().balance.cmZ(), entity.pitch(partialTick), entity.roll(partialTick));
+            if (!JakVehicleClient.inCockpit(entity)) {
+                PivotTilt.apply(poseStack, entity.spec().balance.cmZ(), entity.pitch(partialTick),
+                        entity.roll(partialTick));
+            }
             PoseStack.Pose pose = poseStack.last();
-            emit(model, pose, buffers.getBuffer(RenderType.entityCutoutNoCull(ATLAS)), packedLight, false);
+            // l'epave est noircie au quart de ses couleurs (hvehicle.gc:1172), comme dans le jeu
+            boolean wreck = entity.wrecked();
+            emit(model, pose, buffers.getBuffer(RenderType.entityCutoutNoCull(ATLAS)), packedLight, false, wreck);
             if (model.hasBlend) {
-                emit(model, pose, buffers.getBuffer(RenderType.entityTranslucent(ATLAS)), packedLight, true);
+                emit(model, pose, buffers.getBuffer(RenderType.entityTranslucent(ATLAS)), packedLight, true, wreck);
             }
             poseStack.popPose();
             poseStack.popPose();
@@ -64,7 +76,7 @@ public class JakVehicleRenderer extends EntityRenderer<JakVehicleEntity> {
     }
 
     private static void emit(JakVehicleModel model, PoseStack.Pose pose, VertexConsumer out,
-                             int light, boolean blend) {
+                             int light, boolean blend, boolean wreck) {
         float[] p = model.positions;
         float[] uv = model.uvs;
         float[] n = model.normals;
@@ -78,13 +90,18 @@ public class JakVehicleRenderer extends EntityRenderer<JakVehicleEntity> {
                 int i3 = s * 3;
                 int i2 = s * 2;
                 out.addVertex(pose, p[i3], p[i3 + 1], p[i3 + 2])
-                        .setColor(color[s])
+                        .setColor(wreck ? darken(color[s]) : color[s])
                         .setUv(uv[i2], uv[i2 + 1])
                         .setOverlay(OverlayTexture.NO_OVERLAY)
                         .setLight(light)
                         .setNormal(pose, n[i3], n[i3 + 1], n[i3 + 2]);
             }
         }
+    }
+
+    /** Une couleur ARGB au quart de sa lumiere, opacite gardee. */
+    private static int darken(int argb) {
+        return (argb & 0xFF000000) | (((argb >> 16) & 0xFF) / 4 << 16) | (((argb >> 8) & 0xFF) / 4 << 8) | ((argb & 0xFF) / 4);
     }
 
     /** L'inclinaison d'un vehicule autour de son centre de masse, repere deja tourne du lacet. */

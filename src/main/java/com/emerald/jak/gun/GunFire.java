@@ -262,7 +262,8 @@ public final class GunFire {
         if (!MorphGunKeeper.isGun(stack) || MorphGunData.of(stack) == null) {
             return Refusal.NO_GUN;
         }
-        if (player.isPassenger()) {
+        // au volant ou a bord d'un vehicule de Haven, on tire (cahier §98) ; sur tout le reste, non
+        if (player.isPassenger() && !(player.getVehicle() instanceof com.emerald.jak.vehicle.JakVehicleEntity)) {
             return Refusal.VEHICLE;
         }
         return MorphGunKeeper.inMenu(player) ? Refusal.MENU : Refusal.NONE;

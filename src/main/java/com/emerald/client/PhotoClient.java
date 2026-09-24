@@ -28,6 +28,8 @@ public final class PhotoClient {
     /** La rafale en cours : l'image suivante (-1 : aucune), et les tiques ecoulees. */
     private static int burst = -1;
     private static int burstTicks;
+    /** La derniere rafale finie : elle ne repart pas. */
+    private static String burstDone;
     private static final int BURST_FRAMES = 30;
     private static final int BURST_STEP = 2;
 
@@ -118,6 +120,7 @@ public final class PhotoClient {
                         mc.getMainRenderTarget(), message -> { });
                 if (++burst >= BURST_FRAMES) {
                     burst = -1;
+                    burstDone = wanted;
                     PhotoAutomaton.taken(wanted);
                 }
             }
@@ -126,8 +129,14 @@ public final class PhotoClient {
         if (PhotoAutomaton.readyToShoot() || screenTicks >= 20) {
             screenTicks = 0;
             if (wanted.endsWith("_rafale")) {
+                if (wanted.equals(burstDone)) {
+                    // la rafale est finie, le serveur n'a pas encore passe a la prise suivante : sans
+                    // cette garde, une seconde rafale partait et prenait le nom de la suivante
+                    return;
+                }
                 burst = 0;
                 burstTicks = BURST_STEP - 1;
+                PhotoAutomaton.burstStarted();
                 return;
             }
             Screenshot.grab(mc.gameDirectory, wanted + ".png", mc.getMainRenderTarget(), message -> { });

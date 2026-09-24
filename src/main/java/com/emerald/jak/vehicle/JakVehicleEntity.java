@@ -90,6 +90,7 @@ public class JakVehicleEntity extends Entity {
     private static final String TAG_ROOM = "Appartement";
     private static final String TAG_MODE = "Zone";
     private static final String TAG_TRAFFIC = "Trafic";
+    private static final String TAG_HEALTH = "Sante";
 
     private static final int EMPTY = -1;
 
@@ -114,6 +115,12 @@ public class JakVehicleEntity extends Entity {
             SynchedEntityData.defineId(JakVehicleEntity.class, EntityDataSerializers.FLOAT);
     private static final EntityDataAccessor<Float> DATA_ROLL =
             SynchedEntityData.defineId(JakVehicleEntity.class, EntityDataSerializers.FLOAT);
+    /** La sante, de 1 (neuf) a 0 et au-dessous (detruit) : VehicleDamage. */
+    private static final EntityDataAccessor<Float> DATA_HEALTH =
+            SynchedEntityData.defineId(JakVehicleEntity.class, EntityDataSerializers.FLOAT);
+    /** L'explosion a eu lieu : ce n'est plus qu'une epave, noircie. */
+    private static final EntityDataAccessor<Boolean> DATA_WRECKED =
+            SynchedEntityData.defineId(JakVehicleEntity.class, EntityDataSerializers.BOOLEAN);
     /** Ecart d'equilibre, en radians, sous lequel on ne republie pas (0,1 degre). */
     private static final float ATTITUDE_EPSILON = 0.0017F;
 
@@ -160,7 +167,9 @@ public class JakVehicleEntity extends Entity {
      */
     private double lastFlatSpeed;
     /** Tique du dernier choc annonce par le client du conducteur, cote serveur (VehicleImpacts.reported). */
-    private long lastReportedCrash = Long.MIN_VALUE;
+    // loin dans le passe, SANS DEBORDER : maintenant - Long.MIN_VALUE deborde en negatif, et le
+    // premier choc annonce -- donc tous, puisqu'aucun n'etait note -- etait refuse (cahier §98)
+    private long lastReportedCrash = Long.MIN_VALUE / 2;
     /** Tiques d'etourdissement apres un choc : le trafic ne pilote plus, il derive. */
     private int stun;
     /** La vitesse du debut de la tique : celle que l'autre lit dans un choc (VehicleImpacts). */
@@ -169,6 +178,16 @@ public class JakVehicleEntity extends Entity {
     private long impactHandled = Long.MIN_VALUE;
     /** Le siege que vient de quitter le passager en train de descendre. */
     private int leavingSeat = EMPTY;
+    /** Tiques depuis la destruction, -1 intact ; l'explosion a la tique explodeTick. Serveur. */
+    private int wreckClock = -1;
+    private int explodeTick;
+    /** Tique du dernier coup de poing qui a compte (VehicleDamage.punch). Serveur. */
+    private long lastPunch = Long.MIN_VALUE / 2;
+    /** L'epave tourne en l'air : son equilibre et ce qu'il gagne par tique, en radians. Serveur. */
+    private float wreckPitch;
+    private float wreckRoll;
+    private float spinPitch;
+    private float spinRoll;
 
     /**
      * La cle de la place d'appartement dont c'est le vehicule (HavenCars.Place.key :
@@ -224,6 +243,73 @@ public class JakVehicleEntity extends Entity {
     }
 
     // ------------------------------------------------------------- donnees
+
+    /** La sante : 1 neuf, 0 et au-dessous detruit (VehicleDamage). */
+    public float health() {
+        return this.entityData.get(DATA_HEALTH);
+    }
+
+    public void setHealth(float health) {
+        this.entityData.set(DATA_HEALTH, health);
+    }
+
+    public VehicleDamage.State state() {
+        return VehicleDamage.State.of(this.health());
+    }
+
+    /** L'explosion a eu lieu. */
+    public boolean wrecked() {
+        return this.entityData.get(DATA_WRECKED);
+    }
+
+    void setWrecked() {
+        this.entityData.set(DATA_WRECKED, true);
+    }
+
+    /** La destruction commence ; l'explosion dans tant de tiques. */
+    void startWreck(int ticksToExplosion) {
+        this.wreckClock = 0;
+        this.explodeTick = ticksToExplosion;
+        this.wreckPitch = this.entityData.get(DATA_PITCH);
+        this.wreckRoll = this.entityData.get(DATA_ROLL);
+    }
+
+    /** Une tique de plus depuis la destruction ; rend le compte. */
+    int advanceWreck() {
+        return ++this.wreckClock;
+    }
+
+    int explodeTick() {
+        return this.explodeTick;
+    }
+
+    long lastPunch() {
+        return this.lastPunch;
+    }
+
+    void setLastPunch(long tick) {
+        this.lastPunch = tick;
+    }
+
+    void startSpin(float pitchPerTick, float rollPerTick) {
+        this.spinPitch = pitchPerTick;
+        this.spinRoll = rollPerTick;
+    }
+
+    void stopSpin() {
+        this.spinPitch = 0.0F;
+        this.spinRoll = 0.0F;
+    }
+
+    /** L'epave tourne : son equilibre publie avance d'un pas. */
+    void spinWreck() {
+        if (this.spinPitch != 0.0F || this.spinRoll != 0.0F) {
+            this.wreckPitch += this.spinPitch;
+            this.wreckRoll += this.spinRoll;
+            this.entityData.set(DATA_PITCH, this.wreckPitch);
+            this.entityData.set(DATA_ROLL, this.wreckRoll);
+        }
+    }
 
     public String model() {
         return this.entityData.get(DATA_MODEL);
@@ -463,6 +549,8 @@ public class JakVehicleEntity extends Entity {
         }
         builder.define(DATA_PITCH, 0.0F);
         builder.define(DATA_ROLL, 0.0F);
+        builder.define(DATA_HEALTH, 1.0F);
+        builder.define(DATA_WRECKED, false);
     }
 
     @Override
@@ -492,6 +580,13 @@ public class JakVehicleEntity extends Entity {
         if (this.traffic != null) {
             this.setMode(VehicleDynamics.MODE_HAUT);      // le trafic roule en voie haute, et ne redescend pas
         }
+        this.entityData.set(DATA_HEALTH, tag.contains(TAG_HEALTH, Tag.TAG_FLOAT) ? tag.getFloat(TAG_HEALTH) : 1.0F);
+        if (this.health() <= 0.0F) {
+            // une epave sauvegardee avant de disparaitre : elle ne rexplose pas, elle finit de fumer
+            this.wreckClock = 0;
+            this.explodeTick = 0;
+            this.entityData.set(DATA_WRECKED, true);
+        }
     }
 
     @Override
@@ -504,6 +599,7 @@ public class JakVehicleEntity extends Entity {
         if (this.traffic != null) {
             tag.put(TAG_TRAFFIC, this.traffic.save());
         }
+        tag.putFloat(TAG_HEALTH, this.health());
     }
 
     // ------------------------------------------------------------- boites
@@ -609,17 +705,21 @@ public class JakVehicleEntity extends Entity {
                 this.getX() + CULL_RADIUS, this.getY() + CULL_ABOVE, this.getZ() + CULL_RADIUS);
     }
 
-    // ------------------------------------------------------------- solide et indestructible
+    // ------------------------------------------------------------- solide, et destructible
 
-    /** Indestructible : les coups ne font rien (un /kill la retire toujours). */
+    /**
+     * Les coups (cahier §98) : seul le poing d'un joueur passe par ici, pour quatre points de Jak
+     * (VehicleDamage.punch) ; les chocs et les armes ont leurs propres chemins. Le reste -- le
+     * feu, la lave, les explosions du jeu -- ne fait rien (un /kill la retire toujours).
+     */
     @Override
     public boolean hurt(DamageSource source, float amount) {
-        return false;
+        return !this.level().isClientSide && VehicleDamage.punch(this, source);
     }
 
     @Override
     public boolean skipAttackInteraction(Entity attacker) {
-        return true;
+        return this.health() <= 0.0F;
     }
 
     /** Visable : c'est ce qui permet le clic droit, et F3 la nomme. */
@@ -722,6 +822,9 @@ public class JakVehicleEntity extends Entity {
     protected boolean canAddPassenger(Entity passenger) {
         if (this.traffic != null && passenger instanceof Player) {
             return false;                 // on ne monte pas dans le trafic (pas de detournement, pour l'instant)
+        }
+        if (this.health() <= 0.0F) {
+            return false;                 // ni dans une epave
         }
         return !this.isRemoved() && this.getPassengers().size() < Math.min(SEATS.size(), this.spec().seatCount());
     }
@@ -928,6 +1031,18 @@ public class JakVehicleEntity extends Entity {
             }
         }
         this.tickLerp();
+        if (this.health() <= 0.0F) {
+            // DETRUIT (VehicleDamage) : ni pilote ni propulseurs ; le serveur fait tomber l'epave,
+            // les clients la suivent, la font fumer et la noircissent
+            if (client) {
+                this.syncParts();
+                this.updateAttitudeView(false);
+                VehicleDamageClient.effects(this);
+            } else {
+                VehicleDamage.wreckTick(this);
+            }
+            return;
+        }
         boolean simulating = this.traffic != null ? !client : this.isControlledByLocalInstance();
         boolean resumed = simulating && !this.simulatedHere;
         if (simulating && !this.simulatedHere) {
@@ -976,6 +1091,7 @@ public class JakVehicleEntity extends Entity {
         if (client) {
             this.updateLean();
             this.updateAttitudeView(simulating);
+            VehicleDamageClient.effects(this);
         } else {
             this.serverX = this.getX();
             this.serverY = this.getY();

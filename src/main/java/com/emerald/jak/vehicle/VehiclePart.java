@@ -97,14 +97,17 @@ public class VehiclePart extends PartEntity<JakVehicleEntity> {
         return false;
     }
 
+    /** Un coup sur une partie est un coup sur la voiture (motif du dragon de l'End). */
     @Override
     public boolean hurt(DamageSource source, float amount) {
-        return false;
+        JakVehicleEntity parent = this.parentOrNull();
+        return parent != null && parent.hurt(source, amount);
     }
 
     @Override
     public boolean skipAttackInteraction(Entity attacker) {
-        return true;
+        JakVehicleEntity parent = this.parentOrNull();
+        return parent == null || parent.skipAttackInteraction(attacker);
     }
 
     /** Le clic droit sur une partie est un clic sur la voiture. */

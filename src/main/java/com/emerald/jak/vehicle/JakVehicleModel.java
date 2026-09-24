@@ -18,6 +18,10 @@ import java.nio.charset.StandardCharsets;
 public final class JakVehicleModel {
 
     public static final int FLAG_BLEND = 1;
+    /** Ce qui est devant un siege : a plus de tant de blocs devant lui... */
+    private static final float AHEAD_FROM = 0.3F;
+    /** ... et a moins de tant de cote. */
+    private static final float AHEAD_HALF_WIDTH = 1.3F;
 
     private static final int MAGIC = 'J' | ('K' << 8) | ('V' << 16) | ('H' << 24);
     private static final int VERSION = 1;
@@ -121,6 +125,22 @@ public final class JakVehicleModel {
             }
         }
         this.hasBlend = blend;
+    }
+
+    /**
+     * L'oeil qu'il faut au-dessus d'un siege, repere du modele, pour que toute la carrosserie
+     * devant lui reste sous le regard d'au moins l'angle dont c'est la tangente : un point a d
+     * blocs devant et a y de haut veut un oeil a y + d x tangente. Moins l'infini s'il n'y a rien.
+     */
+    public float eyeClearing(double seatX, double seatZ, double tangent) {
+        float eye = Float.NEGATIVE_INFINITY;
+        for (int i = 0; i < this.positions.length; i += 3) {
+            double ahead = this.positions[i + 2] - seatZ;
+            if (ahead > AHEAD_FROM && Math.abs(this.positions[i] - seatX) < AHEAD_HALF_WIDTH) {
+                eye = Math.max(eye, (float) (this.positions[i + 1] + ahead * tangent));
+            }
+        }
+        return eye;
     }
 
     public static JakVehicleModel parse(byte[] bytes) throws IOException {

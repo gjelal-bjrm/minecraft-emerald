@@ -63,6 +63,9 @@ import java.util.UUID;
  * LES PLACES RESTENT CHARGEES par un ticket, comme le prevoit P11 : sans lui,
  * on ne pourrait jamais conclure qu'un vehicule manque.
  *
+ * DETRUIT (cahier §98), un vehicule explose et son epave disparait : la place en
+ * pose un neuf, a la verification suivante.
+ *
  * REMIS SUR LEUR PLACE quand ils tombent a l'eau ou sortent de la boite de la
  * ville, et dans ces deux cas seulement, comme le joueur l'a decide :
  * l'etourderie d'un joueur ne doit pas priver son groupe de vehicule. Un
@@ -306,6 +309,10 @@ public final class HavenCars {
             return;
         }
         registry.updateChunk(place.key(), car.chunkPosition().toLong());
+        if (car.health() <= 0.0F) {
+            // une epave finit de bruler ou elle est ; quand elle disparait, une neuve est posee ici
+            return;
+        }
         // les deux seuls cas de retour decides par le joueur : dans l'eau, ou hors de la ville
         boolean outside = !inside(state, car);
         boolean wet = car.isInWater();
