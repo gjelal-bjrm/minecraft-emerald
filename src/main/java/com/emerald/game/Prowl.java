@@ -145,6 +145,10 @@ public final class Prowl {
         if (battue) {
             want *= 3;
         }
+        // PENDANT L'ECLIPSE, LA TRAQUE SE TAIT : seules les horreurs des portails rodent.
+        if (com.emerald.weather.WeatherManager.current() == com.emerald.weather.Weather.ECLIPSE) {
+            want = 0;
+        }
         if (want <= 0) {
             return;
         }

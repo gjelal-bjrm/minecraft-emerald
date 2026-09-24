@@ -282,6 +282,7 @@ public final class WeatherEffects {
      * ces listes suivaient dans le monde suivant.
      */
     public static void clearAll() {
+        Eclipse.clearAll();
         meteors.clear();
         strikes.clear();
         waves.clear();
@@ -322,6 +323,9 @@ public final class WeatherEffects {
         if (weather == Weather.DECHIRURE) {
             spawnShards(level);
         }
+        if (weather == Weather.ECLIPSE) {
+            Eclipse.begin(level);
+        }
         if (weather == Weather.METEORES) {
             // jamais de secousse dans les dix premieres secondes
             nextQuake = level.getGameTime() + 200 + level.random.nextInt(300);
@@ -351,6 +355,7 @@ public final class WeatherEffects {
                 surcharged.clear();
             }
             case NUIT -> waves.clear();     // les cicatrices restent minables jusqu'a expiration
+            case ECLIPSE -> Eclipse.end(level);
             default -> {
             }
         }
@@ -366,6 +371,7 @@ public final class WeatherEffects {
             case METEORES -> tickMeteores(level);
             case DECHIRURE -> tickDechirure(level);
             case ORAGE -> tickOrage(level);
+            case ECLIPSE -> Eclipse.tick(level);
             default -> {
             }
         }
@@ -416,7 +422,8 @@ public final class WeatherEffects {
      * pour qu'elle echappe aux regles de lumiere, plafonnee par joueur.
      */
     private static void stormPressure(ServerLevel level, Weather weather) {
-        if (!weather.aggressive || level.getGameTime() % 40 != 0) {
+        // l'Eclipse n'a que ses portails : pas un monstre ordinaire ne vient s'y meler
+        if (!weather.aggressive || weather == Weather.ECLIPSE || level.getGameTime() % 40 != 0) {
             return;
         }
         int tier = switch (GameState.get(level).phase(level)) {

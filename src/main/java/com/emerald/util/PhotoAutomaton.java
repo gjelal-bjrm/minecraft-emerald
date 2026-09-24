@@ -70,6 +70,12 @@ import java.util.Objects;
  * Doree se leve pour de vrai (GoldenGate), et la camera cadre l'arche du village, l'atelier
  * derriere elle -- pour voir OU elle se pose, et non plus seulement a quoi elle ressemble.
  *
+ * L'ECLIPSE (« nom@eclipse:portail », « vague », « brume », cahier §88) : l'Eclipse se
+ * leve pour de vrai la ou se tient le joueur, un portail s'ouvre a une dizaine de blocs,
+ * et la camera le regarde de face (« portail »), puis quand sa vague est sortie
+ * (« vague »), puis vers le lointain, ou le brouillard mange tout sauf les fentes rouges
+ * des autres portails (« brume »).
+ *
  * LES PRISES DE HAVEN (« nom@haven:accueil », « nom@haven:qg ») regardent le parcours
  * du joueur, INTERFACE VISIBLE : titre et barre d'objectif. Les animaux de la ville
  * (« faune_port », « faune_rue », « faune_bassin », « faune_large », « faune_armee ») sont
@@ -162,6 +168,11 @@ public final class PhotoAutomaton {
         /** Une prise d'une porte doree posee par le jeu. */
         boolean gate() {
             return "porte".equals(this.biome.getNamespace());
+        }
+
+        /** Une prise de l'Eclipse. */
+        boolean eclipse() {
+            return "eclipse".equals(this.biome.getNamespace());
         }
 
         /** Tiques d'attente d'une prise de Haven : le titre visible, ou deja parti ; le bout de la ville, charge. */
@@ -514,6 +525,76 @@ public final class PhotoAutomaton {
         return true;
     }
 
+    /** Le portail de l'Eclipse ouvert pour les photos, et d'ou la camera le regarde. */
+    @Nullable
+    private static BlockPos eclipseRift;
+    @Nullable
+    private static net.minecraft.core.Direction eclipseFacing;
+    @Nullable
+    private static BlockPos eclipseStand;
+
+    /**
+     * L'Eclipse : levee une fois, la ou se tient le joueur ; un portail a une dizaine de
+     * blocs, tourne vers lui. « portail » le regarde de face ; « vague » laisse d'abord
+     * sortir sa vague ; « brume » regarde au loin, vers le portail le plus lointain.
+     */
+    private static boolean placeEclipse(ServerLevel level, ServerPlayer player, Shot shot) {
+        String view = shot.biome().getPath();
+        if (PREPARED.add("eclipse")) {
+            eclipseStand = player.blockPosition();
+            com.emerald.weather.WeatherManager.force(level, com.emerald.weather.Weather.ECLIPSE, 20 * 280);
+            com.emerald.block.ArcPortals.Placement spot = com.emerald.block.ArcPortals.find(level, eclipseStand,
+                    9.0, 13.0, 6, 10, 60, eclipseStand, level.random);
+            if (spot == null || !com.emerald.weather.Eclipse.open(level, spot.anchor(), spot.facing())) {
+                LOGGER.warn("photos : pas de place pour un portail de l'Eclipse pres de {}", eclipseStand);
+                return false;
+            }
+            eclipseRift = spot.anchor();
+            eclipseFacing = spot.facing();
+            // et les trois portails lointains d'un joueur (le spectateur n'en recoit pas)
+            com.emerald.weather.Eclipse.openAround(level, eclipseStand, null, 3);
+            LOGGER.info("photos : Eclipse levee, portail en {} tourne {}, portails lointains {}", eclipseRift,
+                    eclipseFacing, com.emerald.weather.Eclipse.rifts());
+        }
+        if (eclipseRift == null || eclipseFacing == null || eclipseStand == null) {
+            return false;
+        }
+        if ("vague".equals(view)) {
+            // la vague sort d'un coup : les tiques de l'Eclipse, en avance
+            for (int t = 0; t < 60 + 30 * 4 + 5; t++) {
+                com.emerald.weather.Eclipse.tickForAutotest(level);
+            }
+        }
+        net.minecraft.world.phys.Vec3 rift = net.minecraft.world.phys.Vec3.atBottomCenterOf(eclipseRift);
+        net.minecraft.world.phys.Vec3 eye;
+        net.minecraft.world.phys.Vec3 target;
+        if ("brume".equals(view)) {
+            BlockPos far = eclipseRift;
+            for (BlockPos p : com.emerald.weather.Eclipse.rifts()) {
+                if (p.distSqr(eclipseStand) > far.distSqr(eclipseStand)) {
+                    far = p;
+                }
+            }
+            eye = net.minecraft.world.phys.Vec3.atBottomCenterOf(eclipseStand).add(0.0, 1.62, 0.0);
+            target = net.minecraft.world.phys.Vec3.atBottomCenterOf(far).add(0.0, 2.0, 0.0);
+        } else {
+            double back = "vague".equals(view) ? 11.0 : 8.5;
+            net.minecraft.core.Direction side = eclipseFacing.getClockWise();
+            double lateral = "vague".equals(view) ? 3.0 : 1.2;
+            eye = rift.add(eclipseFacing.getStepX() * back + side.getStepX() * lateral, 1.9,
+                    eclipseFacing.getStepZ() * back + side.getStepZ() * lateral);
+            target = rift.add(0.0, 2.2, 0.0);
+        }
+        double dx = target.x - eye.x;
+        double dz = target.z - eye.z;
+        float yaw = (float) Math.toDegrees(Math.atan2(-dx, dz));
+        float pitch = (float) -Math.toDegrees(Math.atan2(target.y - eye.y, Math.sqrt(dx * dx + dz * dz)));
+        player.setGameMode(GameType.SPECTATOR);
+        player.teleportTo(level, eye.x, eye.y - player.getEyeHeight(), eye.z, yaw, pitch);
+        LOGGER.info("photos : {} (Eclipse, {}) camera en {}", shot.name(), view, eye);
+        return true;
+    }
+
     /** Une prise du parcours de Haven : attendre le bon moment, puis la laisser au client, interface visible. */
     private static void havenShot(MinecraftServer server, ServerPlayer player, Shot shot) {
         if (pending == null) {
@@ -821,6 +902,9 @@ public final class PhotoAutomaton {
         }
         if (shot.gate()) {
             return placeGate(level, player, shot);
+        }
+        if (shot.eclipse()) {
+            return placeEclipse(level, player, shot);
         }
         BlockPos from = player.blockPosition();
         if (!ORIGIN.isEmpty()) {

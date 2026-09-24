@@ -1007,5 +1007,10 @@
   "game.emeraldweapons.haven.agenda.orbes": "%s precursor orbs",
   "game.emeraldweapons.haven.agenda.orbes.trouves": "Hidden orbs found: %s of %s",
   "game.emeraldweapons.haven.agenda.bonus": "Your purchases",
-  "game.emeraldweapons.haven.agenda.bonus.aucun": "Nothing yet: Tess's shop is in the gun room."
+  "game.emeraldweapons.haven.agenda.bonus.aucun": "Nothing yet: Tess's shop is in the gun room.",
+  "weather.emeraldweapons.eclipse": "The Eclipse",
+  "weather.emeraldweapons.eclipse.sub": "Portals open in the dark. Close them.",
+  "weather.emeraldweapons.omen.eclipse": "The birds fall silent.",
+  "eclipse.emeraldweapons.closed": "Portal closed: +%s Fate Shards",
+  "block.emeraldweapons.eclipse_portal": "Eclipse Portal"
 }

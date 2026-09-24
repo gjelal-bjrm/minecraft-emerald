@@ -203,6 +203,9 @@ public final class WeatherManager {
     private static long clockFor(Weather weather) {
         return switch (weather) {
             case NUIT -> 18000L;
+            // L'ECLIPSE : minuit d'une nuit SANS LUNE. La phase de la lune suit le jour
+            // (jour 4 d'un cycle de 8 : la nouvelle lune) ; l'heure d'avant revient a la fin.
+            case ECLIPSE -> 4L * 24000L + 18000L;
             case METEORES -> 13200L;
             // L'HEURE DOREE : le soleil rasant, juste avant qu'il se couche.
             // Rien a peindre -- le jeu et le pack de shaders s'en chargent, et

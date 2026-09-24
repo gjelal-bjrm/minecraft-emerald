@@ -1007,5 +1007,10 @@
   "game.emeraldweapons.haven.agenda.orbes": "%s orbes précurseurs",
   "game.emeraldweapons.haven.agenda.orbes.trouves": "Orbes cachés trouvés : %s sur %s",
   "game.emeraldweapons.haven.agenda.bonus": "Tes achats",
-  "game.emeraldweapons.haven.agenda.bonus.aucun": "Rien pour l'instant : la boutique de Tess est à la salle des armes."
+  "game.emeraldweapons.haven.agenda.bonus.aucun": "Rien pour l'instant : la boutique de Tess est à la salle des armes.",
+  "weather.emeraldweapons.eclipse": "L'Éclipse",
+  "weather.emeraldweapons.eclipse.sub": "Des portails s'ouvrent dans le noir. Refermez-les.",
+  "weather.emeraldweapons.omen.eclipse": "Les oiseaux se taisent.",
+  "eclipse.emeraldweapons.closed": "Portail refermé : +%s Éclats du Destin",
+  "block.emeraldweapons.eclipse_portal": "Portail de l'Éclipse"
 }

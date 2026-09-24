@@ -115,7 +115,14 @@ public enum Weather {
     NUIT("nuit", true, GamePhase.MONTEE, 300 * 20, 300 * 20, 0xB98CFF),
     METEORES("meteores", true, GamePhase.PRESSION, 300 * 20, 300 * 20, 0xFF9C4A),
     DECHIRURE("dechirure", true, GamePhase.PRESSION, 300 * 20, 300 * 20, 0xE478FF),
-    ORAGE("orage", true, GamePhase.PRESSION, 300 * 20, 300 * 20, 0xFF616B);
+    ORAGE("orage", true, GamePhase.PRESSION, 300 * 20, 300 * 20, 0xFF616B),
+    /**
+     * L'ECLIPSE (24 sept. 2026, cahier §88) : la meteo d'horreur. Minuit sans lune, un
+     * brouillard noir, le silence puis ce qui gronde, et des portails d'ou sortent des
+     * horreurs qu'on ne croise nulle part ailleurs (weather/Eclipse). Des la Montee, comme
+     * la Nuit d'Arcencium : c'est la plus belle des agressives, il faut qu'on la voie.
+     */
+    ECLIPSE("eclipse", true, GamePhase.MONTEE, 300 * 20, 300 * 20, 0xB0283C);
 
     private final String id;
     public final boolean aggressive;
@@ -179,10 +186,10 @@ public enum Weather {
     public static List<Weather> poolFor(GamePhase phase) {
         return switch (phase) {
             case EXPLORATION -> List.of(BATTUE, AURORE, HEURE_DOREE);
-            case MONTEE -> List.of(BATTUE, AURORE, HEURE_DOREE, NUIT);
+            case MONTEE -> List.of(BATTUE, AURORE, HEURE_DOREE, NUIT, ECLIPSE);
             case PRESSION -> List.of(BATTUE, AURORE, HEURE_DOREE, NUIT, METEORES,
-                    DECHIRURE, ORAGE);
-            case ASSAUT -> List.of(METEORES, DECHIRURE, ORAGE);
+                    DECHIRURE, ORAGE, ECLIPSE);
+            case ASSAUT -> List.of(METEORES, DECHIRURE, ORAGE, ECLIPSE);
             default -> List.of();
         };
     }

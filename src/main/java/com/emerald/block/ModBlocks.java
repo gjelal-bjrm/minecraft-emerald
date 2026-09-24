@@ -300,6 +300,14 @@ public class ModBlocks {
      * Les portails d'Arcencium (voir ArcPortalBlock, cahier §84) : la Porte doree de l'Heure
      * Doree, les Brumes de l'Aurore. Sans objet : la meteo les pose et les retire.
      */
+    /** Les portails de l'Eclipse (cahier §88) : poses et retires par weather/Eclipse, jamais par le joueur. */
+    public static final DeferredBlock<EclipsePortalBlock> ECLIPSE_PORTAL = registerBlockOnly("eclipse_portal",
+            () -> new EclipsePortalBlock(BlockBehaviour.Properties.of()
+                    .strength(-1.0F, 3600000.0F).noLootTable()
+                    .pushReaction(net.minecraft.world.level.material.PushReaction.BLOCK)
+                    .mapColor(MapColor.COLOR_BLACK)
+                    .sound(SoundType.STONE)));
+
     public static final DeferredBlock<ArcPortalBlock> ARC_PORTAL = registerBlockOnly("arc_portal",
             () -> new ArcPortalBlock(BlockBehaviour.Properties.of()
                     .strength(-1.0F, 3600000.0F).noLootTable()

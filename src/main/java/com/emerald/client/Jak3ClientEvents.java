@@ -56,6 +56,11 @@ public class Jak3ClientEvents {
                 com.emerald.block.entity.ModBlockEntities.HAVEN_GATE.get(),
                 HavenGateRenderer::new);
 
+        // les portails de l'Eclipse (cahier §88)
+        event.registerBlockEntityRenderer(
+                com.emerald.block.entity.ModBlockEntities.ECLIPSE_PORTAL.get(),
+                EclipsePortalRenderer::new);
+
         // les portails d'Arcencium : Heure Doree, brumes de l'Aurore
         event.registerBlockEntityRenderer(
                 com.emerald.block.entity.ModBlockEntities.ARC_PORTAL.get(),

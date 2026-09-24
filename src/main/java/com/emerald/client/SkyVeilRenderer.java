@@ -64,6 +64,10 @@ public final class SkyVeilRenderer {
         }
         Weather w = WeatherClient.current();
         float partial = event.getPartialTick().getGameTimeDeltaPartialTick(true);
+        if (w == Weather.ECLIPSE) {
+            eclipse(event, mc, intensity, partial);
+            return;
+        }
         float[] veil = WeatherClient.veilFor(w, mc.level.getGameTime() + partial);
         if (veil == null) {
             return;
@@ -86,6 +90,32 @@ public final class SkyVeilRenderer {
         }
         draw(event.getPoseStack(), veil[0] * lit, veil[1] * lit, veil[2] * lit,
                 alpha, veil[4], radius);
+    }
+
+    /**
+     * LE BROUILLARD DE L'ECLIPSE (cahier §88) : non pas un mur, mais QUATRE COUPOLES
+     * noires, de la plus lointaine a la plus proche -- un mur opaque a soixante blocs, puis
+     * des voiles de plus en plus legers a quarante, vingt-quatre et quatorze. Chacune ecrit
+     * la profondeur : dessinees de loin en pres, chacune se pose sur les precedentes, et le
+     * noir s'epaissit avec la distance. Ce qui sort d'un portail a trente blocs est d'abord
+     * une ombre.
+     *
+     * Les portails lointains se voient a leurs fissures rouges, que la brume attenue sans les
+     * eteindre. Une fente rouge dessinee par-dessus a ete essayee et retiree : a la photo,
+     * elle faisait un neon, et passait devant les arbres qui la cachaient.
+     */
+    private static void eclipse(RenderLevelStageEvent event, Minecraft mc, float intensity, float partial) {
+        PoseStack pose = event.getPoseStack();
+        double reach = mc.gameRenderer.getRenderDistance() * 0.9;
+        // UN BROUILLARD QUI SE VOIT. Noir sur une nuit noire, le premier essai ne
+        // cachait rien : a la photo, les murs a quarante blocs restaient lisibles. Un
+        // gris-violet tres sombre, plus epais : le lointain devient une brume ou les
+        // silhouettes se decoupent, et le plus proche reste net.
+        float[][] layers = {
+                {56.0F, 0.97F}, {38.0F, 0.58F}, {24.0F, 0.42F}, {14.0F, 0.26F}};
+        for (float[] layer : layers) {
+            draw(pose, 0.070F, 0.064F, 0.082F, layer[1] * intensity, 1.0F, Math.min(layer[0], reach));
+        }
     }
 
     /**

@@ -71,7 +71,10 @@ import java.util.UUID;
  *   7. les arches (cahier §84) : le voile seul emporte (pas les piliers, ni derriere) ; la
  *      porte doree du village loin des etablis ; une paire de brumes posee puis retiree ;
  *   8. le cycle d'ouverture des meteos (24 sept.) : Aurore, Battue, Heure Doree, Nuit
- *      d'Arcencium, dans cet ordre, sauvegarde avec la partie, puis le tirage au sort.
+ *      d'Arcencium, dans cet ordre, sauvegarde avec la partie, puis le tirage au sort ;
+ *   9. l'Eclipse (cahier §88) : le verrou des horreurs, trois portails, leur vague, la
+ *      fermeture contre des Eclats, l'implosion et la dissolution a la fin. Demande
+ *      The Graveyard et Alex's Mobs au serveur des bancs (tools/dev_mods.py --server).
  * Rapport dans partie_autotest.txt, puis arret.
  */
 @EventBusSubscriber(modid = EmeraldWeaponsMod.MODID)
@@ -113,6 +116,7 @@ public final class ArcenciumAutotest {
             battue(level, spawn);
             arches(level, spawn);
             opening(level);
+            eclipse(level, spawn);
         } catch (RuntimeException e) {
             LOGGER.error("autotest partie : exception", e);
             check("deroulement sans exception", false, e.toString());
@@ -182,6 +186,121 @@ public final class ArcenciumAutotest {
                 state.opening() == 4 && inPool,
                 "phase " + state.phase(level) + " ; tires : " + String.join(", ", after));
         state.restartOpening();                       // le monde d'essai repart propre
+    }
+
+    // ================================================================ 9. l'Eclipse
+
+    private static void eclipse(ServerLevel level, BlockPos spawn) {
+        line("--- l'Eclipse : verrou, portails, vagues, fermeture, fin");
+        com.emerald.weather.Eclipse.clearAll();
+        java.util.Optional<net.minecraft.world.entity.EntityType<?>> ghoul =
+                net.minecraft.world.entity.EntityType.byString("graveyard:ghoul");
+        check("The Graveyard est charge (sinon : python tools/dev_mods.py --server graveyard alexsmobs)",
+                ghoul.isPresent(), ghoul.map(Object::toString).orElse("absent"));
+        if (ghoul.isEmpty()) {
+            return;
+        }
+        check("la goule porte le tag des horreurs", ghoul.get().is(com.emerald.weather.Eclipse.HORRORS), "-");
+        BlockPos probe = spawn.above(2);
+        net.minecraft.world.entity.Entity natural = ghoul.get().spawn(level, probe,
+                net.minecraft.world.entity.MobSpawnType.NATURAL);
+        boolean naturalIn = natural != null && level.getEntity(natural.getUUID()) != null;
+        if (natural != null) {
+            natural.discard();
+        }
+        net.minecraft.world.entity.Entity command = ghoul.get().spawn(level, probe,
+                net.minecraft.world.entity.MobSpawnType.COMMAND);
+        boolean commandIn = command != null && level.getEntity(command.getUUID()) != null;
+        if (command != null) {
+            command.discard();
+        }
+        check("hors Eclipse : une goule naturelle est refusee, une goule de commande passe (essais)",
+                !naturalIn && commandIn, "naturelle " + naturalIn + ", commande " + commandIn);
+
+        // le terrain autour du point d'apparition, charge : les portails s'y cherchent une place
+        for (int cx = -4; cx <= 4; cx++) {
+            for (int cz = -4; cz <= 4; cz++) {
+                level.getChunk((spawn.getX() >> 4) + cx, (spawn.getZ() >> 4) + cz);
+            }
+        }
+        com.emerald.weather.Eclipse.start();
+        BlockPos village = spawn.offset(300, 0, 300);   // loin : il ne gene pas la pose
+        int opened = com.emerald.weather.Eclipse.openAround(level, spawn, village, 3);
+        List<BlockPos> rifts = com.emerald.weather.Eclipse.rifts();
+        boolean blocks = rifts.stream().allMatch(p -> level.getBlockState(p).is(
+                com.emerald.block.ModBlocks.ECLIPSE_PORTAL.get()));
+        double nearest = rifts.stream().mapToDouble(p -> Math.sqrt(p.distSqr(spawn))).min().orElse(0);
+        double farthest = rifts.stream().mapToDouble(p -> Math.sqrt(p.distSqr(spawn))).max().orElse(0);
+        check("trois portails s'ouvrent, a 26-56 blocs, leurs blocs poses",
+                opened == 3 && blocks && nearest >= 25 && farthest <= 57,
+                opened + " ouverts, de " + Math.round(nearest) + " a " + Math.round(farthest) + " blocs, " + rifts);
+
+        net.minecraft.world.entity.Entity naturalDuring = ghoul.get().spawn(level, probe,
+                net.minecraft.world.entity.MobSpawnType.NATURAL);
+        boolean naturalDuringIn = naturalDuring != null && level.getEntity(naturalDuring.getUUID()) != null;
+        if (naturalDuring != null) {
+            naturalDuring.discard();
+        }
+        check("pendant l'Eclipse aussi, pas d'apparition naturelle : les horreurs ne sortent que des portails",
+                !naturalDuringIn, "naturelle " + naturalDuringIn);
+
+        for (int t = 0; t < 60 + 30 * 4 + 5; t++) {
+            com.emerald.weather.Eclipse.tickForAutotest(level);
+        }
+        int emerged = 0;
+        boolean allHorrors = true;
+        boolean allTagged = true;
+        java.util.Set<String> kinds = new java.util.TreeSet<>();
+        for (BlockPos p : rifts) {
+            for (net.minecraft.world.entity.Entity e : com.emerald.weather.Eclipse.aliveAt(level, p)) {
+                emerged++;
+                kinds.add(net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.getKey(e.getType()).toString());
+                allHorrors &= e.getType().is(com.emerald.weather.Eclipse.HORRORS);
+                allTagged &= e.getTags().contains(com.emerald.weather.Eclipse.TAG)
+                        && e.getTags().contains(com.emerald.weather.WeatherEffects.TAG_STORM);
+            }
+        }
+        check("la vague : quatre horreurs par portail, toutes du tag, marquees Eclipse et tempete",
+                emerged == 12 && allHorrors && allTagged,
+                emerged + " sorties : " + String.join(", ", kinds));
+
+        BlockPos first = rifts.get(0);
+        for (net.minecraft.world.entity.Entity e : com.emerald.weather.Eclipse.aliveAt(level, first)) {
+            e.kill();
+        }
+        com.emerald.weather.Eclipse.tickForAutotest(level);
+        boolean closed = !com.emerald.weather.Eclipse.rifts().contains(first)
+                && level.getBlockState(first).isAir();
+        int shards = 0;
+        for (net.minecraft.world.entity.item.ItemEntity item : level.getEntitiesOfClass(
+                net.minecraft.world.entity.item.ItemEntity.class, new net.minecraft.world.phys.AABB(first).inflate(4))) {
+            if (item.getItem().is(com.emerald.item.ModItems.FATE_SHARD.get())) {
+                shards += item.getItem().getCount();
+                item.discard();
+            }
+        }
+        check("sa vague morte, le portail se referme et laisse ses Eclats du Destin",
+                closed && shards == com.emerald.weather.Eclipse.SHARDS,
+                "referme " + closed + ", Eclats " + shards);
+
+        int left = com.emerald.weather.Eclipse.rifts().size();
+        com.emerald.weather.Eclipse.endForAutotest(level);
+        long horrorsLeft = 0;
+        for (net.minecraft.world.entity.Entity e : level.getAllEntities()) {
+            if (e.getTags().contains(com.emerald.weather.Eclipse.TAG)) {
+                horrorsLeft++;
+            }
+        }
+        boolean gone = rifts.stream().allMatch(p -> level.getBlockState(p).isAir());
+        int loose = 0;
+        for (BlockPos p : rifts) {
+            loose += level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class,
+                    new net.minecraft.world.phys.AABB(p).inflate(4),
+                    i -> i.getItem().is(com.emerald.item.ModItems.FATE_SHARD.get())).size();
+        }
+        check("fin de l'Eclipse : les " + left + " portails restants implosent sans rien laisser, les horreurs se dissolvent",
+                gone && horrorsLeft == 0 && loose == 0 && !com.emerald.weather.Eclipse.active(),
+                "blocs retires " + gone + ", horreurs restantes " + horrorsLeft + ", Eclats au sol " + loose);
     }
 
     // ================================================================ 2. les coffres

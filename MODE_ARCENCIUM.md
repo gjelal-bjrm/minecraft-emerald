@@ -7940,3 +7940,101 @@ les quatre premiers tirages rendent aurore, battue, heure_doree, nuit ; la
 partie sauvegarde `Opening = 4` ; les quarante tirages suivants restent dans
 le vivier de la phase. 24 OK, 1 KO : l'arche de l'Heure Doree pres de
 l'atelier, qui echouait deja sur le code d'avant (21 OK, 1 KO sur 2ef8d75).
+
+## 88. L'Eclipse, la meteo d'horreur *(24 sept. 2026)*
+
+« Une meteo un peu speciale avec le theme horreur, durant laquelle il ferait
+sombre avec un brouillard. Des monstres avec un theme horreur, qui
+n'apparaitront que pendant cette meteo. Nulle part ailleurs. Une ambiance
+effrayante et glauque, aussi au niveau des sons. Des portails sombres, et on
+supposerait que les monstres passent a travers ; les joueurs ne pourraient pas
+les utiliser. » Apres proposition, le joueur a valide le nom, refuse les
+« bouches » (« rien de vivant, de vrais portails d'horreur »), garde la
+fermeture d'un portail contre des Eclats et l'implosion finale, et choisi un
+seul mod a telecharger : The Graveyard.
+
+### A. Le mod : The Graveyard -- Resurrected
+
+Le portage The Graveyard (Unofficial Port) 2.6.2 exige NeoForge 21.1.233 et
+GeckoLib 4.8.4 ; le profil tourne en NeoForge 21.1.174 avec GeckoLib 4.7.5.1.
+L'autre portage, **The Graveyard -- Resurrected 1.0.1** (Modrinth `graveyard`,
+GPL-3.0, 13,6 Mo, SHA-512 verifiee), a les memes douze creatures et se
+contente de NeoForge 21 et GeckoLib 4.7 : c'est lui qui est installe (dev et
+profil, `graveyard-resurrected-1.0.1.jar`). Sa config (`config/graveyard.toml`,
+copie dans `modpack/config/`) coupe ses dix-sept structures, ses hordes et
+ses apparitions naturelles.
+
+### B. Ce qui se passe (`weather/Eclipse`)
+
+- **Quand** : des la Montee, comme la Nuit d'Arcencium ; cinq minutes, comme
+  toutes. Minuit d'une nuit sans lune (jour 4 d'un cycle de 8).
+- **Trois portails par joueur**, a 26-44 blocs de lui, jamais a moins de 48
+  du village, a 12 blocs l'un de l'autre (place trouvee comme les arches :
+  `ArcPortals.find`). Bloc `eclipse_portal`, efface de lui-meme des que
+  l'Eclipse ne le connait plus (fin, ou redemarrage).
+- **La vague** : une horreur toutes les 1,5 s, quatre a la Montee, six a la
+  Pression, sept a l'Assaut ; a partir de la Pression, la derniere est une
+  elite (Faucheuse, Cauchemar, Farseer). Horreurs communes : goule, revenant,
+  squelette-creeper, spectre, acolyte, illageois corrompus, Murmur.
+- **Fermer** : la vague morte, le portail implose et laisse **4 Eclats du
+  Destin**, plus 40 d'experience Heros aux joueurs a moins de 32 blocs. Pas
+  referme en 75 s, il lache une autre vague (dix horreurs vivantes au plus).
+- **Ne pas traverser** : qui entre dans le vide est rejete du cote d'ou il
+  vient, perd un cœur et demi (une fois par demi-seconde) et prend
+  l'Obscurite. A moins de 20 blocs d'un portail ouvert, l'Obscurite revient
+  par bouffees.
+- **La fin** : les portails ouverts implosent sans rien laisser, les horreurs
+  se dissolvent en fumee.
+- Pendant l'Eclipse, la Traque et la pression des tempetes se taisent : seules
+  les horreurs des portails rodent. Elles paient comme les monstres de
+  tempete (tag `TAG_STORM`).
+
+**Le verrou.** Le tag `emeraldweapons:eclipse_horrors` (Graveyard : dix
+monstres dont la liche ; Alex's Mobs : Murmur, Farseer, Skreecher). Toute
+apparition de ces types est annulee (`FinalizeSpawnEvent`), pendant
+l'Eclipse comme en dehors, sauf : les portails, la commande et l'oeuf (pour
+les essais), et pendant l'Eclipse ce qu'une horreur appelle elle-meme. Une
+horreur d'Eclipse sauvegardee dans un troncon ne revient pas au rechargement.
+
+### C. Ce qu'on voit et ce qu'on entend
+
+- **Le portail** (`client/EclipsePortalRenderer`, textures de
+  `tools/eclipse_portal_textures.py`) : un vide noir en ogive, un cadre de
+  vingt-deux blocs de pierre noire disjoints dont les fissures rougeoient
+  chacune a son rythme, deux chaines de fer en croix devant le vide, des
+  eclats de pierre en orbite, de la cendre au sol ; il s'ouvre en une seconde
+  et demie depuis un point. Rien de vivant.
+- **Le brouillard** : quatre coupoles gris-violet tres sombres, de loin en
+  pres (56 blocs opaque, puis 38, 24, 14 de plus en plus legeres) ; le noir
+  s'epaissit avec la distance.
+- **Le son** (`client/EclipseClient`) : la musique se coupe ; la boucle de la
+  Vallee des ames jouee grave ; les bruits de grotte du jeu en plein air ; des
+  cris lointains places derriere le joueur ; un battement de cœur quand une
+  horreur approche a moins de 20 blocs, de plus en plus rapide. Le son n'a pas
+  pu etre ecoute au banc : il est a juger en partie.
+
+### D. Verifie
+
+Banc de la partie, epreuve 9 (serveur des bancs avec The Graveyard et
+Alex's Mobs) : goule naturelle refusee, goule de commande acceptee ; trois
+portails a 36-45 blocs ; pas d'apparition naturelle pendant l'Eclipse ; douze
+horreurs (goule, revenant, squelette-creeper, spectre, acolyte, Murmur),
+toutes marquees ; la vague du premier morte, il se referme et laisse 4
+Eclats ; a la fin, les deux autres implosent sans rien laisser et aucune
+horreur ne reste. 32 OK, 1 KO (l'arche de l'Heure Doree, deja en echec
+avant).
+
+Photos (automate, Complementary actif, terrain neuf) : cinq series. Ce
+qu'elles ont corrige :
+1. une fente rouge dessinee pour reperer les portails de loin faisait un
+   neon au milieu du vide, puis passait devant les arbres : retiree, les
+   fissures rouges suffisent a travers la brume ;
+2. le vide etait bordeaux uniforme : les couches emissives allumaient la
+   couleur des pixels transparents (textures maintenant premultipliees), et
+   surtout Complementary eclairait le vide dessine en pleine lumiere -- il
+   est dessine sans lumiere, et il est noir ;
+3. le cadre faisait des confettis rouges : vingt-deux blocs plus gros qui se
+   chevauchent, fissures a l'echelle du bloc ;
+4. le brouillard noir sur nuit noire ne cachait rien : gris-violet, plus
+   epais.
+La fumee qui tourne dans le vide ne ressort pas sous Complementary.
