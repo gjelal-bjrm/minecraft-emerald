@@ -60,8 +60,23 @@ public final class WeatherManager {
     private static int warningTicks;
     private static int gapTicks = 200;
     private static Weather lastRolled = Weather.CLEAR;
-    /** Faux tant qu'aucune meteo n'est tombee dans cette partie : la premiere est l'Aurore. */
-    private static boolean firstDrawn;
+    /**
+     * LE CYCLE D'OUVERTURE, demande par le joueur le 24 septembre : « quand
+     * on debute une partie, en mode defi ou en mode normal, on commence par
+     * l'Aurore, apres la Battue, apres l'Heure Doree, et apres une meteo plus
+     * agressive, la Nuit d'Arcencium ». Les quatre tombent dans cet ordre,
+     * une fois par partie ; le tirage au sort ne reprend qu'apres.
+     *
+     * L'ordre apprend le mode dans le bon sens : la mine (l'Aurore montre les
+     * filons), la chasse (la Battue detoure les betes), la forge (l'Heure
+     * Doree ouvre l'atelier a qui a de quoi forger), puis le premier vrai
+     * danger. Avec les ecarts d'aujourd'hui, la Nuit tombe vers la trentieme
+     * minute, juste apres l'ouverture de la Montee ou elle etait deja prevue.
+     * Le pas du cycle est sauvegarde avec la partie (GameState.opening) : une
+     * partie reprise ne rejoue pas l'ouverture.
+     */
+    private static final List<Weather> OPENING = List.of(
+            Weather.AURORE, Weather.BATTUE, Weather.HEURE_DOREE, Weather.NUIT);
     private static long savedDayTime = -1;
 
     private WeatherManager() {
@@ -148,22 +163,22 @@ public final class WeatherManager {
 
     @Nullable
     private static Weather roll(ServerLevel level) {
-        GamePhase phase = GameState.get(level).phase(level);
+        GameState state = GameState.get(level);
+        // LE CYCLE D'OUVERTURE passe avant la phase : la Nuit y tombe meme si
+        // la partie va plus vite que prevu et que la Montee n'est pas ouverte.
+        if (state.opening() < OPENING.size()) {
+            Weather next = OPENING.get(state.opening());
+            state.advanceOpening();
+            lastRolled = next;
+            org.slf4j.LoggerFactory.getLogger("emeraldweapons").info(
+                    "Cycle d'ouverture {}/{} : {}", state.opening(), OPENING.size(), next.id());
+            return next;
+        }
+        GamePhase phase = state.phase(level);
         List<Weather> pool = Weather.poolFor(phase);
         if (pool.isEmpty()) {
             return null;
         }
-        // LA PREMIERE EST TOUJOURS L'AURORE. Le joueur l'a demande, et la raison
-        // tient : c'est la seule qui APPREND quelque chose -- elle montre les
-        // filons, ouvre les grottes, et donne le diamant sans lequel rien ne
-        // s'ameliore. Tirer l'Heure Doree en premiere ouvre l'atelier a un
-        // joueur qui n'a encore rien a y forger.
-        if (!firstDrawn && pool.contains(Weather.AURORE)) {
-            firstDrawn = true;
-            lastRolled = Weather.AURORE;
-            return Weather.AURORE;
-        }
-        firstDrawn = true;
         // jamais deux fois la meme de suite : la variete est le contrat du mode
         List<Weather> filtered = pool.size() > 1
                 ? pool.stream().filter(w -> w != lastRolled).toList() : pool;
@@ -203,6 +218,8 @@ public final class WeatherManager {
     }
 
     private static void begin(ServerLevel level, Weather weather, int duration) {
+        org.slf4j.LoggerFactory.getLogger("emeraldweapons").info(
+                "Meteo : {} pour {} s", weather.id(), duration / 20);
         current = weather;
         remaining = duration;
         startedAt = level.getGameTime();
@@ -285,13 +302,18 @@ public final class WeatherManager {
      * sans cela, verifier « la premiere est l'Aurore » demandait d'attendre
      * les deux a quatre minutes de l'ecart normal.
      */
+    /** Pour le banc (game/ArcenciumAutotest) : le tirage tel que la tique le ferait. */
+    @Nullable
+    public static Weather drawForAutotest(ServerLevel level) {
+        return roll(level);
+    }
+
     public static void rollNow() {
         gapTicks = 1;
     }
 
-    /** Une partie neuve : la prochaine meteo sera l'Aurore. Appele par GameManager. */
+    /** Une partie neuve : l'ecart d'ouverture. Le cycle, lui, vit dans GameState. Appele par GameManager. */
     public static void resetSchedule() {
-        firstDrawn = false;
         lastRolled = Weather.CLEAR;
         // SOIXANTE SECONDES, ET C'EST MESURE. Sur un serveur neuf l'ecart vaut
         // deux cents tiques : l'Aurore d'ouverture tombait DIX SECONDES apres
@@ -430,7 +452,6 @@ public final class WeatherManager {
         remaining = 0;
         warningTicks = 0;
         gapTicks = 200;
-        firstDrawn = false;               // la prochaine partie recommence par l'Aurore
         lastRolled = Weather.CLEAR;
         savedDayTime = -1;
         startedAt = 0L;

@@ -69,7 +69,9 @@ import java.util.UUID;
  *   6. la Battue : la Proie ne brille que de pres, sa garde ne brille pas, tout s'en va a
  *      la fin, et les lueurs d'avant s'eteignent au rechargement ;
  *   7. les arches (cahier §84) : le voile seul emporte (pas les piliers, ni derriere) ; la
- *      porte doree du village loin des etablis ; une paire de brumes posee puis retiree.
+ *      porte doree du village loin des etablis ; une paire de brumes posee puis retiree ;
+ *   8. le cycle d'ouverture des meteos (24 sept.) : Aurore, Battue, Heure Doree, Nuit
+ *      d'Arcencium, dans cet ordre, sauvegarde avec la partie, puis le tirage au sort.
  * Rapport dans partie_autotest.txt, puis arret.
  */
 @EventBusSubscriber(modid = EmeraldWeaponsMod.MODID)
@@ -110,6 +112,7 @@ public final class ArcenciumAutotest {
             cold(level, spawn);
             battue(level, spawn);
             arches(level, spawn);
+            opening(level);
         } catch (RuntimeException e) {
             LOGGER.error("autotest partie : exception", e);
             check("deroulement sans exception", false, e.toString());
@@ -141,6 +144,44 @@ public final class ArcenciumAutotest {
         check("un echec rend le metal jusqu'a +7, plus vers +8, +9 et +10",
                 Upgrade.refunds(0) && Upgrade.refunds(6) && !Upgrade.refunds(7) && !Upgrade.refunds(9),
                 "depuis +6 : " + Upgrade.refunds(6) + ", depuis +7 : " + Upgrade.refunds(7));
+    }
+
+    // ================================================================ 8. le cycle d'ouverture
+
+    /**
+     * « Quand on debute une partie, on commence par l'Aurore, apres la Battue,
+     * apres l'Heure Doree, et apres une meteo plus agressive, la Nuit
+     * d'Arcencium. » On tire comme la tique le ferait, sans attendre trente
+     * minutes de jeu ; puis on lit ce que la partie sauvegarde.
+     */
+    private static void opening(ServerLevel level) {
+        line("--- le cycle d'ouverture des meteos");
+        GameState state = GameState.get(level);
+        state.restartOpening();
+        List<String> drawn = new ArrayList<>();
+        for (int i = 0; i < 4; i++) {
+            com.emerald.weather.Weather w = com.emerald.weather.WeatherManager.drawForAutotest(level);
+            drawn.add(w == null ? "rien" : w.id());
+        }
+        check("les quatre premieres : Aurore, Battue, Heure Doree, Nuit d'Arcencium, dans cet ordre",
+                drawn.equals(List.of("aurore", "battue", "heure_doree", "nuit")), String.join(", ", drawn));
+        net.minecraft.nbt.CompoundTag saved = state.save(new net.minecraft.nbt.CompoundTag(),
+                level.registryAccess());
+        check("le pas du cycle est sauvegarde avec la partie : une partie reprise ne rejoue pas l'ouverture",
+                state.opening() == 4 && saved.getInt("Opening") == 4,
+                "en memoire " + state.opening() + ", sauvegarde " + saved.getInt("Opening"));
+        List<com.emerald.weather.Weather> pool = com.emerald.weather.Weather.poolFor(state.phase(level));
+        java.util.Set<String> after = new java.util.TreeSet<>();
+        boolean inPool = true;
+        for (int i = 0; i < 40; i++) {
+            com.emerald.weather.Weather w = com.emerald.weather.WeatherManager.drawForAutotest(level);
+            after.add(w == null ? "rien" : w.id());
+            inPool &= w == null ? pool.isEmpty() : pool.contains(w);
+        }
+        check("ensuite le tirage reprend dans le vivier de la phase, et le cycle ne se rejoue pas",
+                state.opening() == 4 && inPool,
+                "phase " + state.phase(level) + " ; tires : " + String.join(", ", after));
+        state.restartOpening();                       // le monde d'essai repart propre
     }
 
     // ================================================================ 2. les coffres

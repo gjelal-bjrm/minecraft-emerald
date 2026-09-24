@@ -7910,3 +7910,33 @@ Ce qu'il a trouve du premier coup :
   cherche les cartes par leur cle, pas par leur libelle ;
 - un orbe pris n'est pas retire du monde -- il reste pour les autres joueurs : c'est le
   paquet de retrait, et lui seul, qui l'efface chez celui qui l'a pris.
+
+## 87. Le cycle d'ouverture des meteos *(24 sept. 2026)*
+
+« Quand on debute une partie, en mode defi ou en mode normal, on commence par
+l'Aurore. Apres, c'est la Battue. Apres, je voudrais que ce soit l'Heure
+Doree. Et apres, une meteo un peu plus agressive : la Nuit d'Arcencium. »
+
+Les quatre tombent dans cet ordre, une fois par partie, avant le tirage au
+sort (`WeatherManager.OPENING`). L'ordre apprend le mode dans le bon sens :
+la mine, la chasse, la forge, puis le premier danger. Le cycle passe avant la
+phase : la Nuit tombe meme si la Montee n'est pas encore ouverte. Avec les
+ecarts actuels (une minute avant la premiere, puis cinq minutes de meteo, une
+Embellie d'une minute et deux a quatre minutes de ciel clair), on attend
+l'Aurore vers 1 min, la Battue vers 10, l'Heure Doree vers 20 et la Nuit vers
+30 -- juste apres l'ouverture de la Montee (27 min), ou elle etait deja
+prevue.
+
+**Le pas du cycle est sauvegarde avec la partie** (`GameState.opening`, cle
+`Opening`). Le drapeau d'avant, « la premiere est l'Aurore », vivait en
+memoire : une partie reprise apres une relance du serveur rejouait l'Aurore.
+Avec quatre meteos imposees, elle aurait rejoue tout le debut. Le cycle
+repart de zero au debut d'une partie et a la remise a zero, pas aux cycles
+du Monde ouvert. Chaque debut de meteo s'ecrit maintenant dans le journal
+(« Meteo : <id> pour <s> s »).
+
+Banc (`EMERALDWEAPONS_AUTOTEST=partie ./gradlew runServer`, epreuve 8) :
+les quatre premiers tirages rendent aurore, battue, heure_doree, nuit ; la
+partie sauvegarde `Opening = 4` ; les quarante tirages suivants restent dans
+le vivier de la phase. 24 OK, 1 KO : l'arche de l'Heure Doree pres de
+l'atelier, qui echouait deja sur le code d'avant (21 OK, 1 KO sur 2ef8d75).

@@ -106,6 +106,7 @@ public class GameState extends SavedData {
     private long pausedAt;
     private long startTick;
     private int anchorsActive;
+    private int opening;
     private int anchorsInProgress;
     private BlockPos village = BlockPos.ZERO;
     /** Le centre de l'atelier : ses trois etablis en dependent (voir FirstForge). */
@@ -161,6 +162,7 @@ public class GameState extends SavedData {
         state.pausedAt = tag.getLong("PausedAt");
         state.startTick = tag.getLong("StartTick");
         state.anchorsActive = tag.getInt("AnchorsActive");
+        state.opening = tag.getInt("Opening");
         state.anchorsInProgress = tag.getInt("AnchorsInProgress");
         state.village = BlockPos.of(tag.getLong("Village"));
         state.workshop = BlockPos.of(tag.getLong("Workshop"));
@@ -198,6 +200,7 @@ public class GameState extends SavedData {
         tag.putLong("PausedAt", this.pausedAt);
         tag.putLong("StartTick", this.startTick);
         tag.putInt("AnchorsActive", this.anchorsActive);
+        tag.putInt("Opening", this.opening);
         tag.putInt("AnchorsInProgress", this.anchorsInProgress);
         tag.putLong("Village", this.village.asLong());
         tag.putLong("Workshop", this.workshop.asLong());
@@ -495,11 +498,36 @@ public class GameState extends SavedData {
     }
 
     /** Appele au retrait de la Lame du Serment : c'est ici que le chrono part. */
+    /**
+     * Ou en est le CYCLE D'OUVERTURE des meteos : combien des quatre premieres
+     * sont deja tombees (voir WeatherManager.OPENING).
+     *
+     * Sauvegarde avec la partie, et non plus en memoire : le drapeau d'avant
+     * (« la premiere est l'Aurore ») repartait de zero a chaque relance du
+     * serveur, si bien qu'une partie reprise rejouait l'Aurore. Avec quatre
+     * meteos imposees, une reprise aurait rejoue tout le debut.
+     */
+    public int opening() {
+        return this.opening;
+    }
+
+    public void advanceOpening() {
+        this.opening++;
+        setDirty();
+    }
+
+    /** Pour le banc : le cycle repart de l'Aurore sans toucher au reste de la partie. */
+    public void restartOpening() {
+        this.opening = 0;
+        setDirty();
+    }
+
     public void begin(ServerLevel level) {
         this.status = Status.RUNNING;
         this.startTick = level.getGameTime();
         this.paused = false;
         this.pausedAt = 0L;
+        this.opening = 0;
         this.anchorsActive = 0;
         this.anchorsInProgress = 0;
         this.activated.clear();
@@ -560,6 +588,7 @@ public class GameState extends SavedData {
         this.paused = false;
         this.pausedAt = 0L;
         this.startTick = 0L;
+        this.opening = 0;
         this.anchorsActive = 0;
         this.anchorsInProgress = 0;
         this.anchors.clear();
