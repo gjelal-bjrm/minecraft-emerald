@@ -20,7 +20,8 @@ build
 # other
 eclipse
 run
-runs
+# a la racine seulement : « runs » tout court ignorait aussi src/.../haven/quest/runs, les quetes (cahier §99)
+/runs
 run-data
 run-server
 

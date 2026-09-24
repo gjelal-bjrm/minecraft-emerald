@@ -57,8 +57,10 @@ import java.util.List;
  * LES VEHICULES SONT DES JakVehicleEntity ordinaires, avec un pilote (TrafficDriver,
  * cote serveur, sauvegarde avec l'entite), en voie haute, que le serveur conduit a
  * la place de sa physique de vol. Solides comme les autres : la voiture d'un joueur
- * s'y cogne, et ils freinent derriere elle. On ne monte pas dedans (Jak 3 les
- * detourne ; pas ici, pas pour l'instant). Le pilote est un habitant sans metier,
+ * s'y cogne, et ils freinent derriere elle. ON LES VOLE, comme dans Jak 3 (cahier §99,
+ * {@link #hijack}) : on y monte, le pilote descend et redevient un habitant, et le
+ * vehicule quitte le trafic ; abandonne loin de tout joueur, il s'en va
+ * ({@link #abandoned}). Le pilote est un habitant sans metier,
  * sans intelligence (setNoAi) et invulnerable, assis a la place 0 ; il ne compte
  * pas pour la population des rues (etiquette {@link #DRIVER_TAG}).
  *
@@ -77,6 +79,15 @@ public final class HavenTraffic {
     public static final String TRAFFIC_TAG = "emeraldweapons.haven_trafic";
     /** L'etiquette du pilote d'un vehicule du trafic. */
     public static final String DRIVER_TAG = "emeraldweapons.haven_pilote";
+    /** L'etiquette d'un vehicule pris au trafic par un joueur (cahier §99). */
+    public static final String STOLEN_TAG = "emeraldweapons.haven_vole";
+    /** Un vehicule vole reste vide, sans joueur a moins de tant de blocs... */
+    public static final double ABANDON_RANGE = 64.0;
+    /** ... tant de tiques, et il s'en va : les cinq secondes hors de vue de Jak 3 (vehicle-states.gc:250-307). */
+    public static final int ABANDON_TICKS = 100;
+    /** Les tiques d'abandon de chaque vehicule vole, comptees par {@link #abandoned}. */
+    private static final java.util.Map<java.util.UUID, Integer> IDLE = new java.util.HashMap<>();
+    private static int thefts;
 
     /** Un vehicule tous les tant de blocs de voie, en moyenne (Jak 3 : 12 m + hasard x 180 m). */
     public static final double SPACING = 80.0;
@@ -232,6 +243,16 @@ public final class HavenTraffic {
                 driver.discard();
             }
         }
+        // UN VEHICULE VOLE, VIDE, QUI GELE -- parti seul sur son elan hors de la zone qui tique,
+        // ou sorti de la ville -- s'en va aussi : son compte d'abandon ne tourne que s'il tique (banc)
+        for (JakVehicleEntity car : level.getEntities(EntityTypeTest.forClass(JakVehicleEntity.class),
+                c -> !c.isRemoved() && c.getTags().contains(STOLEN_TAG))) {
+            if (car.getPassengers().isEmpty()
+                    && (outside(map, origin, car) || !level.isPositionEntityTicking(car.blockPosition()))) {
+                IDLE.remove(car.getUUID());
+                car.discard();
+            }
+        }
         users = counts;
         if (mode == HavenInvasion.Mode.PAISIBLE && !anchors.isEmpty()) {
             spawn(level, data, origin, anchors, counts);
@@ -375,6 +396,69 @@ public final class HavenTraffic {
             return random.nextDouble() * 4.0;
         }
         return "carc".equals(spec.model) ? -random.nextDouble() * 2.0 : random.nextDouble() * 3.0;
+    }
+
+    // ================================================================ le vol
+
+    /**
+     * LE VOL (cahier §99), comme dans Jak 3 : on prend un vehicule du trafic en y montant
+     * (JakVehicleEntity.board). Le pilote descend a cote -- pose au sol s'il y en a a portee,
+     * sinon il saute et tombe -- et redevient un habitant qui marche (vehicle-rider.gc:134-160) ;
+     * le vehicule quitte le trafic, sa voie et son pilote, garde son elan et sa voie haute, et
+     * devient VOLE.
+     */
+    public static void hijack(JakVehicleEntity car) {
+        // la sortie du conducteur remet la voie a zero et reprend la vitesse du joueur qui conduisait
+        // (JakVehicleEntity.removePassenger, hvehicle.gc:1113) : pour un vol, le vehicule garde les siennes
+        Vec3 motion = car.getDeltaMovement();
+        int mode = car.mode();
+        for (Entity passenger : new ArrayList<>(car.getPassengers())) {
+            if (passenger.getTags().contains(DRIVER_TAG) && passenger instanceof Villager driver) {
+                driver.stopRiding();
+                VehicleSpec spec = car.spec();
+                if (driver.getY() > car.getY() + spec.boxBottom) {
+                    // pas de sol a portee sous la voie haute (JakVehicleEntity.getDismountLocationForPassenger) :
+                    // le jeu le posait sur le toit (banc) ; il saute a cote, et tombe dans la rue ou l'eau
+                    double yaw = Math.toRadians(car.getYRot());
+                    double reach = Math.max(spec.maxX, -spec.minX) + 1.0;
+                    driver.teleportTo(car.getX() + reach * Math.cos(yaw), car.getY() + spec.boxBottom,
+                            car.getZ() + reach * Math.sin(yaw));
+                }
+                driver.removeTag(DRIVER_TAG);
+                driver.setNoAi(false);
+                driver.playSound(net.minecraft.sounds.SoundEvents.VILLAGER_NO, 1.0F, 1.0F);
+            }
+        }
+        car.setDeltaMovement(motion);
+        car.setMode(mode);
+        car.setTraffic(null);
+        car.removeTag(TRAFFIC_TAG);
+        car.addTag(STOLEN_TAG);
+        thefts++;
+    }
+
+    /**
+     * Un vehicule vole, toutes les secondes (JakVehicleEntity.serverTick) : vide et loin de tout
+     * joueur pendant cinq secondes, il s'en va -- sinon les vehicules pris et laisses la
+     * s'entasseraient dans la ville.
+     */
+    public static void abandoned(JakVehicleEntity car, int step) {
+        boolean alone = car.getPassengers().isEmpty()
+                && car.level().getNearestPlayer(car, ABANDON_RANGE) == null;
+        if (!alone) {
+            IDLE.remove(car.getUUID());
+            return;
+        }
+        int idle = IDLE.merge(car.getUUID(), step, Integer::sum);
+        if (idle >= ABANDON_TICKS) {
+            IDLE.remove(car.getUUID());
+            car.discard();
+        }
+    }
+
+    /** Vehicules voles depuis le demarrage (banc d'essai). */
+    public static int thefts() {
+        return thefts;
     }
 
     // ================================================================ retraits

@@ -9032,3 +9032,54 @@ doublure plus basse. Les motos ne changent pas.
 - L'automate de photos : une rafale suivie d'une prise simple repartait pour
   un tour et prenait le nom de la suivante (`PhotoClient`, la rafale finie ne
   repart plus).
+
+## 99. On vole les vehicules du trafic *(24 sept. 2026)*
+
+La suite de l'ordre choisi par le joueur (§96) : apres les degats des
+vehicules (§98), « voler un vehicule du trafic ». Jusqu'ici on ne montait pas
+dans le trafic (`canAddPassenger` refusait les joueurs).
+
+### A. Comme dans Jak 3
+
+On prend un vehicule du trafic en y montant : un clic droit, comme sur une
+voiture d'appartement (`JakVehicleEntity.board` -> `HavenTraffic.hijack`). Le
+trafic vole en voie haute, a neuf blocs de la rue : on y arrive en volant avec
+les ailes, ou depuis un pont ou une terrasse.
+- LE PILOTE DESCEND et redevient un habitant qui marche (vehicle-rider.gc:134-
+  160) : il perd la marque de pilote, retrouve son intelligence, garde les
+  marques des habitants de la ville d'aujourd'hui. Pose au sol s'il y en a a
+  portee (la descente des joueurs) ; sinon -- au-dessus de l'eau --, il saute a
+  cote du vehicule et tombe : la descente du jeu le posait sur le toit (banc).
+  Un habitant ne se blesse pas en tombant (`HavenRules`).
+- LE VEHICULE QUITTE LE TRAFIC -- sa voie, son pilote, sa marque -- et devient
+  VOLE (marque `emeraldweapons.haven_vole`). Il GARDE SON ELAN ET SA VOIE HAUTE :
+  la sortie d'un conducteur remet la voie a zero et reprend la vitesse du joueur
+  qui conduisait (`removePassenger`, hvehicle.gc:1113) ; la premiere photo
+  montrait la voiture volee redescendue au rase-sol, arretee.
+- Le trafic ne le compte plus : un autre vehicule nait ailleurs.
+- LAISSE VIDE, SANS JOUEUR A MOINS DE 64 BLOCS, CINQ SECONDES, IL S'EN VA
+  (`HavenTraffic.abandoned`, chaque seconde) -- les cinq secondes hors de vue du
+  jeu (vehicle-states.gc:250-307) --, sinon les vehicules pris et laisses la
+  s'entasseraient. Vide et gele -- parti seul sur son elan hors de la zone qui
+  tique --, ou sorti de la ville, il s'en va a la seconde (`HavenTraffic.update`,
+  comme un vehicule du trafic gele) : son compte d'abandon ne tourne que s'il
+  tique (banc). Il part aussi au depart vers le village, comme les autres.
+- Le chauffard de Keira (§86) : si un joueur le vole, ce n'est plus lui ; un
+  autre vehicule du trafic prend sa place.
+- Il s'abime et explose comme tout vehicule (§98), et l'on y tire de son siege.
+
+### B. Verifie
+
+- Banc de l'invasion : 50 OK. Le vol : le vehicule quitte le trafic, garde son
+  elan et sa voie haute, n'est plus compte ; son pilote descend (pose au sol,
+  1,8 a 10 blocs plus bas) et redevient un habitant qui marche ; laisse seul,
+  il est retire dans les dix secondes. Deux passages l'ont corrige : le
+  premier voyait le pilote pose sur le toit et le vehicule redescendre a
+  l'arret ; le deuxieme, le vehicule vole parti sur son elan hors de la zone
+  qui tique, jamais retire.
+- Banc des quetes : 51 OK (le chauffard).
+- Photo (`haven:vol`, nouvelle prise : la ville passe en paisible, le joueur
+  est pose sur le vehicule du trafic le plus proche et y monte comme d'un clic
+  droit) : au volant d'une car-a prise au trafic, en voie haute au-dessus du
+  port ; l'ancien pilote tombe vers la rue. La premiere montrait la voiture
+  redescendue au rase-sol -- d'ou le correctif de l'elan et de la voie.

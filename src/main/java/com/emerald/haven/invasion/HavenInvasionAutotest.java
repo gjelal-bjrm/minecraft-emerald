@@ -315,12 +315,17 @@ public final class HavenInvasionAutotest {
                                 String.format(Locale.ROOT, "%.2f ms", peacefulMs));
                         villagerChecks(server, level);
                         trafficChecks(server, level);
+                        theftChecks(level);
                         pressInvasion(server, level);
                         next(Stage.FINAL);
                     }
                 }
                 case FINAL -> {
                     if (t == 200) {
+                        if (stolen != null) {
+                            check("vol : laisse vide loin de tout joueur, le vehicule vole s'en va en cinq secondes",
+                                    stolen.isRemoved(), "retire " + stolen.isRemoved() + " dix secondes apres le vol");
+                        }
                         limits(server, level);
                     }
                     // le depart a la tique suivante : les 96 casses du plafond comptent pour la tique du test des limites
@@ -1185,6 +1190,37 @@ public final class HavenInvasionAutotest {
         check("retour de l'invasion : vehicules du trafic et pilotes retires",
                 HavenTraffic.loaded(level).isEmpty() && HavenTraffic.drivers(level).isEmpty(),
                 HavenTraffic.loaded(level).size() + " vehicules, " + HavenTraffic.drivers(level).size() + " pilotes");
+    }
+
+    /** Le vehicule vole par le banc (cahier §99). */
+    @javax.annotation.Nullable
+    private static JakVehicleEntity stolen;
+
+    /**
+     * LE VOL (cahier §99) : un vehicule du trafic pris par un joueur quitte le trafic, son pilote
+     * descend et redevient un habitant qui marche ; laisse loin de tout joueur, il s'en va.
+     */
+    private static void theftChecks(ServerLevel level) {
+        for (JakVehicleEntity car : HavenTraffic.loaded(level)) {
+            if (car.occupant(0) instanceof Villager driver && driver.getTags().contains(HavenTraffic.DRIVER_TAG)) {
+                Vec3 before = car.getDeltaMovement();
+                HavenTraffic.hijack(car);
+                // il garde son elan et sa voie haute (la sortie d'un conducteur le ferait redescendre, a l'arret)
+                boolean freed = car.traffic() == null && !car.getTags().contains(HavenTraffic.TRAFFIC_TAG)
+                        && car.getTags().contains(HavenTraffic.STOLEN_TAG) && !HavenTraffic.loaded(level).contains(car)
+                        && car.mode() == com.emerald.jak.vehicle.VehicleDynamics.MODE_HAUT
+                        && car.getDeltaMovement().distanceTo(before) < 1.0E-9;
+                boolean walks = !driver.isPassenger() && !driver.getTags().contains(HavenTraffic.DRIVER_TAG)
+                        && !driver.isNoAi() && !driver.isRemoved() && driver.getTags().contains(HavenInvasion.VILLAGER_TAG);
+                check("vol : le vehicule pris quitte le trafic, garde son elan et sa voie haute ; son pilote descend et"
+                                + " redevient un habitant qui marche",
+                        freed && walks, "vehicule libere " + freed + ", pilote a pied " + walks
+                                + String.format(Locale.ROOT, " (%.1f blocs sous le vehicule)", car.getY() - driver.getY()));
+                stolen = car;
+                return;
+            }
+        }
+        check("vol : un vehicule du trafic avec son pilote, a voler", false, "aucun");
     }
 
     /** La distance parcourue par chaque vehicule du trafic, tique par tique. */

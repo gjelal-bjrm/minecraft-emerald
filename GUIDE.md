@@ -251,8 +251,12 @@ zone de survol exactement comme une voiture (mêmes touches, Espace compris), à
   se promènent dans toutes les rues de la ville (invulnérables, sans commerce),
   et le **trafic de Jak 3** circule sur la voie haute : voitures et motos
   civiles, un habitant au volant, sur les voies du jeu, à leur vitesse (15 m/s,
-  bien moins que vous). On ne monte pas dedans ; on s'y cogne, et elles freinent
-  derrière vous si vous prenez leur voie. Un nouvel appui relance l'invasion
+  bien moins que vous). On s'y cogne, et elles freinent derrière vous si vous
+  prenez leur voie. **On les vole**, comme dans Jak 3 : un clic droit sur un
+  véhicule du trafic (en volant jusqu'à lui avec les ailes, ou depuis un pont), et
+  son pilote descend — il redevient un habitant — ; le véhicule est à vous, avec son
+  élan et sa voie haute. Laissé vide loin de tout joueur, il s'en va au bout de cinq
+  secondes. Un nouvel appui relance l'invasion
   (deux secondes entre deux appuis). Chaque réouverture du lobby rend la ville
   paisible.
 
@@ -942,6 +946,8 @@ et lancer avec `EMERALDWEAPONS_PHOTOS_MONDE=haven_photos`. Pour le retour du Dé
 `haven:victoire` (une vraie victoire dans l'overworld pose la porte, la caméra se met en face),
 `haven:arche` et `haven:portail` (le joueur est posé dans l'arche ouest, ou sur le plateau du pied
 de la tour ouest le regard en haut : il ressort à l'autre bout, ou monte à la terrasse).
+`haven:vol` : la ville passe en paisible, et le joueur vole le véhicule du trafic le plus proche
+(la caméra derrière lui).
 Pour les quêtes des héros : `haven:quete_torn` (et `quete_tess`, `quete_sig`, `quete_keira`,
 `quete_samos`, `quete_pecheur`) pose le héros de face, `haven:quete_bateau` le bateau du Pêcheur,
 `haven:quete_orbe` un orbe précurseur à deux pas, `haven:quete_cibles` les trois sortes de cibles du

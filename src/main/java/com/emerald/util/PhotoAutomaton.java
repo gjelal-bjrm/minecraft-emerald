@@ -997,6 +997,45 @@ public final class PhotoAutomaton {
         return true;
     }
 
+    /**
+     * LE VOL D'UN VEHICULE DU TRAFIC (cahier §99), « haven:vol » : la ville passe en paisible et
+     * le trafic vient ; le joueur est pose sur le vehicule du trafic le plus proche, dans sa voie
+     * haute, et y monte comme d'un clic droit (JakVehicleEntity.board) -- le pilote descend. La
+     * camera est derriere lui.
+     */
+    private static boolean theftReady(MinecraftServer server, ServerPlayer player, Shot shot) {
+        if (player.getVehicle() instanceof com.emerald.jak.vehicle.JakVehicleEntity car
+                && car.getTags().contains(com.emerald.haven.traffic.HavenTraffic.STOLEN_TAG)) {
+            return true;
+        }
+        if (PREPARED.add(shot.name())) {
+            com.emerald.haven.invasion.HavenInvasion.setMode(server, com.emerald.haven.invasion.HavenInvasion.Mode.PAISIBLE, null);
+            return false;
+        }
+        ServerLevel level = player.serverLevel();
+        com.emerald.jak.vehicle.JakVehicleEntity best = null;
+        double bestDistance = Double.MAX_VALUE;
+        for (com.emerald.jak.vehicle.JakVehicleEntity car : com.emerald.haven.traffic.HavenTraffic.loaded(level)) {
+            double d = car.distanceToSqr(player);
+            if (car.occupant(0) instanceof net.minecraft.world.entity.npc.Villager && d < bestDistance) {
+                best = car;
+                bestDistance = d;
+            }
+        }
+        if (best == null) {
+            return false;                           // le trafic n'est pas encore la
+        }
+        player.setGameMode(GameType.SURVIVAL);
+        player.getAbilities().invulnerable = true;
+        player.onUpdateAbilities();
+        player.teleportTo(level, best.getX(), best.getY() + 1.0, best.getZ(), best.getYRot(), 10.0F);
+        boolean boarded = best.board(player);
+        handsView = "dos";
+        LOGGER.info("photos : {} vole {} en {} {} {} : {}", player.getGameProfile().getName(), best.model(),
+                Math.round(best.getX()), Math.round(best.getY()), Math.round(best.getZ()), boarded ? "a bord" : "refuse");
+        return false;
+    }
+
     /** Apres la prise d'un combat : ce que le joueur a encaisse. */
     private static void combatReport(Shot shot) {
         int n = Integer.parseInt(shot.biome().getPath().substring("combat".length()));
@@ -1046,6 +1085,7 @@ public final class PhotoAutomaton {
         }
         if (waited >= pendingSettle && taken) {
             heldDoor = null;
+            handsView = null;
             LOGGER.info("photos : prise {} faite apres {} tiques, en {} {} {}, lacet {}, tangage {}", shot.name(), waited,
                     Math.round(player.getX() * 10) / 10.0, Math.round(player.getY() * 10) / 10.0,
                     Math.round(player.getZ() * 10) / 10.0, Math.round(player.getYRot()), Math.round(player.getXRot()));
@@ -1116,6 +1156,9 @@ public final class PhotoAutomaton {
         }
         if ("arche".equals(path) || "portail".equals(path)) {
             return gateReady(server, player, shot, path);
+        }
+        if ("vol".equals(path)) {
+            return theftReady(server, player, shot);
         }
         if (path.startsWith("faune_")) {
             // les animaux de la ville (cahier §85), poses devant la camera

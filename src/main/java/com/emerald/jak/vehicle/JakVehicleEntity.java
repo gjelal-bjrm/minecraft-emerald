@@ -813,15 +813,18 @@ public class JakVehicleEntity extends Entity {
         return Math.max(0, Math.min(index, this.spec().seatCount() - 1));
     }
 
-    /** Monter : le clic droit, et l'autotest. */
+    /** Monter : le clic droit, et l'autotest. Dans un vehicule du trafic, on le vole (cahier §99). */
     public boolean board(Entity passenger) {
+        if (this.traffic != null && passenger instanceof Player && !this.level().isClientSide) {
+            HavenTraffic.hijack(this);
+        }
         return passenger.startRiding(this);
     }
 
     @Override
     protected boolean canAddPassenger(Entity passenger) {
         if (this.traffic != null && passenger instanceof Player) {
-            return false;                 // on ne monte pas dans le trafic (pas de detournement, pour l'instant)
+            return false;                 // un vehicule du trafic, on le vole d'abord (board)
         }
         if (this.health() <= 0.0F) {
             return false;                 // ni dans une epave
@@ -1107,6 +1110,9 @@ public class JakVehicleEntity extends Entity {
     private void serverTick() {
         if (this.tickCount % 20 == 0) {
             HavenCars.carTick(this);
+            if (!this.isRemoved() && this.getTags().contains(HavenTraffic.STOLEN_TAG)) {
+                HavenTraffic.abandoned(this, 20);
+            }
             if (this.isRemoved()) {
                 return;
             }
