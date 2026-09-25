@@ -135,6 +135,14 @@ public final class HavenShop {
             out.add(new HavenShopPayload.Article("arme." + form.id, 0, Component.translatable(form.translationKey()), info,
                     weaponPrice(form.family), state, 0, form.family.color));
         }
+        // le JET-Board de Jak 3 (cahier §100), avec les armes : on l'achete comme elles
+        out.add(new HavenShopPayload.Article(com.emerald.jak.board.JetBoard.OWNED, 0,
+                Component.translatable("item.emeraldweapons.jet_board"),
+                Component.translatable("game.emeraldweapons.haven.boutique.jetboard.info",
+                        Component.keybind(com.emerald.jak.board.JetBoard.KEY_NAME)),
+                com.emerald.jak.board.JetBoard.PRICE,
+                com.emerald.jak.board.JetBoard.owns(id) ? HavenShopPayload.OWNED : HavenShopPayload.BUYABLE, 0,
+                com.emerald.jak.board.JetBoard.COLOR));
         for (GunForm.Family family : GunForm.Family.values()) {
             String key = unlimitedKey(family);
             boolean owns = false;
@@ -234,8 +242,12 @@ public final class HavenShop {
             HavenProgress.grantForms(id, GunForm.byId(articleId.substring(5)).bit());
             MorphGunKeeper.guard(player);
         } else {
-            // l'eco illimite (acquis une fois pour toutes) et les bonus du Defi (qui s'accumulent)
+            // l'eco illimite et le JET-Board (acquis une fois pour toutes), les bonus du Defi (qui s'accumulent)
             HavenProgress.addBonus(id, articleId, 1);
+            if (com.emerald.jak.board.JetBoard.OWNED.equals(articleId)) {
+                // dans sa case tout de suite
+                com.emerald.jak.board.JetBoardKeeper.guard(player);
+            }
         }
     }
 

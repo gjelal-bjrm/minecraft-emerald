@@ -238,7 +238,7 @@ public final class PhotoAutomaton {
          */
         boolean havenGui() {
             String path = this.biome.getPath();
-            if (path.startsWith("quete_")) {
+            if (path.startsWith("quete_") || path.startsWith("board_")) {
                 return path.endsWith("_ui");
             }
             return !path.startsWith("camera") && !path.startsWith("faune_");
@@ -553,7 +553,19 @@ public final class PhotoAutomaton {
             player.getInventory().setItem(1, stack.copy());     // l'icone dans la barre d'objets aussi
         }
         player.teleportTo(level, stage.getX() + 0.5, stage.getY(), stage.getZ() - 2.5, 180.0F, 8.0F);
-        if ("livre".equals(view) && item == com.emerald.item.ModItems.HAVEN_AGENDA.get()) {
+        if (view.startsWith("livre") && item == com.emerald.item.ModItems.HAVEN_AGENDA.get()) {
+            // « livre3 » : l'agenda ouvert a sa page 3 (en comptant de 0) ; les rues reprises, pour avoir
+            // les pages des quetes et de la bourse. « livre3_plein » : toutes les quetes faites, l'argent
+            // aux epreuves de Tess -- les lignes les plus longues, pour voir si la page les tient
+            com.emerald.haven.journey.HavenProgress.get(player.getUUID()).reprise = true;
+            if (view.endsWith("_plein")) {
+                for (com.emerald.haven.quest.HavenQuest quest : com.emerald.haven.quest.HavenQuestBook.ALL) {
+                    com.emerald.haven.journey.HavenProgress.completeQuest(player.getUUID(), quest.id());
+                    if (quest.medals()) {
+                        com.emerald.haven.journey.HavenProgress.setMedal(player.getUUID(), quest.id(), 2);
+                    }
+                }
+            }
             com.emerald.haven.journey.HavenAgenda.open(player);
         }
         handsView = view;
@@ -1036,6 +1048,72 @@ public final class PhotoAutomaton {
         return false;
     }
 
+    /**
+     * LE JET-BOARD (cahier §100), autour du tremplin de l'est, ville paisible, la planche achetee :
+     * « board_tremplin » le montre, et le rail qu'il vise, d'une camera libre au sud ; « board_course »
+     * de meme, avec les reperes du depart de la course de Tess ; « board_planche » : le joueur debout
+     * sur la planche, sept blocs a l'ouest, camera derriere ; « board_face » : de face ;
+     * « board_elan » (a nommer « ..._rafale ») : de la, bouton tenu pendant la rafale -- le tremplin,
+     * le vol, le rail ; « board_case_ui » : l'ecran Curios, la planche dans sa case. Sur la planche,
+     * le joueur tient S jusqu'a la prise : bouton lache, elle repart seule a 10 m/s, comme dans Jak 3.
+     */
+    private static boolean boardReady(MinecraftServer server, ServerPlayer player, Shot shot, String view) {
+        List<com.emerald.jak.board.JetBoardPads.Pad> pads = com.emerald.jak.board.JetBoardPads.pads();
+        if (pads.isEmpty()) {
+            return false;
+        }
+        ServerLevel level = player.serverLevel();
+        if (PREPARED.add(shot.name())) {
+            com.emerald.haven.invasion.HavenInvasion.setMode(server, com.emerald.haven.invasion.HavenInvasion.Mode.PAISIBLE, null);
+            if (!com.emerald.jak.board.JetBoard.owns(player.getUUID())) {
+                com.emerald.haven.journey.HavenProgress.addBonus(player.getUUID(), com.emerald.jak.board.JetBoard.OWNED, 1);
+            }
+            player.stopRiding();
+            com.emerald.haven.quest.QuestMarkers.clear(List.of(player));
+            player.setGameMode(GameType.SURVIVAL);
+            player.getAbilities().invulnerable = true;
+            player.onUpdateAbilities();
+            return false;
+        }
+        net.minecraft.world.phys.Vec3 pad = pads.get(0).at();
+        if ("case_ui".equals(view)) {
+            // la case se remplit toute seule (JetBoardKeeper, chaque seconde) ; l'ecran s'ouvre cote client
+            if (!com.emerald.jak.board.JetBoard.equipped(player)) {
+                return false;
+            }
+            handsView = "curios";
+            return true;
+        }
+        if ("tremplin".equals(view) || "course".equals(view)) {
+            // une camera libre au sud du tremplin, trois blocs en l'air : lui en bas, le rail qu'il vise au-dessus
+            player.setGameMode(GameType.SPECTATOR);
+            net.minecraft.world.phys.Vec3 eye = pad.add(-2.0, 3.0 + player.getEyeHeight(), 9.0);
+            net.minecraft.world.phys.Vec3 aim = pad.add(-3.0, 4.0, -5.0);
+            double flat = Math.hypot(aim.x - eye.x, aim.z - eye.z);
+            player.teleportTo(level, eye.x, eye.y - player.getEyeHeight(), eye.z,
+                    (float) Math.toDegrees(Math.atan2(-(aim.x - eye.x), aim.z - eye.z)),
+                    (float) -Math.toDegrees(Math.atan2(aim.y - eye.y, flat)));
+            if ("course".equals(view)) {
+                com.emerald.haven.quest.QuestMarkers.show(List.of(player), com.emerald.haven.quest.runs.JetRaceRun.markers(
+                        com.emerald.jak.board.JetBoardCourse.rings(), 0));
+            }
+            handsView = null;
+            return true;
+        }
+        // sur la planche, sept blocs a l'ouest du tremplin, face a lui
+        com.emerald.jak.board.JetBoardEntity board = com.emerald.init.Jak3Registry.JET_BOARD.get().create(level);
+        if (board == null) {
+            return false;
+        }
+        board.moveTo(pad.x - 7.0, pad.y + 0.5, pad.z, -90.0F, 0.0F);
+        level.addFreshEntity(board);
+        player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, net.minecraft.world.item.ItemStack.EMPTY);
+        player.teleportTo(level, board.getX(), board.getY() + 0.1, board.getZ(), -90.0F, 12.0F);
+        player.startRiding(board, true);
+        handsView = "elan".equals(view) ? "planche_avance" : "face".equals(view) ? "planche_face" : "planche";
+        return true;
+    }
+
     /** Apres la prise d'un combat : ce que le joueur a encaisse. */
     private static void combatReport(Shot shot) {
         int n = Integer.parseInt(shot.biome().getPath().substring("combat".length()));
@@ -1159,6 +1237,9 @@ public final class PhotoAutomaton {
         }
         if ("vol".equals(path)) {
             return theftReady(server, player, shot);
+        }
+        if (path.startsWith("board_")) {
+            return boardReady(server, player, shot, path.substring("board_".length()));
         }
         if (path.startsWith("faune_")) {
             // les animaux de la ville (cahier §85), poses devant la camera

@@ -182,6 +182,14 @@ public class ModItems {
             ITEMS.register("morph_gun", () ->
                     new com.emerald.jak.gun.MorphGunItem(new Item.Properties()));
 
+    /**
+     * Le JET-Board de Jak 3 (voir com.emerald.jak.board) : achete chez Tess, porte dans sa case
+     * Curios. Hors de l'onglet creatif, sans recette ni butin.
+     */
+    public static final DeferredItem<com.emerald.jak.board.JetBoardItem> JET_BOARD =
+            ITEMS.register("jet_board", () ->
+                    new com.emerald.jak.board.JetBoardItem(new Item.Properties()));
+
     // ------------------------------------------------- derives de l'Arbre de Prisme
     // Aucune piece d'Arcencium n'est fabricable sans passer par l'arbre : c'est
     // ce qui rend le bucheronnage aussi necessaire que le minage.

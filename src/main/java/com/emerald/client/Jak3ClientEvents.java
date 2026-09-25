@@ -81,6 +81,7 @@ public class Jak3ClientEvents {
                 ArcenciumBoltRenderer::new);
 
         // voitures de Haven : triangles cuits par tools/jak_vehicle.py
+        event.registerEntityRenderer(Jak3Registry.JET_BOARD.get(), com.emerald.jak.board.JetBoardRenderer::new);
         event.registerEntityRenderer(Jak3Registry.JAK_VEHICLE.get(),
                 com.emerald.jak.vehicle.JakVehicleRenderer::new);
 

@@ -33,9 +33,14 @@ public record HavenQuest(String id, HavenHero giver, int order, boolean invades,
         return Component.translatable("quete.emeraldweapons." + this.id + ".desc");
     }
 
-    /** Les epreuves de tir se jouent a la medaille : bronze, argent, or. */
+    /** Les epreuves de Tess se jouent a la medaille -- le tir et la course du JET-Board : bronze, argent, or. */
     public boolean medals() {
-        return this.id.startsWith("tir");
+        return this.giver == HavenHero.TESS;
+    }
+
+    /** La course du JET-Board se fait sur la planche : il faut l'avoir achetee. */
+    public boolean needsBoard() {
+        return "course".equals(this.id);
     }
 
     /** Ce que paie une medaille : le bronze la recompense, l'argent une fois et demie, l'or le double. */

@@ -8,6 +8,7 @@ import com.emerald.haven.quest.runs.FishingRun;
 import com.emerald.haven.quest.runs.GullsRun;
 import com.emerald.haven.quest.runs.HoldRun;
 import com.emerald.haven.quest.runs.HuntRun;
+import com.emerald.haven.quest.runs.JetRaceRun;
 import com.emerald.haven.quest.runs.MarketRun;
 import com.emerald.haven.quest.runs.PatrolRun;
 import com.emerald.haven.quest.runs.RangeRun;
@@ -22,7 +23,8 @@ import java.util.List;
 
 /**
  * LE LIVRE DES QUETES DE HAVEN (lot 3, cahier §86) : les dix-huit quetes des six heros,
- * dans l'ordre ou chacun les donne, ce qu'elles paient et leur limite de temps.
+ * dans l'ordre ou chacun les donne, ce qu'elles paient et leur limite de temps -- et la
+ * course du JET-Board (cahier §100), quatrieme de Tess, facultative et rejouable.
  *
  * Les prix suivent le §85.1 : trente a quatre-vingts orbes, l'or double aux epreuves de tir.
  * Les quetes de Torn, Sig et Samos sont celles du COMBAT : elles envahissent la ville (choix
@@ -49,6 +51,7 @@ public final class HavenQuestBook {
             new HavenQuest("tir1", HavenHero.TESS, 0, false, false, 30, 5 * MINUTE, RangeRun::fixed),
             new HavenQuest("tir2", HavenHero.TESS, 1, false, false, 30, 5 * MINUTE, RangeRun::moving),
             new HavenQuest("tir3", HavenHero.TESS, 2, false, false, 30, 5 * MINUTE, RangeRun::far),
+            new HavenQuest("course", HavenHero.TESS, 3, false, true, 40, 0, JetRaceRun::new),
             // Samos, sur la terrasse de la tour ouest : l'eco
             new HavenQuest("ecos", HavenHero.SAMOS, 0, true, false, 60, 8 * MINUTE, EcosRun::new),
             new HavenQuest("plateforme", HavenHero.SAMOS, 1, true, false, 60, 0, HoldRun::platform),

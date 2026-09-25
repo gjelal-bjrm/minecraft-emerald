@@ -46,7 +46,7 @@ import java.util.UUID;
  * « Il faudra qu'on definisse combien de quetes on met a disposition et a quel PNJ on les
  * donne. [...] L'idee, c'est de faire voyager les joueurs un peu partout sur la map. »
  *
- * Six heros (HavenHero), dix-huit quetes (HavenQuestBook). On parle a un heros (clic droit) :
+ * Six heros (HavenHero), dix-neuf quetes (HavenQuestBook). On parle a un heros (clic droit) :
  * sa carte du chat liste ses quetes -- faite, a faire (bouton « Accepter »), en cours (bouton
  * « Rejoindre »), ou fermee (apres la precedente). Les decisions du joueur (§85.1) :
  *
@@ -56,7 +56,7 @@ import java.util.UUID;
  *    ville le temps de la faire ; la conduite, le tir et l'eau se font en ville paisible ;
  *  - LES ORBES : chaque quete paie en orbes a la premiere reussite ; qui aide a refaire une
  *    quete deja faite touche un coup de main ; le contrat de Torn paie a chaque fois ; les
- *    epreuves de tir paient a la medaille (et la difference si l'on fait mieux).
+ *    epreuves de Tess (le tir, la course) paient a la medaille (et la difference si l'on fait mieux).
  *
  * UNE QUETE A LA FOIS PAR JOUEUR, et un seul deroulement de chaque quete a la fois : qui
  * arrive pendant qu'elle court la rejoint. La barre d'objectif du guide (HavenJourney) montre
@@ -216,6 +216,11 @@ public final class HavenQuests {
                     .append(DASH).append(Component.translatable("game.emeraldweapons.haven.quete.apres", before.title())
                             .withStyle(ChatFormatting.DARK_GRAY));
         }
+        if (quest.needsBoard() && !com.emerald.jak.board.JetBoard.owns(id)) {
+            return out.append(Component.literal("✗ ").withStyle(ChatFormatting.DARK_GRAY)).append(title.withStyle(ChatFormatting.DARK_GRAY))
+                    .append(DASH).append(Component.translatable("game.emeraldweapons.haven.quete.planche")
+                            .withStyle(ChatFormatting.DARK_GRAY));
+        }
         out.append(Component.literal(done ? "↻ " : "▶ ").withStyle(ChatFormatting.YELLOW)).append(title.withStyle(ChatFormatting.WHITE));
         if (quest.medals() && done) {
             out.append(Component.literal(" ").append(medalName(HavenProgress.medal(id, quest.id()))));
@@ -259,6 +264,8 @@ public final class HavenQuests {
             HavenQuest before = HavenQuestBook.before(quest);
             if (before != null && !HavenProgress.done(id, before.id())) {
                 refusal = Component.translatable("game.emeraldweapons.haven.quete.refus.apres", before.title());
+            } else if (quest.needsBoard() && !com.emerald.jak.board.JetBoard.owns(id)) {
+                refusal = Component.translatable("game.emeraldweapons.haven.quete.refus.planche");
             }
         }
         if (refusal != null) {

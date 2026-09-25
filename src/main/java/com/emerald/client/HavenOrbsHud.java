@@ -17,7 +17,7 @@ import net.neoforged.neoforge.client.gui.VanillaGuiLayers;
 
 /**
  * Le compteur d'orbes precurseurs, en haut a droite de l'ecran, dans Haven seulement (lot 3,
- * cahier §86) : un orbe dessine, le solde, et les orbes caches trouves (« 12/150 »).
+ * cahier §86) : un orbe dessine, le solde, et les orbes caches trouves (« 12/180 », rails compris).
  */
 public final class HavenOrbsHud {
 

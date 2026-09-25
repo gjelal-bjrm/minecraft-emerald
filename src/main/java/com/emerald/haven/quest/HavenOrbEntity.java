@@ -46,10 +46,14 @@ public class HavenOrbEntity extends Entity {
         this.entityData.set(INDEX, index);
     }
 
+    /**
+     * A chaque tique : en JET-Board sur un rail, on file a 25 m/s, un bloc et quart par tique
+     * (cahier §100) -- une verification toutes les quatre tiques laissait passer un orbe entre deux.
+     */
     @Override
     public void tick() {
         super.tick();
-        if (!(this.level() instanceof ServerLevel level) || this.tickCount % 4 != 0) {
+        if (!(this.level() instanceof ServerLevel level)) {
             return;
         }
         for (ServerPlayer player : level.getEntitiesOfClass(ServerPlayer.class, this.getBoundingBox().inflate(REACH),

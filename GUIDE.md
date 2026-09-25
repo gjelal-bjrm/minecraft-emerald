@@ -231,6 +231,40 @@ zone de survol exactement comme une voiture (mêmes touches, Espace compris), à
   Jak), reviennent sur leur place si elles tombent à l'eau ou sortent de la ville,
   et disparaissent au départ vers le village.
 
+### Le JET-Board
+
+La planche de Jak 3. Elle s'achète **200 orbes chez Tess**, avec les armes, et ne sort
+que dans Haven.
+
+- **Sa case** : à l'achat, elle va dans sa propre case, avec les artefacts (l'écran de
+  Curios, touche G) ; elle y reste à la mort. Jetée, elle revient dans sa case au bout
+  d'une seconde.
+- **La touche `;`** (à droite du L ; **M** sur un clavier AZERTY) la sort sous vos pieds,
+  avec votre élan, ou la range. Elle se change dans Options > Commandes.
+- **Conduire** : Z (ou W) va où vous regardez, Q et D de côté, S freine. Bouton tenu, elle
+  file à 25 m/s ; lâchée, elle glisse encore à 10 m/s — comme dans Jak 3, elle ne s'arrête
+  pas seule, et même à l'arrêt elle repart doucement : **S tenu la retient**. Elle plane
+  au-dessus du sol, **va sur l'eau comme sur la pierre**, et monte seule une marche d'un bloc.
+- **Sauter** : tenez Espace, la barre de saut se remplit (comme à cheval), lâchez : d'un
+  bloc à six et demi.
+- **Les rails** : retombez sur un rail, la planche s'y accroche et glisse. Z pousse, S
+  freine ; au bout, elle s'envole ; Espace saute du rail. Trop lente, elle tombe de côté.
+- **On ne se blesse jamais en retombant** de la planche, de n'importe quelle hauteur.
+- **Les tremplins** : les rails pendent sous les arcades, bien trop haut pour un saut.
+  Trois bouches d'éco bleu, au pied des chaînes de rails, vous y lancent : passez dessus en
+  planche. À l'est, sous le bout du rail le plus bas ; à l'ouest, sous les deux bouts de la
+  chaîne. À pied, elles ne font rien.
+- **La chaîne de l'est ne se fait qu'en montant**, depuis son tremplin : au bout de
+  chaque rail, sautez vers le suivant ; pour le premier saut (quatorze blocs), tenez Espace
+  au moins une demi-seconde avant de lâcher au bout du rail. Elle finit trente blocs
+  au-dessus de la baie : plongez. **La chaîne de
+  l'ouest** se fait dans les deux sens, sauts à mi-charge.
+- **Trente orbes précurseurs** flottent au-dessus des rails : on ne les prend qu'en glissant
+  (ou avec les ailes +20).
+- **Sortir de la baie** : les quais sont à huit blocs au-dessus de l'eau. Remontez par un
+  escalier du quai (celui du quai ouest, près du tremplin de l'ouest, a des marches d'un
+  bloc), ou par la rampe du bassin, au centre de la ville.
+
 ### L'invasion
 
 - **En invasion** : zombies, villageois zombies et squelettes casqués
@@ -293,9 +327,9 @@ zone de survol exactement comme une voiture (mêmes touches, Espace compris), à
   sur la terrasse de la tour ouest, et **le Pêcheur** sur un petit bateau amarré au pied
   de l'escalier qui descend dans le bassin, sous l'arc nord. Tant que les rues ne sont pas
   reprises, seul Torn vous parle.
-- **Clic droit sur un héros** : sa carte s'écrit dans le chat — ses trois quêtes, l'état
-  de chacune (✓ faite, ⟳ en cours, ▶ à faire, ✗ fermée tant que la précédente n'est pas
-  faite) et ce qu'elle paie. **Les boutons se cliquent dans le chat** : `[Accepter]`,
+- **Clic droit sur un héros** : sa carte s'écrit dans le chat — ses quêtes (trois, quatre
+  chez Tess), l'état de chacune (✓ faite, ⟳ en cours, ▶ à faire, ✗ fermée tant que la
+  précédente n'est pas faite, ou sans le JET-Board pour la course) et ce qu'elle paie. **Les boutons se cliquent dans le chat** : `[Accepter]`,
   `[Rejoindre]`, `[Abandonner]`, et `[Boutique]` chez Tess. Chaque bouton ne sert qu'une
   fois et vaut cinq minutes.
 - **Une quête à la fois**, et une seule fois la même en même temps : qui accepte propose
@@ -313,7 +347,7 @@ zone de survol exactement comme une voiture (mêmes touches, Espace compris), à
 | Torn | Reprendre les rues ; la patrouille des douze points d'éco (10 min) ; tenir le port une minute (se refait) | 40 ; 60 ; 25 |
 | Sig | la chasse (25 monstres au Pulvérisator) ; les trois brutes en armure (6 min) ; nettoyer le marché (5 min) | 40 ; 60 ; 50 |
 | Keira | la course aux dix anneaux ; le taxi (3 min de trajet) ; le chauffard (3 chocs) | 50 ; 40 ; 50 |
-| Tess | trois épreuves de tir chronométrées, bronze, argent, or | 30 à 60 chacune |
+| Tess | trois épreuves de tir chronométrées, bronze, argent, or ; la course du JET-Board (facultative, se refait) | 30 à 60 chacune ; 40 à 80 |
 | Samos | les quatre écos sans mourir ; tenir la plate-forme ; trois vagues et une élite | 60 ; 60 ; 80 |
 | Le Pêcheur | la pêche (200 livres) ; les six coffres engloutis (10 min) ; l'armée de mouettes (10 abattues, l'armée comprise) | 50 ; 50 ; 40 |
 
@@ -321,10 +355,18 @@ zone de survol exactement comme une voiture (mêmes touches, Espace compris), à
   valent un point, le KG doré trois, et **les civils coûtent deux points** — ne tirez pas
   dessus. Une minute par épreuve ; le score donne la médaille, et l'or paie le double du
   bronze. Refaire une épreuve ne paie que la différence.
-- **Les orbes précurseurs** sont la monnaie : les quêtes en donnent, et **cent cinquante
+- **La course du JET-Board**, quatrième quête de Tess (après le tireur d'élite, et il faut
+  la planche) : les anneaux dans l'ordre, du tremplin de l'est — le chrono part — à la chaîne
+  de rails de l'est en montant, le plongeon dans la baie, la traversée jusqu'à l'escalier du
+  quai ouest, la rue jusqu'au tremplin de l'ouest et la chaîne de l'ouest. Or, argent ou
+  bronze au chrono (le bronze pour qui finit dans les trois minutes) ; elle se refait, et ne
+  paie que la différence.
+- **Les orbes précurseurs** sont la monnaie : les quêtes en donnent, **cent cinquante
   sont cachés dans la ville** — dans les rues, sur les toits, autour des tours, au fond
-  du bassin et au large. Le compteur est en haut à droite dans Haven ; l'agenda a une page
-  « ta bourse ». Chacun a les siens, et ils vous suivent de partie en partie.
+  du bassin et au large —, et trente flottent au-dessus des rails du JET-Board. Le
+  compteur est en haut à droite dans Haven ; l'agenda a ses pages de quêtes (un ou deux
+  héros par page) et une page « ta bourse ». Chacun a les siens, et ils vous suivent de
+  partie en partie.
 - **La boutique de Tess**, à la salle des armes : les **onze armes** du Morph Gun au prix
   de leur couleur (rouge 40, jaune 80, bleue 120, sombre 200 ; le Pulvérisator reste au
   râtelier du QG, et il faut la première d'une couleur avant la deuxième) ; **l'éco
@@ -333,7 +375,7 @@ zone de survol exactement comme une voiture (mêmes touches, Espace compris), à
   sceau de rareté et sceau de Spécialisation (60 chacun). Les sceaux ne partent que quand
   ils servent : ils changent un échec en réussite.
 - **La maîtrise** — les douze armes **et** les dix-sept quêtes des héros — ouvre le bouton
-  du QG. Le contrat du port, qui se refait, n'en fait pas partie.
+  du QG. Le contrat du port, qui se refait, et la course du JET-Board n'en font pas partie.
 
 ### Le Morph Gun
 
@@ -926,12 +968,12 @@ Sur un serveur d'essai (`run-server`), chacun écrit son rapport puis arrête le
 - `EMERALDWEAPONS_AUTOTEST=vote ./gradlew runServer` : appartements et vote, rapport `run-server/vote_autotest.txt` ;
 - `EMERALDWEAPONS_AUTOTEST=salles ./gradlew runServer` : relevé et rejeu des salles, rapport `run-server/salles_autotest.txt` ;
 - `EMERALDWEAPONS_AUTOTEST=atelier ./gradlew runServer` : l'atelier et le relevé de la ville entière (ville nue relevée vide, retouches — dont une petite porte de Jak 3 — relevées puis rejouées par deux poses), rapport `run-server/atelier_autotest.txt` ;
-- `EMERALDWEAPONS_AUTOTEST=vehicules ./gradlew runServer` : voitures et motos (dont leurs dégâts, leur destruction et leur explosion), rapport `run-server/vehicules_autotest.txt` ;
+- `EMERALDWEAPONS_AUTOTEST=vehicules ./gradlew runServer` : voitures et motos (dont leurs dégâts, leur destruction et leur explosion), puis le JET-Board (l'eau, la glisse lâchée, le frein, les sauts, le sol, un rail, les trois tremplins, et la course de Tess faite par la planche seule, bouton tenu, en sautant au bout des rails), rapport `run-server/vehicules_autotest.txt` ;
 - `EMERALDWEAPONS_AUTOTEST=invasion ./gradlew runServer` : invasion, décor destructible, bouton du QG et MSPT, rapport `run-server/invasion_autotest.txt` ;
 - `EMERALDWEAPONS_AUTOTEST=armes ./gradlew runServer` : Morph Gun (poses, confinement, tir des douze armes, munitions, décor, MSPT avec quatre tireurs), rapport `run-server/armes_autotest.txt` ;
 - `EMERALDWEAPONS_AUTOTEST=parcours ./gradlew runServer` : le parcours (fiche sur disque, arme qui suit les formes du joueur, ville paisible, bouton verrouillé, titre et objectifs du guide ; puis le lot 2 : râtelier du QG, deuxième arrivée envahie, reprise des rues, retour après la défaite, porte de la victoire ; puis les transports : les huit stations, l'arche et sa recharge, le portail des tours ; puis l'agenda, l'équipe attendue au QG et la réunion), rapport `run-server/parcours_autotest.txt` ;
 - `EMERALDWEAPONS_AUTOTEST=faune ./gradlew runServer` : les animaux de la ville (carte de l'eau, places de chaque espèce, plafonds, dangers tenus au large et agressifs au large seulement, piqûre des méduses, armée de mouettes, compagnons à l'invasion), rapport `run-server/faune_autotest.txt` ; avant, `python tools/dev_mods.py --server alexsmobs aquaculture livingthings`, après, `python tools/dev_mods.py --server --clean` ;
-- `EMERALDWEAPONS_AUTOTEST=quetes ./gradlew runServer` : les quêtes des héros (le livre des quêtes, les six héros et le bateau du Pêcheur, les cartes du chat et leurs jetons, l'épreuve de tir jusqu'à la médaille, la pêche au poids, les coffres engloutis, la chasse aux mouettes, la patrouille, la tenue du port et l'invasion qui va avec, les orbes cachés, la boutique de Tess et ses sceaux, puis le ménage), rapport `run-server/quetes_autotest.txt` ; avant, `python tools/dev_mods.py --server alexsmobs aquaculture livingthings`, après, `python tools/dev_mods.py --server --clean` ;
+- `EMERALDWEAPONS_AUTOTEST=quetes ./gradlew runServer` : les quêtes des héros (le livre des quêtes, les six héros et le bateau du Pêcheur, les cartes du chat et leurs jetons, l'épreuve de tir jusqu'à la médaille, la pêche au poids, les coffres engloutis, la chasse aux mouettes, la patrouille, la tenue du port et l'invasion qui va avec, les orbes cachés et ceux des rails, la boutique de Tess et ses sceaux, la course du JET-Board et ses médailles, puis le ménage), rapport `run-server/quetes_autotest.txt` ; avant, `python tools/dev_mods.py --server alexsmobs aquaculture livingthings`, après, `python tools/dev_mods.py --server --clean` ;
 - `EMERALDWEAPONS_AUTOTEST=partie ./gradlew runServer` : la partie (chances de la Forge et métal perdu, coffres des sanctuaires selon l'avancée, vol d'élytre des ailes +20, bouclier d'Arcencium, plumes d'ailes en récompense, usure sans casse, Grand Froid de l'Aurore, Proie de la Battue et sa garde, arches, cycle d'ouverture des météos, Éclipse, bestiaires, garnisons et matières des trois sanctuaires, arène du boss), rapport `run-server/partie_autotest.txt`. Les épreuves 9 à 12 demandent des mods au serveur des bancs : `python tools/dev_mods.py --server graveyard alexsmobs twilightforest cataclysm irons_spellbooks undergarden eternal_starlight creeperoverhaul variantsandventures lionfishapi resourcefullib`, puis `--server --clean`.
 
 Pour regarder un terrain (arbres, biomes) sans jouer : le run `photos` entre dans le monde
@@ -947,7 +989,15 @@ et lancer avec `EMERALDWEAPONS_PHOTOS_MONDE=haven_photos`. Pour le retour du Dé
 `haven:arche` et `haven:portail` (le joueur est posé dans l'arche ouest, ou sur le plateau du pied
 de la tour ouest le regard en haut : il ressort à l'autre bout, ou monte à la terrasse).
 `haven:vol` : la ville passe en paisible, et le joueur vole le véhicule du trafic le plus proche
-(la caméra derrière lui).
+(la caméra derrière lui). Le JET-Board, autour du tremplin de l'est : `haven:board_tremplin` (le
+tremplin et le rail au-dessus, le joueur à pied), `haven:board_course` (de même, avec les repères
+du départ de la course), `haven:board_planche` (le joueur debout sur la planche, caméra derrière ;
+S tenu pour qu'elle ne parte pas), `haven:board_face` (de face), `haven:board_elan` dans une prise
+nommée `..._rafale` (Z tenu pendant la rafale : le tremplin, le vol, le rail) et `haven:board_case_ui`
+(l'écran de Curios, la planche dans sa case). L'agenda ouvert à une page :
+`EMERALDWEAPONS_PHOTOS_MAIN=emeraldweapons:haven_agenda` et `nom@main:livre3` (la page 3 en comptant
+de 0, les rues reprises) ; `livre3_plein` coche toutes les quêtes, l'argent aux épreuves de Tess — les
+lignes les plus longues, pour voir si la page les tient (quatorze lignes par page).
 Pour les quêtes des héros : `haven:quete_torn` (et `quete_tess`, `quete_sig`, `quete_keira`,
 `quete_samos`, `quete_pecheur`) pose le héros de face, `haven:quete_bateau` le bateau du Pêcheur,
 `haven:quete_orbe` un orbe précurseur à deux pas, `haven:quete_cibles` les trois sortes de cibles du

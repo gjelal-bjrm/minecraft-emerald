@@ -1,6 +1,7 @@
 {
   "replace": false,
   "values": [
-    "emeraldweapons:morph_gun"
+    "emeraldweapons:morph_gun",
+    "emeraldweapons:jet_board"
   ]
 }

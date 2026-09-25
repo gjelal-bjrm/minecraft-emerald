@@ -139,6 +139,14 @@ public class ModNetwork {
                 (payload, context) -> context.enqueueWork(
                         () -> com.emerald.jak.gun.GunClient.accept(payload)));
 
+        // la touche du JET-Board : le serveur la sort sous les pieds, ou la range (cahier §100)
+        registrar.playToServer(JetBoardTogglePayload.TYPE, JetBoardTogglePayload.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(() -> {
+                    if (context.player() instanceof ServerPlayer player) {
+                        com.emerald.jak.board.JetBoard.toggle(player);
+                    }
+                }));
+
         // « changer de zone de survol » : seul le conducteur bascule sa voiture,
         // et c'est le serveur qui decide (la donnee d'entite du mode suit)
         registrar.playToServer(VehicleModePayload.TYPE, VehicleModePayload.STREAM_CODEC,

@@ -334,6 +334,25 @@ public final class VehicleAutotest {
         for (double x = RAM_CELL_X - 16; x <= RAM_CELL_X + 80; x += 16) {
             hold(level, new ChunkPos(BlockPos.containing(o.getX() + x, 80, o.getZ() + RAM_CELL_Z)));
         }
+        // les rails du JET-Board (cahier §100) : un ticket tous les seize blocs de chaque rail
+        for (com.emerald.jak.board.JetBoardRails.Rail rail : com.emerald.jak.board.JetBoardRails.rails()) {
+            for (Vec3 p : rail.points()) {
+                hold(level, new ChunkPos(BlockPos.containing(p)));
+            }
+        }
+        // ses tremplins, et le trace de la course de Tess, de la baie a l'escalier du quai ouest
+        for (com.emerald.jak.board.JetBoardPads.Pad pad : com.emerald.jak.board.JetBoardPads.pads()) {
+            hold(level, new ChunkPos(BlockPos.containing(pad.at())));
+        }
+        List<com.emerald.jak.board.JetBoardCourse.Ring> course = com.emerald.jak.board.JetBoardCourse.rings();
+        for (int i = 0; i + 1 < course.size(); i++) {
+            Vec3 a = course.get(i).center();
+            Vec3 b = course.get(i + 1).center();
+            int n = (int) Math.ceil(a.distanceTo(b) / 16.0);
+            for (int k = 0; k <= n; k++) {
+                hold(level, new ChunkPos(BlockPos.containing(a.lerp(b, k / (double) Math.max(1, n)))));
+            }
+        }
         line("tickets poses sur " + HELD.size() + " troncons (rue du bar, places, couloir du pont, couloir du"
                 + " renversement, zone en mer de 648 x 192 blocs)");
 
@@ -365,6 +384,9 @@ public final class VehicleAutotest {
         planCollisions();
         planBalance();
         planDamage();
+        planJetBoard(street);
+        planJetBoardPads();
+        planJetBoardCourse();
         STEPS.add((s, l, t) -> {
             // hors du pont, rien ne change : la bosse du carrefour ouest (+8 dans la carte du jeu) ne degage rien
             // dans notre ville, seul le trafic la suit
@@ -1874,6 +1896,336 @@ public final class VehicleAutotest {
             blastVictim = null;
             doomedRider = null;
             return true;
+        });
+    }
+
+    // ------------------------------------------------------------- JET-Board (cahier §100)
+
+    private static com.emerald.jak.board.JetBoardEntity board;
+    private static double boardRef;
+    private static double boardPeak;
+    private static boolean boardGround;
+    private static int boardAttached;
+    private static double boardDeviation;
+    private static boolean boardGrinded;
+    private static Vec3 boardExit;
+
+    private static com.emerald.jak.board.JetBoardEntity spawnBoard(ServerLevel l, double x, double y, double z, float yaw) {
+        com.emerald.jak.board.JetBoardEntity b = Jak3Registry.JET_BOARD.get().create(l);
+        if (b == null) {
+            return null;
+        }
+        b.moveTo(x, y, z, yaw, 0.0F);
+        b.setAutotestInput(new com.emerald.jak.board.JetBoardEntity.Input(0.0F, 0.0F, yaw));
+        l.addFreshEntity(b);
+        SPAWNED.add(b);
+        return b;
+    }
+
+    private static double boardSpeedMs(com.emerald.jak.board.JetBoardEntity b) {
+        return Math.hypot(b.getX() - b.xo, b.getZ() - b.zo) * 20.0;
+    }
+
+    /**
+     * Le JET-Board, roule au serveur avec des commandes imposees : sur l'eau, sa croisiere (25 m/s
+     * bouton tenu), sa glisse bouton lache (10 m/s), son frein, sa hauteur ; ses sauts, charge
+     * nulle et pleine ; au sol, sa hauteur ; sur un rail de Jak 3, l'accroche, la glisse le long du
+     * tube et l'envol au bout.
+     */
+    private static void planJetBoard(BlockPos street) {
+        // 1. sur l'eau, bouton tenu vers +X, cinq secondes
+        STEPS.add((s, l, t) -> {
+            // a +100, pas plus loin : en dix secondes elle fait deux cents blocs, et la zone qui tique s'arrete a +648
+            double x = sea0X + 100.0;
+            double water = groundBelow(l, x, 90.0, sea0Z, 40.0);
+            board = spawnBoard(l, x, (Double.isNaN(water) ? 63.0 : water) + 1.0, sea0Z, -90.0F);
+            boardRef = Double.isNaN(water) ? 63.0 : water;
+            if (board != null) {
+                board.setAutotestInput(new com.emerald.jak.board.JetBoardEntity.Input(1.0F, 0.0F, -90.0F));
+            }
+            return true;
+        });
+        STEPS.add((s, l, t) -> {
+            if (board == null) {
+                return true;
+            }
+            if (t < 100) {
+                return false;
+            }
+            double speed = boardSpeedMs(board);
+            double water = groundBelow(l, board.getX(), board.getY() + 1.0, board.getZ(), 6.0);
+            double height = board.getY() - water;
+            check("JET-Board sur l'eau : bouton tenu, il atteint la croisiere de Jak 3 (25 m/s) et plane a 0,8 bloc",
+                    speed > 22.0 && speed < 25.8 && Math.abs(height - 0.8) < 0.2,
+                    String.format(Locale.ROOT, "%.1f m/s apres 5 s, %.2f bloc au-dessus de l'eau", speed, height));
+            board.setAutotestInput(new com.emerald.jak.board.JetBoardEntity.Input(0.0F, 0.0F, -90.0F));
+            return true;
+        });
+        // 2. bouton lache : il glisse vers 10 m/s ; puis S freine
+        STEPS.add((s, l, t) -> {
+            if (board == null) {
+                return true;
+            }
+            if (t < 100) {
+                return false;
+            }
+            double speed = boardSpeedMs(board);
+            check("JET-Board lache : il glisse encore, vers 10 m/s -- le jeu n'a pas de frein",
+                    speed > 9.0 && speed < 11.8, String.format(Locale.ROOT, "%.1f m/s apres 5 s", speed));
+            board.setAutotestInput(new com.emerald.jak.board.JetBoardEntity.Input(-1.0F, 0.0F, -90.0F));
+            return true;
+        });
+        STEPS.add((s, l, t) -> {
+            if (board == null) {
+                return true;
+            }
+            if (t < 20) {
+                return false;
+            }
+            double speed = boardSpeedMs(board);
+            check("JET-Board : S freine jusqu'a l'arret en moins d'une seconde", speed < 0.5,
+                    String.format(Locale.ROOT, "%.2f m/s apres 1 s de frein", speed));
+            board.setAutotestInput(new com.emerald.jak.board.JetBoardEntity.Input(0.0F, 0.0F, -90.0F));
+            boardRef = board.getY();
+            boardPeak = board.getY();
+            board.autotestJump(100);
+            return true;
+        });
+        // 3. les sauts : charge pleine, puis charge nulle
+        STEPS.add((s, l, t) -> {
+            if (board == null) {
+                return true;
+            }
+            boardPeak = Math.max(boardPeak, board.getY());
+            if (t < 50) {
+                return false;
+            }
+            double rise = boardPeak - boardRef;
+            boolean back = Math.abs(board.getY() - boardRef) < 0.2;
+            check("JET-Board : un saut charge a fond monte d'environ six blocs et demi, et il retombe a sa hauteur",
+                    rise > 6.0 && rise < 7.0 && back,
+                    String.format(Locale.ROOT, "monte de %.2f blocs, de retour a %.2f de sa hauteur", rise,
+                            board.getY() - boardRef));
+            boardPeak = board.getY();
+            board.autotestJump(0);
+            return true;
+        });
+        STEPS.add((s, l, t) -> {
+            if (board == null) {
+                return true;
+            }
+            boardPeak = Math.max(boardPeak, board.getY());
+            if (t < 30) {
+                return false;
+            }
+            double rise = boardPeak - boardRef;
+            check("JET-Board : un saut sans charge monte d'un bloc", rise > 0.75 && rise < 1.3,
+                    String.format(Locale.ROOT, "monte de %.2f bloc (au sol %s, en X %+.0f de la zone)", rise,
+                            board.grounded(), board.getX() - sea0X));
+            board.discard();
+            // 4. au sol, dans la rue du bar
+            double ground = groundBelow(l, street.getX() + 0.5, street.getY() + 4.0, street.getZ() + 0.5, 10.0);
+            board = spawnBoard(l, street.getX() + 0.5, (Double.isNaN(ground) ? street.getY() : ground) + 0.2,
+                    street.getZ() + 0.5, 0.0F);
+            boardRef = Double.isNaN(ground) ? street.getY() : ground;
+            return true;
+        });
+        STEPS.add((s, l, t) -> {
+            if (board == null) {
+                return true;
+            }
+            if (t < 40) {
+                return false;
+            }
+            double height = board.getY() - boardRef;
+            check("JET-Board au sol : il plane a un demi-bloc de la rue", Math.abs(height - 0.5) < 0.1,
+                    String.format(Locale.ROOT, "%.2f bloc au-dessus du sol", height));
+            board.discard();
+            // 5. un rail de Jak 3 : pose juste au-dessus de son debut, lance le long de lui a 15 m/s
+            com.emerald.jak.board.JetBoardRails.Rail rail = com.emerald.jak.board.JetBoardRails.rails().isEmpty() ? null
+                    : com.emerald.jak.board.JetBoardRails.rails().get(0);
+            if (rail == null) {
+                check("JET-Board : des rails a glisser (HavenCables)", false, "aucun");
+                board = null;
+                return true;
+            }
+            Vec3 a = rail.points().get(0);
+            Vec3 dir = com.emerald.jak.board.JetBoardRails.direction(rail, 0, 1);
+            Vec3 start = a.add(dir.scale(1.0)).add(0.0, 0.6, 0.0);
+            float yaw = (float) Math.toDegrees(Math.atan2(-dir.x, dir.z));
+            board = spawnBoard(l, start.x, start.y, start.z, yaw);
+            if (board != null) {
+                board.setDeltaMovement(dir.scale(15.0 / 20.0));
+                board.setAutotestInput(new com.emerald.jak.board.JetBoardEntity.Input(1.0F, 0.0F, yaw));
+            }
+            boardAttached = -1;
+            boardDeviation = 0.0;
+            boardGrinded = false;
+            boardExit = null;
+            line(String.format(Locale.ROOT, "JET-Board : rail 0, %d points, depart en %.1f %.1f %.1f", rail.points().size(),
+                    start.x, start.y, start.z));
+            return true;
+        });
+        STEPS.add((s, l, t) -> {
+            if (board == null) {
+                return true;
+            }
+            if (board.grinding()) {
+                if (boardAttached < 0) {
+                    boardAttached = t;
+                }
+                boardGrinded = true;
+                com.emerald.jak.board.JetBoardRails.Hit near = com.emerald.jak.board.JetBoardRails.nearest(board.position(),
+                        3.0, -1.0, 2.0);
+                if (near != null) {
+                    boardDeviation = Math.max(boardDeviation, Math.hypot(board.getX() - near.point().x,
+                            board.getZ() - near.point().z));
+                }
+            } else if (boardGrinded && boardExit == null) {
+                boardExit = board.position();
+            }
+            if (boardExit == null && t < 600) {
+                return false;
+            }
+            com.emerald.jak.board.JetBoardRails.Rail rail = com.emerald.jak.board.JetBoardRails.rails().get(0);
+            Vec3 end = rail.points().get(rail.points().size() - 1);
+            double fromEnd = boardExit == null ? -1.0 : Math.hypot(boardExit.x - end.x, boardExit.z - end.z);
+            double speed = boardSpeedMs(board);
+            check("JET-Board sur un rail : il s'accroche en y retombant, suit le tube et s'envole au bout",
+                    boardAttached >= 0 && boardAttached <= 4 && boardDeviation < 0.05 && fromEnd >= 0.0 && fromEnd < 2.0
+                            && speed > 3.0,
+                    String.format(Locale.ROOT, "accroche a la tique %d, ecart au tube %.3f, sortie a %.2f du bout, %.1f m/s en"
+                            + " l'air", boardAttached, boardDeviation, fromEnd, speed));
+            board.discard();
+            board = null;
+            return true;
+        });
+    }
+
+    private static int padGrindTick;
+    private static int padRail;
+    private static double padLeft;
+
+    /**
+     * Les tremplins (JetBoardPads) : une planche posee sur chacun part, et s'accroche a son rail
+     * pres du point vise (trois blocs apres le bout), avant le sommet du vol ou juste apres -- dans le
+     * monde tel qu'il est, meubles de l'atelier compris.
+     */
+    private static void planJetBoardPads() {
+        for (com.emerald.jak.board.JetBoardPads.Pad pad : com.emerald.jak.board.JetBoardPads.pads()) {
+            STEPS.add((s, l, t) -> {
+                board = spawnBoard(l, pad.at().x, pad.at().y + 0.6, pad.at().z, pad.yaw());
+                padGrindTick = -1;
+                padRail = -1;
+                padLeft = -1.0;
+                return true;
+            });
+            STEPS.add((s, l, t) -> {
+                if (board == null) {
+                    return true;
+                }
+                if (board.grinding() && padGrindTick < 0) {
+                    padGrindTick = t;
+                    padRail = board.grindRail();
+                    padLeft = board.grindLeft();
+                }
+                if (padGrindTick < 0 && t < 80) {
+                    return false;
+                }
+                List<Vec3> points = com.emerald.jak.board.JetBoardRails.rails().get(pad.rail()).points();
+                double total = 0.0;
+                for (int i = 0; i + 1 < points.size(); i++) {
+                    total += points.get(i).distanceTo(points.get(i + 1));
+                }
+                // la planche glisse vers le debut du rail : ce qui reste devant elle, c'est tout moins la distance au bout
+                double fromEnd = total - padLeft;
+                check(String.format(Locale.ROOT, "JET-Board : le tremplin %d lance la planche sur son rail, trois blocs apres le"
+                                + " bout", pad.number()),
+                        padRail == pad.rail() && Math.abs(fromEnd - 3.0) < 2.5 && padGrindTick <= pad.flight() + 8,
+                        String.format(Locale.ROOT, "accroche du rail %d (vise %d) a la tique %d (sommet a %d), a %.1f blocs du"
+                                + " bout", padRail, pad.rail(), padGrindTick, pad.flight(), padGrindTick < 0 ? -1.0 : fromEnd));
+                board.discard();
+                board = null;
+                return true;
+            });
+        }
+    }
+
+    private static int courseNext;
+    private static int courseStart;
+    private static int courseLastPass;
+    private static final StringBuilder COURSE_LOG = new StringBuilder();
+
+    /**
+     * LA COURSE DE TESS, faite par la planche seule (JetBoardCourse) : bouton tenu, cap sur l'anneau
+     * suivant, un saut au bout des rails ou un vide suit -- 85 % de charge pour les quatorze blocs de
+     * l'est, la moitie ailleurs. Elle doit passer les anneaux dans l'ordre, jusqu'a l'arrivee ; son
+     * temps donne la mesure des medailles (JetRaceRun).
+     */
+    private static void planJetBoardCourse() {
+        STEPS.add((s, l, t) -> {
+            List<com.emerald.jak.board.JetBoardCourse.Ring> rings = com.emerald.jak.board.JetBoardCourse.rings();
+            if (rings.isEmpty() || com.emerald.jak.board.JetBoardPads.pads().isEmpty()) {
+                check("JET-Board : le trace de la course de Tess", false, "vide");
+                board = null;
+                return true;
+            }
+            com.emerald.jak.board.JetBoardPads.Pad pad = com.emerald.jak.board.JetBoardPads.pads().get(0);
+            // douze blocs a l'ouest du tremplin de l'est, sur la rue (a l'est, le perron d'un immeuble)
+            board = spawnBoard(l, pad.at().x - 12.0, pad.at().y + 0.6, pad.at().z, -90.0F);
+            courseNext = 0;
+            courseStart = -1;
+            courseLastPass = 0;
+            COURSE_LOG.setLength(0);
+            return true;
+        });
+        STEPS.add((s, l, t) -> {
+            if (board == null) {
+                return true;
+            }
+            List<com.emerald.jak.board.JetBoardCourse.Ring> rings = com.emerald.jak.board.JetBoardCourse.rings();
+            com.emerald.jak.board.JetBoardCourse.Ring ring = rings.get(courseNext);
+            Vec3 torso = board.position().add(0.0, com.emerald.jak.board.JetBoardCourse.RIDER_TORSO, 0.0);
+            if (ring.passedBy(torso)) {
+                if (courseNext == 0) {
+                    courseStart = t;
+                }
+                if (courseNext == 0 || rings.get(courseNext - 1).kind() != ring.kind()) {
+                    COURSE_LOG.append(String.format(Locale.ROOT, "%s a %.1f s ; ", ring.kind(), (t - courseStart) / 20.0));
+                }
+                courseNext++;
+                courseLastPass = t;
+                if (courseNext >= rings.size()) {
+                    double time = (t - courseStart) / 20.0;
+                    check("JET-Board : la course de Tess se fait d'un bout a l'autre, bouton tenu, en sautant au bout des rails,"
+                                    + " sous le temps de l'or", time < com.emerald.haven.quest.runs.JetRaceRun.GOLD_SECONDS,
+                            String.format(Locale.ROOT, "%d anneaux en %.1f s (or a %d s) -- %s", rings.size(), time,
+                                    com.emerald.haven.quest.runs.JetRaceRun.GOLD_SECONDS, COURSE_LOG));
+                    board.discard();
+                    board = null;
+                    return true;
+                }
+            }
+            if (t - courseLastPass > 20 * 20 || t > 20 * 240) {
+                check("JET-Board : la course de Tess se fait d'un bout a l'autre, bouton tenu, en sautant au bout des rails",
+                        false, String.format(Locale.ROOT, "arretee avant l'anneau %d sur %d (%s, en %.1f %.1f %.1f), la planche"
+                                        + " en %.1f %.1f %.1f, %s, %.1f m/s -- %s", courseNext, rings.size(), ring.kind(),
+                                ring.center().x, ring.center().y, ring.center().z, board.getX(), board.getY(), board.getZ(),
+                                board.grinding() ? "sur le rail " + board.grindRail() : board.grounded() ? "posee" : "en l'air",
+                                boardSpeedMs(board), COURSE_LOG));
+                board.discard();
+                board = null;
+                return true;
+            }
+            float yaw = (float) Math.toDegrees(Math.atan2(-(ring.center().x - board.getX()), ring.center().z - board.getZ()));
+            board.setAutotestInput(new com.emerald.jak.board.JetBoardEntity.Input(1.0F, 0.0F, yaw));
+            if (board.grinding() && ring.kind() == com.emerald.jak.board.JetBoardCourse.Kind.GAP) {
+                double left = board.grindLeft();
+                if (left >= 0.0 && left <= boardSpeedMs(board) * 0.05 * 2.0) {
+                    board.autotestJump(board.grindRail() == 0 ? 85 : 50);
+                }
+            }
+            return false;
         });
     }
 

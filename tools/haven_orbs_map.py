@@ -15,12 +15,21 @@ Tirage deterministe (graine fixe) et ECARTE : un orbe a au moins 36 blocs de tou
 sa famille (30 sous l'eau), hors des zones sures (appartements, Hip Hog), a plus de 6 blocs
 d'un point d'eco. Une image de controle : build/jak/orbes-carte.png.
 
-    python tools/haven_orbs_map.py
+LES ORBES DES RAILS (cahier §100, choix du joueur : « des orbes le long des rails ») : une
+trentaine au-dessus des six rails de Jak 3, un tous les onze blocs et demi, a hauteur du joueur
+qui glisse -- on ne les prend qu'en JET-Board (ou avec les ailes +20). Ils s'AJOUTENT apres les
+150 caches : le numero d'un orbe est son rang, et les fiches des joueurs retiennent les numeros
+trouves. --rails les repose sans toucher aux autres ; ne pas relancer le tirage des 150.
+
+    python tools/haven_orbs_map.py            # le tirage des 150 (NE PAS relancer : les rangs changeraient)
+    python tools/haven_orbs_map.py --rails    # les orbes des rails, ajoutes a la fin
 """
 
 import json
+import math
 import os
 import random
+import sys
 
 from PIL import Image, ImageDraw
 
@@ -45,7 +54,6 @@ def inside(box, x, y, z):
 
 def tower_spots(safe):
     """Autour des stations des tours : un sol plein, deux cellules d'air, a 3 a 9 cellules de la station."""
-    import sys
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
     import jak_preview
     volume = jak_preview.read_volume("ctyport")
@@ -150,5 +158,45 @@ def main():
     print("image : %s" % IMG)
 
 
+RAIL_SPACING = 11.4
+
+
+def rails():
+    """Les orbes des rails, ajoutes a la fin : les 150 d'avant gardent leur rang."""
+    cables = json.load(open(os.path.join(DATA, "haven_cables.json"), encoding="utf-8"))
+    with open(OUT, encoding="utf-8") as f:
+        data = json.load(f)
+    kept = [o for o in data["orbes"] if o["lieu"] != "rail"]
+    added = []
+    for line in cables["lines"]:
+        if line["kind"] != "rail":
+            continue
+        pts = line["points"]
+        lengths = [math.dist(pts[i], pts[i + 1]) for i in range(len(pts) - 1)]
+        total = sum(lengths)
+        count = max(1, round(total / RAIL_SPACING))
+        step = total / count
+        for k in range(count):
+            # une demi-maille du bout, puis une maille : jamais sur le saut entre deux rails
+            left = step * (k + 0.5)
+            i = 0
+            while i < len(lengths) - 1 and left > lengths[i]:
+                left -= lengths[i]
+                i += 1
+            t = left / lengths[i] if lengths[i] > 0 else 0.0
+            p = [pts[i][a] + (pts[i + 1][a] - pts[i][a]) * t for a in range(3)]
+            # a hauteur des hanches de celui qui glisse : l'orbe (cellule + 0,25) flotte de 0,5 a 1,5 bloc au-dessus du tube
+            added.append({"cellule": [math.floor(p[0]), round(p[1] + 0.75), math.floor(p[2])], "lieu": "rail"})
+    data["orbes"] = kept + added
+    data["_format"][1] = ("cellule : la cellule du volume ou flotte l'orbe (Y monde = cellule + 5) ; "
+                          "lieu : rue, toit, tour, bassin, large, rail.")
+    with open(OUT, "w", encoding="utf-8", newline="\n") as f:
+        json.dump(data, f, ensure_ascii=False, indent=1)
+    print("rails : %d orbes ajoutes apres les %d autres -> %s" % (len(added), len(kept), OUT))
+
+
 if __name__ == "__main__":
-    main()
+    if "--rails" in sys.argv:
+        rails()
+    else:
+        main()

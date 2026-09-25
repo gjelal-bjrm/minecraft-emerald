@@ -76,6 +76,21 @@ public class Jak3Registry {
                             .clientTrackingRange(10)
                             .build("jak_vehicle"));
 
+    /**
+     * Le JET-Board sous les pieds du joueur (cahier §100). La boite couvre la planche ET le joueur
+     * debout dessus : un passager ne bute contre rien, seule la planche le fait. Jamais sauvegardee :
+     * sans son joueur, elle n'est rien, et elle retourne dans sa case a la deconnexion.
+     */
+    public static final DeferredHolder<EntityType<?>, EntityType<com.emerald.jak.board.JetBoardEntity>> JET_BOARD =
+            ENTITIES.register("jet_board", () ->
+                    EntityType.Builder.<com.emerald.jak.board.JetBoardEntity>of(
+                                    com.emerald.jak.board.JetBoardEntity::new, MobCategory.MISC)
+                            .sized(0.9f, 2.3f)
+                            .noSave()
+                            .fireImmune()
+                            .clientTrackingRange(8)
+                            .build("jet_board"));
+
     // --- le Morph Gun (Haven) : tirs, foudre et munitions d'eco, jamais sauvegardes
 
     /**

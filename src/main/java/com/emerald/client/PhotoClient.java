@@ -58,16 +58,26 @@ public final class PhotoClient {
         }
         String hands = PhotoAutomaton.handsView();
         // l'inventaire et le livre se prennent OUVERTS : leur ecran ne retient pas la prise
-        boolean wantsScreen = "inventaire".equals(hands) || "livre".equals(hands);
+        boolean wantsScreen = "inventaire".equals(hands) || (hands != null && hands.startsWith("livre")) || "curios".equals(hands);
+        if (hands == null && (mc.options.keyUp.isDown() || mc.options.keyDown.isDown())) {
+            // la prise d'avant tenait Z ou S (en planche) : on les lache
+            mc.options.keyUp.setDown(false);
+            mc.options.keyDown.setDown(false);
+        }
         if (hands != null && mc.player != null) {
             // LA PRISE EN MAIN : la camera, le clic tenu (bouclier leve), l'inventaire ; les ailes
             // (« dos », « vol ») se prennent de dos
-            boolean front = hands.startsWith("face");
-            boolean back = hands.startsWith("dos") || hands.startsWith("vol");
+            boolean front = hands.startsWith("face") || hands.endsWith("_face");
+            boolean back = hands.startsWith("dos") || hands.startsWith("vol") || (hands.startsWith("planche") && !front);
             mc.options.setCameraType(front ? net.minecraft.client.CameraType.THIRD_PERSON_FRONT
                     : back ? net.minecraft.client.CameraType.THIRD_PERSON_BACK
                     : net.minecraft.client.CameraType.FIRST_PERSON);
             mc.options.keyUse.setDown(hands.endsWith("leve"));
+            // en planche : S tenu jusqu'a la prise (lachee, elle repart seule, comme dans Jak 3), Z pendant la
+            // rafale d'elan seulement (cahier §100)
+            boolean going = hands.endsWith("avance") && burst >= 0;
+            mc.options.keyUp.setDown(going);
+            mc.options.keyDown.setDown(hands.startsWith("planche") && !going);
             if (hands.startsWith("vol")) {
                 // le vol en rond des ailes : le regard suit la vitesse, un peu vers le bas, comme en vrai
                 net.minecraft.world.phys.Vec3 motion = mc.player.getDeltaMovement();
@@ -82,6 +92,18 @@ public final class PhotoClient {
             }
             if ("inventaire".equals(hands) && mc.screen == null) {
                 mc.setScreen(new net.minecraft.client.gui.screens.inventory.InventoryScreen(mc.player));
+            }
+            if (hands.startsWith("livre") && hands.length() > 5
+                    && mc.screen instanceof net.minecraft.client.gui.screens.inventory.BookViewScreen book) {
+                book.setPage(Integer.parseInt(hands.substring(5).replaceAll("[^0-9].*$", "")));
+            }
+            if ("curios".equals(hands) && mc.screen == null) {
+                // l'ecran de Curios s'ouvre par sa touche : on la presse comme le joueur
+                for (net.minecraft.client.KeyMapping key : mc.options.keyMappings) {
+                    if ("key.curios.open.desc".equals(key.getName())) {
+                        net.minecraft.client.KeyMapping.click(key.getKey());
+                    }
+                }
             }
         }
         // le terrain autour est-il entierement dessine ? (Sodium repond ici aussi) -- et le troncon

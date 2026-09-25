@@ -53,7 +53,8 @@ import java.util.UUID;
  * ville, a ramasser, pour pousser a explorer. » (le joueur, §79.7)
  *
  * Le solde de chaque joueur est sur sa fiche (HavenProgress), comme les orbes caches deja
- * trouves. Les 150 orbes caches (jak/haven_orbs.json, tools/haven_orbs_map.py) sont des
+ * trouves. Les 150 orbes caches et les 30 des rails, a prendre en JET-Board (cahier §100)
+ * (jak/haven_orbs.json, tools/haven_orbs_map.py), sont des
  * entites HavenOrbEntity posees quand leur troncon est charge ; chacun ne se montre qu'a qui
  * ne l'a pas encore pris, et vaut un orbe. Le compteur s'affiche en haut a droite de l'ecran
  * dans Haven (HavenOrbsHud), avec les orbes caches trouves.

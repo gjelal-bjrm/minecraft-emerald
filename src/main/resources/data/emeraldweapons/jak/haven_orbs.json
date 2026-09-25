@@ -1,7 +1,7 @@
 {
  "_format": [
   "Orbes precurseurs caches de Haven, ecrits par tools/haven_orbs_map.py ; lus par com.emerald.haven.quest.HavenOrbs.",
-  "cellule : la cellule du volume ou flotte l'orbe (Y monde = cellule + 5) ; lieu : rue, toit, tour, bassin, large.",
+  "cellule : la cellule du volume ou flotte l'orbe (Y monde = cellule + 5) ; lieu : rue, toit, tour, bassin, large, rail.",
   "Le NUMERO est l'indice dans la liste : les fiches des joueurs retiennent les numeros trouves. Ne pas reordonner."
  ],
  "orbes": [
@@ -1204,6 +1204,246 @@
     122
    ],
    "lieu": "large"
+  },
+  {
+   "cellule": [
+    956,
+    84,
+    277
+   ],
+   "lieu": "rail"
+  },
+  {
+   "cellule": [
+    962,
+    83,
+    284
+   ],
+   "lieu": "rail"
+  },
+  {
+   "cellule": [
+    940,
+    85,
+    259
+   ],
+   "lieu": "rail"
+  },
+  {
+   "cellule": [
+    932,
+    87,
+    252
+   ],
+   "lieu": "rail"
+  },
+  {
+   "cellule": [
+    924,
+    90,
+    244
+   ],
+   "lieu": "rail"
+  },
+  {
+   "cellule": [
+    915,
+    90,
+    237
+   ],
+   "lieu": "rail"
+  },
+  {
+   "cellule": [
+    907,
+    90,
+    229
+   ],
+   "lieu": "rail"
+  },
+  {
+   "cellule": [
+    896,
+    90,
+    231
+   ],
+   "lieu": "rail"
+  },
+  {
+   "cellule": [
+    881,
+    94,
+    246
+   ],
+   "lieu": "rail"
+  },
+  {
+   "cellule": [
+    873,
+    96,
+    251
+   ],
+   "lieu": "rail"
+  },
+  {
+   "cellule": [
+    280,
+    90,
+    290
+   ],
+   "lieu": "rail"
+  },
+  {
+   "cellule": [
+    289,
+    90,
+    282
+   ],
+   "lieu": "rail"
+  },
+  {
+   "cellule": [
+    298,
+    90,
+    274
+   ],
+   "lieu": "rail"
+  },
+  {
+   "cellule": [
+    305,
+    85,
+    267
+   ],
+   "lieu": "rail"
+  },
+  {
+   "cellule": [
+    314,
+    85,
+    259
+   ],
+   "lieu": "rail"
+  },
+  {
+   "cellule": [
+    324,
+    85,
+    253
+   ],
+   "lieu": "rail"
+  },
+  {
+   "cellule": [
+    334,
+    85,
+    246
+   ],
+   "lieu": "rail"
+  },
+  {
+   "cellule": [
+    266,
+    90,
+    303
+   ],
+   "lieu": "rail"
+  },
+  {
+   "cellule": [
+    257,
+    90,
+    310
+   ],
+   "lieu": "rail"
+  },
+  {
+   "cellule": [
+    247,
+    90,
+    312
+   ],
+   "lieu": "rail"
+  },
+  {
+   "cellule": [
+    236,
+    90,
+    313
+   ],
+   "lieu": "rail"
+  },
+  {
+   "cellule": [
+    225,
+    90,
+    314
+   ],
+   "lieu": "rail"
+  },
+  {
+   "cellule": [
+    216,
+    90,
+    308
+   ],
+   "lieu": "rail"
+  },
+  {
+   "cellule": [
+    206,
+    90,
+    302
+   ],
+   "lieu": "rail"
+  },
+  {
+   "cellule": [
+    197,
+    90,
+    297
+   ],
+   "lieu": "rail"
+  },
+  {
+   "cellule": [
+    180,
+    90,
+    286
+   ],
+   "lieu": "rail"
+  },
+  {
+   "cellule": [
+    171,
+    85,
+    280
+   ],
+   "lieu": "rail"
+  },
+  {
+   "cellule": [
+    160,
+    85,
+    274
+   ],
+   "lieu": "rail"
+  },
+  {
+   "cellule": [
+    149,
+    86,
+    268
+   ],
+   "lieu": "rail"
+  },
+  {
+   "cellule": [
+    138,
+    85,
+    262
+   ],
+   "lieu": "rail"
   }
  ]
 }

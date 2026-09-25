@@ -83,7 +83,7 @@ public final class HavenQuestsAutotest {
     private static final int TIMEOUT_TICKS = 20 * 60 * 20;
     private static final int TICKET_DISTANCE = 3;
 
-    private enum Stage { READY, LIVRE, PNJ, CARTES, TIR, PECHE, COFFRES, MOUETTES, PATROUILLE, PORT, ORBES, BOUTIQUE, MENAGE, END }
+    private enum Stage { READY, LIVRE, PNJ, CARTES, TIR, PECHE, COFFRES, MOUETTES, PATROUILLE, PORT, ORBES, BOUTIQUE, COURSE, MENAGE, END }
 
     private static final StringBuilder OUT = new StringBuilder();
     private static Stage stage = Stage.READY;
@@ -111,6 +111,12 @@ public final class HavenQuestsAutotest {
     /** Un cobaye qui garde ce qu'on lui dit : les cartes du chat se cliquent par leur jeton. */
     static final class Cobaye extends FakePlayer {
         final List<Component> said = new ArrayList<>();
+        /**
+         * Sa monture, pour la course du JET-Board : un joueur factice de NeoForge ne monte sur rien
+         * (FakePlayer.startRiding refuse toujours) ; il dit donc sur quoi il est.
+         */
+        @Nullable
+        net.minecraft.world.entity.Entity mount;
 
         Cobaye(ServerLevel level, GameProfile profile) {
             super(level, profile);
@@ -119,6 +125,41 @@ public final class HavenQuestsAutotest {
         @Override
         public void sendSystemMessage(Component message) {
             this.said.add(message);
+        }
+
+        @Nullable
+        @Override
+        public net.minecraft.world.entity.Entity getVehicle() {
+            return this.mount != null ? this.mount : super.getVehicle();
+        }
+
+        /** Il a recu un message de cette cle (le serveur traduit en anglais : on regarde la cle). */
+        boolean saidKey(String key) {
+            for (Component line : this.said) {
+                if (hasKey(line, key)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private static boolean hasKey(Component component, String key) {
+            if (component.getContents() instanceof net.minecraft.network.chat.contents.TranslatableContents t) {
+                if (t.getKey().equals(key)) {
+                    return true;
+                }
+                for (Object arg : t.getArgs()) {
+                    if (arg instanceof Component inner && hasKey(inner, key)) {
+                        return true;
+                    }
+                }
+            }
+            for (Component sibling : component.getSiblings()) {
+                if (hasKey(sibling, key)) {
+                    return true;
+                }
+            }
+            return false;
         }
 
         /** Il ne tique pas : l'eau se lit sous ses pieds. */
@@ -223,6 +264,7 @@ public final class HavenQuestsAutotest {
                 case PORT -> port(server, level);
                 case ORBES -> orbs(server, level);
                 case BOUTIQUE -> shop(server, level);
+                case COURSE -> race(level);
                 case MENAGE -> cleanup(server, level);
                 case END -> {
                 }
@@ -263,10 +305,18 @@ public final class HavenQuestsAutotest {
 
     private static void book() {
         line("--- le livre des quetes");
-        check("dix-huit quetes, six heros, trois chacun", HavenQuestBook.ALL.size() == 18
-                        && HavenHero.values().length == 6 && HavenQuestBook.of(HavenHero.TORN).size() == 3
-                        && HavenQuestBook.of(HavenHero.PECHEUR).size() == 3,
+        check("dix-neuf quetes, six heros, trois chacun et une quatrieme chez Tess (la course du JET-Board)",
+                HavenQuestBook.ALL.size() == 19 && HavenHero.values().length == 6
+                        && HavenQuestBook.of(HavenHero.TORN).size() == 3 && HavenQuestBook.of(HavenHero.PECHEUR).size() == 3
+                        && HavenQuestBook.of(HavenHero.TESS).size() == 4,
                 HavenQuestBook.ALL.size() + " quetes, " + HavenHero.values().length + " heros");
+        HavenQuest course = HavenQuestBook.byId("course");
+        check("la course du JET-Board : apres le tireur d'elite, a la medaille (40, 60, 80 orbes), rejouable, facultative,"
+                        + " sur la planche",
+                course != null && course.giver() == HavenHero.TESS && HavenQuestBook.before(course) == HavenQuestBook.byId("tir3")
+                        && course.medals() && course.rewardFor(1) == 40 && course.rewardFor(3) == 80 && course.repeatable()
+                        && course.needsBoard() && !HavenProgress.REQUIRED_QUESTS.contains("course") && !course.invades(),
+                course == null ? "absente" : course.rewardFor(1) + "/" + course.rewardFor(2) + "/" + course.rewardFor(3));
         boolean chain = true;
         boolean factories = true;
         StringBuilder detail = new StringBuilder();
@@ -726,8 +776,12 @@ public final class HavenQuestsAutotest {
     private static void orbs(MinecraftServer server, ServerLevel level) {
         line("--- les orbes caches");
         List<HavenOrbs.Spot> spots = HavenOrbs.spots(server);
-        check("cent cinquante orbes caches dans la ville, de la rue aux toits, du bassin au large",
-                spots.size() == 150 && HavenOrbs.total(server) == 150, spots.size() + " places");
+        long rails = spots.stream().filter(s -> "rail".equals(s.place())).count();
+        boolean railsLast = spots.stream().allMatch(s -> "rail".equals(s.place()) == (s.index() >= 150));
+        check("cent cinquante orbes caches dans la ville, de la rue aux toits, du bassin au large, puis trente le long"
+                        + " des rails du JET-Board, apres eux : leur rang est leur numero",
+                spots.size() == 180 && HavenOrbs.total(server) == 180 && rails == 30 && railsLast,
+                spots.size() + " places, dont " + rails + " sur les rails");
         HavenOrbs.Spot spot = spots.isEmpty() ? null : spots.get(0);
         if (spot == null) {
             next(Stage.BOUTIQUE);
@@ -823,11 +877,102 @@ public final class HavenQuestsAutotest {
                 food + " vivres, " + runes + " rune");
         int prices = 0;
         for (HavenShopPayload.Article article : HavenShop.catalogForTest(cobaye)) {
-            prices += article.section() == 0 ? article.price() : 0;
+            // les armes seules : le JET-Board est dans le meme onglet (cahier §100)
+            prices += article.section() == 0 && article.id().startsWith("arme.") ? article.price() : 0;
         }
         check("les onze armes valent environ 1 300 orbes (rouge 40, jaune 80, bleue 120, sombre 200)",
                 prices == 1280, prices + " orbes pour les armes");
+        next(Stage.COURSE);
+    }
+
+    // ================================================================ 12. la course du JET-Board (cahier §100)
+
+    @Nullable
+    private static com.emerald.jak.board.JetBoardEntity raceBoard;
+    private static boolean raceAgain;
+
+    /**
+     * La course de Tess, sans la physique -- le banc des vehicules fait le trace en vraie planche :
+     * refusee sans le JET-Board ; puis le cobaye « sur » une planche (il ne peut pas monter, voir
+     * Cobaye.mount), pose a chaque tique sur l'anneau que la course attend, jusqu'a l'arrivee. En
+     * quelques secondes : l'or, 80 orbes. Refaite : elle se relance (rejouable), et l'or deja pris ne
+     * paie plus.
+     */
+    private static void race(ServerLevel level) {
+        UUID id = cobaye.getUUID();
+        HavenQuest course = HavenQuestBook.byId("course");
+        List<com.emerald.jak.board.JetBoardCourse.Ring> rings = com.emerald.jak.board.JetBoardCourse.rings();
+        if (t == 0) {
+            line("--- la course du JET-Board de Tess");
+            if (course == null || rings.isEmpty()) {
+                check("la course du JET-Board et son trace", false, course == null ? "pas de quete" : "trace vide");
+                next(Stage.MENAGE);
+                return;
+            }
+            for (String tir : new String[]{"tir1", "tir2", "tir3"}) {
+                HavenProgress.completeQuest(id, tir);
+                HavenProgress.completeQuest(ami.getUUID(), tir);
+            }
+            ami.said.clear();
+            QuestRun refused = HavenQuests.accept(ami, course);
+            check("sans le JET-Board, la course est refusee, et on le dit",
+                    refused == null && HavenQuests.runOf(ami.getUUID()) == null
+                            && ami.saidKey("game.emeraldweapons.haven.quete.refus.planche"), ami.heard());
+            HavenProgress.addBonus(id, com.emerald.jak.board.JetBoard.OWNED, 1);
+            orbsBefore = HavenProgress.orbs(id);
+            raceAgain = false;
+            // une planche qui n'est pas dans le monde : sans joueur dessus, elle s'y rangerait aussitot
+            raceBoard = com.emerald.init.Jak3Registry.JET_BOARD.get().create(level);
+            cobaye.mount = raceBoard;
+            QuestRun run = HavenQuests.accept(cobaye, course);
+            check("avec la planche, la course commence (" + rings.size() + " anneaux)",
+                    run instanceof com.emerald.haven.quest.runs.JetRaceRun && cobaye.getVehicle() == raceBoard, "");
+            return;
+        }
+        QuestRun run = HavenQuests.runOf(id);
+        if (run instanceof com.emerald.haven.quest.runs.JetRaceRun jet && raceBoard != null) {
+            // le cobaye sur l'anneau attendu, son torse a son centre
+            Vec3 center = rings.get(Math.min(jet.ringsPassed(), rings.size() - 1)).center();
+            cobaye.setPos(center.x, center.y - 0.9, center.z);
+            if (t > 20 * 60) {
+                check("la course s'acheve quand les anneaux sont passes", false,
+                        "toujours en cours apres 60 s, anneau " + jet.ringsPassed() + " sur " + rings.size());
+                HavenQuests.abandon(cobaye);
+                raceDone();
+                next(Stage.MENAGE);
+            }
+            return;
+        }
+        int medal = HavenProgress.medal(id, "course");
+        int gain = HavenProgress.orbs(id) - orbsBefore;
+        if (!raceAgain) {
+            check("les anneaux passes vite : l'or, qui paie 80 orbes la premiere fois", medal == 3 && gain == 80,
+                    "medaille " + medal + ", " + gain + " orbes");
+            raceAgain = true;
+            orbsBefore = HavenProgress.orbs(id);
+            QuestRun again = HavenQuests.accept(cobaye, course);
+            check("la course se refait", again instanceof com.emerald.haven.quest.runs.JetRaceRun, "");
+            if (again == null) {
+                raceDone();
+                next(Stage.MENAGE);
+            }
+            return;
+        }
+        check("refaite, l'or deja pris ne paie plus", medal == 3 && gain == 0, gain + " orbes");
+        int gold = com.emerald.haven.quest.runs.JetRaceRun.GOLD_SECONDS * 20;
+        int silver = com.emerald.haven.quest.runs.JetRaceRun.SILVER_SECONDS * 20;
+        check("les medailles de la course : l'or jusqu'a " + gold / 20 + " s, l'argent jusqu'a " + silver / 20
+                        + " s, le bronze au-dela",
+                com.emerald.haven.quest.runs.JetRaceRun.medalFor(gold) == 3
+                        && com.emerald.haven.quest.runs.JetRaceRun.medalFor(gold + 1) == 2
+                        && com.emerald.haven.quest.runs.JetRaceRun.medalFor(silver + 1) == 1, "");
+        raceDone();
         next(Stage.MENAGE);
+    }
+
+    private static void raceDone() {
+        cobaye.mount = null;
+        raceBoard = null;
     }
 
     // ================================================================ 12. le menage

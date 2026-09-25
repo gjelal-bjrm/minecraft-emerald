@@ -133,20 +133,27 @@ public final class HavenAgenda {
         }
     }
 
-    /** Les pages : le prochain rendez-vous, le carnet de route ; les rues reprises, les quetes et la bourse. */
+    /**
+     * Les pages : le prochain rendez-vous, le carnet de route ; les rues reprises, les quetes et la
+     * bourse. UNE PAGE DE LIVRE TIENT QUATORZE LIGNES, et un titre de quete en prend souvent deux : trois
+     * heros par page debordaient (photo de l'agenda, 25 sept. -- Keira coupee a sa premiere quete, le
+     * Pecheur absent). Deux heros au plus par page, et Tess seule, avec ses quatre epreuves a medaille.
+     */
     public static List<Component> pages(ServerPlayer player) {
         List<Component> out = new ArrayList<>();
         out.add(nextPage(player));
         out.add(roadPage(player));
         if (HavenProgress.get(player.getUUID()).reprise) {
-            out.add(questPage(player, HavenHero.TORN, HavenHero.SIG, HavenHero.KEIRA));
-            out.add(questPage(player, HavenHero.TESS, HavenHero.SAMOS, HavenHero.PECHEUR));
+            out.add(questPage(player, HavenHero.TORN, HavenHero.SIG));
+            out.add(questPage(player, HavenHero.KEIRA));
+            out.add(questPage(player, HavenHero.TESS));
+            out.add(questPage(player, HavenHero.SAMOS, HavenHero.PECHEUR));
             out.add(pursePage(player));
         }
         return out;
     }
 
-    /** Les quetes de trois heros : faites, en cours, a faire, fermees. */
+    /** Les quetes de ces heros : faites, en cours, a faire, fermees. */
     private static Component questPage(ServerPlayer player, HavenHero... heroes) {
         UUID id = player.getUUID();
         QuestRun mine = HavenQuests.runOf(id);
@@ -204,6 +211,11 @@ public final class HavenAgenda {
                         .withStyle(ChatFormatting.BLACK));
                 any = true;
             }
+        }
+        if (com.emerald.jak.board.JetBoard.owns(id)) {
+            page.append("\n");
+            page.append(Component.translatable("item.emeraldweapons.jet_board").withStyle(ChatFormatting.BLACK));
+            any = true;
         }
         for (GunForm.Family family : GunForm.Family.values()) {
             if (HavenShop.unlimited(id, family)) {

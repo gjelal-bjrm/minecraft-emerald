@@ -175,7 +175,10 @@ SHOTS = [("gun_grenade", "gun-grenade-lod0"), ("gun_saucer", "gun-saucer-lod0"),
          # de Ndi Madman). Choix du joueur, 22 sept. : « pour les collectables, je voulais
          # justement que tu reprennes l'oeuf rose du jeu original » -- c'est donc une piece du
          # jeu, et non un dessin a nous (cahier §86.6)
-         ("haven_orb", "collectables-skill-lod0")]
+         ("haven_orb", "collectables-skill-lod0"),
+         # LE JET-BOARD de Jak 3 (cahier §100) : la planche seule, sans Jak dessus ; ses ailerons
+         # (leftFin, rightFin...) sont des os, a leur place de repos
+         ("jet_board", "board-lod0")]
 # les cibles du stand de tir de Jak 3 (niveau lgunnorm, les parcours de tir de Tess) : les gardes KG en
 # carton a abattre, le KG dore des points en plus, et les civils qu'on ne tire pas (lot 3 de Haven)
 TARGETS = [("haven_cible_kg_b", "gun-kg-target-b-lod0"), ("haven_cible_kg_c", "gun-kg-target-c-lod0"),

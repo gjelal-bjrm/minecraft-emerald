@@ -1,0 +1,9 @@
+{
+  "size": 1,
+  "order": 250,
+  "icon": "emeraldweapons:slot/jet_board",
+  "validators": ["curios:tag"],
+  "add_cosmetic": false,
+  "render_toggle": false,
+  "drop_rule": "ALWAYS_KEEP"
+}

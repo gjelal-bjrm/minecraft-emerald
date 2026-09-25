@@ -9083,3 +9083,164 @@ les ailes, ou depuis un pont ou une terrasse.
   droit) : au volant d'une car-a prise au trafic, en voie haute au-dessus du
   port ; l'ancien pilote tombe vers la rue. La premiere montrait la voiture
   redescendue au rase-sol -- d'ou le correctif de l'elan et de la voie.
+
+## 100. Le JET-Board *(25 sept. 2026)*
+
+La suite de l'ordre choisi par le joueur (§96) : « JET-Board : il s'obtient a
+l'achat comme les armes ; il donne acces aux zones sur les chaines (les rails) --
+y mettre des recompenses ; eventuellement un defi pour l'exploiter ; il va sur
+l'eau ». Ses choix (24 sept.) : 200 orbes chez Tess ; une trentaine d'orbes le
+long des rails ; la course de Tess -- enchainer les deux chaines en passant des
+anneaux, chronometre, bronze, argent et or comme le stand de tir, quatrieme
+quete de Tess, facultative, rejouable ; et, s'etant ravise sur la sortie, « un
+nouvel emplacement expres pour lui, un peu comme les artefacts, et une touche
+pour l'activer et le desactiver ».
+
+### A. La planche
+
+Le modele est celui du jeu (`levels/common/board-lod0.glb` de l'export OpenGoal,
+cuit par `tools/jak_gun.py` avec les armes : `jak_gun/jet_board.bin`, 244
+triangles). TOUT VIENT DU JEU (engine/target/board, target-board.gc), en blocs et
+en tiques -- 1 m = 1 bloc, 20 tiques par seconde. Dans Jak 3 la planche n'a pas
+de physique a elle : c'est le controleur de Jak avec les reglages de la planche.
+- AU SOL ET SUR L'EAU (qu'elle prend comme de la pierre, sans ralentir) : 25 m/s
+  bouton tenu, 10 m/s lachee -- elle glisse encore, le jeu n'a pas de frein --,
+  35 au plus ; 18,75 m/s2 d'acceleration ; S freine (31,25 m/s2). On dirige
+  comme au baton de Jak, par rapport au regard. Elle plane a un demi-bloc du sol,
+  a huit dixiemes sur l'eau, et monte seule une marche d'un bloc : le jeu ne fait
+  monter une marche qu'a ce qui est pose au sol, et la planche, qui plane,
+  butait contre la premiere marche de l'escalier du quai ouest (banc de la
+  course) ; elle se dit donc posee pendant son pas quand elle plane.
+- BOUTON LACHE, ELLE AVANCE ENCORE, meme partie de l'arret : la poussee du jeu
+  garde 40 % sous un stick lache (`lerp-scale 0.4 1.0` de son amplitude,
+  target-board.gc:1199). Garde tel quel ; S tenu la retient (la premiere serie
+  de photos l'a montre : la planche posee pour la prise etait partie seule).
+- LE SAUT se charge en tenant Espace, avec la barre de saut du cheval : d'un
+  bloc a six et demi. La vitesse de depart est celle qui met le sommet a la
+  hauteur voulue AU PAS D'UNE TIQUE (la racine de 2gh depassait de 0,7 bloc).
+  Gravite du jeu : 60 m/s2, chute limite 40 m/s.
+- SUR UN RAIL, elle s'accroche d'elle-meme quand on y retombe (le jeu demande le
+  bouton carre tenu), garde sa vitesse, freine un peu (3,75 m/s2 lente, 0,75 a
+  pleine vitesse), gagne a la descente et perd a la montee ; Z pousse (+10 m/s2),
+  S freine. Au bout, elle s'envole droit devant ; Espace saute du rail ; sous un
+  demi-metre par seconde, elle tombe de cote.
+- Le joueur est DEBOUT dessus, le corps dans l'axe de la planche. Pas de chute
+  qui blesse : on retombe de toute hauteur, comme Jak (le jeu passait sinon la
+  chute de la planche a son passager).
+- QUI SIMULE : le client du joueur dessus, comme les vehicules ; le serveur recoit
+  ses positions.
+
+### B. Sa case et sa touche
+
+- L'achat chez Tess (200 orbes, avec les armes) donne la planche ; elle va
+  aussitot dans SA CASE CURIOS (`jet_board`, gardee a la mort), sinon dans le
+  sac. Jetee, elle disparait au sol et revient : celui qui l'a achetee la
+  retrouve chaque seconde dans Haven (`JetBoardKeeper`).
+- LA TOUCHE est `;` (a droite du L ; M sur un clavier AZERTY) : toutes les
+  lettres sont prises dans le profil du joueur. Elle sort la planche sous les
+  pieds, avec l'elan du joueur, ou la range. Seulement dans Haven.
+
+### C. Monter sur les rails : les tremplins
+
+Les six rails de Jak 3 (city-port-smallpipe-straight-grind, `HavenCables`,
+lignes « rail ») pendent sous les arcades, de QUATORZE A TRENTE BLOCS au-dessus
+de la rue, et RIEN N'Y MENE : pas de plancher d'ou sauter (le plus haut est
+douze blocs dessous ; le saut en fait six et demi), et depuis la baie les
+piliers des arcades barrent toutes les trajectoires essayees (des centaines,
+simulees tique par tique contre la ville posee). D'ou TROIS TREMPLINS
+d'eco bleu (`JetBoardPads`) au pied des chaines : on y passe en planche, elle
+part sur le rail, trois blocs apres son bout ; a pied, rien. Un cercle bleu qui
+bat, une spirale, une colonne de lumiere, des etincelles (`JetBoardPadRenderer`).
+- A L'EST, sous le bout bas du rail 6. LA CHAINE EST NE SE FAIT QU'EN MONTANT
+  (6, 7, 8) : dans l'autre sens, aucun saut ne retombe sur le rail suivant, a
+  aucune vitesse ni aucune charge (simule). Elle finit en l'air, trente blocs
+  au-dessus de la baie. Son elan est le plus long (quinze blocs : la planche
+  arrive a 20 m/s) : le saut de quatorze blocs vers le rail 7 demande alors 80 %
+  de charge, ce que la barre du cheval garde quand on tient Espace (a 16 m/s, il
+  fallait la charge pleine au dixieme de seconde pres).
+- A L'OUEST, sous le bout du rail 9 (cote centre) et sous celui du rail 11 (au
+  bout de la ville) : la chaine ouest, sauts de huit blocs, se fait dans les deux
+  sens, a toute vitesse, sauts a mi-charge.
+- Le saut du tremplin est calcule comme celui de la planche : sommet a 0,8 bloc
+  au-dessus de la hauteur de glisse, a l'aplomb du point vise. La planche ne se
+  dirige pas pendant le vol ; il faut etre sorti du tremplin pour qu'il relance.
+
+### D. Les orbes des rails
+
+TRENTE ORBES au-dessus des six rails, un tous les onze blocs et demi, a hauteur
+des hanches de celui qui glisse (`tools/haven_orbs_map.py --rails`) : on ne les
+prend qu'en planche (ou avec les ailes +20). Ils s'AJOUTENT apres les 150 caches
+-- le numero d'un orbe est son rang, et les fiches des joueurs retiennent les
+numeros trouves : le tirage des 150 ne se relance pas. Le compteur passe a 180.
+Un orbe regarde desormais s'il est pris A CHAQUE TIQUE : a 25 m/s on parcourt
+cinq blocs en quatre tiques, et l'on passait entre deux verifications.
+
+### E. La course de Tess
+
+Quatrieme quete de Tess (`course`, apres le tireur d'elite), sur la planche
+(sans elle, la carte dit « il faut le JET-Board »), facultative (hors de la
+maitrise) et rejouable : bronze 40, argent 60, or 80 orbes, et la difference si
+l'on fait mieux. LE TRACE (`JetBoardCourse`, 47 anneaux) va d'est en ouest :
+1. le tremplin est (le chrono part), les rails 6, 7 et 8 en montant ;
+2. LE PLONGEON du bout du rail 8 dans la baie, trente blocs plus bas (seize a
+   quarante blocs plus loin selon la vitesse, a cote du cargo amarre) ;
+3. LA BAIE vers l'ouest, au large des quais, de la jetee du centre et du bout du
+   bras ouest : un demi-kilometre d'eau libre (verifie tous les demi-blocs, a
+   deux blocs de marge) ;
+4. L'ESCALIER du quai ouest -- les quais sont a huit blocs au-dessus de l'eau,
+   une planche tombee dans la baie ne remonte que par des marches d'un bloc, en
+   diagonale ici --, puis la rue jusqu'au tremplin ouest, a l'ouest de deux bacs
+   de deux blocs de haut (chemin cherche cellule par cellule : marches d'un bloc
+   au plus, voisines comprises, la planche fait 0,9 bloc de large) ;
+5. les rails 9, 10 et 11 ; l'arrivee au bout du rail 11.
+Les anneaux des rails sont a la hauteur du torse, tous les douze blocs ; ceux des
+sauts au milieu du vide, et ils se passent a toute la hauteur des arcs qui
+retombent sur le rail suivant : qui a saute est passe. LES TEMPS : la planche
+fait le trace seule en 40,3 s au banc (bouton tenu, droit sur chaque anneau,
+sauts lances au bout des rails a la bonne charge) ; l'or a 48 s (un cinquieme
+au-dessus), l'argent a 65 s (de quoi rater un saut ou deux), le bronze pour qui
+finit dans les trois minutes.
+
+### F. Verifie
+
+- Banc des vehicules : 173 OK. La planche : sur l'eau 23,6 m/s apres 5 s a
+  0,80 bloc ; lachee 9,9 m/s ; freinee a l'arret en 1 s ; sauts de 6,51 et
+  1,01 blocs ; 0,50 bloc au-dessus de la rue ; un rail pris, suivi, quitte au
+  bout. LES TROIS TREMPLINS, dans le monde tel qu'il est (meubles de l'atelier
+  compris) : chacun accroche son rail a la quatorzieme tique, a 3,0 a 3,3 blocs
+  du bout. LA COURSE, faite par la planche seule : 47 anneaux en 40,3 s -- la
+  chaine est en 7 s, la baie en 20, l'escalier et la rue en 2, la chaine ouest
+  en 10. Le premier passage s'etait arrete au pied de l'escalier, a l'arret :
+  la planche ne montait pas les marches (elle se dit desormais posee pendant son
+  pas, voir A) et le trace passait sur un bac de deux blocs (d'ou l'escalier pris
+  en diagonale et la rue a l'ouest des bacs).
+- Photos (`haven:board_*`, monde de photos de Haven) : le tremplin -- la
+  premiere prise le montrait a peine, un disque pale en plein jour ; plus grand
+  et plus opaque, avec une colonne de quatre blocs et demi et un coeur de sept,
+  il se voit --, les reperes du depart de la course, la planche de dos et de
+  face (le nez devant, les deux ailerons de Jak 3 derriere, le joueur debout au
+  milieu), l'ecran de Curios avec la planche dans sa case, et une rafale bouton
+  tenu : le tremplin, le vol contre la facade, la glisse sous les arcades, un
+  orbe ramasse en passant. Le rail, dessine en chaine fine, se voit mal de la
+  rue ; les orbes et la colonne du tremplin le signalent.
+- L'AGENDA DEBORDAIT : une page de livre tient quatorze lignes, et les trois
+  heros par page n'y tenaient pas deja avant la course (photo : Keira coupee a
+  sa premiere quete, le Pecheur absent). Deux heros au plus par page, Tess seule
+  (quatre pages de quetes) ; photographie vide et pleine, l'argent partout.
+- Banc des quetes : 58 OK (7 de plus) -- dix-neuf quetes, la course apres le
+  tireur d'elite, a la medaille, rejouable et hors de la maitrise ; 180 orbes
+  dont les 30 des rails apres les 150 ; la course refusee sans la planche ; les
+  47 anneaux passes : l'or et 80 orbes, puis refaite, rien de plus ; les seuils
+  des medailles. Le cobaye y est « sur » la planche sans y monter : un joueur
+  factice de NeoForge ne monte sur rien (`FakePlayer.startRiding` refuse
+  toujours) -- trois KO du premier passage venaient de la, et du serveur qui
+  traduit les textes du mod en anglais (on teste la cle).
+
+### G. Choix du joueur (25 sept.)
+
+- Les TREMPLINS, ajout de ma part (Jak 3 n'en a pas a ces rails, mais rien n'y
+  mene dans la ville posee) : GARDES.
+- La planche qui repart seule bouton lache, comme dans le jeu : GARDEE.
+- Livre : commit, push et installation au profil.
+- Reste a voir : les rails, en chaine fine, se voient mal depuis la rue.
+
