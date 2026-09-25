@@ -172,7 +172,18 @@ public final class HeroEvents {
      * {@link #elementBonus}.
      */
     public static void apply(Player player) {
-        int vitality = HeroLevel.effective(player, HeroStat.VITALITE);
+        applyPaths(player, HeroLevel.effective(player, HeroStat.ATTAQUE),
+                HeroLevel.effective(player, HeroStat.ELEMENT),
+                HeroLevel.effective(player, HeroStat.DEFENSE),
+                HeroLevel.effective(player, HeroStat.VITALITE));
+    }
+
+    /**
+     * Les trois modificateurs d'une fiche donnee par ses quatre voies : le joueur, ou un
+     * monstre habille par MobScaling (cahier §104), dont la fiche suit la meme regle.
+     */
+    public static void applyPaths(net.minecraft.world.entity.LivingEntity player, int attack, int element,
+                                  int defense, int vitality) {
 
         // LA VITALITE DEBORDE SUR LES DEUX AUTRES, comme la voie HP/MP de
         // NosTale, dont les paliers donnent de la puissance d'attaque et de la
@@ -180,10 +191,10 @@ public final class HeroEvents {
         // mieux : elle ne fait rien mieux que les autres, elle fait un peu des
         // trois, et c'est un choix defendable plutot qu'un lot de consolation.
         set(player.getAttribute(Attributes.ATTACK_DAMAGE), ATTACK_ID,
-                HeroStat.ATTAQUE.value(HeroLevel.effective(player, HeroStat.ATTAQUE))
+                HeroStat.ATTAQUE.value(attack)
                         + HeroStat.VITALITE.bonus(HeroBonus.ATTACK_FLAT, vitality));
         set(player.getAttribute(Attributes.ARMOR), ARMOR_ID,
-                HeroStat.DEFENSE.value(HeroLevel.effective(player, HeroStat.DEFENSE))
+                HeroStat.DEFENSE.value(defense)
                         + HeroStat.VITALITE.bonus(HeroBonus.ARMOR_FLAT, vitality));
 
         AttributeInstance health = player.getAttribute(Attributes.MAX_HEALTH);

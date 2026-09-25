@@ -1,5 +1,9 @@
 package com.emerald.game;
 
+import com.emerald.rune.RuneFamily;
+import com.emerald.rune.RuneMark;
+import com.emerald.rune.Runes;
+
 import com.emerald.item.GearRarity;
 import com.emerald.item.Upgrade;
 import net.minecraft.server.level.ServerLevel;
@@ -116,6 +120,18 @@ public final class MobGear {
      * sur le premier venu.
      */
     public static void equip(Mob mob, double stage, RandomSource random) {
+        // DEPUIS LE 25 SEPTEMBRE, LE STADE NE COMPTE PLUS : les monstres s'alignent sur les
+        // joueurs (MobScaling, cahier §104). Les systemes qui posent leurs monstres -- siege,
+        // garnisons, Traque, Echos, Battue -- appellent toujours ici ; on les habille tout de
+        // suite, selon la reference des joueurs.
+        MobScaling.scaleNow(mob, random);
+    }
+
+    /**
+     * L'ancien habillage, selon le stade de la partie. Garde pour memoire et pour le banc,
+     * qui compare les coups pour tuer avant et apres (ArcenciumAutotest, epreuve 13).
+     */
+    public static void equipByStage(Mob mob, double stage, RandomSource random) {
         int rung = Math.min(LADDER.length - 1, (int) (stage * LADDER.length));
         Kit kit = LADDER[rung];
 
@@ -134,6 +150,101 @@ public final class MobGear {
         if (mob.getMainHandItem().isEmpty()) {
             put(mob, EquipmentSlot.MAINHAND, kit.weapon(), stage, odds, random);
         }
+    }
+
+    // ================================================================ le miroir
+
+    /** L'armure complete de chaque echelon, en points : cuir, maille, fer, diamant, diamant. */
+    private static final double[] SET_ARMOUR = {7, 12, 15, 20, 20};
+
+    /**
+     * L'echelon d'un monstre : l'armure la plus lourde qui reste SOUS celle des joueurs, avec
+     * un dixieme de marge -- un joueur en fer croise de la maille, un joueur en Arcencium
+     * ameliore croise du diamant.
+     */
+    static int rungFor(double armourPoints) {
+        int rung = 0;
+        for (int i = 0; i < SET_ARMOUR.length; i++) {
+            if (SET_ARMOUR[i] <= armourPoints * 0.9) {
+                rung = i;
+            }
+        }
+        if (armourPoints >= 26.0) {
+            rung = LADDER.length - 1;               // et l'epee de netherite
+        }
+        return rung;
+    }
+
+    /**
+     * Habille un monstre sous la reference des joueurs (cahier §104) : rarete de 0 a la leur,
+     * amelioration de +0 a la leur, une rune de rang 1 au leur sur l'arme, le casque et chaque
+     * piece d'armure. Tous les monstres, meme sans mains : l'equipement ne se voit pas sur
+     * une araignee, mais il compte (choix du joueur).
+     */
+    public static void dress(Mob mob, MobScaling.Reference ref, RandomSource random) {
+        Kit kit = LADDER[rungFor(ref.armourPoints())];
+        // le casque toujours : sans lui, un mort-vivant brule a midi, et le mode se joue a midi
+        mirror(mob, EquipmentSlot.HEAD, kit.helmet(), ref, 1.0, RuneFamily.WEAPON, random);
+        mirror(mob, EquipmentSlot.CHEST, kit.chest(), ref, 1.0, RuneFamily.ARMOR, random);
+        mirror(mob, EquipmentSlot.LEGS, kit.legs(), ref, 0.85, RuneFamily.ARMOR, random);
+        mirror(mob, EquipmentSlot.FEET, kit.boots(), ref, 0.85, RuneFamily.ARMOR, random);
+        // l'arme, seulement a qui n'en a pas : un squelette garde son arc, un vindicateur sa hache
+        if (mob.getMainHandItem().isEmpty()) {
+            mirror(mob, EquipmentSlot.MAINHAND, kit.weapon(), ref, 1.0, RuneFamily.WEAPON, random);
+        }
+    }
+
+    private static void mirror(Mob mob, EquipmentSlot slot, Item item, MobScaling.Reference ref, double odds,
+                               RuneFamily family, RandomSource random) {
+        if (random.nextDouble() > odds) {
+            return;
+        }
+        boolean weapon = slot == EquipmentSlot.MAINHAND;
+        ItemStack stack = new ItemStack(item);
+        int upgrade = upTo(weapon ? ref.weaponUpgrade() : ref.armourUpgrade(), random);
+        if (upgrade > 0) {
+            Upgrade.set(stack, upgrade);
+        }
+        int rank = upTo(weapon ? ref.weaponRarity() : ref.armourRarity(), random);
+        if (rank > 0) {
+            GearRarity.set(stack, GearRarity.values()[Math.min(8, rank)]);
+        }
+        int runeTop = (int) Math.round(ref.runeRank());
+        if (runeTop >= 1) {
+            Runes.engrave(stack, RuneMark.roll(family, 1 + random.nextInt(runeTop), random));
+        }
+        mob.setItemSlot(slot, stack);
+        mob.setDropChance(slot, DROP_CHANCE);
+    }
+
+    /** Un entier de 0 a la valeur de reference arrondie, au hasard. */
+    private static int upTo(double reference, RandomSource random) {
+        int top = (int) Math.round(reference);
+        return top <= 0 ? 0 : random.nextInt(top + 1);
+    }
+
+    /**
+     * Le boss final (cahier §104) : netherite, rarete 8, +8 a +10, une rune de rang 8 a l'arme
+     * et a chaque piece d'armure, et PAS DE CASQUE -- le casque porte une rune d'arme, et le
+     * joueur n'en veut pas sur le boss.
+     */
+    public static void dressFinalBoss(Mob mob, RandomSource random) {
+        mob.setItemSlot(EquipmentSlot.HEAD, ItemStack.EMPTY);
+        boss(mob, EquipmentSlot.CHEST, Items.NETHERITE_CHESTPLATE, RuneFamily.ARMOR, random);
+        boss(mob, EquipmentSlot.LEGS, Items.NETHERITE_LEGGINGS, RuneFamily.ARMOR, random);
+        boss(mob, EquipmentSlot.FEET, Items.NETHERITE_BOOTS, RuneFamily.ARMOR, random);
+        if (mob.getMainHandItem().isEmpty()) {
+            boss(mob, EquipmentSlot.MAINHAND, Items.NETHERITE_SWORD, RuneFamily.WEAPON, random);
+        }
+    }
+
+    private static void boss(Mob mob, EquipmentSlot slot, Item item, RuneFamily family, RandomSource random) {
+        ItemStack stack = new ItemStack(item);
+        Upgrade.set(stack, 8 + random.nextInt(3));
+        GearRarity.set(stack, GearRarity.PHENOMENAL);
+        Runes.engrave(stack, RuneMark.roll(family, 8, random));
+        mob.setItemSlot(slot, stack);
+        mob.setDropChance(slot, 0.0F);
     }
 
     private static void put(Mob mob, EquipmentSlot slot, Item item,

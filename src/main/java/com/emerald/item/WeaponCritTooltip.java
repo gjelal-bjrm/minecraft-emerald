@@ -60,5 +60,12 @@ public final class WeaponCritTooltip {
                             String.format(Locale.ROOT, "%.0f", pierce))
                     .withStyle(ChatFormatting.DARK_AQUA));
         }
+        // LA BRECHE (cahier §104) : contre les boss seulement, et elle monte avec la rarete
+        double breach = Breach.chance(stack);
+        if (breach > 0.0) {
+            event.getToolTip().add(Component.translatable("weapon.emeraldweapons.breach",
+                            String.format(Locale.ROOT, "%.1f", breach))
+                    .withStyle(ChatFormatting.DARK_AQUA));
+        }
     }
 }

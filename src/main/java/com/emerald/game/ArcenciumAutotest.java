@@ -88,7 +88,10 @@ import java.util.UUID;
  *  12. l'arene du boss (cahier §91) : le volume de Spargus et ses reperes vont ensemble, le boss
  *      nait sur le sol loin de la lave, les gardes jamais dans une rigole, toute la lave est
  *      tenue (ni air a cote ni dessous), l'on marche de la porte sud au boss sans lave, et les
- *      quatre boss sont des geants (leur combat contre le vrai joueur : l'automate de photos).
+ *      quatre boss sont des geants (leur combat contre le vrai joueur : l'automate de photos) ;
+ *  13. les monstres alignes sur les joueurs (cahier §104) : la reference d'un groupe, les
+ *      bornes de l'habillage, le boss final, les boss des autres mods, la Breche, et les
+ *      COUPS POUR TUER avant et apres, contre un joueur en +7.
  * Rapport dans partie_autotest.txt, puis arret.
  */
 @EventBusSubscriber(modid = EmeraldWeaponsMod.MODID)
@@ -136,6 +139,7 @@ public final class ArcenciumAutotest {
             bestiary(level);
             sanctuaries(level, spawn);
             arena(server);
+            scaling(level, spawn);
         } catch (RuntimeException e) {
             LOGGER.error("autotest partie : exception", e);
             check("deroulement sans exception", false, e.toString());
@@ -250,8 +254,10 @@ public final class ArcenciumAutotest {
                 com.emerald.block.ModBlocks.ECLIPSE_PORTAL.get()));
         double nearest = rifts.stream().mapToDouble(p -> Math.sqrt(p.distSqr(spawn))).min().orElse(0);
         double farthest = rifts.stream().mapToDouble(p -> Math.sqrt(p.distSqr(spawn))).max().orElse(0);
-        check("trois portails s'ouvrent, a 26-56 blocs, leurs blocs poses",
-                opened == 3 && blocks && nearest >= 25 && farthest <= 57,
+        // DEUX AU MOINS : le terrain d'essai s'est rempli (l'arene, les autres chantiers), et un
+        // relief tres accidente peut aussi, en partie, n'en laisser que deux
+        check("deux ou trois portails s'ouvrent, a 26-74 blocs (l'anneau s'elargit si la place manque), leurs blocs poses",
+                opened >= 2 && blocks && nearest >= 25 && farthest <= 75,
                 opened + " ouverts, de " + Math.round(nearest) + " a " + Math.round(farthest) + " blocs, " + rifts);
 
         net.minecraft.world.entity.Entity naturalDuring = ghoul.get().spawn(level, probe,
@@ -280,14 +286,23 @@ public final class ArcenciumAutotest {
             }
         }
         check("la vague : quatre horreurs par portail, toutes du tag, marquees Eclipse et tempete",
-                emerged == 12 && allHorrors && allTagged,
+                emerged == 4 * rifts.size() && allHorrors && allTagged,
                 emerged + " sorties : " + String.join(", ", kinds));
 
         BlockPos first = rifts.get(0);
+        List<String> killed = new ArrayList<>();
+        FakePlayer hunter = fake(level, "chasseur", first.above());
         for (net.minecraft.world.entity.Entity e : com.emerald.weather.Eclipse.aliveAt(level, first)) {
-            e.kill();
+            // UN VRAI COUP DE JOUEUR : le spectre de The Graveyard est immunise contre tout ce qui
+            // ignore l'armure -- /kill, et meme les degats generiques -- et contre les fleches.
+            // A l'epee, il meurt comme un autre.
+            e.invulnerableTime = 0;
+            e.hurt(level.damageSources().playerAttack(hunter), 100000.0F);
+            killed.add(net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.getKey(e.getType()).getPath()
+                    + (e.isAlive() ? " (vivant)" : ""));
         }
         com.emerald.weather.Eclipse.tickForAutotest(level);
+        line("premier portail : tues " + killed + ", encore vivants " + com.emerald.weather.Eclipse.aliveAt(level, first).size());
         boolean closed = !com.emerald.weather.Eclipse.rifts().contains(first)
                 && level.getBlockState(first).isAir();
         int shards = 0;
@@ -298,8 +313,10 @@ public final class ArcenciumAutotest {
                 item.discard();
             }
         }
+        // AU MOINS les Eclats du portail : tuees par un joueur, les horreurs lachent aussi le
+        // butin des monstres de tempete (un Eclat une fois sur deux)
         check("sa vague morte, le portail se referme et laisse ses Eclats du Destin",
-                closed && shards == com.emerald.weather.Eclipse.SHARDS,
+                closed && shards >= com.emerald.weather.Eclipse.SHARDS,
                 "referme " + closed + ", Eclats " + shards);
 
         int left = com.emerald.weather.Eclipse.rifts().size();
@@ -639,6 +656,317 @@ public final class ArcenciumAutotest {
         }
         check("quatre boss geants : huit blocs de haut au moins (un joueur en fait 1,8), six cents PV au moins",
                 giants && sizes.size() == 4, String.join(" ; ", sizes));
+    }
+
+    // ============================================================ 13. l'alignement
+
+    /** Un joueur factice equipe : arme, armure, runes, niveau Heros ; les attributs poses a la main. */
+    private static FakePlayer armed(ServerLevel level, String name, BlockPos feet,
+                                    net.minecraft.world.item.Item weaponItem, int weaponUp, int weaponRank,
+                                    net.minecraft.world.item.Item[] armour, int armourUp, int armourRank,
+                                    int runeRank, int heroLevel, int[] paths) {
+        FakePlayer fake = fake(level, name, feet);
+        net.minecraft.util.RandomSource random = net.minecraft.util.RandomSource.create(name.hashCode());
+        net.minecraft.world.item.ItemStack weapon = new net.minecraft.world.item.ItemStack(weaponItem);
+        com.emerald.item.Upgrade.set(weapon, weaponUp);
+        com.emerald.item.GearRarity.set(weapon, com.emerald.item.GearRarity.values()[weaponRank]);
+        if (runeRank > 0) {
+            com.emerald.rune.Runes.engrave(weapon, com.emerald.rune.RuneMark.roll(
+                    com.emerald.rune.RuneFamily.WEAPON, runeRank, random));
+        }
+        fake.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, weapon);
+        net.minecraft.world.entity.EquipmentSlot[] slots = {net.minecraft.world.entity.EquipmentSlot.HEAD,
+                net.minecraft.world.entity.EquipmentSlot.CHEST, net.minecraft.world.entity.EquipmentSlot.LEGS,
+                net.minecraft.world.entity.EquipmentSlot.FEET};
+        for (int i = 0; i < 4 && armour != null; i++) {
+            net.minecraft.world.item.ItemStack piece = new net.minecraft.world.item.ItemStack(armour[i]);
+            com.emerald.item.Upgrade.set(piece, armourUp);
+            com.emerald.item.GearRarity.set(piece, com.emerald.item.GearRarity.values()[armourRank]);
+            if (runeRank > 0 && i > 0) {
+                com.emerald.rune.Runes.engrave(piece, com.emerald.rune.RuneMark.roll(
+                        com.emerald.rune.RuneFamily.ARMOR, runeRank, random));
+            }
+            fake.setItemSlot(slots[i], piece);
+        }
+        net.minecraft.nbt.CompoundTag data = fake.getPersistentData();
+        data.putInt("HeroLevel", heroLevel);
+        com.emerald.hero.HeroStat[] order = {com.emerald.hero.HeroStat.ATTAQUE, com.emerald.hero.HeroStat.ELEMENT,
+                com.emerald.hero.HeroStat.DEFENSE, com.emerald.hero.HeroStat.VITALITE};
+        for (int i = 0; i < 4; i++) {
+            data.putInt(order[i].tag(), paths[i]);
+        }
+        equipNow(fake);
+        com.emerald.hero.HeroEvents.apply(fake);
+        com.emerald.rune.RuneEvents.apply(fake);
+        return fake;
+    }
+
+    /** Les attributs de l'equipement porte, poses tout de suite (le jeu le fait a la tique suivante). */
+    private static void equipNow(net.minecraft.world.entity.LivingEntity entity) {
+        for (net.minecraft.world.entity.EquipmentSlot slot : net.minecraft.world.entity.EquipmentSlot.values()) {
+            net.minecraft.world.item.ItemStack stack = entity.getItemBySlot(slot);
+            if (stack.isEmpty()) {
+                continue;
+            }
+            stack.forEachModifier(slot, (attribute, modifier) -> {
+                net.minecraft.world.entity.ai.attributes.AttributeInstance instance = entity.getAttribute(attribute);
+                if (instance != null) {
+                    instance.addOrUpdateTransientModifier(modifier);
+                }
+            });
+        }
+    }
+
+    /**
+     * Combien de coups du joueur pour tuer ce monstre, en moyenne sur « trials » monstres
+     * neufs ; et combien de coups du monstre pour tuer le joueur (armure du joueur comprise).
+     */
+    private static double[] duel(ServerLevel level, FakePlayer player,
+                                 java.util.function.Supplier<net.minecraft.world.entity.Mob> make, int trials) {
+        double hits = 0;
+        double back = 0;
+        double mobHealth = 0;
+        double mobArmour = 0;
+        float strike = (float) player.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE);
+        for (int t = 0; t < trials; t++) {
+            net.minecraft.world.entity.Mob mob = make.get();
+            equipNow(mob);
+            mob.setHealth(mob.getMaxHealth());
+            mobHealth += mob.getMaxHealth();
+            mobArmour += mob.getArmorValue();
+            int n = 0;
+            while (mob.getHealth() > 0.0F && n < 200) {
+                mob.invulnerableTime = 0;
+                mob.hurt(level.damageSources().playerAttack(player), strike);
+                n++;
+            }
+            hits += n;
+            float bite = (float) mob.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE);
+            float taken = net.minecraft.world.damagesource.CombatRules.getDamageAfterAbsorb(player, bite,
+                    level.damageSources().mobAttack(mob), player.getArmorValue(),
+                    (float) player.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.ARMOR_TOUGHNESS));
+            back += Math.ceil(player.getMaxHealth() / Math.max(0.01F, taken));
+            mob.discard();
+        }
+        return new double[]{hits / trials, back / trials, mobHealth / trials, mobArmour / trials};
+    }
+
+    private static void scaling(ServerLevel level, BlockPos spawn) {
+        line("--- les monstres alignes sur les joueurs : reference, bornes, boss, Breche, coups pour tuer");
+        BlockPos feet = spawn.above(2);
+        net.minecraft.world.item.Item[] diamond = {net.minecraft.world.item.Items.DIAMOND_HELMET,
+                net.minecraft.world.item.Items.DIAMOND_CHESTPLATE, net.minecraft.world.item.Items.DIAMOND_LEGGINGS,
+                net.minecraft.world.item.Items.DIAMOND_BOOTS};
+        net.minecraft.world.item.Item[] iron = {net.minecraft.world.item.Items.IRON_HELMET,
+                net.minecraft.world.item.Items.IRON_CHESTPLATE, net.minecraft.world.item.Items.IRON_LEGGINGS,
+                net.minecraft.world.item.Items.IRON_BOOTS};
+        net.minecraft.world.item.Item sword = com.emerald.item.ModItems.EMERALD_SWORD.get();
+
+        // 1. le groupe : le milieu entre le plus faible et le plus fort
+        FakePlayer weak = armed(level, "faible", feet, sword, 3, 2, iron, 3, 2, 2, 30, new int[]{8, 4, 8, 8});
+        FakePlayer strong = armed(level, "fort", feet, sword, 7, 6, diamond, 7, 6, 6, 70, new int[]{25, 15, 25, 25});
+        MobScaling.Reference group = MobScaling.of(List.of(weak, strong));
+        check("a deux joueurs, la reference est le milieu : arme +5 rang 4, armure +5 rang 4, runes 4, niveau 50",
+                group.weaponUpgrade() == 5 && group.weaponRarity() == 4 && group.armourUpgrade() == 5
+                        && group.armourRarity() == 4 && group.runeRank() == 4 && group.heroLevel() == 50,
+                String.format(Locale.ROOT, "arme +%.1f rang %.1f, armure +%.1f rang %.1f, runes %.1f, niveau %.1f, armure %.1f pts",
+                        group.weaponUpgrade(), group.weaponRarity(), group.armourUpgrade(), group.armourRarity(),
+                        group.runeRank(), group.heroLevel(), group.armourPoints()));
+
+        // 2. les bornes : un joueur en +3, rang 2, runes 2, niveau 40
+        MobScaling.Reference ref = MobScaling.of(weak);
+        ref = ref.with(3, 2, 3, 2, 2, 40);
+        int outOfBounds = 0;
+        int levelLow = 999;
+        int levelHigh = 0;
+        int stronger = 0;
+        int offensive = 0;
+        for (int i = 0; i < 300; i++) {
+            net.minecraft.world.entity.monster.Zombie z = EntityType.ZOMBIE.create(level);
+            if (z == null) {
+                continue;
+            }
+            MobScaling.scale(z, ref, level.random);
+            for (net.minecraft.world.entity.EquipmentSlot slot : net.minecraft.world.entity.EquipmentSlot.values()) {
+                net.minecraft.world.item.ItemStack stack = z.getItemBySlot(slot);
+                if (stack.isEmpty()) {
+                    continue;
+                }
+                boolean bad = com.emerald.item.Upgrade.of(stack) > 3
+                        || com.emerald.item.GearRarity.of(stack).rank() > 2;
+                for (com.emerald.rune.RuneMark mark : com.emerald.rune.Runes.on(stack)) {
+                    bad |= mark.rank() < 1 || mark.rank() > 2;
+                }
+                if (bad) {
+                    outOfBounds++;
+                }
+            }
+            int lv = MobScaling.level(z);
+            levelLow = Math.min(levelLow, lv);
+            levelHigh = Math.max(levelHigh, lv);
+            int atk = MobScaling.path(z, com.emerald.hero.HeroStat.ATTAQUE);
+            int vit = MobScaling.path(z, com.emerald.hero.HeroStat.VITALITE);
+            if (vit > atk + 3) {
+                stronger++;
+            } else if (atk > vit + 3) {
+                offensive++;
+            }
+            z.discard();
+        }
+        check("300 zombies sous un joueur +3, rang 2, runes 2, niveau 40 : rien au-dessus, niveau 34 a 40, des costauds et des offensifs",
+                outOfBounds == 0 && levelLow >= 34 && levelHigh <= 40 && stronger > 20 && offensive > 20,
+                "hors bornes " + outOfBounds + ", niveaux " + levelLow + "-" + levelHigh + ", costauds " + stronger
+                        + ", offensifs " + offensive);
+
+        // 3. le boss final
+        net.minecraft.world.entity.monster.Zombie boss = EntityType.ZOMBIE.create(level);
+        if (boss != null) {
+            boss.addTag(Finale.TAG_BOSS);
+            MobScaling.scaleNow(boss, level.random);
+            boolean noHelmet = boss.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.HEAD).isEmpty();
+            boolean gear = true;
+            StringBuilder seen = new StringBuilder();
+            for (net.minecraft.world.entity.EquipmentSlot slot : new net.minecraft.world.entity.EquipmentSlot[]{
+                    net.minecraft.world.entity.EquipmentSlot.MAINHAND, net.minecraft.world.entity.EquipmentSlot.CHEST,
+                    net.minecraft.world.entity.EquipmentSlot.LEGS, net.minecraft.world.entity.EquipmentSlot.FEET}) {
+                net.minecraft.world.item.ItemStack stack = boss.getItemBySlot(slot);
+                int up = com.emerald.item.Upgrade.of(stack);
+                int rank = com.emerald.item.GearRarity.of(stack).rank();
+                int rune = com.emerald.rune.Runes.on(stack).isEmpty() ? 0 : com.emerald.rune.Runes.on(stack).get(0).rank();
+                gear &= up >= 8 && up <= 10 && rank == 8 && rune == 8;
+                seen.append(slot.getName()).append(" +").append(up).append(" r").append(rank).append(" rune").append(rune).append(" ; ");
+            }
+            int[] p = {MobScaling.path(boss, com.emerald.hero.HeroStat.ATTAQUE),
+                    MobScaling.path(boss, com.emerald.hero.HeroStat.ELEMENT),
+                    MobScaling.path(boss, com.emerald.hero.HeroStat.DEFENSE),
+                    MobScaling.path(boss, com.emerald.hero.HeroStat.VITALITE)};
+            int spread = java.util.Arrays.stream(p).max().getAsInt() - java.util.Arrays.stream(p).min().getAsInt();
+            check("le boss final : sans casque, arme et armure +8 a +10, rarete 8, runes 8, niveau 99 a parts egales",
+                    noHelmet && gear && MobScaling.level(boss) == 99 && spread <= 1,
+                    seen + "niveau " + MobScaling.level(boss) + ", voies " + java.util.Arrays.toString(p));
+            boss.discard();
+        }
+
+        // 4. un boss d'un autre mod (le Wither porte le tag commun des boss) : le niveau seul
+        net.minecraft.world.entity.Mob wither = EntityType.WITHER.create(level);
+        if (wither != null) {
+            MobScaling.scale(wither, ref, level.random);   // ce que scaleNow ferait, sans la reference du serveur
+            wither.getTags().remove(MobScaling.TAG);
+            wither.getPersistentData().remove("EmeraldHero");
+            for (net.minecraft.world.entity.EquipmentSlot slot : net.minecraft.world.entity.EquipmentSlot.values()) {
+                wither.setItemSlot(slot, net.minecraft.world.item.ItemStack.EMPTY);
+            }
+            MobScaling.scaleLevelOnly(wither, ref, level.random);
+            boolean bare = true;
+            for (net.minecraft.world.entity.EquipmentSlot slot : net.minecraft.world.entity.EquipmentSlot.values()) {
+                bare &= wither.getItemBySlot(slot).isEmpty();
+            }
+            check("un boss d'un autre mod (le Wither) est reconnu boss et ne recoit que le niveau",
+                    MobScaling.isBoss(wither) && bare && MobScaling.level(wither) >= 34,
+                    "boss " + MobScaling.isBoss(wither) + ", nu " + bare + ", niveau " + MobScaling.level(wither));
+            wither.discard();
+        }
+
+        // 5. la Breche : le sceptre (sans critique) de rang 4, contre un boss et contre un zombie
+        FakePlayer mage = armed(level, "breche", feet, com.emerald.item.ModItems.ARCENCIUM_SCEPTER.get(),
+                0, 4, null, 0, 0, 0, 1, new int[]{0, 0, 0, 0});
+        double expected = com.emerald.item.Breach.chance(mage.getMainHandItem());
+        int[] procs = new int[2];
+        for (int who = 0; who < 2; who++) {
+            net.minecraft.world.entity.monster.Zombie target = EntityType.ZOMBIE.create(level);
+            if (target == null) {
+                continue;
+            }
+            if (who == 0) {
+                target.addTag(Finale.TAG_BOSS);
+                MobGear.dressFinalBoss(target, level.random);
+            } else {
+                target.setItemSlot(net.minecraft.world.entity.EquipmentSlot.CHEST,
+                        new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.NETHERITE_CHESTPLATE));
+            }
+            equipNow(target);
+            // des points de vie par MODIFICATEUR : une base d'un million ferait du zombie un boss
+            var health = target.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH);
+            health.addTransientModifier(new net.minecraft.world.entity.ai.attributes.AttributeModifier(
+                    net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("emeraldweapons", "banc_pv"),
+                    1000000.0, net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_VALUE));
+            float strike = (float) mage.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE) + 6.0F;
+            int before = com.emerald.item.Breach.procs;
+            for (int i = 0; i < 600; i++) {
+                target.setHealth(target.getMaxHealth());
+                target.invulnerableTime = 0;
+                target.hurt(level.damageSources().playerAttack(mage), strike);
+            }
+            procs[who] = com.emerald.item.Breach.procs - before;
+            target.discard();
+        }
+        double rate = procs[0] / 6.0;
+        check("la Breche : " + String.format(Locale.ROOT, "%.1f", expected) + " % au rang 4 contre le boss, jamais contre un monstre ordinaire",
+                Math.abs(rate - expected) < 5.0 && procs[1] == 0,
+                String.format(Locale.ROOT, "boss : %.1f %% des coups, zombie : %d coups sur 600", rate, procs[1]));
+
+        // 6. les coups pour tuer, avant et apres, contre un joueur en +7 (epee rang 4, diamant +7 rang 4, runes 2, niveau 40)
+        FakePlayer hero = armed(level, "plus7", feet, sword, 7, 4, diamond, 7, 4, 2, 40, new int[]{12, 6, 12, 12});
+        MobScaling.Reference mirror = MobScaling.of(hero);
+        double stage = 0.4;                             // vers la 35e minute
+        double[] zombieBefore = duel(level, hero, () -> {
+            net.minecraft.world.entity.monster.Zombie z = EntityType.ZOMBIE.create(level);
+            MobGear.equipByStage(z, stage, level.random);
+            return z;
+        }, 40);
+        double[] zombieAfter = duel(level, hero, () -> {
+            net.minecraft.world.entity.monster.Zombie z = EntityType.ZOMBIE.create(level);
+            MobScaling.scale(z, mirror, level.random);
+            return z;
+        }, 40);
+        double[] vindBefore = duel(level, hero, () -> {
+            net.minecraft.world.entity.monster.Vindicator v = EntityType.VINDICATOR.create(level);
+            MobGear.equipByStage(v, stage, level.random);
+            return v;
+        }, 40);
+        double[] vindAfter = duel(level, hero, () -> {
+            net.minecraft.world.entity.monster.Vindicator v = EntityType.VINDICATOR.create(level);
+            MobScaling.scale(v, mirror, level.random);
+            return v;
+        }, 40);
+        line(String.format(Locale.ROOT, "joueur en +7 : %.1f degats par coup, %.1f PV, %.1f d'armure ; reference : arme +%.0f r%.0f, armure +%.1f r%.1f, runes %.0f, niveau %.0f, armure %.1f pts",
+                hero.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE), hero.getMaxHealth(),
+                (double) hero.getArmorValue(), mirror.weaponUpgrade(), mirror.weaponRarity(), mirror.armourUpgrade(),
+                mirror.armourRarity(), mirror.runeRank(), mirror.heroLevel(), mirror.armourPoints()));
+        line(String.format(Locale.ROOT, "zombie      avant : %.1f coups pour le tuer (%.0f PV, %.1f armure), %.1f coups pour vous tuer", zombieBefore[0], zombieBefore[2], zombieBefore[3], zombieBefore[1]));
+        line(String.format(Locale.ROOT, "zombie      apres : %.1f coups pour le tuer (%.0f PV, %.1f armure), %.1f coups pour vous tuer", zombieAfter[0], zombieAfter[2], zombieAfter[3], zombieAfter[1]));
+        line(String.format(Locale.ROOT, "vindicateur avant : %.1f coups pour le tuer (%.0f PV, %.1f armure), %.1f coups pour vous tuer", vindBefore[0], vindBefore[2], vindBefore[3], vindBefore[1]));
+        line(String.format(Locale.ROOT, "vindicateur apres : %.1f coups pour le tuer (%.0f PV, %.1f armure), %.1f coups pour vous tuer", vindAfter[0], vindAfter[2], vindAfter[3], vindAfter[1]));
+        // 7. le vrai chemin : un zombie qui APPARAIT en pleine partie est habille a la tique suivante,
+        //    selon les joueurs presents (ici aucun joueur reel : la reference minimale, niveau 1)
+        GameState state = GameState.get(level);
+        GameState.Status was = state.status();
+        if (was == GameState.Status.LOBBY) {
+            state.beginPrologue();
+        }
+        net.minecraft.world.entity.Entity walker = EntityType.ZOMBIE.spawn(level, feet,
+                net.minecraft.world.entity.MobSpawnType.NATURAL);
+        boolean tagged = false;
+        boolean helmet = false;
+        if (walker != null) {
+            MobScaling.flushForAutotest(level);
+            tagged = walker.getTags().contains(MobScaling.TAG) && MobScaling.level(
+                    (net.minecraft.world.entity.LivingEntity) walker) >= 1;
+            helmet = !((net.minecraft.world.entity.LivingEntity) walker)
+                    .getItemBySlot(net.minecraft.world.entity.EquipmentSlot.HEAD).isEmpty();
+            walker.discard();
+        }
+        if (was == GameState.Status.LOBBY) {
+            state.returnToLobby();
+        }
+        check("un zombie qui apparait en pleine partie est habille a la tique suivante (marque, niveau, casque)",
+                tagged && helmet, "marque et niveau " + tagged + ", casque " + helmet);
+
+        check("apres l'alignement, un zombie ou un vindicateur de votre niveau encaisse 3 a 5 de vos coups, et ils frappent plus fort",
+                zombieAfter[0] >= 3.0 && zombieAfter[0] <= 5.0 && vindAfter[0] >= 3.0 && vindAfter[0] <= 5.5
+                        && zombieAfter[1] <= zombieBefore[1],
+                String.format(Locale.ROOT, "zombie %.1f -> %.1f, vindicateur %.1f -> %.1f", zombieBefore[0], zombieAfter[0],
+                        vindBefore[0], vindAfter[0]));
     }
 
     // ================================================================ 2. les coffres

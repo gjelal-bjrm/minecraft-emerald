@@ -81,7 +81,7 @@ public final class RuneEvents {
         regenerate(player);
     }
 
-    public static void apply(Player player) {
+    public static void apply(LivingEntity player) {
         AttributeInstance armour = player.getAttribute(Attributes.ARMOR);
         // en ville, les runes de l'equipement se taisent (cahier §96, HavenGear)
         double on = com.emerald.haven.Haven.is(player.level()) ? 0.0 : 1.0;
@@ -137,22 +137,22 @@ public final class RuneEvents {
     // ------------------------------------------- ce que la fiche vient lire
 
     /** La chance de critique ajoutee par les runes, en pour cent. */
-    public static double critChance(Player player) {
+    public static double critChance(LivingEntity player) {
         return Runes.total(player, Rune.CHANCE);
     }
 
     /** Les degats critiques ajoutes par les runes, en pour cent. */
-    public static double critDamage(Player player) {
+    public static double critDamage(LivingEntity player) {
         return Runes.total(player, Rune.FUREUR);
     }
 
     /** L'esquive ajoutee par les runes, en pour cent. */
-    public static double dodge(Player player) {
+    public static double dodge(LivingEntity player) {
         return Runes.total(player, Rune.ESQUIVE);
     }
 
     /** La reduction des critiques subis ajoutee par les runes, en pour cent. */
-    public static double critSoak(Player player) {
+    public static double critSoak(LivingEntity player) {
         return Runes.total(player, Rune.EGIDE);
     }
 
@@ -160,7 +160,10 @@ public final class RuneEvents {
 
     @SubscribeEvent
     public static void onOutgoing(LivingIncomingDamageEvent event) {
-        if (!(event.getSource().getEntity() instanceof Player attacker)) {
+        // LES MONSTRES HABILLES PORTENT DES RUNES (cahier §104) : elles frappent comme celles
+        // du joueur. Les autres monstres n'en ont pas, on ne les lit pas.
+        if (!(event.getSource().getEntity() instanceof LivingEntity attacker)
+                || !(attacker instanceof Player || com.emerald.game.MobScaling.scaled(attacker))) {
             return;
         }
         LivingEntity victim = event.getEntity();
@@ -221,7 +224,7 @@ public final class RuneEvents {
      * les grouper obligerait a inventer un ordre de priorite entre trois effets
      * qui n'ont aucune raison de s'exclure.
      */
-    private static void afflict(ServerLevel level, Player attacker,
+    private static void afflict(ServerLevel level, LivingEntity attacker,
                                 LivingEntity victim, float amount) {
         double bleed = Runes.total(attacker, Rune.SAIGNEE);
         if (bleed > 0.0 && attacker.getRandom().nextDouble() * 100.0 < bleed) {
@@ -244,7 +247,8 @@ public final class RuneEvents {
                     victim.getBoundingBox().inflate(CATACLYSM_RANGE),
                     e -> e.isAlive() && e != attacker && e != victim
                             && !e.isAlliedTo(attacker))) {
-                near.hurt(level.damageSources().playerAttack(attacker), amount * 0.5F);
+                near.hurt(attacker instanceof Player player ? level.damageSources().playerAttack(player)
+                        : level.damageSources().mobAttack(attacker), amount * 0.5F);
             }
             level.sendParticles(ParticleTypes.SWEEP_ATTACK,
                     victim.getX(), victim.getY() + victim.getBbHeight() * 0.5, victim.getZ(),
@@ -292,7 +296,9 @@ public final class RuneEvents {
      */
     @SubscribeEvent
     public static void onIncoming(LivingIncomingDamageEvent event) {
-        if (!(event.getEntity() instanceof Player defender) || event.getAmount() <= 0.0F) {
+        if (!(event.getEntity() instanceof LivingEntity defender)
+                || !(defender instanceof Player || com.emerald.game.MobScaling.scaled(defender))
+                || event.getAmount() <= 0.0F) {
             return;
         }
         net.minecraft.world.damagesource.DamageSource source = event.getSource();

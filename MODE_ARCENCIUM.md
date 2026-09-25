@@ -9484,3 +9484,110 @@ l'eau a toute sa place. Le releve montrait que le joueur n'avait rien retouche d
 l'atelier d'avant 10 h 22 (son dernier etat) remis, puis rouvert une fois -- portes, cables et bar
 se posent au demarrage, et le rangement corrige ne touche plus a l'atelier. Les deux etats
 intermediaires sont gardes dans `run/atelier_sauvegardes/`.
+
+## 104. Les monstres s'alignent sur les joueurs, et la Breche *(25 sept. 2026)*
+
+« Au fur et a mesure que le joueur evolue, les monstres apparaissent de facon
+equilibree : un joueur en arme et armure +3, avec des runes de rarete 2,
+rencontre des monstres de rarete 0 a 2, en +0 a +3, runes de rarete 1 a 2, et
+d'un niveau egal au sien ou de 10 a 15 % plus faible, au hasard. Le boss
+final : equipement de rarete 8, de +8 a +10, niveau 99 reparti a parts egales,
+runes de rarete 8 a l'arme et a l'armure, sans casque. » Puis : « s'il y a
+plusieurs joueurs, une moyenne entre le plus faible et le plus fort ».
+Le constat du joueur : « je les one-shot les plus faibles, et les plus forts
+c'est entre 2 et 3 coups », en +7 au premier sanctuaire.
+
+### A. Ce qu'il y avait
+
+`MobGear` habillait les monstres selon l'HORLOGE (temps ecoule, ancres,
+palier), jamais selon ce que portait le joueur ; vers la 35e minute : +1 a
++2 sur l'arme, +0 a +1 sur l'armure, rarete 0 a 2. Les runes (`RuneEvents`)
+et la fiche du Heros (`HeroEvents`, `HeroCombat`) ne s'appliquaient qu'aux
+joueurs. L'amelioration et la rarete, elles, passent par les attributs des
+objets (`RarityStats`) et valaient deja pour un monstre qui les porte.
+
+### B. Ce qui change (`game/MobScaling`)
+
+- **La reference**, relue au plus une fois par seconde : pour chaque joueur
+  hors de Haven, sa meilleure arme du sac (amelioration, rarete, degats d'un
+  coup), son armure portee (amelioration et rarete moyennes, points
+  d'armure), le rang de ses meilleures runes, son niveau Heros ; en groupe,
+  pour chaque grandeur, le MILIEU entre le plus faible et le plus fort.
+- **Tout monstre hostile** qui apparait pendant une partie (prologue compris,
+  hors Haven) est habille UNE fois, a la tique suivante (les autres systemes
+  ont fini de le poser et de le marquer) ; les systemes qui posent leurs
+  monstres (siege, garnisons, Traque, Echos, Battue) passent par
+  `MobGear.equip`, qui habille tout de suite. Ce qu'un joueur a invoque ou
+  apprivoise n'est pas touche.
+- **L'equipement** (`MobGear.dress`) : casque toujours (un mort-vivant brule a
+  midi), plastron toujours, jambieres et bottes 85 % ; l'arme a qui n'en a
+  pas. Rarete de 0 a la reference, amelioration de +0 a la reference, une rune
+  de rang 1 a la reference sur chaque piece (runes d'arme a l'arme et au
+  casque, d'armure au reste). La matiere suit l'armure des joueurs, un cran en
+  dessous (cuir 7, maille 12, fer 15, diamant 20 points). Les monstres sans
+  mains recoivent le meme equipement, invisible (choix du joueur). Il peut
+  tomber a la mort, 1,5 % (choix du joueur).
+- **Le niveau** : de 85 a 100 % de la reference ; les points qu'un joueur
+  aurait gagnes jusque-la, achetes au prix du joueur dans les quatre voies,
+  AUTOUR de l'equilibre (poids tires au hasard : des costauds, des offensifs
+  -- choix du joueur). La fiche s'applique comme celle du joueur :
+  `HeroEvents.applyPaths` (attaque, armure, points de vie), et `HeroCombat`
+  pour l'esquive, le critique, la reduction des critiques et la resistance.
+  Les runes des monstres habilles comptent aussi (`RuneEvents` : attributs,
+  critique, esquive, effets au toucher, reductions).
+- **Les points de vie qui suivent le joueur.** Le miroir seul ne suffisait
+  pas, et c'est le banc qui l'a dit (voir D) : un zombie habille comme un
+  joueur en +7 mourait en 1,8 coup, parce qu'un +7 frappe 18 et qu'un zombie a
+  vingt points de vie -- la fiche ne lui en ajoute que deux ou trois, et
+  l'armure plafonne. Les PV visent donc `HITS_TO_KILL` = 6,4 coups BRUTS du
+  joueur apres l'armure du monstre (les critiques, l'element et les
+  declenchements en font environ quatre vrais), a proportion du niveau, un
+  peu plus pour la Vitalite et pour les grandes especes (racine des PV de
+  base). On n'abaisse jamais.
+- **Les boss des autres mods** (tag `c:bosses`, ou 150 PV de base et plus) :
+  le niveau seul, ni equipement ni PV en plus (choix du joueur).
+- **Le boss final** (`Finale.TAG_BOSS`) : netherite, rarete 8, +8 a +10, une
+  rune de rang 8 a l'arme et a chaque piece, PAS DE CASQUE, niveau 99 a parts
+  egales (45 dans chaque voie) ; ses PV restent ceux de `Finale.giant`, plus
+  sa Vitalite.
+
+### C. La Breche (`item/Breach`)
+
+La proposition du joueur contre le plafond d'armure : « sur chacune des
+armes, une probabilite entre 10 et 20 % d'ignorer une partie de la defense,
+uniquement pour les boss ». Nos armes (celles qui ont un profil : epee,
+glaive, sceptre, arc) : 10 % au rang 0, +1,25 % par rang de rarete, 20 % au
+rang 8. Le coup qui perce ignore LA MOITIE de l'armure du boss, calcule comme
+la Percee des runes. Ligne dans l'infobulle de l'arme.
+
+### D. Banc (epreuve 13 du banc de la partie, 67 OK sur 67, deux passages)
+
+- a deux joueurs (+3 rang 2 runes 2 niveau 30 ; +7 rang 6 runes 6 niveau 70),
+  la reference est le milieu : +5, rang 4, runes 4, niveau 50 ;
+- 300 zombies sous un joueur +3 rang 2 runes 2 niveau 40 : rien au-dessus,
+  niveaux 34 a 40, une centaine de costauds et autant d'offensifs ;
+- le boss final : sans casque, +8 a +10, rarete 8, runes 8, voies [45, 45, 45,
+  45] ;
+- le Wither, reconnu boss, ne recoit que le niveau ;
+- la Breche au rang 4 : 12 a 17 % des coups sur un boss (15 attendus), zero
+  sur un monstre ordinaire ;
+- un zombie qui APPARAIT en pleine partie est habille a la tique suivante ;
+- les coups pour tuer, contre un joueur en +7 (epee rang 4, diamant +7 rang
+  4, runes 2, niveau 40 : 18,1 degats par coup, 21 d'armure) :
+
+| monstre | avant | miroir seul | miroir + PV |
+| --- | --- | --- | --- |
+| zombie | 1,5 coup | 1,8 | 3,8 |
+| vindicateur | 1,4 a 1,6 | 1,9 | 4,1 a 4,6 |
+| coups du zombie pour tuer le joueur | 16 a 21 | 7,1 | 6,7 |
+
+Deux pieges de l'epreuve de l'Eclipse, vus en route : le spectre de The
+Graveyard est IMMUNISE contre tout ce qui ignore l'armure (`/kill`, et meme
+les degats generiques) et contre les fleches -- a l'epee, il meurt comme un
+autre ; et les horreurs tuees par un joueur lachent aussi le butin des
+monstres de tempete, d'ou plus de 4 Eclats au pied du portail.
+
+**A regarder en partie** : un joueur au pur arc peut avoir du mal a refermer un
+portail qui garde un spectre ; l'Eclipse finit de toute facon au bout de cinq
+minutes. Si le joueur trouve les monstres trop durs ou trop tendres, un seul
+chiffre : `MobScaling.HITS_TO_KILL`.

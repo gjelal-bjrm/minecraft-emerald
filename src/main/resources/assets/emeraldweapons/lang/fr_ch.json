@@ -1082,5 +1082,6 @@
   "game.emeraldweapons.sanctuaire.theme.givre": "Sanctuaire du Givre",
   "game.emeraldweapons.sanctuaire.theme.braises": "Sanctuaire des Braises",
   "game.emeraldweapons.sanctuaire.approche": "Garnison du palier %s",
-  "game.emeraldweapons.sanctuaire.renfort": "Des renforts du palier %s sont arrivés au sanctuaire."
+  "game.emeraldweapons.sanctuaire.renfort": "Des renforts du palier %s sont arrivés au sanctuaire.",
+  "weapon.emeraldweapons.breach": "Brèche : %s %% de chance d'ignorer la moitié de l'armure d'un boss"
 }

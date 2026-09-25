@@ -145,6 +145,17 @@ public final class HeroLevel {
      * pas plus loin. Le depassement donne du lineaire, pas des bonus francs, de
      * sorte qu'une rune ne puisse jamais offrir un palier entier.
      */
+    /**
+     * Le niveau d'une voie pour n'importe quel combattant : la fiche d'un joueur, ou celle
+     * d'un monstre habille par MobScaling (cahier §104) ; zero pour tout le reste.
+     */
+    public static int effectiveOf(net.minecraft.world.entity.LivingEntity entity, HeroStat stat) {
+        if (entity instanceof Player player) {
+            return effective(player, stat);
+        }
+        return com.emerald.game.MobScaling.path(entity, stat);
+    }
+
     public static int effective(Player player, HeroStat stat) {
         // LA MEILLEURE DE CHAQUE CATEGORIE, pas la somme (voir Runes.best). Les
         // deux categories, elles, s'ajoutent : une SL Generale et une SL Attaque

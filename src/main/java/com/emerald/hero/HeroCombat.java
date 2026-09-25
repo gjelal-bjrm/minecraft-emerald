@@ -63,16 +63,19 @@ public final class HeroCombat {
         // aucun sens apres reduction. On ne l'applique pas aux degats dont on ne
         // peut pas se soustraire -- chute, noyade, vide -- car une esquive qui
         // sauve du vide ne se lit pas comme une esquive mais comme un bogue.
-        if (victim instanceof Player defender && !source.is(net.minecraft.tags.DamageTypeTags.BYPASSES_INVULNERABILITY)
+        // les monstres habilles (cahier §104) esquivent comme le joueur, avec leur fiche et leurs runes
+        if ((victim instanceof Player || com.emerald.game.MobScaling.scaled(victim))
+                && !source.is(net.minecraft.tags.DamageTypeTags.BYPASSES_INVULNERABILITY)
                 && source.getEntity() != null) {
+            LivingEntity defender = victim;
             // Les runes s'ajoutent au meme total : un seul jet d'esquive, pas
             // deux. Deux systemes qui tireraient chacun le leur donneraient
             // deux chances d'annuler le meme coup, et l'affichage ne pourrait
             // plus dire au joueur quelle esquive il possede vraiment.
             double dodge = HeroStat.DEFENSE.bonus(HeroBonus.DODGE,
-                    HeroLevel.effective(defender, HeroStat.DEFENSE))
+                    HeroLevel.effectiveOf(defender, HeroStat.DEFENSE))
                     + com.emerald.rune.RuneEvents.dodge(defender)
-                    + com.emerald.specialization.SkinBonus.dodge(defender);
+                    + (defender instanceof Player p ? com.emerald.specialization.SkinBonus.dodge(p) : 0.0);
             if (dodge > 0.0 && defender.getRandom().nextDouble() * 100.0 < dodge) {
                 event.setCanceled(true);
                 if (defender.level() instanceof ServerLevel level) {
@@ -86,6 +89,33 @@ public final class HeroCombat {
         float amount = event.getAmount();
 
         // 2. LE CRITIQUE de l'attaquant.
+        //
+        // UN MONSTRE HABILLE CRITIQUE AUSSI (cahier §104) : son arme, sa voie d'Attaque et ses
+        // runes, comme le joueur -- sans les ailes ni la Constellation, qui sont au joueur.
+        if (com.emerald.game.MobScaling.scaled(source.getEntity())
+                && source.getEntity() instanceof LivingEntity brute) {
+            int level = HeroLevel.effectiveOf(brute, HeroStat.ATTAQUE);
+            net.minecraft.world.item.ItemStack held = brute.getMainHandItem();
+            double chance = com.emerald.element.WeaponProfile.critChance(held)
+                    + HeroStat.ATTAQUE.bonus(HeroBonus.CRIT_CHANCE, level)
+                    + com.emerald.rune.RuneEvents.critChance(brute);
+            if (chance > 0.0 && brute.getRandom().nextDouble() * 100.0 < chance) {
+                double multiplier = CRIT_BASE
+                        + (com.emerald.element.WeaponProfile.critDamage(held)
+                           + HeroStat.ATTAQUE.bonus(HeroBonus.CRIT_DAMAGE, level)
+                           + com.emerald.rune.RuneEvents.critDamage(brute)) / 100.0;
+                double soak = (HeroStat.DEFENSE.bonus(HeroBonus.CRIT_TAKEN,
+                        HeroLevel.effectiveOf(victim, HeroStat.DEFENSE))
+                        + com.emerald.rune.RuneEvents.critSoak(victim)) / 100.0;
+                multiplier = 1.0 + (multiplier - 1.0) * Math.max(0.0, 1.0 - soak);
+                amount = (float) (amount * multiplier);
+                if (brute.level() instanceof ServerLevel world) {
+                    world.playSound(null, victim.blockPosition(),
+                            SoundEvents.PLAYER_ATTACK_CRIT, SoundSource.HOSTILE, 0.8F, 0.8F);
+                }
+            }
+        }
+
         if (source.getEntity() instanceof Player attacker) {
             int level = HeroLevel.effective(attacker, HeroStat.ATTAQUE);
             // TROIS SOURCES, UN SEUL TOTAL : l'arme, la fiche, les runes.
@@ -118,10 +148,10 @@ public final class HeroCombat {
                 // endroit ou les deux fiches se rencontrent, et il fallait bien
                 // qu'il y en ait un : sinon la Defense ne repondrait a rien de
                 // ce que l'Attaque construit.
-                if (victim instanceof Player defender) {
+                if (victim instanceof Player || com.emerald.game.MobScaling.scaled(victim)) {
                     double soak = (HeroStat.DEFENSE.bonus(HeroBonus.CRIT_TAKEN,
-                            HeroLevel.effective(defender, HeroStat.DEFENSE))
-                            + com.emerald.rune.RuneEvents.critSoak(defender)) / 100.0;
+                            HeroLevel.effectiveOf(victim, HeroStat.DEFENSE))
+                            + com.emerald.rune.RuneEvents.critSoak(victim)) / 100.0;
                     multiplier = 1.0 + (multiplier - 1.0) * Math.max(0.0, 1.0 - soak);
                 }
                 amount = (float) (amount * multiplier);
@@ -151,10 +181,12 @@ public final class HeroCombat {
         // protege des effets qu'on subit. Restreindre aux degats indirects --
         // magie, projectiles, explosions, feu -- lui evite d'etre une seconde
         // armure, role qui appartient a la Defense.
-        if (victim instanceof Player defender) {
+        if (victim instanceof Player || com.emerald.game.MobScaling.scaled(victim)) {
+            LivingEntity defender = victim;
             double resist = (HeroStat.ELEMENT.bonus(HeroBonus.RESISTANCE,
-                    HeroLevel.effective(defender, HeroStat.ELEMENT))
-                    + com.emerald.specialization.SkinBonus.resistance(defender)) / 100.0;
+                    HeroLevel.effectiveOf(defender, HeroStat.ELEMENT))
+                    + (defender instanceof Player p ? com.emerald.specialization.SkinBonus.resistance(p) : 0.0))
+                    / 100.0;
             // les ailes d'Aurore de l'attaquant percent une part de cette resistance
             if (source.getEntity() instanceof Player piercer) {
                 resist -= com.emerald.specialization.SkinBonus.pierce(piercer) / 100.0;

@@ -1082,5 +1082,6 @@
   "game.emeraldweapons.sanctuaire.theme.givre": "Sanctuary of Frost",
   "game.emeraldweapons.sanctuaire.theme.braises": "Sanctuary of Embers",
   "game.emeraldweapons.sanctuaire.approche": "Tier %s garrison",
-  "game.emeraldweapons.sanctuaire.renfort": "Tier %s reinforcements have reached the sanctuary."
+  "game.emeraldweapons.sanctuaire.renfort": "Tier %s reinforcements have reached the sanctuary.",
+  "weapon.emeraldweapons.breach": "Breach: %s%% chance to ignore half of a boss's armour"
 }
