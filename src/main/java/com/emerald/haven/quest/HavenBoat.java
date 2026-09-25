@@ -30,7 +30,11 @@ import java.util.List;
  *
  * Pose avec les heros (HavenNpcs), retire avec eux et a l'arret du serveur : il ne reste
  * jamais dans une sauvegarde. Sa place se recalcule a l'identique depuis la carte de l'eau,
- * et le retrait rend l'eau (sous la surface) et l'air (au-dessus).
+ * et le retrait rend l'eau (sous la surface) et l'air (au-dessus) A SES SEULS BLOCS. Le
+ * retrait passe a chaque arret, bateau pose ou non : il rendait l'eau et l'air a toute sa
+ * place, et dans l'atelier, ou le bateau n'est jamais pose, ce que le joueur y aurait bati
+ * aurait ete efface a la fermeture, puis perdu au releve suivant (25 sept.). Il n'y touche
+ * plus a rien.
  */
 public final class HavenBoat {
 
@@ -139,8 +143,12 @@ public final class HavenBoat {
         built = true;
     }
 
-    /** Retire le bateau : l'eau sous la surface, l'air au-dessus. */
+    /** Retire le bateau : l'eau sous la surface, l'air au-dessus, la ou sont ses blocs. */
     static void remove(ServerLevel level) {
+        // l'atelier n'a pas de bateau (la ville y est fermee) : rien a rendre, sauf a un bateau pose juste avant
+        if (!built && HavenState.get(level.getServer()).atelier()) {
+            return;
+        }
         Layout l = layout(level);
         if (l != null && level.isLoaded(l.stern())) {
             build(level, l, false);
@@ -172,31 +180,29 @@ public final class HavenBoat {
             for (int across = -half; across <= half; across++) {
                 BlockPos column = stern.relative(forward, along).relative(side, across);
                 BlockPos hullPos = column.below();
-                set(level, hullPos, place ? hull : water);
+                put(level, hullPos, place, hull, water);
                 // un rang de coque sous l'eau sur le pourtour : le flanc se voit du quai
                 boolean edge = Math.abs(across) == half || along == 0 || along == LENGTH - 1;
                 if (edge) {
-                    set(level, hullPos.below(), place ? hull : water);
+                    put(level, hullPos.below(), place, hull, water);
                 }
                 boolean railHere = (Math.abs(across) == half && along > 0) || along == LENGTH - 1;
                 if (railHere) {
                     rails.add(column);
-                } else if (!place) {
-                    set(level, column, air);
                 }
             }
         }
         for (BlockPos pos : rails) {
-            set(level, pos, place ? rail : air);
+            put(level, pos, place, rail, air);
         }
         // le mat et sa lanterne, aux deux tiers vers la proue ; deux tonneaux contre le flanc
         BlockPos mast = stern.relative(forward, LENGTH - 3);
         for (int h = 0; h < 4; h++) {
-            set(level, mast.above(h), place ? rail : air);
+            put(level, mast.above(h), place, rail, air);
         }
-        set(level, mast.above(4), place ? Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, false) : air);
-        set(level, stern.relative(forward, 2).relative(side, HALF_WIDTH - 1), place ? Blocks.BARREL.defaultBlockState() : air);
-        set(level, stern.relative(forward, 3).relative(side, HALF_WIDTH - 1), place ? Blocks.BARREL.defaultBlockState() : air);
+        put(level, mast.above(4), place, Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, false), air);
+        put(level, stern.relative(forward, 2).relative(side, HALF_WIDTH - 1), place, Blocks.BARREL.defaultBlockState(), air);
+        put(level, stern.relative(forward, 3).relative(side, HALF_WIDTH - 1), place, Blocks.BARREL.defaultBlockState(), air);
         if (place) {
             // les barrieres se relient entre elles
             for (BlockPos pos : rails) {
@@ -208,9 +214,11 @@ public final class HavenBoat {
         }
     }
 
-    private static void set(ServerLevel level, BlockPos pos, BlockState state) {
-        if (level.getBlockState(pos) != state) {
-            level.setBlock(pos, state, Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
+    /** Pose un bloc du bateau ; au retrait, rend l'eau ou l'air -- si c'est bien un bloc du bateau qui est la. */
+    private static void put(ServerLevel level, BlockPos pos, boolean place, BlockState boat, BlockState back) {
+        BlockState now = level.getBlockState(pos);
+        if (place ? now != boat : now.is(boat.getBlock())) {
+            level.setBlock(pos, place ? boat : back, Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
         }
     }
 }

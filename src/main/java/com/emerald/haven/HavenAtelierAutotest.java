@@ -5,6 +5,8 @@ import com.emerald.haven.door.HavenDoorFrame;
 import com.emerald.haven.door.HavenDoorKind;
 import com.emerald.haven.door.HavenDoors;
 import com.emerald.haven.invasion.HavenInvasion;
+import com.emerald.haven.quest.HavenBoat;
+import com.emerald.haven.quest.HavenNpcs;
 import com.emerald.jak.JakVolume;
 import com.emerald.main.EmeraldWeaponsMod;
 import com.mojang.authlib.GameProfile;
@@ -232,6 +234,7 @@ public final class HavenAtelierAutotest {
                 check("avant releve : les decors tiennent seuls, aucun objet au sol",
                         decorNear(level, near).size() == 2 && countItems(level, near) == 0,
                         decorNear(level, near).size() + " decors, " + countItems(level, near) + " objets au sol");
+                boat(level);
                 startCapture(server, "autotest");
                 stage = Stage.CAPTURE1;
             }
@@ -623,8 +626,40 @@ public final class HavenAtelierAutotest {
         return level.getEntitiesOfClass(ItemEntity.class, box).size();
     }
 
+    /**
+     * Le rangement du bateau du Pecheur, qui passe a chaque arret du serveur, ne touche a rien dans
+     * l'atelier : il y rendait l'eau et l'air a toute la place du bateau, qui n'y est jamais pose
+     * (25 sept.). Des blocs poses a sa place -- des planches de chene noir sur l'eau, celles de la
+     * coque, et une lanterne dessus -- restent ; le banc rend ensuite les deux cellules.
+     */
+    private static void boat(ServerLevel level) {
+        BlockPos deck = HavenBoat.deck(level);
+        if (deck == null) {
+            check("dans l'atelier, le rangement du bateau du Pecheur ne touche a rien", false, "pas de place pour le bateau");
+            return;
+        }
+        BlockPos hull = deck.below();
+        BlockState hullWas = level.getBlockState(hull);
+        BlockState deckWas = level.getBlockState(deck);
+        level.setBlock(hull, Blocks.DARK_OAK_PLANKS.defaultBlockState(), Block.UPDATE_CLIENTS);
+        level.setBlock(deck, Blocks.LANTERN.defaultBlockState(), Block.UPDATE_CLIENTS);
+        HavenNpcs.removeAll(level);
+        BlockState hullNow = level.getBlockState(hull);
+        BlockState deckNow = level.getBlockState(deck);
+        check("dans l'atelier, le rangement du bateau du Pecheur ne touche a rien : des planches sur l'eau"
+                        + " et une lanterne posees a sa place restent",
+                level.isLoaded(deck) && hullNow.is(Blocks.DARK_OAK_PLANKS) && deckNow.is(Blocks.LANTERN),
+                "pont " + deck.toShortString() + " : dessous " + hullNow + ", dessus " + deckNow);
+        level.setBlock(deck, deckWas, Block.UPDATE_CLIENTS);
+        level.setBlock(hull, hullWas, Block.UPDATE_CLIENTS);
+    }
+
     private static void hold(ServerLevel level, BlockPos o) {
-        List<BlockPos> sites = List.of(o.offset(Haven.BAR_FRONT_CELL), o.offset(ROOM_CELL));
+        List<BlockPos> sites = new ArrayList<>(List.of(o.offset(Haven.BAR_FRONT_CELL), o.offset(ROOM_CELL)));
+        BlockPos deck = HavenBoat.deck(level);
+        if (deck != null) {
+            sites.add(deck);                            // la place du bateau, chargee pour son essai
+        }
         for (BlockPos site : sites) {
             for (int cx = (site.getX() - SEARCH - 4) >> 4; cx <= (site.getX() + SEARCH + 4) >> 4; cx++) {
                 for (int cz = (site.getZ() - SEARCH - 4) >> 4; cz <= (site.getZ() + SEARCH + 4) >> 4; cz++) {

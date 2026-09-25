@@ -973,7 +973,7 @@ Sur un serveur d'essai (`run-server`), chacun écrit son rapport puis arrête le
 
 - `EMERALDWEAPONS_AUTOTEST=vote ./gradlew runServer` : appartements et vote, rapport `run-server/vote_autotest.txt` ;
 - `EMERALDWEAPONS_AUTOTEST=salles ./gradlew runServer` : relevé et rejeu des salles, rapport `run-server/salles_autotest.txt` ;
-- `EMERALDWEAPONS_AUTOTEST=atelier ./gradlew runServer` : l'atelier et le relevé de la ville entière (ville nue relevée vide, retouches — dont une petite porte de Jak 3 — relevées puis rejouées par deux poses), rapport `run-server/atelier_autotest.txt` ;
+- `EMERALDWEAPONS_AUTOTEST=atelier ./gradlew runServer` : l'atelier et le relevé de la ville entière (ville nue relevée vide, retouches — dont une petite porte de Jak 3 — relevées puis rejouées par deux poses, et le rangement du bateau du Pêcheur qui n'y touche à rien), rapport `run-server/atelier_autotest.txt` ;
 - `EMERALDWEAPONS_AUTOTEST=haven ./gradlew runServer` : la ville posée (sol, eau, portes de Jak 3, câbles vidés, équipement du dehors sans effet) et les vitres de Jak 3 (une fenêtre reliée, son cadre, l'iris d'un clic, une vitre ajoutée, une fenêtre coupée en deux), rapport `run-server/haven_autotest.txt` ;
 - `EMERALDWEAPONS_AUTOTEST=vehicules ./gradlew runServer` : voitures et motos (dont leurs dégâts, leur destruction et leur explosion), puis le JET-Board (l'eau, la glisse lâchée, le frein, les sauts, le sol, un rail, les trois tremplins, et la course de Tess faite par la planche seule, bouton tenu, en sautant au bout des rails), rapport `run-server/vehicules_autotest.txt` ;
 - `EMERALDWEAPONS_AUTOTEST=invasion ./gradlew runServer` : invasion, décor destructible, bouton du QG et MSPT, rapport `run-server/invasion_autotest.txt` ;

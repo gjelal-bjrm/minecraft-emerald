@@ -9311,3 +9311,57 @@ avec la vitre).
 
 - La lumiere qui passe, fenetre fermee : GARDEE.
 - Livre : commit, push et installation au profil.
+
+## 102. L'atelier mis a jour, et le bateau du Pecheur qui n'y touche plus *(25 sept. 2026)*
+
+Le joueur meuble et corrige la ville dans l'atelier (§75) : c'est SA version qui deviendra
+la ville de toutes les parties, quand il dira avoir fini. Deux questions du 25 sept. : ses
+retouches sont-elles dans le mod, et l'atelier a-t-il les nouvelles portes de Jak 3 ?
+
+### A. L'atelier mis a jour
+
+- Ses retouches : oui -- le releve du 24 sept., 363 cellules, est dans le mod.
+- Les portes : non -- le vidage des cables et les portes d'office (§94, §95) ne passent
+  qu'au demarrage d'une ville deja posee. Sauvegarde de l'atelier
+  (`run/atelier_sauvegardes/haven_atelier-avant-portes-20260925-1022`, et le releve
+  d'avant), puis une ouverture automatique (`EMERALDWEAPONS_ATELIER=releve`) : cinq
+  portes de Jak 3 posees, 2 240 cellules de cables videes. La seconde porte du Hip Hog
+  ne l'est pas : la porte de cuivre du joueur tient sa place, et elle reste.
+- Le releve refait redonne les memes 363 cellules que le fichier du mod : rien a
+  rejouer.
+
+### B. Le rangement du bateau
+
+`HavenBoat.remove` passe a chaque arret du serveur, bateau pose ou non -- c'est voulu
+(§86) : un bateau reste d'un arret brutal part au suivant. Mais il rendait l'eau et l'air
+a TOUTE la place du bateau, cinq blocs sur neuf, au pied de l'escalier du bassin sous
+l'arc nord -- aussi dans l'atelier, ou le bateau n'est jamais pose (la ville y est
+fermee). Ce que le joueur y aurait bati aurait ete efface a la fermeture, puis perdu au
+releve suivant. Rien n'a ete perdu : aucune de ses 363 cellules n'est la.
+
+Le bateau lui-meme ne change pas (le joueur, inquiet : « n'enleve pas le bateau du
+pecheur ! ») : amarre des que la ville est ouverte, le Pecheur a bord, range a l'arret.
+Seul le rangement change :
+- il ne rend l'eau ou l'air qu'aux cellules ou se trouve un bloc du bateau (planches de
+  chene noir, barrieres de sapin, lanterne, tonneaux) ;
+- dans l'atelier, il ne fait rien -- sauf a un bateau pose juste avant que le monde passe
+  en atelier.
+
+### C. Verifie
+
+- Banc de l'atelier : 18 OK (un de plus) -- la place du bateau chargee, des planches de
+  chene noir posees sur l'eau (celles de la coque, le pire cas) et une lanterne dessus
+  restent apres le rangement ; le banc rend ensuite les deux cellules.
+- Banc des quetes : 55 OK, 1 KO -- le bateau amarre et le Pecheur a bord, puis l'eau qui
+  revient. Le KO, ce sont les mouettes : le serveur des bancs tourne sans Alex's Mobs
+  (voulu, `dev_mods.py --server` ne les pose que le temps du banc de la faune).
+
+### D. Le QG (demande du joueur, a proposer)
+
+Le QG, le bar du Hip Hog, est fait de blocs de pierre sans texture (la collision du bar,
+un bloc par surface) : « on ne peut pas le laisser comme ca ». Le joueur est d'accord
+pour le rendre fidele au bar de Jak 3. Le decor entier du bar est la
+(`levels/hiphog/hiphog-background.glb` : 44 001 triangles, 113 textures, la lumiere cuite
+du jeu dans les couleurs de sommet) et tombe sur l'emprise du QG. 37 cellules du joueur
+sont dans le bar (19 bandes de lumiere, 17 escaliers, un ventilateur) : elles doivent
+rester. A proposer en images avant tout travail.
