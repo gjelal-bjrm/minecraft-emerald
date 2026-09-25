@@ -47,6 +47,7 @@ public class ModCreativeModeTabs {
                         output.accept(ModItems.HAVEN_DOOR_HIP);
                         output.accept(ModItems.HAVEN_DOOR_PETITE);
                         output.accept(ModItems.HAVEN_DOOR_SAS);
+                        output.accept(com.emerald.block.ModBlocks.HAVEN_WINDOW);
                         // les plumes de la specialisation : le materiau, puis une apparence de chaque
                         output.accept(ModItems.ARCENCIUM_FEATHER);
                         for (com.emerald.specialization.WingSkin skin

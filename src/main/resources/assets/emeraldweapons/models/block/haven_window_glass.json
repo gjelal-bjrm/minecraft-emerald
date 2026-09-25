@@ -1,0 +1,81 @@
+{
+  "render_type": "minecraft:translucent",
+  "textures": {
+    "glass": "emeraldweapons:block/haven_window_glass",
+    "particle": "emeraldweapons:block/haven_window_frame"
+  },
+  "elements": [
+    {
+      "from": [
+        0,
+        0,
+        7.5
+      ],
+      "to": [
+        16,
+        16,
+        8.5
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#glass"
+        },
+        "south": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#glass"
+        },
+        "east": {
+          "uv": [
+            7.5,
+            0,
+            8.5,
+            16
+          ],
+          "texture": "#glass",
+          "cullface": "east"
+        },
+        "west": {
+          "uv": [
+            7.5,
+            0,
+            8.5,
+            16
+          ],
+          "texture": "#glass",
+          "cullface": "west"
+        },
+        "up": {
+          "uv": [
+            0,
+            7.5,
+            16,
+            8.5
+          ],
+          "texture": "#glass",
+          "cullface": "up"
+        },
+        "down": {
+          "uv": [
+            0,
+            7.5,
+            16,
+            8.5
+          ],
+          "texture": "#glass",
+          "cullface": "down"
+        }
+      }
+    }
+  ]
+}

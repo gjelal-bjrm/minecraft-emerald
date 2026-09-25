@@ -57,10 +57,12 @@ public class Jak3ClientEvents {
                 com.emerald.block.entity.ModBlockEntities.HAVEN_GUN_RACK.get(),
                 HavenGunRackRenderer::new);
 
-        // les portes de Jak 3 de la ville (cahier §95)
+        // les portes de Jak 3 de la ville (cahier §95), et l'iris de ses vitres (§101)
         event.registerBlockEntityRenderer(
                 com.emerald.block.entity.ModBlockEntities.HAVEN_DOOR.get(),
                 HavenDoorRenderer::new);
+        event.registerBlockEntityRenderer(com.emerald.block.entity.ModBlockEntities.HAVEN_WINDOW.get(),
+                HavenWindowRenderer::new);
 
         // la porte precurseur de la victoire du Defi
         event.registerBlockEntityRenderer(

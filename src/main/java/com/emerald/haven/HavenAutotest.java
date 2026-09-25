@@ -233,6 +233,7 @@ public final class HavenAutotest {
                         + HavenCables.lines().size() + " avec leur temoin, etat " + state.cables());
 
         doors(server, level, o, state);
+        windows(level, o);
         gear(level, o);
 
         curtain(level, volume, o);
@@ -403,6 +404,102 @@ public final class HavenAutotest {
                 street.getZ() + 0.5, 0.0F);
         for (HavenDoorFrame frame : List.of(small, hip)) {
             placeAndBreak(level, frame);
+        }
+    }
+
+    /**
+     * LES VITRES DE JAK 3 (cahier §101), une fenetre de trois sur deux posee sur la rue, six blocs
+     * devant le bar : elles se relient, et le cadre n'en borde que le pourtour ; un clic ferme toute
+     * la fenetre, l'iris clos au bout d'une course ; une vitre ajoutee a une fenetre fermee se ferme
+     * avec elle ; casser la colonne du milieu coupe la fenetre en deux, et chaque moitie s'ouvre seule.
+     */
+    private static void windows(ServerLevel level, BlockPos o) {
+        BlockPos base = o.offset(Haven.BAR_FRONT_CELL).south(6);
+        com.emerald.block.HavenWindowBlock block = com.emerald.block.ModBlocks.HAVEN_WINDOW.get();
+        boolean free = true;
+        for (int dx = -1; dx <= 4; dx++) {
+            for (int dy = 0; dy <= 2; dy++) {
+                free &= level.getBlockState(base.offset(dx, dy, 0)).isAir();
+            }
+        }
+        if (!free) {
+            check("vitres de Jak 3 : une place libre de six sur trois devant le bar", false, "en " + base.toShortString());
+            return;
+        }
+        BlockState placed = block.defaultBlockState().setValue(com.emerald.block.HavenWindowBlock.AXIS,
+                net.minecraft.core.Direction.Axis.X);
+        List<BlockPos> panes = new ArrayList<>();
+        for (int dy = 0; dy <= 1; dy++) {
+            for (int dx = 0; dx <= 2; dx++) {
+                BlockPos at = base.offset(dx, dy, 0);
+                level.setBlock(at, com.emerald.block.HavenWindowBlock.connected(level, at, placed), Block.UPDATE_ALL);
+                panes.add(at);
+            }
+        }
+        // le cadre : la ou aucune vitre ne continue
+        BlockState corner = level.getBlockState(base);
+        BlockState middle = level.getBlockState(base.offset(1, 1, 0));
+        boolean frame = !corner.getValue(com.emerald.block.HavenWindowBlock.LEFT)
+                && corner.getValue(com.emerald.block.HavenWindowBlock.RIGHT)
+                && corner.getValue(com.emerald.block.HavenWindowBlock.UP)
+                && !corner.getValue(com.emerald.block.HavenWindowBlock.DOWN)
+                && middle.getValue(com.emerald.block.HavenWindowBlock.LEFT)
+                && middle.getValue(com.emerald.block.HavenWindowBlock.RIGHT)
+                && !middle.getValue(com.emerald.block.HavenWindowBlock.UP)
+                && middle.getValue(com.emerald.block.HavenWindowBlock.DOWN);
+        com.emerald.haven.door.HavenWindows.Window window = com.emerald.haven.door.HavenWindows.group(level, base);
+        check("vitres de Jak 3 : une fenetre de trois sur deux, reliee, le cadre sur son seul pourtour",
+                frame && window.panes().size() == 6 && window.u0() == base.getX() && window.u1() == base.getX() + 2
+                        && window.v0() == base.getY() && window.v1() == base.getY() + 1,
+                window.panes().size() + " vitres, de " + window.u0() + " a " + window.u1() + " et de " + window.v0()
+                        + " a " + window.v1() + ", coin " + corner + ", milieu du haut " + middle);
+
+        com.emerald.haven.door.HavenWindows.toggle(level, base.offset(2, 1, 0));
+        long now = level.getGameTime();
+        int closing = 0;
+        int shut = 0;
+        for (BlockPos pane : panes) {
+            if (level.getBlockEntity(pane) instanceof com.emerald.block.entity.HavenWindowBlockEntity entity
+                    && entity.closed() && entity.u1() == base.getX() + 2 && entity.v1() == base.getY() + 1) {
+                closing += entity.openness(now, 0.0F) == 1.0F ? 1 : 0;
+                shut += entity.openness(now + com.emerald.haven.door.HavenWindows.DURATION, 0.0F) == 0.0F ? 1 : 0;
+            }
+        }
+        check("vitres de Jak 3 : un clic sur une vitre ferme toute la fenetre, l'iris clos au bout d'une course",
+                closing == 6 && shut == 6, closing + " vitres qui partent grandes ouvertes, " + shut + " closes "
+                        + com.emerald.haven.door.HavenWindows.DURATION + " tiques plus tard");
+        // l'iris est dit parti il y a une course : la fenetre est fermee
+        long past = now - com.emerald.haven.door.HavenWindows.DURATION;
+        for (BlockPos pane : panes) {
+            if (level.getBlockEntity(pane) instanceof com.emerald.block.entity.HavenWindowBlockEntity entity) {
+                entity.set(true, past, entity.u0(), entity.u1(), entity.v0(), entity.v1());
+            }
+        }
+
+        // une vitre de plus au bout du bas : elle rejoint la fenetre fermee
+        BlockPos extra = base.offset(3, 0, 0);
+        level.setBlock(extra, com.emerald.block.HavenWindowBlock.connected(level, extra, placed), Block.UPDATE_ALL);
+        boolean joined = level.getBlockEntity(extra) instanceof com.emerald.block.entity.HavenWindowBlockEntity entity
+                && entity.closed() && entity.openness(level.getGameTime(), 0.0F) == 0.0F
+                && level.getBlockEntity(base) instanceof com.emerald.block.entity.HavenWindowBlockEntity first
+                && first.u1() == base.getX() + 3;
+        check("vitres de Jak 3 : une vitre ajoutee a une fenetre fermee se ferme avec elle, et la fenetre s'agrandit",
+                joined, "vitre ajoutee en " + extra.toShortString());
+
+        // la colonne du milieu cassee : deux fenetres, chacune avec ses bornes, et un clic n'ouvre que la sienne
+        level.setBlock(base.offset(1, 0, 0), Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
+        level.setBlock(base.offset(1, 1, 0), Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
+        com.emerald.haven.door.HavenWindows.toggle(level, base);
+        boolean split = level.getBlockEntity(base) instanceof com.emerald.block.entity.HavenWindowBlockEntity leftPane
+                && !leftPane.closed() && leftPane.u0() == base.getX() && leftPane.u1() == base.getX()
+                && level.getBlockEntity(base.offset(2, 0, 0)) instanceof com.emerald.block.entity.HavenWindowBlockEntity rightPane
+                && rightPane.closed() && rightPane.u0() == base.getX() + 2 && rightPane.u1() == base.getX() + 3;
+        check("vitres de Jak 3 : la colonne du milieu cassee, deux fenetres ; la gauche se rouvre seule",
+                split, "");
+        for (int dy = 0; dy <= 1; dy++) {
+            for (int dx = 0; dx <= 3; dx++) {
+                level.setBlock(base.offset(dx, dy, 0), Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
+            }
         }
     }
 

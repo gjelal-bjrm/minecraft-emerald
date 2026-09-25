@@ -300,6 +300,19 @@ public class ModBlocks {
                     .mapColor(MapColor.WOOD)
                     .sound(SoundType.WOOD)));
 
+    /**
+     * Une vitre de Jak 3 (HavenWindowBlock, cahier §101) : se relie a ses voisines en une fenetre,
+     * dont un clic ferme ou rouvre l'iris. A poser dans l'atelier ; tombe quand on la casse.
+     */
+    public static final DeferredBlock<HavenWindowBlock> HAVEN_WINDOW = registerBlock("haven_window",
+            () -> new HavenWindowBlock(BlockBehaviour.Properties.of()
+                    .strength(1.5F)
+                    .mapColor(MapColor.METAL)
+                    .sound(SoundType.GLASS)
+                    .isRedstoneConductor((state, level, pos) -> false)
+                    .isSuffocating((state, level, pos) -> false)
+                    .isViewBlocking((state, level, pos) -> false)));
+
     public static final DeferredBlock<HavenGateBlock> HAVEN_GATE = registerBlockOnly("haven_gate",
             () -> new HavenGateBlock(BlockBehaviour.Properties.of()
                     .strength(-1.0F, 3600000.0F).noLootTable()

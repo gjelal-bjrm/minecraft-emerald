@@ -9244,3 +9244,70 @@ finit dans les trois minutes.
 - Livre : commit, push et installation au profil.
 - Reste a voir : les rails, en chaine fine, se voient mal depuis la rue.
 
+## 101. Les vitres de Jak 3 *(25 sept. 2026)*
+
+La derniere demande de la liste du 24 sept. (§96) : « des vitres de Jak 3, style
+futuriste comme les portes, bordure tres legere, vitre au centre ; elles se relient
+entre elles comme les vitres ; clic droit : la bordure se referme sur la vitre en
+ellipse -- un iris qui se rejoint au centre --, re-clic : elle se rouvre. Masque ou
+montre l'exterieur. » Son choix (24 sept.) : UN IRIS PAR FENETRE -- un cadre fin autour
+de toute la fenetre reliee, une seule ellipse qui se resserre en son centre, et un clic
+sur n'importe quelle vitre ferme ou rouvre toute la fenetre.
+
+### A. La vitre
+
+Un bloc, « Vitre de Jak 3 » (`haven_window`, `HavenWindowBlock`), dans l'onglet du mod,
+pour l'atelier (§87) ; cassee, elle tombe. Une vitre fine au milieu du bloc, tournee
+selon le mur : posee face au joueur. Elle se RELIE a ses voisines du meme axe, a gauche,
+a droite, en haut et en bas, et ensemble elles font UNE FENETRE : le verre -- un bleu
+pale translucide, deux reflets en biais -- est d'un seul tenant (ni tranche ni cadre
+entre deux vitres reliees), et le CADRE, deux pixels, ne borde que le pourtour. Les
+metaux sont ceux des portes de Jak 3 (§95), tires de leur atlas par
+`tools/haven_window.py` : le cadre, l'acier brosse clair de la porte du Hip Hog ;
+l'iris, l'acier sombre des panneaux du sas du port. Une vitre en main, un clic sur une
+vitre en pose une autre contre elle au lieu de fermer la fenetre.
+
+### B. L'iris
+
+- UNE ELLIPSE par fenetre, centree sur son rectangle (moins le cadre) : grande ouverte,
+  elle le contient tout entier (racine de 2 fois ses demi-axes) ; elle se resserre
+  jusqu'a rien en 24 tiques, une seconde et un cinquieme, en douceur aux deux bouts.
+  Chaque vitre dessine sa part (`HavenWindowRenderer`), PIXEL PAR PIXEL -- seize par
+  bloc, comme les textures --, et un LISERE d'acier clair borde le verre qui reste.
+- DEVANT LE VERRE, des deux faces, en retrait dans l'epaisseur du cadre.
+- En pleine course, un clic fait demi-tour d'ou il est (courbe symetrique). Un piston
+  qui sort a la fermeture, qui rentre a l'ouverture.
+- Fermee, la fenetre MASQUE l'exterieur ; la LUMIERE, elle, passe toujours (voir C).
+
+### C. Les fenetres
+
+`HavenWindows` : une fenetre, ce sont les vitres reliees de proche en proche (512 au
+plus). Un clic les accorde toutes : l'etat voulu, la tique de depart, le rectangle. Une
+vitre posee prend l'etat de la fenetre qu'elle rejoint, et la fenetre s'agrandit ; une
+vitre cassee la reduit, ou la coupe en deux, chaque morceau reprenant ses bornes. Chaque
+vitre garde tout cela dans son entite (sauve, envoye au client, releve par l'atelier
+avec la vitre).
+
+### D. Verifie
+
+- Banc de la ville : 22 OK (4 de plus) -- une fenetre de trois sur deux devant le bar :
+  reliee, le cadre sur son seul pourtour ; un clic la ferme toute, l'iris clos au bout
+  d'une course ; une vitre ajoutee a la fenetre fermee se ferme avec elle et l'agrandit ;
+  la colonne du milieu cassee, deux fenetres, et la gauche se rouvre seule.
+- Photos (`haven:vitre_*`, une fenetre de quatre sur trois posee sur le quai est, la
+  baie derriere), trois series :
+  1. l'iris au milieu du verre, et la fenetre fermee qui arretait la lumiere : la teinte
+     et les reflets du verre passaient sur l'acier, qui ressemblait a du verre depoli, et
+     a la fin de l'iris tout s'assombrissait d'un coup -- un bloc qui arrete la lumiere
+     est noir pour lui-meme. D'ou l'iris devant le verre, et la lumiere qui passe : le
+     joueur avait demande de masquer l'exterieur, pas de faire le noir ;
+  2. l'iris devant le verre : juste, mais fermee, la fenetre montrait une grille de
+     carreaux -- le chanfrein du panneau du sas, repete a chaque bloc ;
+  3. l'acier pris dans le panneau, son degrade ote (brossage garde) : un seul panneau
+     d'acier qui se referme en ellipse, le lisere autour de l'ouverture, fermee des deux
+     cotes.
+
+### E. Choix du joueur (25 sept.)
+
+- La lumiere qui passe, fenetre fermee : GARDEE.
+- Livre : commit, push et installation au profil.

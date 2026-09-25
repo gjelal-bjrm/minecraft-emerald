@@ -933,6 +933,12 @@ tout cela entre dans le mod pour tous les joueurs.
    d'épaisseur). Clic droit sur le sol : la porte se dresse face à vous, et s'ouvre
    toute seule quand on s'en approche, comme dans Jak 3. Casser un de ses blocs la
    retire entière.
+   Les **vitres de Jak 3** aussi : posées côte à côte ou l'une sur l'autre dans le même
+   plan, elles font **une seule fenêtre**, un cadre fin sur son seul pourtour. Un clic
+   droit sur n'importe laquelle ferme ou rouvre toute la fenêtre : un iris d'acier se
+   referme en ellipse jusqu'en son centre, en une seconde, et masque l'extérieur (la
+   lumière passe toujours). Vitre en main, un clic sur une vitre en pose une autre contre
+   elle.
 3. **Relevez** : `/arcencium haven atelier releve` (cliquable dans le message d'arrivée).
    Toute la ville se charge puis se lit, en quelques secondes. Le relevé ne garde que ce
    qui diffère de la ville posée, et il est écrit dans `run/arcencium_jak/ville.nbt`,
@@ -968,6 +974,7 @@ Sur un serveur d'essai (`run-server`), chacun écrit son rapport puis arrête le
 - `EMERALDWEAPONS_AUTOTEST=vote ./gradlew runServer` : appartements et vote, rapport `run-server/vote_autotest.txt` ;
 - `EMERALDWEAPONS_AUTOTEST=salles ./gradlew runServer` : relevé et rejeu des salles, rapport `run-server/salles_autotest.txt` ;
 - `EMERALDWEAPONS_AUTOTEST=atelier ./gradlew runServer` : l'atelier et le relevé de la ville entière (ville nue relevée vide, retouches — dont une petite porte de Jak 3 — relevées puis rejouées par deux poses), rapport `run-server/atelier_autotest.txt` ;
+- `EMERALDWEAPONS_AUTOTEST=haven ./gradlew runServer` : la ville posée (sol, eau, portes de Jak 3, câbles vidés, équipement du dehors sans effet) et les vitres de Jak 3 (une fenêtre reliée, son cadre, l'iris d'un clic, une vitre ajoutée, une fenêtre coupée en deux), rapport `run-server/haven_autotest.txt` ;
 - `EMERALDWEAPONS_AUTOTEST=vehicules ./gradlew runServer` : voitures et motos (dont leurs dégâts, leur destruction et leur explosion), puis le JET-Board (l'eau, la glisse lâchée, le frein, les sauts, le sol, un rail, les trois tremplins, et la course de Tess faite par la planche seule, bouton tenu, en sautant au bout des rails), rapport `run-server/vehicules_autotest.txt` ;
 - `EMERALDWEAPONS_AUTOTEST=invasion ./gradlew runServer` : invasion, décor destructible, bouton du QG et MSPT, rapport `run-server/invasion_autotest.txt` ;
 - `EMERALDWEAPONS_AUTOTEST=armes ./gradlew runServer` : Morph Gun (poses, confinement, tir des douze armes, munitions, décor, MSPT avec quatre tireurs), rapport `run-server/armes_autotest.txt` ;
@@ -994,7 +1001,10 @@ tremplin et le rail au-dessus, le joueur à pied), `haven:board_course` (de mêm
 du départ de la course), `haven:board_planche` (le joueur debout sur la planche, caméra derrière ;
 S tenu pour qu'elle ne parte pas), `haven:board_face` (de face), `haven:board_elan` dans une prise
 nommée `..._rafale` (Z tenu pendant la rafale : le tremplin, le vol, le rail) et `haven:board_case_ui`
-(l'écran de Curios, la planche dans sa case). L'agenda ouvert à une page :
+(l'écran de Curios, la planche dans sa case). Les vitres de Jak 3 : `haven:vitre_ouverte` (une
+fenêtre de quatre sur trois posée sur le quai est, vue de la rue), `haven:vitre_iris` dans une prise
+nommée `..._rafale` (l'iris se ferme au début de la rafale), `haven:vitre_fermee` et `haven:vitre_dos`
+(fermée, vue de la baie). L'agenda ouvert à une page :
 `EMERALDWEAPONS_PHOTOS_MAIN=emeraldweapons:haven_agenda` et `nom@main:livre3` (la page 3 en comptant
 de 0, les rues reprises) ; `livre3_plein` coche toutes les quêtes, l'argent aux épreuves de Tess — les
 lignes les plus longues, pour voir si la page les tient (quatorze lignes par page).

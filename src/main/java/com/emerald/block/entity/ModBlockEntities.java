@@ -48,6 +48,11 @@ public class ModBlockEntities {
                     () -> BlockEntityType.Builder.of(HavenDoorBlockEntity::new,
                             ModBlocks.HAVEN_DOOR.get()).build(null));
 
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<HavenWindowBlockEntity>>
+            HAVEN_WINDOW = BLOCK_ENTITIES.register("haven_window",
+                    () -> BlockEntityType.Builder.of(HavenWindowBlockEntity::new,
+                            ModBlocks.HAVEN_WINDOW.get()).build(null));
+
     public static void register(IEventBus eventBus) {
         BLOCK_ENTITIES.register(eventBus);
     }

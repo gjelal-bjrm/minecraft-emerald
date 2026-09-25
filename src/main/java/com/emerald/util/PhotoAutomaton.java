@@ -1114,6 +1114,57 @@ public final class PhotoAutomaton {
         return true;
     }
 
+    /** La fenetre dont l'iris se ferme au debut de la rafale (« vitre_iris »), serveur. */
+    @Nullable
+    private static BlockPos irisTarget;
+    /** La premiere vitre de la fenetre des photos, en cellule du volume : quatre de long en z, trois de haut. */
+    private static final int[] WINDOW_AT = {924, 66, 272};
+
+    /**
+     * LES VITRES DE JAK 3 (cahier §101) : une fenetre de quatre sur trois posee en travers du quai
+     * est, face a la baie, ville paisible. « vitre_ouverte » la regarde depuis la rue, a sept blocs ;
+     * « vitre_iris » (a nommer « ..._rafale ») : de la, l'iris se ferme au debut de la rafale ;
+     * « vitre_fermee » : fermee ; « vitre_dos » : fermee, vue depuis la baie. Camera libre, a la
+     * hauteur du milieu de la fenetre.
+     */
+    private static boolean windowReady(MinecraftServer server, ServerPlayer player, Shot shot, String view) {
+        ServerLevel level = player.serverLevel();
+        BlockPos base = com.emerald.haven.HavenState.get(server).origin().offset(WINDOW_AT[0], WINDOW_AT[1], WINDOW_AT[2]);
+        if (PREPARED.add(shot.name())) {
+            com.emerald.haven.invasion.HavenInvasion.setMode(server, com.emerald.haven.invasion.HavenInvasion.Mode.PAISIBLE, null);
+            player.stopRiding();
+            if (!(level.getBlockState(base).getBlock() instanceof com.emerald.block.HavenWindowBlock)) {
+                BlockState placed = com.emerald.block.ModBlocks.HAVEN_WINDOW.get().defaultBlockState()
+                        .setValue(com.emerald.block.HavenWindowBlock.AXIS, net.minecraft.core.Direction.Axis.Z);
+                for (int dy = 0; dy < 3; dy++) {
+                    for (int dz = 0; dz < 4; dz++) {
+                        BlockPos at = base.offset(0, dy, dz);
+                        level.setBlock(at, com.emerald.block.HavenWindowBlock.connected(level, at, placed),
+                                net.minecraft.world.level.block.Block.UPDATE_ALL);
+                    }
+                }
+                LOGGER.info("photos : fenetre de vitres posee en {}", base.toShortString());
+            }
+            // ouverte pour la vue d'ouverture et pour la rafale (qui la ferme), fermee sinon
+            boolean wanted = view.startsWith("fermee") || view.startsWith("dos");
+            if (level.getBlockEntity(base) instanceof com.emerald.block.entity.HavenWindowBlockEntity pane
+                    && pane.closed() != wanted) {
+                com.emerald.haven.door.HavenWindows.toggle(level, base);
+            }
+            return false;
+        }
+        player.setGameMode(GameType.SPECTATOR);
+        double eye = base.getY() + 1.5;
+        double cz = base.getZ() + 2.0;
+        boolean back = view.startsWith("dos");
+        player.teleportTo(level, back ? base.getX() - 6.5 : base.getX() + 7.5, eye - player.getEyeHeight(), cz,
+                back ? -90.0F : 90.0F, 0.0F);
+        irisTarget = view.startsWith("iris") ? base : null;
+        burstStarted = false;
+        handsView = null;
+        return true;
+    }
+
     /** Apres la prise d'un combat : ce que le joueur a encaisse. */
     private static void combatReport(Shot shot) {
         int n = Integer.parseInt(shot.biome().getPath().substring("combat".length()));
@@ -1157,6 +1208,10 @@ public final class PhotoAutomaton {
             return;
         }
         ++waited;
+        if (irisTarget != null && burstStarted) {
+            com.emerald.haven.door.HavenWindows.toggle(player.level(), irisTarget);
+            irisTarget = null;
+        }
         if (heldDoor != null && waited >= heldFrom
                 && player.level().getBlockEntity(heldDoor) instanceof com.emerald.block.entity.HavenDoorBlockEntity door) {
             door.trigger(player.level());
@@ -1240,6 +1295,9 @@ public final class PhotoAutomaton {
         }
         if (path.startsWith("board_")) {
             return boardReady(server, player, shot, path.substring("board_".length()));
+        }
+        if (path.startsWith("vitre_")) {
+            return windowReady(server, player, shot, path.substring("vitre_".length()));
         }
         if (path.startsWith("faune_")) {
             // les animaux de la ville (cahier §85), poses devant la camera
