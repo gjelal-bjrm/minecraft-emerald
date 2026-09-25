@@ -169,7 +169,9 @@ public final class HavenAutotest {
         BlockPos street = Haven.STREET_CELL;
         BlockPos door = Haven.BAR_DOOR_CELL;
         BlockState streetWanted = cell(volume, street);
-        BlockState doorWanted = cell(volume, door);
+        // le seuil a la matiere du bar du Hip Hog (cahier §103), s'il en est une cellule
+        BlockState barDoor = HavenBar.wanted(door.getX(), door.getY(), door.getZ());
+        BlockState doorWanted = barDoor != null ? barDoor : cell(volume, door);
         BlockState doorUpWanted = cell(volume, door.above());
 
         BlockPos streetAt = o.offset(street);
@@ -197,7 +199,7 @@ public final class HavenAutotest {
         BlockState doorGot = level.getBlockState(o.offset(door));
         BlockState doorUp = level.getBlockState(o.offset(door.above()));
         // au-dessus du seuil, l'air du volume -- ou la porte de Jak 3, posee d'office (cahier §95)
-        check("porte du bar en cellule (361, 66, 197) : le seuil, et au-dessus l'air ou la porte de Jak 3",
+        check("porte du bar en cellule (361, 66, 197) : le seuil (volume ou bar), et au-dessus l'air ou la porte de Jak 3",
                 same(doorGot, doorWanted) && (same(doorUp, doorUpWanted)
                         || doorUp.getBlock() instanceof HavenDoorBlock),
                 "monde " + name(doorGot) + " / " + name(doorUp) + ", volume " + name(doorWanted)
@@ -232,6 +234,7 @@ public final class HavenAutotest {
                 emptied + " cellules vides sur " + HavenCables.cells().size() + ", " + seen + " cables sur "
                         + HavenCables.lines().size() + " avec leur temoin, etat " + state.cables());
 
+        bar(level, o, state);
         doors(server, level, o, state);
         windows(level, o);
         gear(level, o);
@@ -352,6 +355,38 @@ public final class HavenAutotest {
      * se referment quand il s'en va. Une porte posee a la main sur la rue tient toutes ses
      * cellules ; en casser une emporte la porte entiere.
      */
+    /**
+     * Le bar du Hip Hog en blocs (cahier §103) : chaque cellule de haven_bar.json a son etat voulu apres la pose,
+     * et les places de ce que le mod pose dans le bar restent libres, leurs appuis pleins -- la porte, les pieds
+     * de Torn, le ratelier sur son socle et le bouton sur le bout du comptoir (tous deux du comptoir), la borne.
+     */
+    private static void bar(ServerLevel level, BlockPos o, HavenState state) {
+        int placed = 0;
+        String first = "";
+        for (BlockPos cell : HavenBar.cells()) {
+            BlockState got = level.getBlockState(o.offset(cell));
+            if (got == HavenBar.wanted(cell.getX(), cell.getY(), cell.getZ())) {
+                placed++;
+            } else if (first.isEmpty()) {
+                first = ", la premiere autre : " + cell.toShortString() + " " + got;
+            }
+        }
+        check("bar du Hip Hog : chaque cellule a son etat voulu apres la pose, etat a la version " + HavenBar.VERSION,
+                HavenBar.size() > 5000 && placed == HavenBar.size() && state.bar() == HavenBar.VERSION,
+                placed + " sur " + HavenBar.size() + first + ", etat " + state.bar());
+        net.minecraft.world.level.block.Block counter = com.emerald.block.HipHogBlocks.COUNTER.get();
+        BlockState doorway = level.getBlockState(o.offset(Haven.BAR_DOOR_CELL).above());
+        boolean door = doorway.isAir() || doorway.is(com.emerald.block.ModBlocks.HAVEN_DOOR.get());
+        boolean torn = level.getBlockState(o.offset(334, 68, 166)).isAir() && level.getBlockState(o.offset(334, 69, 166)).isAir()
+                && level.getBlockState(o.offset(334, 67, 166)).isSolid();
+        boolean rack = level.getBlockState(o.offset(331, 68, 166)).is(counter);
+        boolean button = level.getBlockState(o.offset(333, 68, 167)).is(counter);
+        boolean vote = !level.getBlockState(o.offset(335, 67, 168)).isAir();
+        check("bar : la porte libre, Torn au sol, le ratelier et le bouton sur le comptoir, la borne sur son sol",
+                door && torn && rack && button && vote,
+                "porte " + door + ", Torn " + torn + ", ratelier " + rack + ", bouton " + button + ", borne " + vote);
+    }
+
     private static void doors(MinecraftServer server, ServerLevel level, BlockPos o, HavenState state) {
         List<HavenDoorFrame> frames = HavenDoors.defaults(server);
         int doors = 0;

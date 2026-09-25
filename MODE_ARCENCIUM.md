@@ -9365,3 +9365,122 @@ pour le rendre fidele au bar de Jak 3. Le decor entier du bar est la
 du jeu dans les couleurs de sommet) et tombe sur l'emprise du QG. 37 cellules du joueur
 sont dans le bar (19 bandes de lumiere, 17 escaliers, un ventilateur) : elles doivent
 rester. A proposer en images avant tout travail.
+
+## 103. Le QG en blocs : le bar du Hip Hog de Jak 3 *(25 sept. 2026)*
+
+La demande (25 sept.) : « si tu arrives a faire en sorte que le quartier general soit fidele
+au bar de Jak 3, pourquoi pas ? Mais tu as juste mis des blocs sans aucune texture [...] c'est
+juste des blocs de pierre, on ne peut pas le laisser comme ca. » Le QG etait la collision du bar
+posee en trois pierres (un bloc par surface, §41). Ses choix, sur une planche de rendus du vrai
+bar :
+- LE VRAI DECOR, « mais en version Minecraft, car ca denature trop le jeu quand ce n'est pas en
+  blocs » ;
+- fait AVANT qu'il meuble le QG dans l'atelier ;
+- le bar GARDE SON BIAIS dans le port (tourne de 33,6 degres sur la grille : les bords droits
+  font des marches de trois sur deux) ;
+- ON ENTRE dans les alcoves.
+
+### A. Le vrai bar
+
+`levels/hiphog/hiphog-background.glb` : 44 001 triangles, 113 textures de 128 pixels, sans la
+lumiere cuite du jeu (couleurs de sommet a zero). Il tombe pile sur l'emprise du QG. Son plan,
+mesure dans son repere (u le long, du comptoir a l'entree ; v en travers) -- le joueur l'a
+rappele sur les premieres images (« tu as mal compris le bar de Jak ») :
+- AU CENTRE, un carre rouge (l'anneau de moquette et de marches, 26 sur 16 m) autour d'un fond en
+  metal ; dedans, la table ronde (6 m) et deux caisses dans un coin ;
+- SUR LES COTES, huit alcoves, quatre par long mur : une petite salle a l'entree ronde, une table
+  au milieu, des banquettes sur les cotes, une lampe bleue ;
+- TOUT AU FOND, le bar : comptoir, tabourets, etageres de bouteilles, cartes et affiches ;
+- une charpente en A jusqu'au faitage (20 m au-dessus du sol), seize lampes suspendues, cinq
+  arches (piliers entre les alcoves).
+
+### B. Ce que les maquettes et les photos ont appris
+
+Maquettes en Python pur (textures du jeu, ombre de coins de Minecraft), puis photos en jeu sans
+vision nocturne -- les neuf lecons de `tools/jak_bar.py` :
+1. LA FORME RESTE, LA MATIERE CHANGE : la collision du bar est sa forme ; tout ce qui s'y appuie
+   (la porte, Torn, le ratelier, le bouton, la borne, les cellules de l'atelier) reste juste.
+2. CONVERTI AU BLOC PRES, LE DECOR EST DU BRUIT : sur une grille de biais, une pente fine fait
+   une marche a chaque colonne, une poutre d'un metre sort en troncons. Toiture EN PALIERS (cinq,
+   de deux blocs), unie, au vrai faitage (cellule 85) : le bar est plus haut, et se voit
+   de la rue (aucune voie du trafic au-dessus).
+3. LES OBJETS FINS SONT DES BLOCS DESSINES : tabourets, tabourets hauts, tables hautes ; les
+   bouteilles, des rangs de flacons sur le mur jaune du bar (sur du metal sombre, le mur passait pour
+   une bibliotheque). Les lampes du jeu sont de grands caissons poses sur la toiture : a plat dans le
+   toit, deux blocs sur deux de lampe ambre (les petites lampes suspendues laissaient la voute noire,
+   a cote du rendu du jeu) ; la table ronde, un disque bleu lumineux cercle d'acier, comme son ecran.
+   La lampe suspendue reste un bloc de l'onglet, pour l'atelier. Les cubes que la collision
+   donnait aux tabourets et aux poteaux du bar, devant le comptoir, restaient en blocs pleins de
+   chrome ou de moquette (photos) : otes, les tabourets posent sur le sol. Une seule table par
+   alcove (deux cellules voisines en posaient deux).
+4. LES ALCOVES : un cercle de cinq blocs dans le mur, le bas sur l'allee ; baties entieres (la
+   collision n'en donnait ni le fond ni tout le plafond), murs d'un metre trois.
+5. UN BLOC PAR ROLE : 26 matieres et 4 objets, pas 99 textures.
+6. CHAQUE ELEMENT SE RECONNAIT : la matiere se choisit par role et par region du plan (le fond en
+   metal, l'anneau de moquette releve d'une demi-marche, l'allee, les murs -- socle rouge, mur
+   jaune, piliers et leurs capsules rouges --, les alcoves, le comptoir et le mur de bouteilles) ;
+   la texture la plus proche de chaque bloc noyait tout.
+7. LA LUMIERE DESCEND : les lampes sont a dix blocs du sol, comme dans le jeu, et le bar etait
+   noir. Cinquante lumieres invisibles de Minecraft, trois blocs au-dessus de l'allee : sous
+   chaque caisson, une grille tous les six metres, les alcoves, la table, le comptoir, l'entree.
+8. L'ENVELOPPE EST FERMEE : les murs de la collision avaient des vides, la grille de biais sautait
+   des rangees d'une bande trop mince, et vider les cubes d'un tabouret ouvrait un puits dans
+   l'allee. Longs murs pleins sur plus de deux metres, meubles qui ne vident jamais leur sol ;
+   l'outil refait un remplissage de l'air, porte bouchee, et s'arrete sur une fuite. Ce qui n'est
+   pas un bloc plein (meubles, chaine, dalle, siege, verre) y compte pour une ouverture : une lampe
+   suspendue posee dans la contremarche entre deux paliers ouvrait un jour sur le ciel, que le
+   premier controle, qui la comptait pleine, n'avait pas vu.
+9. CE QUI BRILLE ET CE QUI PEND : le chrome du jeu, en aplat gris clair, passait pour un miroir
+   aux shaders -- les cercles des alcoves montraient le ciel, comme des trous. Ce n'en etait pas :
+   la sauvegarde avait tous ses blocs (lue case par case, puis dessinee de la meme camera, une
+   couleur par bloc : c'etaient les blocs de chrome). C'est l'acier brosse des portes du Hip Hog.
+   La toiture qui monte laissait flotter la lampe-ventilateur du joueur, pendue au plafond plat :
+   une chaine l'y rattache. Ses cellules ne sont jamais touchees.
+Le comptoir n'existait pas : la collision ne gardait du bar qu'un sol plat et les cubes des
+tabourets, ou reposaient Torn, le bouton et le ratelier. Il est bati, un bloc de haut ; le
+ratelier et le bouton se posent dessus, Torn se tient au sol devant.
+
+### C. En jeu
+
+- 30 blocs (`HipHogBlocks`, onglet du mod) : 26 matieres, dont trois lampes (bleue, rouge, ambre,
+  a pleine clarte), la dalle de moquette et le siege de banquette (un escalier) ; les meubles
+  (`HipHogFurnitureBlock`) ont la forme de leur modele. Textures, modeles, etats et butins : ecrits
+  par l'outil. Noms dans les quatre langues.
+- `HavenBar` : `haven_bar.json`, chaque cellule que le bar change (etat voulu, etat du volume) --
+  11 685 ; pose apres la ville (avant le rejeu des releves du joueur, qui passent par-dessus) et
+  au demarrage d'une ville deja posee (etat de Haven a la version 1). Une cellule ne change que si
+  le monde y a encore l'etat du volume. Le volume n'est pas touche (son sha1 tient tout).
+- Le releve de l'atelier compare chaque cellule du bar a l'etat voulu, pas au volume
+  (`JakCityCapture`) : sans cela, le bar entier passait pour des retouches du joueur.
+- La camera des photos peut se passer de vision nocturne (`EMERALDWEAPONS_PHOTOS_VISION=0`) : pour
+  juger la lumiere d'un lieu.
+
+### D. Verifie
+
+- Banc de la ville : 24 OK (deux de plus) -- les 11 685 cellules du bar a leur etat apres la pose ;
+  la porte libre, Torn au sol devant le comptoir, le ratelier et le bouton sur le comptoir, la
+  borne sur son sol.
+- Banc de l'atelier : 18 OK -- le releve de la ville nue reste VIDE avec le bar.
+- Parcours 51 OK (ratelier, arche du depart dans le bar), vote 36 OK, quetes 55 OK et 1 KO (les
+  mouettes : pas d'Alex's Mobs au serveur des bancs, voulu).
+- Photos en jeu sans vision nocturne, sept vues, cinq series ; la planche les met chacune a cote du
+  rendu du jeu, de la meme place et au meme champ (77 degres en hauteur : celui du spectateur).
+- Reste, si le joueur le veut : les affiches et les cartes, les rideaux de deux alcoves, le verre
+  bleu des entrees rondes, les poutres de la voute.
+
+### E. Choix du joueur (25 sept.)
+
+- Sur la planche (le jeu et le QG en jeu, de la meme place) : le QG convient, pose dans l'atelier
+  -- une ouverture automatique, comme pour les portes (§102), tout avant qu'il le meuble.
+- Livre : commit, push et installation au profil.
+
+### F. L'atelier : le bar pose, et trois marches rendues
+
+La premiere ouverture pour le bar donnait 366 cellules au lieu des 363 du joueur : trois marches
+d'andesite noyees au pied de l'escalier du bassin nord, sous la poupe du bateau du Pecheur. C'etait
+le rangement du bateau d'avant §102 B, a la fermeture de l'ouverture automatique de 10 h 22 : le
+releve avait charge toute la ville, le troncon du bateau l'etait encore, et l'ancien code rendait
+l'eau a toute sa place. Le releve montrait que le joueur n'avait rien retouche depuis. Reparation :
+l'atelier d'avant 10 h 22 (son dernier etat) remis, puis rouvert une fois -- portes, cables et bar
+se posent au demarrage, et le rangement corrige ne touche plus a l'atelier. Les deux etats
+intermediaires sont gardes dans `run/atelier_sauvegardes/`.

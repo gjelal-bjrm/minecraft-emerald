@@ -134,6 +134,8 @@ public final class PhotoAutomaton {
     private static volatile String handsView;
     /** La camera libre de Haven : « x,y,z,lacet,tangage » en cellules du volume (prise « nom@haven:camera »). */
     private static final String CAMERA = Objects.requireNonNullElse(System.getenv(VARIABLE + "_CAMERA"), "").trim();
+    /** « 0 » : la camera sans vision nocturne, pour juger la lumiere d'un lieu (le bar du Hip Hog, §103). */
+    private static final boolean CAMERA_NIGHT = !"0".equals(System.getenv(VARIABLE + "_VISION"));
     /**
      * La vitrine « en direct » (EMERALDWEAPONS_PHOTOS_VITRINE_DIRECT=1) : l'estrade est batie
      * a la premiere prise, les blocs poses a la suivante, le joueur deja la -- comme un
@@ -1328,8 +1330,10 @@ public final class PhotoAutomaton {
             }
             BlockPos o = com.emerald.haven.HavenState.get(server).origin();
             player.setGameMode(GameType.SPECTATOR);
-            player.addEffect(new net.minecraft.world.effect.MobEffectInstance(
-                    net.minecraft.world.effect.MobEffects.NIGHT_VISION, 20 * 120, 0, false, false));
+            if (CAMERA_NIGHT) {
+                player.addEffect(new net.minecraft.world.effect.MobEffectInstance(
+                        net.minecraft.world.effect.MobEffects.NIGHT_VISION, 20 * 120, 0, false, false));
+            }
             player.teleportTo((ServerLevel) player.level(), o.getX() + Double.parseDouble(v[0].trim()),
                     o.getY() + Double.parseDouble(v[1].trim()) - player.getEyeHeight(),
                     o.getZ() + Double.parseDouble(v[2].trim()), Float.parseFloat(v[3].trim()), Float.parseFloat(v[4].trim()));

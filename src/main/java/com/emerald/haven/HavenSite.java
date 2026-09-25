@@ -211,8 +211,9 @@ public final class HavenSite {
         // tenus, et avant que le banc d'essai de la ville ne regarde l'eau
         ServerLevel level = Haven.level(server);
         if (level != null) {
-            // les cables vides d'abord (cahier §94), les releves du joueur par-dessus
+            // les cables vides d'abord (cahier §94), le bar du Hip Hog (§103), les releves du joueur par-dessus
             HavenCables.afterPose(server, level, state);
+            HavenBar.afterPose(server, level, state);
             JakOverlay.replayAll(server, level, volume, origin, sha1, player);
             // les portes de Jak 3 apres les releves : elles ne prennent que les cellules restees libres
             com.emerald.haven.door.HavenDoors.afterPose(server, level, state);

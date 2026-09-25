@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/stairs",
+  "textures": {
+    "bottom": "emeraldweapons:block/hiphog_booth",
+    "top": "emeraldweapons:block/hiphog_booth",
+    "side": "emeraldweapons:block/hiphog_booth"
+  }
+}

@@ -382,6 +382,7 @@ public class ModBlocks {
     }
 
     public static void register(IEventBus eventbus) {
+        HipHogBlocks.init();
         BLOCKS.register(eventbus);
     }
 }

@@ -86,6 +86,24 @@ QG.
 - Si la ville est encore en train de se poser (serveur dédié), vous attendez
   quelques instants près de la Lame, puis vous partez dans votre appartement.
 
+### Le QG : le bar du Hip Hog
+
+Le QG est le bar de Jak 3 en blocs de Minecraft, à ses textures :
+
+- **au centre**, le **carré rouge** : un anneau de moquette, une demi-marche au-dessus de
+  l'allée, autour d'un fond en métal ; au milieu, la **table ronde** et son écran bleu, et
+  deux caisses dans un coin (la table est un grand disque bleu lumineux, comme son écran) ;
+- **sur les côtés**, **huit alcôves**, quatre par long mur : une petite salle derrière une
+  **entrée ronde** cerclée d'acier, deux banquettes face à face, une table au milieu et une
+  lampe bleue au plafond. On y entre ;
+- **tout au fond**, **le bar** : le comptoir, ses tabourets, et le mur de bouteilles
+  derrière ; Torn se tient devant, le râtelier d'armes et le bouton sont sur le comptoir ;
+- au-dessus, la **charpente en paliers** jusqu'au faîte, et ses seize caissons de lumière.
+
+Le bar se pose tout seul sur la ville : à chaque pose, et au démarrage d'une partie où la
+ville était déjà posée. Ce qu'un joueur a mis à la place d'un de ses blocs reste. Des
+lumières invisibles l'éclairent (pour les voir, tenir un bloc de lumière en créatif).
+
 ### Le vote au QG
 
 Le QG est le **bar du Hip Hog**, à l'est des appartements. La **borne de
@@ -939,6 +957,9 @@ tout cela entre dans le mod pour tous les joueurs.
    referme en ellipse jusqu'en son centre, en une seconde, et masque l'extérieur (la
    lumière passe toujours). Vitre en main, un clic sur une vitre en pose une autre contre
    elle.
+   Les **blocs du Hip Hog** aussi — le toit, les métaux, la moquette, le comptoir, les
+   banquettes, les lampes, les tabourets et les tables : ceux du QG, pour le meubler ou le
+   prolonger.
 3. **Relevez** : `/arcencium haven atelier releve` (cliquable dans le message d'arrivée).
    Toute la ville se charge puis se lit, en quelques secondes. Le relevé ne garde que ce
    qui diffère de la ville posée, et il est écrit dans `run/arcencium_jak/ville.nbt`,
@@ -974,7 +995,7 @@ Sur un serveur d'essai (`run-server`), chacun écrit son rapport puis arrête le
 - `EMERALDWEAPONS_AUTOTEST=vote ./gradlew runServer` : appartements et vote, rapport `run-server/vote_autotest.txt` ;
 - `EMERALDWEAPONS_AUTOTEST=salles ./gradlew runServer` : relevé et rejeu des salles, rapport `run-server/salles_autotest.txt` ;
 - `EMERALDWEAPONS_AUTOTEST=atelier ./gradlew runServer` : l'atelier et le relevé de la ville entière (ville nue relevée vide, retouches — dont une petite porte de Jak 3 — relevées puis rejouées par deux poses, et le rangement du bateau du Pêcheur qui n'y touche à rien), rapport `run-server/atelier_autotest.txt` ;
-- `EMERALDWEAPONS_AUTOTEST=haven ./gradlew runServer` : la ville posée (sol, eau, portes de Jak 3, câbles vidés, équipement du dehors sans effet) et les vitres de Jak 3 (une fenêtre reliée, son cadre, l'iris d'un clic, une vitre ajoutée, une fenêtre coupée en deux), rapport `run-server/haven_autotest.txt` ;
+- `EMERALDWEAPONS_AUTOTEST=haven ./gradlew runServer` : la ville posée (sol, eau, portes de Jak 3, câbles vidés, le bar du Hip Hog en blocs et ce qui s'y pose — porte, Torn, râtelier, bouton, borne —, équipement du dehors sans effet) et les vitres de Jak 3 (une fenêtre reliée, son cadre, l'iris d'un clic, une vitre ajoutée, une fenêtre coupée en deux), rapport `run-server/haven_autotest.txt` ;
 - `EMERALDWEAPONS_AUTOTEST=vehicules ./gradlew runServer` : voitures et motos (dont leurs dégâts, leur destruction et leur explosion), puis le JET-Board (l'eau, la glisse lâchée, le frein, les sauts, le sol, un rail, les trois tremplins, et la course de Tess faite par la planche seule, bouton tenu, en sautant au bout des rails), rapport `run-server/vehicules_autotest.txt` ;
 - `EMERALDWEAPONS_AUTOTEST=invasion ./gradlew runServer` : invasion, décor destructible, bouton du QG et MSPT, rapport `run-server/invasion_autotest.txt` ;
 - `EMERALDWEAPONS_AUTOTEST=armes ./gradlew runServer` : Morph Gun (poses, confinement, tir des douze armes, munitions, décor, MSPT avec quatre tireurs), rapport `run-server/armes_autotest.txt` ;
@@ -1014,6 +1035,10 @@ Pour les quêtes des héros : `haven:quete_torn` (et `quete_tess`, `quete_sig`, 
 stand de tir, `haven:quete_reperes` les trois repères (colonne, anneau, zone) ; `haven:quete_boutique_ui`
 ouvre l'écran de la boutique de Tess et `haven:quete_hud_ui` montre le compteur d'orbes et la barre
 d'objectif (ces deux-là gardent l'interface, les autres la masquent).
+Une place libre : `nom@haven:camera0` (puis `camera1`…) pose la caméra, en spectateur, à la place et
+dans l'axe de `EMERALDWEAPONS_PHOTOS_CAMERA` (« x,y,z,lacet,tangage » en cellules du volume, les places
+séparées par « | ») ; avec `EMERALDWEAPONS_PHOTOS_VISION=0`, sans vision nocturne, pour juger la
+lumière d'un lieu (le bar du Hip Hog).
 La vitrine (`nom@vitrine:face`, `biais`, `proche0`...) montre les blocs de
 `EMERALDWEAPONS_PHOTOS_VITRINE` sur une estrade dans le ciel ; pour de grands objets,
 `EMERALDWEAPONS_PHOTOS_VITRINE_PAS` (écart), `_RECUL` et `_HAUTEUR` ; `nom@vitrine:face@18000` la

@@ -69,6 +69,8 @@ public final class HavenState extends SavedData {
     private int cables;
     /** Les portes de Jak 3 posees d'office (HavenDoors.VERSION) ; 0 sur les mondes d'avant. */
     private int doors;
+    /** Le bar du Hip Hog en blocs (HavenBar.VERSION) ; 0 sur les mondes d'avant. */
+    private int bar;
     /**
      * LE MODE DE JEU D'ORIGINE, PAR JOUEUR.
      *
@@ -112,6 +114,7 @@ public final class HavenState extends SavedData {
         state.cables = tag.contains("CablesVersion") ? tag.getInt("CablesVersion")
                 : tag.getBoolean("Cables") ? 1 : 0;
         state.doors = tag.getInt("DoorsVersion");
+        state.bar = tag.getInt("BarVersion");
         state.sha1 = tag.getString("Sha1");
         if (tag.contains("Origin")) {
             state.origin = BlockPos.of(tag.getLong("Origin"));
@@ -157,6 +160,7 @@ public final class HavenState extends SavedData {
         tag.putBoolean("Atelier", this.atelier);
         tag.putInt("CablesVersion", this.cables);
         tag.putInt("DoorsVersion", this.doors);
+        tag.putInt("BarVersion", this.bar);
         tag.putString("Sha1", this.sha1);
         tag.putLong("Origin", this.origin.asLong());
         tag.putInt("Width", this.width);
@@ -235,6 +239,18 @@ public final class HavenState extends SavedData {
     /** Les portes d'office de la ville posee (HavenDoors.VERSION). */
     public int doors() {
         return this.doors;
+    }
+
+    /** Le bar du Hip Hog de la ville posee (HavenBar.VERSION). */
+    public int bar() {
+        return this.bar;
+    }
+
+    public void setBar(int bar) {
+        if (this.bar != bar) {
+            this.bar = bar;
+            setDirty();
+        }
     }
 
     public void setDoors(int doors) {

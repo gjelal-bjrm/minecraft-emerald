@@ -378,6 +378,11 @@ public final class JakCityCapture {
                         if (raw.is(Blocks.WATER)) {
                             raw = generated;             // l'eau du volume n'est pas posee : c'est la mer du generateur
                         }
+                        // le bar du Hip Hog se compare a ce que HavenBar y pose, pas au volume (§103)
+                        BlockState bar = HavenBar.wanted(wx - this.origin.getX(), y, wz - this.origin.getZ());
+                        if (bar != null) {
+                            raw = bar;
+                        }
                         BlockState world = section.getBlockState(wx & 15, wy & 15, wz & 15);
                         if (world == raw) {
                             continue;
