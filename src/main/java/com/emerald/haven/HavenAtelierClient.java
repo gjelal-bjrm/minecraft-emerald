@@ -34,10 +34,9 @@ public final class HavenAtelierClient {
         }
         stopping = true;
         LOGGER.info("atelier : releve automatique termine, fermeture du client");
-        // la sauvegarde du monde de l'atelier passe d'abord : quatre-vingt-dix secondes avant
-        // tout arret force (AutomatonExit)
-        // vingt secondes : la sauvegarde passe en moins d'une ; a quatre-vingt-dix, le joueur
-        // a eu le temps de voir la fenetre noire et de la tuer lui-meme (24 sept.)
+        // la sauvegarde du monde de l'atelier passe d'abord (AutomatonExit attend la fin du serveur
+        // integre) ; vingt secondes ensuite : a quatre-vingt-dix, le joueur avait eu le temps de voir la
+        // fenetre noire et de la tuer lui-meme (24 sept.)
         com.emerald.client.AutomatonExit.stop("atelier", 20);
     }
 }

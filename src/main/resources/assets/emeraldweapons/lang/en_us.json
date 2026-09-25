@@ -663,6 +663,7 @@
   "command.emeraldweapons.haven.atelier.on": "Workshop open: the city empties, and operators build in creative",
   "command.emeraldweapons.haven.atelier.off": "Workshop closed: the city comes back to life",
   "command.emeraldweapons.haven.atelier.releve.started": "City survey started: the whole city loads, then is read (about a minute)",
+  "command.emeraldweapons.haven.atelier.portes": "Default Jak 3 doors: %1$s put back, %2$s already there, %3$s impossible (one of your blocks in the doorway)",
   "command.emeraldweapons.haven.atelier.releve.running": "A city survey is already running",
   "command.emeraldweapons.haven.atelier.releve.loaded": "Survey: the city's %s chunks are loaded, reading",
   "command.emeraldweapons.haven.atelier.releve.progress": "Survey: %s %% read, %s changed cell(s) so far",

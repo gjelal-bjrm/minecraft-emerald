@@ -21,6 +21,7 @@ import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -36,8 +37,10 @@ import java.util.Set;
  * (com-airlock-outer). Posees apres chaque pose de la ville, et une fois au demarrage sur une
  * ville deja posee (l'etat de Haven garde la version ; une porte d'office qui a bouge d'une
  * version a l'autre est remplacee). Une porte ne prend que des cellules vides : ce que le
- * joueur a mis dans une ouverture reste. Le releve de l'atelier les ignore (JakCityCapture) ;
- * celles que le joueur pose lui-meme, il les releve.
+ * joueur a mis dans une ouverture reste. Les releves -- celui de l'atelier (JakCityCapture) comme
+ * celui d'une salle (JakDiff) -- ne prennent pas leurs blocs, mais bien ce que le joueur change
+ * dans leur ouverture (JakDiff.forCapture : le linteau du bar, retire, §105) ; la remise a zero
+ * d'une salle laisse sa porte ou la repose. Celles que le joueur pose lui-meme, il les releve.
  *
  * LE VOLUME N'EST PAS JAK 3 AU CENTIMETRE. Au bar, le voxeliseur a pose le sol une cellule
  * au-dessus de celui du jeu (le seuil, en y 66) et l'escalier du mur en biais ne laisse que
@@ -76,20 +79,29 @@ public final class HavenDoors {
         HavenRooms.Data data = HavenRooms.get(server);
         if (data != null) {
             for (HavenRooms.Room room : data.rooms()) {
-                HavenRooms.Box door = room.door();
-                if (door == null) {
-                    continue;
+                HavenDoorFrame frame = frameOf(room);
+                if (frame != null) {
+                    frames.add(frame);
                 }
-                // l'ouverture est dans le plan d'un mur : sa largeur court le long de l'autre axe
-                boolean alongZ = door.sizeX() == 1;
-                double x = alongZ ? door.min().getX() + 0.5 : (door.min().getX() + door.max().getX() + 1) / 2.0;
-                double z = alongZ ? (door.min().getZ() + door.max().getZ() + 1) / 2.0 : door.min().getZ() + 0.5;
-                frames.add(new HavenDoorFrame(HavenDoorKind.HIP, x, door.min().getY(), z, alongZ ? 90.0F : 0.0F));
             }
         }
         frames.add(BAR);
         frames.add(SAS);
         return frames;
+    }
+
+    /** La porte d'office d'un appartement, en cellules du volume ; null s'il n'a pas d'ouverture. */
+    @Nullable
+    public static HavenDoorFrame frameOf(HavenRooms.Room room) {
+        HavenRooms.Box door = room.door();
+        if (door == null) {
+            return null;
+        }
+        // l'ouverture est dans le plan d'un mur : sa largeur court le long de l'autre axe
+        boolean alongZ = door.sizeX() == 1;
+        double x = alongZ ? door.min().getX() + 0.5 : (door.min().getX() + door.max().getX() + 1) / 2.0;
+        double z = alongZ ? (door.min().getZ() + door.max().getZ() + 1) / 2.0 : door.min().getZ() + 0.5;
+        return new HavenDoorFrame(HavenDoorKind.HIP, x, door.min().getY(), z, alongZ ? 90.0F : 0.0F);
     }
 
     /** Cette cellule du volume appartient-elle a une porte d'office ? (le releve de l'atelier ne les compte pas) */
@@ -128,6 +140,45 @@ public final class HavenDoors {
         int placed = placeDefaults(server, level, state.origin());
         state.setDoors(VERSION);
         LOGGER.info("Haven : {} portes de Jak 3 posees sur la ville deja posee", placed);
+    }
+
+    /**
+     * Les portes d'office qui manquent a la ville posee, reposees (l'atelier : « une porte cassee par
+     * megarde », le joueur, 26 sept.). Celles qui sont la ne bougent pas ; une ouverture ou le joueur a mis
+     * un bloc a la place du controleur reste a lui.
+     *
+     * @return {portes reposees, portes deja la, portes impossibles}
+     */
+    public static int[] replaceMissing(MinecraftServer server) {
+        ServerLevel level = Haven.level(server);
+        HavenState state = HavenState.get(server);
+        int[] counts = new int[3];
+        if (level == null || !state.built()) {
+            return counts;
+        }
+        for (HavenDoorFrame cellFrame : defaults(server)) {
+            counts[putBack(level, state.origin(), cellFrame)]++;
+        }
+        return counts;
+    }
+
+    /**
+     * Une porte d'office, reposee si elle manque (l'atelier, la remise a zero d'une salle).
+     *
+     * @return 0 reposee, 1 deja la, 2 impossible (un bloc du joueur a la place du controleur)
+     */
+    public static int putBack(ServerLevel level, BlockPos origin, HavenDoorFrame cellFrame) {
+        HavenDoorFrame frame = cellFrame.moved(origin.getX(), origin.getY(), origin.getZ());
+        level.getChunk(frame.controller().getX() >> 4, frame.controller().getZ() >> 4);
+        if (level.getBlockEntity(frame.controller()) instanceof HavenDoorBlockEntity entity
+                && same(entity.frame(), frame)) {
+            return 1;
+        }
+        if (!place(level, frame, true)) {
+            return 2;
+        }
+        LOGGER.info("Haven : porte {} reposee en {} {} {}", frame.kind(), frame.x(), frame.y(), frame.z());
+        return 0;
     }
 
     private static int placeDefaults(MinecraftServer server, ServerLevel level, BlockPos origin) {

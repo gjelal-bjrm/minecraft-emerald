@@ -886,10 +886,11 @@ Toutes commencent par `/arcencium` et demandent le niveau opérateur.
 | `haven salle <n>` (ou `salle <n> tp`) | Vous téléporte dans l'appartement n (1, 2 ou 3), tourné vers la porte |
 | `haven salle <n> capture` | Relève votre aménagement de l'appartement n (voir plus bas) |
 | `haven salle <n> show` | Résume le relevé (cellules, décors, date, auteur) et dit si un aménagement de cette salle est déjà dans le mod |
-| `haven salle <n> reset` | Remet l'appartement tel que la ville le pose, retire ses décors et efface le relevé. L'aménagement déjà dans le mod revient à la prochaine pose |
+| `haven salle <n> reset` | Remet l'appartement tel que la ville le pose, retire ses décors et efface le relevé. Sa porte de Jak 3 reste, ou revient si elle manque. L'aménagement déjà dans le mod revient à la prochaine pose |
 | `haven atelier` | Dit si ce monde est l'atelier de la ville, et la date du dernier relevé |
 | `haven atelier on` / `off` | Fait de ce monde l'atelier de la ville (voir plus bas), ou le lui retire |
 | `haven atelier releve` | Relève **toute la ville** : tout ce qui y a changé, où que ce soit (voir plus bas) |
+| `haven atelier portes` | Repose les portes de Jak 3 d'office qui manquent (une porte cassée par mégarde). Celles qui sont là ne bougent pas, et un bloc à vous dans l'ouverture reste |
 | `vehicule cara` (ou `carb`, `carc`, et les motos `bikea`, `bikeb`, `bikec`) | Pose une voiture ou une moto volante de Haven devant vous. Elle se monte et se conduit comme celles des appartements (voir la partie 1) |
 | `haven invasion etat` | Dit le mode de la ville, le nombre de monstres et d'habitants, et les blocs cassés qui attendent leur retour |
 | `haven invasion invasion` (ou `paisible`) | Passe toute la ville en invasion ou en paisible, comme le bouton du QG |
@@ -950,7 +951,8 @@ tout cela entre dans le mod pour tous les joueurs.
    la **petite porte de Haven** (1 × 2) et le **sas du port** (12 × 12, quatre blocs
    d'épaisseur). Clic droit sur le sol : la porte se dresse face à vous, et s'ouvre
    toute seule quand on s'en approche, comme dans Jak 3. Casser un de ses blocs la
-   retire entière.
+   retire entière. Une porte posée d'office (appartements, bar, sas du port) cassée par
+   mégarde revient avec `/arcencium haven atelier portes`.
    Les **vitres de Jak 3** aussi : posées côte à côte ou l'une sur l'autre dans le même
    plan, elles font **une seule fenêtre**, un cadre fin sur son seul pourtour. Un clic
    droit sur n'importe laquelle ferme ou rouvre toute la fenêtre : un iris d'acier se
@@ -968,7 +970,9 @@ tout cela entre dans le mod pour tous les joueurs.
    séance, ou quand vous voulez.
    Sans relever vous-même : quittez le jeu et dites-le à Claude. Il lance
    `EMERALDWEAPONS_ATELIER=releve ./gradlew runAtelier`, qui ouvre le monde, relève la
-   ville et referme le jeu tout seul.
+   ville et referme le jeu tout seul, une fois le monde entièrement sauvegardé
+   (`EMERALDWEAPONS_ATELIER=portes` : les portes d'office qui manquent d'abord, puis le
+   relevé).
 4. **Dans le mod** : `python tools/jak_zone_apply.py ville` (`--dry-run` pour vérifier),
    puis relancez le jeu et `/arcencium haven rebuild` : la ville reposée porte vos
    retouches, partout où elle est posée.
@@ -980,7 +984,9 @@ tout cela entre dans le mod pour tous les joueurs.
   et le bouton de l'invasion, les câbles des tours et les portes de Jak 3 posées d'office
   (appartements, bar, sas du port) — le mod les pose lui-même —, et tout ce qui sort de
   la grille de la ville (1227 × 158 × 695 blocs à partir de 0, 5, 0). Les portes de Jak 3
-  que vous posez, elles, sont relevées.
+  que vous posez, elles, sont relevées, et ce que vous changez dans l'ouverture d'une
+  porte posée d'office aussi (un bloc retiré au-dessus d'elle, un bloc posé à sa place).
+  La même règle vaut pour le relevé d'un appartement.
 - Les règles des salles valent ici aussi : portes refermées, redstone éteinte, eau qui
   coule écartée ; leviers, trappes, bougies et feux de camp gardés tels quels.
 - Un bloc d'un autre mod doit exister dans le modpack du joueur : le script signale ceux
@@ -993,9 +999,9 @@ tout cela entre dans le mod pour tous les joueurs.
 Sur un serveur d'essai (`run-server`), chacun écrit son rapport puis arrête le serveur :
 
 - `EMERALDWEAPONS_AUTOTEST=vote ./gradlew runServer` : appartements et vote, rapport `run-server/vote_autotest.txt` ;
-- `EMERALDWEAPONS_AUTOTEST=salles ./gradlew runServer` : relevé et rejeu des salles, rapport `run-server/salles_autotest.txt` ;
+- `EMERALDWEAPONS_AUTOTEST=salles ./gradlew runServer` : relevé et rejeu des salles (la porte de Jak 3 de l'appartement, cassée, revient à la remise à zéro et n'entre dans aucun relevé), rapport `run-server/salles_autotest.txt` ;
 - `EMERALDWEAPONS_AUTOTEST=atelier ./gradlew runServer` : l'atelier et le relevé de la ville entière (ville nue relevée vide, retouches — dont une petite porte de Jak 3 — relevées puis rejouées par deux poses, et le rangement du bateau du Pêcheur qui n'y touche à rien), rapport `run-server/atelier_autotest.txt` ;
-- `EMERALDWEAPONS_AUTOTEST=haven ./gradlew runServer` : la ville posée (sol, eau, portes de Jak 3, câbles vidés, le bar du Hip Hog en blocs et ce qui s'y pose — porte, Torn, râtelier, bouton, borne —, équipement du dehors sans effet) et les vitres de Jak 3 (une fenêtre reliée, son cadre, l'iris d'un clic, une vitre ajoutée, une fenêtre coupée en deux), rapport `run-server/haven_autotest.txt` ;
+- `EMERALDWEAPONS_AUTOTEST=haven ./gradlew runServer` : la ville posée (sol, eau, portes de Jak 3 — dont une porte cassée qui revient par `haven atelier portes` —, câbles vidés, le bar du Hip Hog en blocs et ce qui s'y pose — porte, Torn, râtelier, bouton, borne —, équipement du dehors sans effet) et les vitres de Jak 3 (une fenêtre reliée, son cadre, l'iris d'un clic, une vitre ajoutée, une fenêtre coupée en deux), rapport `run-server/haven_autotest.txt` ;
 - `EMERALDWEAPONS_AUTOTEST=vehicules ./gradlew runServer` : voitures et motos (dont leurs dégâts, leur destruction et leur explosion), puis le JET-Board (l'eau, la glisse lâchée, le frein, les sauts, le sol, un rail, les trois tremplins, et la course de Tess faite par la planche seule, bouton tenu, en sautant au bout des rails), rapport `run-server/vehicules_autotest.txt` ;
 - `EMERALDWEAPONS_AUTOTEST=invasion ./gradlew runServer` : invasion, décor destructible, bouton du QG et MSPT, rapport `run-server/invasion_autotest.txt` ;
 - `EMERALDWEAPONS_AUTOTEST=armes ./gradlew runServer` : Morph Gun (poses, confinement, tir des douze armes, munitions, décor, MSPT avec quatre tireurs), rapport `run-server/armes_autotest.txt` ;

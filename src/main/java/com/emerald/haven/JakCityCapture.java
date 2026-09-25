@@ -395,20 +395,16 @@ public final class JakCityCapture {
 
         private void compare(LevelChunk column, BlockState raw, BlockState world, int wx, int wy, int wz) {
             BlockState base = JakDiff.normalize(raw, raw);
-            BlockState got = JakDiff.normalize(world, base);
-            if (got == base) {
-                return;
-            }
-            if (managed(world)) {
-                this.managedCells++;
-                return;
-            }
             int x = wx - this.origin.getX();
             int y = wy - this.origin.getY();
             int z = wz - this.origin.getZ();
-            if (HavenCables.isCable(x, y, z)
-                    || com.emerald.haven.door.HavenDoors.isDefaultCell(this.server, x, y, z)) {
-                this.managedCells++;          // un cable vide ou une porte d'office : le mod, pas le joueur
+            // borne, cable vide, porte d'office : le mod, pas le joueur ; sous une porte, la cellule reste a lui
+            BlockState own = JakDiff.forCapture(this.server, world, base, x, y, z);
+            BlockState got = own == null ? base : JakDiff.normalize(own, base);
+            if (got == base) {
+                if (own != world) {
+                    this.managedCells++;
+                }
                 return;
             }
             CompoundTag cell = new CompoundTag();
@@ -416,7 +412,7 @@ public final class JakCityCapture {
             cell.putInt("base", this.palette.computeIfAbsent(base, s -> this.palette.size()));
             cell.putInt("state", this.palette.computeIfAbsent(got, s -> this.palette.size()));
             BlockPos pos = new BlockPos(wx, wy, wz);
-            BlockEntity blockEntity = column.getBlockEntity(pos);
+            BlockEntity blockEntity = own == world ? column.getBlockEntity(pos) : null;
             String extra = "";
             if (blockEntity != null) {
                 CompoundTag data = blockEntity.saveWithId(this.level.registryAccess());

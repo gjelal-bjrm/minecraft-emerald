@@ -1,5 +1,6 @@
 package com.emerald.haven;
 
+import com.emerald.block.ModBlocks;
 import com.emerald.jak.JakVolume;
 import com.emerald.main.EmeraldWeaponsMod;
 import net.minecraft.commands.arguments.blocks.BlockStateParser;
@@ -113,6 +114,35 @@ public final class JakDiff {
             return Haven.generatorState(origin.getY() + y);
         }
         return state;
+    }
+
+    /**
+     * Ce qu'une cellule a pour un releve, sans ce que le mod y pose lui-meme ; null si elle est
+     * au mod tout entiere (jamais relevee). x, y, z : en cellules du volume.
+     *
+     * La regle du releve de la ville (JakCityCapture), et depuis le 26 sept. celle d'une salle
+     * aussi -- chaque appartement a sa porte de Jak 3 depuis le 24 sept., et le releve d'une salle
+     * la comptait comme un amenagement du joueur (cahier §105) :
+     *   - la borne, le bouton d'invasion, le ratelier et les grilles, un cable vide : null ;
+     *   - une porte d'office : la porte est au mod, la cellule au joueur. Un bloc de porte y compte
+     *     pour ce que la cellule aurait sans elle : la reference si la porte la prend telle quelle
+     *     (air, eau), de l'air sinon -- la porte ne prend que des cellules libres, quelqu'un a donc
+     *     vide celle-la. Le linteau du bar, retire par le joueur au-dessus de sa porte, se perdait :
+     *     la ville reposee le remettait, et la porte s'ouvrait sous deux blocs jaunes. Autre chose
+     *     qu'une porte, dans l'ouverture, est releve tel quel.
+     *
+     * @param base la reference de la cellule, normalisee
+     */
+    @Nullable
+    public static BlockState forCapture(MinecraftServer server, BlockState world, BlockState base,
+                                        int x, int y, int z) {
+        if (JakCityCapture.managed(world) || HavenCables.isCable(x, y, z)) {
+            return null;
+        }
+        if (world.is(ModBlocks.HAVEN_DOOR.get()) && com.emerald.haven.door.HavenDoors.isDefaultCell(server, x, y, z)) {
+            return base.isAir() || base.canBeReplaced() ? base : Blocks.AIR.defaultBlockState();
+        }
+        return world;
     }
 
     /**
@@ -264,7 +294,12 @@ public final class JakDiff {
                     BlockState raw = reference(volume, origin, x, y, z);
                     BlockState base = normalize(raw, raw);
                     pos.set(origin.getX() + x, origin.getY() + y, origin.getZ() + z);
-                    BlockState world = normalize(level.getBlockState(pos), base);
+                    BlockState found = level.getBlockState(pos);
+                    BlockState own = forCapture(level.getServer(), found, base, x, y, z);
+                    if (own == null) {
+                        continue;
+                    }
+                    BlockState world = normalize(own, base);
                     if (world == base) {
                         continue;
                     }
@@ -273,7 +308,7 @@ public final class JakDiff {
                             z - box.min().getZ()}));
                     cell.putInt("base", palette.computeIfAbsent(base, s -> palette.size()));
                     cell.putInt("state", palette.computeIfAbsent(world, s -> palette.size()));
-                    BlockEntity blockEntity = level.getBlockEntity(pos);
+                    BlockEntity blockEntity = own == found ? level.getBlockEntity(pos) : null;
                     String extra = "";
                     if (blockEntity != null) {
                         CompoundTag data = blockEntity.saveWithId(level.registryAccess());

@@ -663,6 +663,7 @@
   "command.emeraldweapons.haven.atelier.on": "Atelier ouvert : la ville se vide, et les opérateurs y bâtissent en créatif",
   "command.emeraldweapons.haven.atelier.off": "Atelier fermé : la ville reprend vie",
   "command.emeraldweapons.haven.atelier.releve.started": "Relevé de la ville lancé : toute la ville se charge, puis se lit (une minute environ)",
+  "command.emeraldweapons.haven.atelier.portes": "Portes de Jak 3 d'office : %1$s reposée(s), %2$s déjà là, %3$s impossible(s) (un bloc à toi dans l'ouverture)",
   "command.emeraldweapons.haven.atelier.releve.running": "Un relevé de la ville est déjà en cours",
   "command.emeraldweapons.haven.atelier.releve.loaded": "Relevé : les %s tronçons de la ville sont chargés, lecture en cours",
   "command.emeraldweapons.haven.atelier.releve.progress": "Relevé : %s %% lus, %s cellule(s) changée(s) jusqu'ici",

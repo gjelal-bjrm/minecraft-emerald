@@ -1,5 +1,8 @@
 package com.emerald.haven;
 
+import com.emerald.block.ModBlocks;
+import com.emerald.haven.door.HavenDoorFrame;
+import com.emerald.haven.door.HavenDoors;
 import com.emerald.jak.JakBuilder;
 import com.emerald.jak.JakVolume;
 import com.emerald.main.EmeraldWeaponsMod;
@@ -493,12 +496,16 @@ public final class JakOverlay {
      * Remet une salle a l'etat de la ville : coque et interieur tels que la pose
      * les laisse, sans decors.
      *
+     * La porte d'office de l'appartement en fait partie (§105) : elle reste, et
+     * revient si elle manque. Ce que le joueur a mis dans l'ouverture s'en va.
+     *
      * @return {blocs remis, decors retires}
      */
     public static int[] resetRoom(ServerLevel level, HavenRooms.Room room, JakVolume volume, BlockPos origin) {
         HavenRooms.Box box = JakDiff.clamp(room.envelope(), volume);
         int decor = removeDecor(level, JakDiff.aabb(origin, box));
         int blocks = 0;
+        Block door = ModBlocks.HAVEN_DOOR.get();
         BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
         for (int y = box.min().getY(); y <= box.max().getY(); y++) {
             for (int z = box.min().getZ(); z <= box.max().getZ(); z++) {
@@ -509,6 +516,9 @@ public final class JakOverlay {
                     if (world == base || (world.isAir() && base.isAir())) {
                         continue;
                     }
+                    if (world.is(door) && HavenDoors.isDefaultCell(level.getServer(), x, y, z)) {
+                        continue;
+                    }
                     Clearable.tryClear(level.getBlockEntity(pos));
                     level.setBlock(pos, base, JakBuilder.FLAGS);
                     blocks++;
@@ -516,6 +526,10 @@ public final class JakOverlay {
             }
         }
         forgetTicks(level, JakDiff.worldMin(origin, box), JakDiff.worldMax(origin, box));
+        HavenDoorFrame frame = HavenDoors.frameOf(room);
+        if (frame != null) {
+            HavenDoors.putBack(level, origin, frame);
+        }
         return new int[]{blocks, decor};
     }
 

@@ -60,7 +60,10 @@ public final class HavenAtelier {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(EmeraldWeaponsMod.MODID);
 
-    /** « creer » : poser la ville d'un monde neuf, le passer en atelier, arreter. « releve » : relever et quitter. */
+    /**
+     * « creer » : poser la ville d'un monde neuf, le passer en atelier, arreter. « releve » : relever et quitter.
+     * « portes » : reposer les portes d'office qui manquent, puis relever et quitter.
+     */
     public static final String VARIABLE = "EMERALDWEAPONS_ATELIER";
     private static final String AUTO = Objects.requireNonNullElse(System.getenv(VARIABLE), "").trim()
             .toLowerCase(Locale.ROOT);
@@ -87,7 +90,7 @@ public final class HavenAtelier {
 
     /** Le client de dev lance pour le releve automatique : doit-il se fermer ? */
     public static boolean autoReleve() {
-        return "releve".equals(AUTO);
+        return "releve".equals(AUTO) || "portes".equals(AUTO);
     }
 
     public static boolean autoFinished() {
@@ -134,7 +137,8 @@ public final class HavenAtelier {
                         .executes(ctx -> status(ctx.getSource()))
                         .then(Commands.literal("on").executes(ctx -> toggle(ctx.getSource(), true)))
                         .then(Commands.literal("off").executes(ctx -> toggle(ctx.getSource(), false)))
-                        .then(Commands.literal("releve").executes(ctx -> capture(ctx.getSource())))));
+                        .then(Commands.literal("releve").executes(ctx -> capture(ctx.getSource())))
+                        .then(Commands.literal("portes").executes(ctx -> doors(ctx.getSource())))));
         event.getDispatcher().register(root);
     }
 
@@ -162,6 +166,14 @@ public final class HavenAtelier {
                 ? "command.emeraldweapons.haven.atelier.on"
                 : "command.emeraldweapons.haven.atelier.off"), true);
         return 1;
+    }
+
+    /** Les portes de Jak 3 d'office qui manquent (une cassee par megarde), reposees. */
+    private static int doors(CommandSourceStack source) {
+        int[] counts = com.emerald.haven.door.HavenDoors.replaceMissing(source.getServer());
+        source.sendSuccess(() -> Component.translatable("command.emeraldweapons.haven.atelier.portes",
+                counts[0], counts[1], counts[2]), true);
+        return counts[0];
     }
 
     private static int capture(CommandSourceStack source) throws CommandSyntaxException {
@@ -233,7 +245,7 @@ public final class HavenAtelier {
                     finishAuto(server);
                 }
             }
-            case "releve" -> {
+            case "releve", "portes" -> {
                 if (autoStarted || !ready || server.getPlayerList().getPlayerCount() == 0 || autoTicks < 100) {
                     return;
                 }
@@ -242,6 +254,11 @@ public final class HavenAtelier {
                     LOGGER.error("atelier : ce monde n'est pas un atelier, rien a relever");
                     finishAuto(server);
                     return;
+                }
+                if ("portes".equals(AUTO)) {
+                    int[] counts = com.emerald.haven.door.HavenDoors.replaceMissing(server);
+                    LOGGER.info("atelier : portes de Jak 3 d'office : {} reposee(s), {} deja la, {} impossible(s)",
+                            counts[0], counts[1], counts[2]);
                 }
                 ServerPlayer player = server.getPlayerList().getPlayers().get(0);
                 Component refused = JakCityCapture.start(server, player, directory(server), "releve automatique",
@@ -256,7 +273,7 @@ public final class HavenAtelier {
                 }
             }
             default -> {
-                LOGGER.error("atelier : {}={} inconnu (creer ou releve)", VARIABLE, AUTO);
+                LOGGER.error("atelier : {}={} inconnu (creer, releve ou portes)", VARIABLE, AUTO);
                 autoFinished = true;
             }
         }

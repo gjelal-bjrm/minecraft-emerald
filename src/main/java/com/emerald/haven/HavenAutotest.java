@@ -39,8 +39,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -236,6 +238,7 @@ public final class HavenAutotest {
 
         bar(level, o, state);
         doors(server, level, o, state);
+        doorPutBack(server, level, o);
         windows(level, o);
         gear(level, o);
 
@@ -361,9 +364,24 @@ public final class HavenAutotest {
      * de Torn, le ratelier sur son socle et le bouton sur le bout du comptoir (tous deux du comptoir), la borne.
      */
     private static void bar(ServerLevel level, BlockPos o, HavenState state) {
+        // le releve de la ville (l'atelier du joueur) se rejoue apres le bar : ses cellules sont a lui
+        Set<Long> replayed = new HashSet<>();
+        net.minecraft.nbt.CompoundTag ville = JakOverlay.zones(level.getServer(), Haven.VOLUME).get(JakCityCapture.NAME);
+        if (ville != null) {
+            net.minecraft.nbt.ListTag list = ville.getList("cells", net.minecraft.nbt.Tag.TAG_COMPOUND);
+            for (int i = 0; i < list.size(); i++) {
+                int[] p = list.getCompound(i).getIntArray("pos");
+                replayed.add(BlockPos.asLong(p[0], p[1], p[2]));
+            }
+        }
         int placed = 0;
+        int theirs = 0;
         String first = "";
         for (BlockPos cell : HavenBar.cells()) {
+            if (replayed.contains(cell.asLong())) {
+                theirs++;
+                continue;
+            }
             BlockState got = level.getBlockState(o.offset(cell));
             if (got == HavenBar.wanted(cell.getX(), cell.getY(), cell.getZ())) {
                 placed++;
@@ -371,9 +389,11 @@ public final class HavenAutotest {
                 first = ", la premiere autre : " + cell.toShortString() + " " + got;
             }
         }
-        check("bar du Hip Hog : chaque cellule a son etat voulu apres la pose, etat a la version " + HavenBar.VERSION,
-                HavenBar.size() > 5000 && placed == HavenBar.size() && state.bar() == HavenBar.VERSION,
-                placed + " sur " + HavenBar.size() + first + ", etat " + state.bar());
+        check("bar du Hip Hog : chaque cellule a son etat voulu apres la pose (hors releve du joueur), etat a la version "
+                        + HavenBar.VERSION,
+                HavenBar.size() > 5000 && placed + theirs == HavenBar.size() && state.bar() == HavenBar.VERSION,
+                placed + " sur " + HavenBar.size() + ", " + theirs + " sous le releve du joueur" + first + ", etat "
+                        + state.bar());
         net.minecraft.world.level.block.Block counter = com.emerald.block.HipHogBlocks.COUNTER.get();
         BlockState doorway = level.getBlockState(o.offset(Haven.BAR_DOOR_CELL).above());
         boolean door = doorway.isAir() || doorway.is(com.emerald.block.ModBlocks.HAVEN_DOOR.get());
@@ -385,6 +405,29 @@ public final class HavenAutotest {
         check("bar : la porte libre, Torn au sol, le ratelier et le bouton sur le comptoir, la borne sur son sol",
                 door && torn && rack && button && vote,
                 "porte " + door + ", Torn " + torn + ", ratelier " + rack + ", bouton " + button + ", borne " + vote);
+    }
+
+    /**
+     * Une porte d'office cassee par megarde (le joueur, 26 sept.) : /arcencium haven atelier portes la repose, et
+     * celles qui sont la ne bougent pas.
+     */
+    private static void doorPutBack(MinecraftServer server, ServerLevel level, BlockPos o) {
+        HavenDoorFrame bar = null;
+        for (HavenDoorFrame frame : HavenDoors.defaults(server)) {
+            if (bar == null || frame.controller().distSqr(Haven.BAR_DOOR_CELL) < bar.controller().distSqr(Haven.BAR_DOOR_CELL)) {
+                bar = frame;
+            }
+        }
+        BlockPos controller = bar.moved(o.getX(), o.getY(), o.getZ()).controller();
+        HavenDoors.breakAround(level, controller);
+        boolean gone = !(level.getBlockState(controller).getBlock() instanceof HavenDoorBlock);
+        int[] counts = HavenDoors.replaceMissing(server);
+        boolean back = HavenDoors.controllerAt(level, o, bar) instanceof HavenDoorBlockEntity entity
+                && entity.kind() == bar.kind();
+        check("une porte d'office cassee revient (/arcencium haven atelier portes), les autres ne bougent pas",
+                gone && back && counts[0] == 1 && counts[1] == HavenDoors.defaults(server).size() - 1 && counts[2] == 0,
+                "cassee " + gone + ", revenue " + back + ", " + counts[0] + " reposee(s), " + counts[1] + " deja la, "
+                        + counts[2] + " impossible(s)");
     }
 
     private static void doors(MinecraftServer server, ServerLevel level, BlockPos o, HavenState state) {

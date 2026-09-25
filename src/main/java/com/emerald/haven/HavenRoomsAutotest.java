@@ -1,5 +1,8 @@
 package com.emerald.haven;
 
+import com.emerald.block.entity.HavenDoorBlockEntity;
+import com.emerald.haven.door.HavenDoorFrame;
+import com.emerald.haven.door.HavenDoors;
 import com.emerald.jak.JakBuilder;
 import com.emerald.jak.JakVolume;
 import com.emerald.main.EmeraldWeaponsMod;
@@ -86,6 +89,9 @@ import java.util.Set;
  * bloc, decor par decor ; aucun objet au sol, aucune eau qui coule, et le meme
  * nombre de decors apres les deux poses. Il verifie enfin qu'une salle au sha1
  * faux, ou a l'origine deplacee, est refusee sans rien toucher.
+ *
+ * La porte d'office de l'appartement (§95) est au mod : cassee avant la remise a
+ * zero, elle revient, et reste la tout le banc sans entrer dans aucun releve (§105).
  *
  * LE RELEVE D'ESSAI RESTE HORS DU MOD : il est ecrit dans
  * arcencium_jak/autotest/ du dossier du serveur (run-server/, ignore par git)
@@ -236,10 +242,21 @@ public final class HavenRoomsAutotest {
 
     private static void prepare(ServerLevel level, BlockPos o) {
         AABB box = JakDiff.aabb(o, room.envelope());
+        // la porte d'office de l'appartement est au mod (§105) : cassee avant la remise a zero, elle
+        // doit revenir, et rester la tout le banc sans entrer dans aucun releve
+        HavenDoorFrame office = HavenDoors.frameOf(room);
+        if (office != null) {
+            HavenDoors.breakAround(level, office.moved(o.getX(), o.getY(), o.getZ()).controller());
+        }
         int[] reset = JakOverlay.resetRoom(level, room, volume, o);
         int items = discardItems(level, box.inflate(8.0));
         line("salle " + ROOM + " (" + room.id() + ") remise a l'etat du volume : " + reset[0] + " blocs, "
                 + reset[1] + " decors retires, " + items + " objets au sol retires");
+        check("remise a zero : la porte d'office de la salle, cassee, revient (au mod, pas au joueur)",
+                office != null && HavenDoors.controllerAt(level, o, office) instanceof HavenDoorBlockEntity entity
+                        && entity.kind() == office.kind(),
+                office == null ? "pas d'ouverture dans haven_rooms.json" : "porte " + office.kind() + " en "
+                        + office.x() + " " + office.y() + " " + office.z());
 
         // chaque cellule d'interieur doit etre de l'air dans la ville, chaque
         // cellule de coque un bloc plein : sinon le jeu d'essai est mal place

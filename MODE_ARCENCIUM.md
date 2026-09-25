@@ -9591,3 +9591,108 @@ monstres de tempete, d'ou plus de 4 Eclats au pied du portail.
 portail qui garde un spectre ; l'Eclipse finit de toute facon au bout de cinq
 minutes. Si le joueur trouve les monstres trop durs ou trop tendres, un seul
 chiffre : `MobScaling.HITS_TO_KILL`.
+
+## 105. L'atelier : une porte cassee par megarde, et les retouches du 26 sept. *(26 sept. 2026)*
+
+« J'ai accidentellement casse la porte du quartier general. Est-ce que tu peux la remplacer ? Et
+d'ailleurs, je l'ai ajoute quelques meubles et quelques changements, il faudrait que tu les
+recuperes pour que ce soit le monde par defaut. » Puis : « J'ai aussi ajoute des fenetres dans
+les differentes salles, ainsi que des lits et des lumieres. » (le joueur, 26 sept.)
+
+### A. La porte
+
+Casser un bloc d'une porte de Jak 3 la retire entiere (§95), et le mod ne pose ses portes d'office
+qu'une fois sur une ville deja posee (l'etat de Haven garde la version) : dans l'atelier, la porte
+du bar ne revenait pas. Dans la ville par defaut rien ne change, elle est posee apres chaque pose,
+apres les releves.
+- `/arcencium haven atelier portes` : les portes d'office qui manquent reviennent
+  (`HavenDoors.replaceMissing`) ; celles qui sont la ne bougent pas, et une ouverture ou le joueur a
+  mis un bloc a la place du controleur reste a lui. Le message dit combien de chaque.
+- `EMERALDWEAPONS_ATELIER=portes ./gradlew runAtelier` : la meme chose, puis le releve, et le
+  client se ferme.
+Dans l'atelier du joueur : 1 porte reposee (celle du bar, en 361,115 72 197,413), 4 deja la.
+
+### B. La sauvegarde coupee
+
+La premiere ouverture a coupe l'ecriture du monde. Le garde-fou de fermeture (`AutomatonExit`,
+l'ecran noir du 22 sept.) comptait ses vingt secondes des la demande de fermeture ; ce jour-la,
+apres un releve qui charge toute la ville (41 s), la sauvegarde en demandait plus, et l'arret force
+est tombe au milieu. Le releve etait deja ecrit, mais le monde de l'atelier pouvait etre abime. Il a
+ete remis tel que le joueur l'avait laisse (copie prise juste avant), puis rouvert : la porte
+revient, le releve redonne les memes 686 cellules, et le monde s'ecrit en entier.
+
+Le garde-fou attend maintenant que le serveur integre ait fini d'ecrire (son fil s'arrete apres la
+sauvegarde ; dix minutes au plus) avant de compter ses vingt secondes. Le meme sert aux photos.
+Copies gardees dans `run/atelier_sauvegardes/`.
+
+### C. Les retouches
+
+Le releve passe de 363 cellules a 688, dont 84 avec entite de bloc (66 vitres, 18 moities de lit).
+Compare cellule par cellule a celui de la veille :
+- les trois appartements : 215 cellules nouvelles, les memes dans chacun (22 vitres de Jak 3,
+  13 appliques, 3 lits), et un mur de briques de 92 blocs dans l'appartement 1 ;
+- le bar et son vestibule : l'entree retouchee -- 48 blocs du bar retires (29 de mur jaune, dont
+  les deux du linteau au-dessus de la porte, voir D ; 13 de metal gris, 5 de sol, une caisse),
+  7 sols de metal et 9 dalles poses, 6 blocs de mur poses ou changes -- et 45 bandes de lumiere,
+  dont 3 juste dehors ; 3 bandes de la veille retirees, 2 tournees ;
+- le reste de la veille : 356 cellules, inchangees.
+Les releves de 00 h 41 et de 00 h 45 ont donne les memes 686 cellules ; celui de 01 h 20, avec la
+regle de D, les memes plus le linteau. `jak_zone_apply.py ville` l'a ecrit dans le mod
+(`zones/ctyport/ville.nbt`) : c'est la ville de toute partie neuve, et d'un monde deja fait apres
+`/arcencium haven rebuild`. Le banc de la ville compte a part les cellules du bar que le releve du
+joueur rejoue par-dessus.
+
+La grande vitre du fond des appartements 1 et 2 a l'iris ferme dans l'atelier (celle du 3 est
+ouverte) : le releve garde l'etat de chaque fenetre, elles seront fermees au depart. A rouvrir
+dans l'atelier si ce n'est pas voulu.
+
+### D. Les portes d'office dans les releves
+
+Le banc des salles, qui n'avait pas tourne depuis les portes (§95), trouvait 12 cellules en trop
+apres chaque repose : la porte d'office de l'appartement 1 (trois sur quatre), qui est dans
+l'enveloppe de la salle. Le releve de la ville ignorait deja les portes d'office ; celui d'une salle
+les comptait comme un amenagement du joueur, et la remise a zero d'une salle les retirait.
+
+Puis la ville par defaut, comparee bloc par bloc a l'atelier : 0 ecart dans les trois appartements
+(14 175 cellules) et dans le vestibule du bar, 2 au QG -- les deux blocs jaunes du linteau, au-dessus
+de la porte du bar. Le joueur les avait retires, la porte reposee avait pris leurs cellules, et le
+releve, qui ignorait toute cellule d'une porte d'office, avait perdu le retrait : la ville reposee
+les remettait, et la porte s'ouvrait sous deux blocs jaunes.
+
+Une seule regle maintenant pour les deux releves (`JakDiff.forCapture`) :
+- la borne, le bouton de l'invasion, le ratelier et les grilles, un cable vide : au mod, jamais
+  releves ;
+- une porte d'office : la porte est au mod, la cellule au joueur. Un bloc de porte y compte pour ce
+  que la cellule aurait sans elle -- la reference si la porte la prend telle quelle (air, eau), de
+  l'air sinon, puisque la porte ne prend que des cellules libres. Autre chose qu'une porte, dans
+  l'ouverture, est releve tel quel ;
+- la remise a zero d'une salle (`/arcencium haven salle <n> reset`) laisse sa porte, et la repose
+  si elle manque ; ce que le joueur a mis dans l'ouverture s'en va.
+La ville nue se releve toujours vide (banc de l'atelier), avec les memes 2 870 cellules du mod
+ignorees.
+
+### E. Vu a l'ecran
+
+Les premieres photos de la ville par defaut (une copie du monde du serveur des bancs, reposee par
+le banc de la ville) n'avaient pas une applique : « tu n'as pas recupere les lights que j'avais mis
+sur les murs » (le joueur). Elles etaient dans le releve ; le serveur des bancs, qui tourne sans les
+mods du modpack, avait saute les 103 blocs de Simply Light et celui de Macaw's Lights (« etat
+illisible » dans son journal). `dev_mods.py --server simplylight mcwlights` les lui a donnes le temps
+de la verification : 686 blocs rejoues, 0 saute, et les photos montrent les 13 appliques de
+l'appartement 1 (6 sur le mur de la porte, 7 autour de la grande vitre), ses lits, ses vitres, et
+les bandes de lumiere autour de la porte du bar. Dans le profil, ces mods sont la.
+
+Apres la regle de D, la meme comparaison bloc par bloc : 0 ecart sur 66 210 cellules (les trois
+appartements, le QG, le vestibule), et la porte du bar entiere, vue des deux cotes.
+
+### F. Les bancs
+
+Sans les mods du modpack, comme toujours :
+- `haven` : 25 OK -- dont une porte d'office cassee qui revient par la commande, les quatre autres
+  sans bouger ; les portes des trois appartements, du bar et du sas fermees sur 620 cellules (2 de
+  plus qu'avant : le linteau) ; le bar du Hip Hog hors des 73 cellules du joueur ;
+- `salles` : 27 OK -- dont la porte de l'appartement 1, cassee avant la remise a zero, qui revient,
+  puis 15 cellules relevees pour 15 posees et deux reposes identiques ;
+- `atelier` : 18 OK -- la ville nue toujours relevee vide, 2 870 cellules du mod ignorees ;
+- `parcours` : 51 OK ; `vote` : 36 OK ; `quetes` : 55 OK, 1 KO attendu (les mouettes d'Alex's
+  Mobs, absent du serveur des bancs) -- passes avant la regle de D, qui ne touche que les releves.
