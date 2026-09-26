@@ -9696,3 +9696,71 @@ Sans les mods du modpack, comme toujours :
 - `atelier` : 18 OK -- la ville nue toujours relevee vide, 2 870 cellules du mod ignorees ;
 - `parcours` : 51 OK ; `vote` : 36 OK ; `quetes` : 55 OK, 1 KO attendu (les mouettes d'Alex's
   Mobs, absent du serveur des bancs) -- passes avant la regle de D, qui ne touche que les releves.
+
+## 106. Le Portail de Haven : quitter le Defi, rentrer du Monde ouvert *(27 sept. 2026)*
+
+« Il faudrait aussi permettre aux utilisateurs, parce qu'ils ont lance un defi, de pouvoir
+l'arreter. Moi, je propose qu'on leur permette de fabriquer le portail a travers lequel ils
+pourraient revenir en ville, tout comme dans le mode normal sans le defi. » (le joueur, 27 sept.)
+
+Le portail du « mode normal » n'existait pas : la Porte de Haven du mode libre, prevue au §79.2
+(point 9, lot 6), n'avait jamais ete faite ; en Monde ouvert, seule une commande ramenait en
+ville. **Choix du joueur** : un seul objet pour les deux modes ; en Defi, chacun rentre quand il
+veut ; la recette moyenne. Il s'appelle PORTAIL de Haven : « Porte de Haven » est deja le nom de
+la porte coulissante de Jak 3 (§95).
+
+### A. L'objet
+
+- Recette : 4 lingots d'Arcencium en croix autour d'une perle de l'Ender (`haven_portal`).
+- Clic droit sur le sol : l'anneau precurseur de la victoire (`HavenGateBlock`, style ANNEAU,
+  dessin inchange) se dresse, la face vers le joueur ; il faut un sol et quatre cellules libres.
+  Refuse a Haven, et dans un monde sans ville.
+- Un portail par joueur : en poser un autre retire le premier (son tronçon est charge pour cela)
+  et rend son objet. Accroupi, les mains vides, un clic droit a son pied le reprend ; un
+  operateur peut reprendre celui de n'importe qui. Incassable autrement. Tout le monde peut le
+  passer.
+
+### B. L'arrivee, toujours au QG ; le Monde ouvert
+
+Premiere version : l'arrivee dans son appartement, devant un anneau jumeau au milieu de la piece.
+« Je ne veux pas que le portail apparaisse dans une des salles de repos des joueurs », « qu'il soit
+toujours au meme endroit » (le joueur, 27 sept.) ; proposes : le sommet ou la terrasse d'une tour,
+la rue devant le QG, le QG. **Choix du joueur : le QG.** L'ANNEAU DE LA VILLE se pose a la place de
+l'arche du depart (HavenDeparture.place, la meme a chaque partie), tourne comme elle vers le centre
+du bar -- quatre blocs devant elle si elle est encore ouverte ; on ressort 2 blocs devant lui.
+
+En Monde ouvert, repasser l'anneau de la ville ramene devant le portail d'ou l'on vient, le dos
+tourne a lui. La partie continue ; la reapparition n'est pas touchee. L'anneau est temporaire : il
+s'en va quand plus personne venu par un portail n'est en ville, et au retour du lobby (la borne
+reprend sa place).
+
+### C. Defi : le quitter
+
+Rester deux secondes dans l'anneau (40 tiques, un compte a rebours dans la barre d'action : un pas
+de travers ne suffit pas) fait quitter le Defi : le QG, la reapparition dans son appartement, et
+l'on attend l'equipe comme a la porte de la victoire ; les autres sont prevenus. L'anneau de la
+ville ne ramene pas dans le Defi (il le dit). Le Defi continue pour
+eux ; quand plus personne n'y joue (HavenReturn.remaining vide), il finit et la ville rouvre
+comme apres une defaite (HavenReturn.bringBack). Pas de retour dans le Defi. Apres la victoire
+ou la defaite, le portail ne fait plus rien : le retour du lot 2 s'en charge.
+
+### D. Ce qui est garde
+
+`HavenPortal.Data` (sauvegarde du monde) : le portail de chacun, le portail d'ou vient celui qui
+est chez lui (Monde ouvert), et qui a quitte le Defi en cours. Un redemarrage ne renvoie donc pas
+au village celui qui attend en ville (HavenReturn.holding), et n'oublie aucun portail. Un portail
+qui n'est plus le sien (remplace pendant que son tronçon dormait) s'efface a son reveil.
+
+### E. Vu, et essaye
+
+- Photos de la premiere version (`anneau_fond`, `anneau_porte`) : l'anneau jumeau dans
+  l'appartement 1, entre les lits et les appliques du joueur -- refuse ensuite pour le QG ; photos
+  de l'anneau de la ville (`anneau_qg_face`, `anneau_qg_biais`, prise `haven:anneau_villeN` de
+  l'automate) : il se dresse dans le bar, a la place de l'arche du depart, face a la salle ; au
+  lobby la borne est encore a cote de lui (le monde des photos), en partie elle est retiree.
+- Icone de l'objet tiree des textures du warp gate (metal, glyphes, voile).
+- Banc `parcours` : recette ; pose, deplacement, refus a Haven et sans place ; anneau de la ville
+  au QG, dans aucun appartement ; aller du Monde ouvert et anneau de la ville retire ensuite ; Defi quitte apres
+  40 tiques et continue pour les autres ; le dernier parti, la ville rouvre ; reprise refusee a un
+  autre, accordee a son maitre -- 58 OK. `haven` 25 OK, `vote` 36 OK, `quetes` 55 OK (et les
+  mouettes, absentes du serveur des bancs).

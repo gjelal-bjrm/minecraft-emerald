@@ -155,6 +155,17 @@ public final class HavenDeparture {
     }
 
     /**
+     * La place de l'arche du depart, la meme a chaque partie : l'anneau d'arrivee du Portail de
+     * Haven s'y pose aussi (HavenPortal, §106). Null si la ville n'en a pas.
+     */
+    @Nullable
+    static ArcPortals.Placement place(MinecraftServer server) {
+        ServerLevel haven = Haven.level(server);
+        HavenArrival.Layout rooms = HavenArrival.layout(server);
+        return haven == null || rooms == null ? null : spot(haven, server, rooms);
+    }
+
+    /**
      * La place de l'arche : dans le bar, du plus pres de la borne au plus loin ; a defaut,
      * dans la rue devant sa porte. Elle regarde le centre du bar : on la voit en entrant.
      */

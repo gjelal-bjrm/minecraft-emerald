@@ -185,6 +185,7 @@ public final class HavenJourneyAutotest {
         secondArrival(server, level);
         returnDefeat(server);
         returnVictory(server);
+        portal(server);
         gates(server, level);
         departure(server, level);
         isolation(server);
@@ -847,6 +848,167 @@ public final class HavenJourneyAutotest {
                     HavenReturn.stage() == HavenReturn.Stage.AUCUN && HavenReturn.door() == null,
                     "etape " + HavenReturn.stage());
         } finally {
+            HavenReturn.resetForTest(server);
+            HavenReturn.clearSubjects();
+            restore(server, saved);
+        }
+    }
+
+    // ================================================================ 9 bis. le Portail de Haven (§106)
+
+    private static void portal(MinecraftServer server) {
+        line("--- le Portail de Haven : recette, pose, Monde ouvert, Defi quitte, reprise");
+        ServerLevel overworld = server.overworld();
+        GameState game = GameState.get(overworld);
+        HavenState state = HavenState.get(server);
+        GameState.Mode saved = game.mode();
+        HavenPortal.Data data = HavenPortal.data(server);
+        FakePlayer a = new FakePlayer(overworld, new GameProfile(uuid("portail-a"), "[Parcours]"));
+        FakePlayer b = new FakePlayer(overworld, new GameProfile(uuid("portail-b"), "[Parcours]"));
+        FakePlayer c = new FakePlayer(overworld, new GameProfile(uuid("portail-c"), "[Parcours]"));
+        List<BlockPos> placedAt = new ArrayList<>();
+        try {
+            // la recette : quatre lingots d'Arcencium en croix, une perle au milieu
+            var recipe = server.getRecipeManager().byKey(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(
+                    EmeraldWeaponsMod.MODID, "haven_portal"));
+            boolean recipeOk = false;
+            String recipeText = "absente";
+            if (recipe.isPresent()) {
+                int ingots = 0;
+                int pearls = 0;
+                for (var ingredient : recipe.get().value().getIngredients()) {
+                    if (ingredient.test(new ItemStack(com.emerald.item.ModItems.ARCENCIUM_INGOT.get()))) {
+                        ingots++;
+                    } else if (ingredient.test(new ItemStack(net.minecraft.world.item.Items.ENDER_PEARL))) {
+                        pearls++;
+                    }
+                }
+                ItemStack result = recipe.get().value().getResultItem(server.registryAccess());
+                recipeOk = ingots == 4 && pearls == 1 && result.is(com.emerald.item.ModItems.HAVEN_PORTAL.get());
+                recipeText = ingots + " lingots, " + pearls + " perle, donne " + result;
+            }
+            check("recette du Portail de Haven : 4 lingots d'Arcencium et 1 perle de l'Ender", recipeOk, recipeText);
+
+            BlockPos where = WorldSetup.findOpenGround(overworld, overworld.getSharedSpawnPos().offset(-48, 0, 24), 12);
+            BlockPos there = WorldSetup.findOpenGround(overworld, where.offset(20, 0, 0), 12);
+            HavenPortal.Placed first = HavenPortal.place(a, overworld, where, net.minecraft.core.Direction.SOUTH);
+            placedAt.add(where);
+            boolean firstOk = overworld.getBlockEntity(where) instanceof HavenGateBlockEntity gate
+                    && a.getUUID().equals(gate.owner()) && !gate.temporary();
+            HavenPortal.Placed second = HavenPortal.place(a, overworld, there, net.minecraft.core.Direction.SOUTH);
+            placedAt.add(there);
+            boolean oldGone = !overworld.getBlockState(where).is(ModBlocks.HAVEN_GATE.get());
+            HavenPortal.Spot spot = data.portal(a.getUUID());
+            ServerLevel haven = Haven.level(server);
+            HavenPortal.Placed inHaven = haven == null ? null
+                    : HavenPortal.place(a, haven, state.origin().offset(100, 62, 188), net.minecraft.core.Direction.SOUTH);
+            HavenPortal.Placed blocked = HavenPortal.place(b, overworld, there.below(), net.minecraft.core.Direction.SOUTH);
+            check("pose : le portail se dresse, a son maitre ; un deuxieme retire le premier ; refuse a Haven et sans place",
+                    first == HavenPortal.Placed.POSE && firstOk && second == HavenPortal.Placed.DEPLACE && oldGone
+                            && spot != null && spot.pos().equals(there) && inHaven == HavenPortal.Placed.DANS_HAVEN
+                            && blocked == HavenPortal.Placed.PAS_LA_PLACE && data.portal(b.getUUID()) == null,
+                    first + " (" + firstOk + "), " + second + ", ancien retire " + oldGone + ", enregistre "
+                            + (spot == null ? "rien" : spot.pos().toShortString()) + ", a Haven " + inHaven
+                            + ", sans place " + blocked);
+
+            // l'anneau de la ville : au QG, a la place de l'arche du depart, jamais dans un appartement
+            HavenPortal.RingSpot ringAt = HavenPortal.ringSpot(server);
+            HavenArrival.Layout rooms = HavenArrival.layout(server);
+            boolean inHq = ringAt != null && rooms != null
+                    && rooms.inHq(state.origin(), ringAt.pos().getX() + 0.5, ringAt.pos().getY(), ringAt.pos().getZ() + 0.5);
+            boolean inRoom = false;
+            if (ringAt != null && rooms != null) {
+                for (HavenArrival.Room room : rooms.rooms()) {
+                    inRoom |= HavenArrival.inside(state.origin().offset(room.boxMin()).offset(-1, -1, -1),
+                            state.origin().offset(room.boxMax()).offset(1, 1, 1),
+                            ringAt.pos().getX() + 0.5, ringAt.pos().getY(), ringAt.pos().getZ() + 0.5);
+                }
+            }
+            check("anneau de la ville : au QG (la place de l'arche du depart), dans aucun appartement",
+                    inHq && !inRoom,
+                    ringAt == null ? "aucune place" : ringAt.pos().subtract(state.origin()).toShortString()
+                            + " face " + ringAt.facing() + ", au QG " + inHq + ", dans un appartement " + inRoom);
+
+            // Monde ouvert : on passe l'anneau, son appartement a son anneau jumeau, le retour est note
+            HavenPortal.addSubject(a);
+            game.chooseMode(GameState.Mode.LIBRE);
+            game.begin(overworld);
+            state.setPhase(HavenState.Phase.PARTI);
+            a.moveTo(there.getX() + 0.5, there.getY(), there.getZ() + 0.5, 0.0F, 0.0F);
+            HavenPortal.tickForTest(server);
+            HavenPortal.Spot back = data.back.get(a.getUUID());
+            BlockPos ring = HavenPortal.ring();
+            boolean ringUp = ring != null && haven != null && haven.getBlockState(ring).is(ModBlocks.HAVEN_GATE.get())
+                    && haven.getBlockEntity(ring) instanceof HavenGateBlockEntity g && g.temporary();
+            boolean stillRunning = game.status() != GameState.Status.LOBBY && state.phase() == HavenState.Phase.PARTI;
+            // un vrai joueur est a Haven ; le cobaye, qui ne change pas de monde, s'ecarte du portail
+            a.moveTo(there.getX() + 10.5, there.getY(), there.getZ() + 0.5, 0.0F, 0.0F);
+            HavenPortal.tickForTest(server);
+            boolean ringGone = ring != null && haven != null && !haven.getBlockState(ring).is(ModBlocks.HAVEN_GATE.get());
+            check("Monde ouvert : le portail mene au QG (retour note, anneau de la ville pose), la partie continue ;"
+                            + " revenu dans le monde autrement, l'anneau de la ville s'en va",
+                    back != null && back.pos().equals(there) && ringUp && stillRunning && ringGone
+                            && !data.back.containsKey(a.getUUID()),
+                    "retour " + (back == null ? "aucun" : back.pos().toShortString()) + ", anneau "
+                            + (ring == null ? "aucun" : ring.toShortString()) + " pose " + ringUp + ", partie "
+                            + game.status() + ", phase " + state.phase() + ", puis retire " + ringGone);
+            HavenPortal.clearSubjects();
+
+            // Defi : deux secondes dans l'anneau pour le quitter ; le dernier parti, la ville rouvre
+            HavenPortal.place(b, overworld, where, net.minecraft.core.Direction.SOUTH);
+            b.moveTo(where.getX() + 0.5, where.getY(), where.getZ() + 0.5, 0.0F, 0.0F);
+            c.moveTo(there.getX() + 12.5, there.getY(), there.getZ() + 0.5, 0.0F, 0.0F);
+            HavenReturn.addSubject(b);
+            HavenReturn.addSubject(c);
+            HavenPortal.addSubject(b);
+            HavenPortal.addSubject(c);
+            game.returnToLobby();             // le regime ne se choisit qu'au lobby
+            game.chooseMode(GameState.Mode.DEFI);
+            game.begin(overworld);
+            state.setPhase(HavenState.Phase.PARTI);
+            int held = 0;
+            while (!data.hasLeft(b.getUUID()) && held < 100) {
+                HavenPortal.tickForTest(server);
+                held += 5;
+            }
+            boolean bLeft = data.hasLeft(b.getUUID());
+            List<net.minecraft.server.level.ServerPlayer> still = HavenReturn.remaining(server);
+            boolean goesOn = game.status() == GameState.Status.RUNNING && state.phase() == HavenState.Phase.PARTI
+                    && still.size() == 1 && still.contains(c);
+            check("Defi : " + HavenPortal.ABANDON_HOLD + " tiques dans l'anneau pour le quitter ; le Defi continue pour les autres",
+                    bLeft && held == HavenPortal.ABANDON_HOLD && goesOn,
+                    "quitte " + bLeft + " apres " + held + " tiques, partie " + game.status() + ", encore " + still.size());
+            c.moveTo(where.getX() + 0.6, where.getY(), where.getZ() + 0.4, 0.0F, 0.0F);
+            for (int i = 0; i < 20 && !HavenArrival.lobbyOpen(server); i++) {
+                HavenPortal.tickForTest(server);
+            }
+            check("Defi : le dernier le quitte par un portail, la ville rouvre comme apres une defaite",
+                    HavenArrival.lobbyOpen(server) && game.status() == GameState.Status.LOBBY && !data.hasLeft(b.getUUID())
+                            && !data.hasLeft(c.getUUID()),
+                    "lobby " + HavenArrival.lobbyOpen(server) + ", partie " + game.status() + ", phase " + state.phase());
+
+            // la reprise : un autre joueur, non ; son maitre, oui
+            boolean refused = HavenPortal.pickUp(c, overworld, there) && overworld.getBlockState(there).is(ModBlocks.HAVEN_GATE.get());
+            boolean taken = HavenPortal.pickUp(a, overworld, there) && !overworld.getBlockState(there).is(ModBlocks.HAVEN_GATE.get())
+                    && data.portal(a.getUUID()) == null
+                    && a.getInventory().countItem(com.emerald.item.ModItems.HAVEN_PORTAL.get()) == 1;
+            check("reprise : un autre joueur ne peut pas ; son maitre reprend l'objet, le portail s'en va", refused && taken,
+                    "refuse " + refused + ", repris " + taken);
+        } finally {
+            for (BlockPos pos : placedAt) {
+                if (overworld.getBlockState(pos).is(ModBlocks.HAVEN_GATE.get())) {
+                    overworld.setBlock(pos, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
+                }
+            }
+            for (FakePlayer subject : List.of(a, b, c)) {
+                data.portals.remove(subject.getUUID());
+                data.back.remove(subject.getUUID());
+                data.left.remove(subject.getUUID());
+                state.removeApartment(subject.getUUID());
+            }
+            data.setDirty();
+            HavenPortal.onReturn(server);
+            HavenPortal.clearSubjects();
             HavenReturn.resetForTest(server);
             HavenReturn.clearSubjects();
             restore(server, saved);

@@ -1319,9 +1319,14 @@ public final class PhotoAutomaton {
         if (shot.biome().getPath().startsWith("porte")) {
             return doorShot(server, player, shot, shot.biome().getPath().substring("porte".length()));
         }
-        if (shot.biome().getPath().startsWith("camera")) {
-            // « camera2 » : la troisieme place de EMERALDWEAPONS_PHOTOS_CAMERA (« place|place|... »)
-            String rest = shot.biome().getPath().substring(6);
+        boolean ring = shot.biome().getPath().startsWith("anneau_ville");
+        if (ring || shot.biome().getPath().startsWith("camera")) {
+            if (ring && PREPARED.add(shot.name())) {
+                // le Portail de Haven (§106) : l'anneau de la ville, au QG, tenu le temps des photos
+                com.emerald.haven.journey.HavenPortal.pinForPhoto(server);
+            }
+            // « camera2 » : la troisieme place de EMERALDWEAPONS_PHOTOS_CAMERA (« place|place|... »), « anneau_ville1 » aussi
+            String rest = shot.biome().getPath().substring(ring ? "anneau_ville".length() : 6);
             String[] places = CAMERA.split("[|]");
             String[] v = places[Math.max(0, Math.min(places.length - 1, rest.isEmpty() ? 0 : Integer.parseInt(rest)))].split(",");
             if (v.length < 5) {

@@ -106,9 +106,12 @@ public final class HavenReturn {
         return due;
     }
 
-    /** Vrai si ce joueur est passe par la porte et attend l'equipe dans la ville. */
+    /**
+     * Vrai si ce joueur attend dans la ville : passe par la porte de victoire, ou venu par son
+     * Portail de Haven (HavenPortal : le Defi quitte, ou le Monde ouvert).
+     */
     public static boolean holding(ServerPlayer player) {
-        return stage == Stage.PORTE && THROUGH.contains(player.getUUID());
+        return (stage == Stage.PORTE && THROUGH.contains(player.getUUID())) || HavenPortal.holding(player);
     }
 
     /** La porte de victoire ouverte en ce moment est-elle a cette place ? (HavenGateBlockEntity) */
@@ -325,7 +328,8 @@ public final class HavenReturn {
         Set<UUID> seen = new LinkedHashSet<>();
         for (ServerPlayer player : all) {
             if (!seen.add(player.getUUID()) || (player.isFakePlayer() && !SUBJECTS.contains(player))
-                    || HavenRules.chantier(player) || THROUGH.contains(player.getUUID()) || Haven.is(player.level())) {
+                    || HavenRules.chantier(player) || THROUGH.contains(player.getUUID()) || Haven.is(player.level())
+                    || HavenPortal.left(server, player.getUUID())) {
                 continue;
             }
             out.add(player);
@@ -362,6 +366,7 @@ public final class HavenReturn {
         stage = Stage.AUCUN;
         door = null;
         THROUGH.clear();
+        HavenPortal.onReturn(server);
         GameManager.clear();
         GameManager.setup(overworld, overworld.getSharedSpawnPos(), false);
         int moved = HavenArrival.reopen(server, true);
@@ -429,7 +434,8 @@ public final class HavenReturn {
         return null;
     }
 
-    private static boolean clear(ServerLevel level, BlockPos feet) {
+    /** Un sol qui porte, pas d'eau, et quatre cellules libres au-dessus (la porte, un Portail de Haven). */
+    static boolean clear(ServerLevel level, BlockPos feet) {
         BlockPos below = feet.below();
         if (level.getBlockState(below).getCollisionShape(level, below).isEmpty()
                 || !level.getFluidState(feet).isEmpty()) {

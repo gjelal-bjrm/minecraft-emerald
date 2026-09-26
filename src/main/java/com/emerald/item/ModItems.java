@@ -157,6 +157,9 @@ public class ModItems {
             () -> new HavenDoorItem(com.emerald.haven.door.HavenDoorKind.PETITE, new Item.Properties()));
     public static final DeferredItem<HavenDoorItem> HAVEN_DOOR_SAS = ITEMS.register("haven_door_sas",
             () -> new HavenDoorItem(com.emerald.haven.door.HavenDoorKind.SAS, new Item.Properties()));
+    /** Le Portail de Haven (cahier §106) : l'anneau fabrique, qui ramene en ville ou fait quitter le Defi. */
+    public static final DeferredItem<HavenPortalItem> HAVEN_PORTAL = ITEMS.register("haven_portal",
+            () -> new HavenPortalItem(new Item.Properties().stacksTo(16)));
 
     /** L'agenda de Haven : les rendez-vous du parcours (HavenAgenda, cahier §83). */
     public static final DeferredItem<HavenAgendaItem> HAVEN_AGENDA =

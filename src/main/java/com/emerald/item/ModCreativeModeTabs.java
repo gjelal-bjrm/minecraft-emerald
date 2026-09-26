@@ -44,6 +44,7 @@ public class ModCreativeModeTabs {
                         }
                         output.accept(ModItems.FORGE_STONE);
                         output.accept(ModItems.HAVEN_AGENDA);
+                        output.accept(ModItems.HAVEN_PORTAL);
                         output.accept(ModItems.HAVEN_DOOR_HIP);
                         output.accept(ModItems.HAVEN_DOOR_PETITE);
                         output.accept(ModItems.HAVEN_DOOR_SAS);

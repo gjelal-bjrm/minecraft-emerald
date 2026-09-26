@@ -49,7 +49,20 @@ touché. Votre mode de jeu habituel vous est rendu au village.
   où le boss est tombé : qui la traverse rentre dans son appartement et attend
   l'équipe ; quand tout le monde est rentré, ou au bout de cinq minutes, la ville
   rouvre et chacun retrouve son appartement. Mourir pendant le Défi ne change rien
-  (la tombe, le village). Le Monde ouvert ne change pas non plus.
+  (la tombe, le village).
+- **Le Portail de Haven** se fabrique à l'établi : **4 lingots d'Arcencium** en croix
+  autour d'une **perle de l'Ender**. Clic droit sur le sol : l'anneau précurseur se
+  dresse, face à vous (il faut un sol et quatre blocs libres au-dessus). Un seul
+  portail par joueur : en poser un autre retire le premier et rend son objet ;
+  accroupi, les mains vides, un clic droit à son pied le reprend. Tout le monde peut
+  le passer. On arrive **toujours au même endroit : au QG**, devant l'anneau de la
+  ville, à la place de l'arche du départ.
+  - **En Monde ouvert**, repasser l'anneau du QG vous ramène devant votre portail.
+    Aller-retour à volonté, la partie continue.
+  - **En Défi**, rester **deux secondes** dans l'anneau fait **quitter le Défi** : vous
+    arrivez au QG et attendez l'équipe (vous réapparaissez dans votre appartement). Le
+    Défi continue pour les autres ; quand plus personne n'y joue, la ville rouvre, comme
+    après une défaite. On ne revient pas dans le Défi.
 - **La deuxième arrivée : Haven a été envahie.** Au premier retour du Défi, la
   ville est en invasion : « Haven a été envahie — Une arme t'attend au QG ».
   L'objectif en haut mène au **râtelier d'armes**, derrière le comptoir du bar :
@@ -1005,7 +1018,7 @@ Sur un serveur d'essai (`run-server`), chacun écrit son rapport puis arrête le
 - `EMERALDWEAPONS_AUTOTEST=vehicules ./gradlew runServer` : voitures et motos (dont leurs dégâts, leur destruction et leur explosion), puis le JET-Board (l'eau, la glisse lâchée, le frein, les sauts, le sol, un rail, les trois tremplins, et la course de Tess faite par la planche seule, bouton tenu, en sautant au bout des rails), rapport `run-server/vehicules_autotest.txt` ;
 - `EMERALDWEAPONS_AUTOTEST=invasion ./gradlew runServer` : invasion, décor destructible, bouton du QG et MSPT, rapport `run-server/invasion_autotest.txt` ;
 - `EMERALDWEAPONS_AUTOTEST=armes ./gradlew runServer` : Morph Gun (poses, confinement, tir des douze armes, munitions, décor, MSPT avec quatre tireurs), rapport `run-server/armes_autotest.txt` ;
-- `EMERALDWEAPONS_AUTOTEST=parcours ./gradlew runServer` : le parcours (fiche sur disque, arme qui suit les formes du joueur, ville paisible, bouton verrouillé, titre et objectifs du guide ; puis le lot 2 : râtelier du QG, deuxième arrivée envahie, reprise des rues, retour après la défaite, porte de la victoire ; puis les transports : les huit stations, l'arche et sa recharge, le portail des tours ; puis l'agenda, l'équipe attendue au QG et la réunion), rapport `run-server/parcours_autotest.txt` ;
+- `EMERALDWEAPONS_AUTOTEST=parcours ./gradlew runServer` : le parcours (fiche sur disque, arme qui suit les formes du joueur, ville paisible, bouton verrouillé, titre et objectifs du guide ; puis le lot 2 : râtelier du QG, deuxième arrivée envahie, reprise des rues, retour après la défaite, porte de la victoire ; le Portail de Haven — recette, pose, anneau de la ville au QG, aller-retour du Monde ouvert, Défi quitté, reprise ; puis les transports : les huit stations, l'arche et sa recharge, le portail des tours ; puis l'agenda, l'équipe attendue au QG et la réunion), rapport `run-server/parcours_autotest.txt` ;
 - `EMERALDWEAPONS_AUTOTEST=faune ./gradlew runServer` : les animaux de la ville (carte de l'eau, places de chaque espèce, plafonds, dangers tenus au large et agressifs au large seulement, piqûre des méduses, armée de mouettes, compagnons à l'invasion), rapport `run-server/faune_autotest.txt` ; avant, `python tools/dev_mods.py --server alexsmobs aquaculture livingthings`, après, `python tools/dev_mods.py --server --clean` ;
 - `EMERALDWEAPONS_AUTOTEST=quetes ./gradlew runServer` : les quêtes des héros (le livre des quêtes, les six héros et le bateau du Pêcheur, les cartes du chat et leurs jetons, l'épreuve de tir jusqu'à la médaille, la pêche au poids, les coffres engloutis, la chasse aux mouettes, la patrouille, la tenue du port et l'invasion qui va avec, les orbes cachés et ceux des rails, la boutique de Tess et ses sceaux, la course du JET-Board et ses médailles, puis le ménage), rapport `run-server/quetes_autotest.txt` ; avant, `python tools/dev_mods.py --server alexsmobs aquaculture livingthings`, après, `python tools/dev_mods.py --server --clean` ;
 - `EMERALDWEAPONS_AUTOTEST=partie ./gradlew runServer` : la partie (chances de la Forge et métal perdu, coffres des sanctuaires selon l'avancée, vol d'élytre des ailes +20, bouclier d'Arcencium, plumes d'ailes en récompense, usure sans casse, Grand Froid de l'Aurore, Proie de la Battue et sa garde, arches, cycle d'ouverture des météos, Éclipse, bestiaires, garnisons et matières des trois sanctuaires, arène du boss), rapport `run-server/partie_autotest.txt`. Les épreuves 9 à 12 demandent des mods au serveur des bancs : `python tools/dev_mods.py --server graveyard alexsmobs twilightforest cataclysm irons_spellbooks undergarden eternal_starlight creeperoverhaul variantsandventures lionfishapi resourcefullib`, puis `--server --clean`.

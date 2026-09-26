@@ -4,6 +4,11 @@ import com.emerald.block.entity.HavenGateBlockEntity;
 import com.emerald.block.entity.ModBlockEntities;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.phys.BlockHitResult;
+import com.emerald.haven.journey.HavenPortal;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
@@ -42,6 +47,9 @@ import java.util.Locale;
  * ON LES TRAVERSE, sauf le plateau du portail, ou l'on se tient : une dalle de 3,5/16.
  * Incassable, sans butin, sans objet ; posee et retiree par HavenReturn -- et si un
  * redemarrage l'oublie, elle s'efface d'elle-meme (HavenGateBlockEntity).
+ *
+ * LE PORTAIL DE HAVEN (§106) est ce meme anneau, fabrique et pose par un joueur (HavenPortal) :
+ * accroupi, les mains vides, un clic droit a son pied le reprend.
  */
 public class HavenGateBlock extends Block implements EntityBlock {
 
@@ -83,6 +91,19 @@ public class HavenGateBlock extends Block implements EntityBlock {
     @Override
     protected VoxelShape getCollisionShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
         return state.getValue(STYLE) == Style.PORTAIL ? PAD : Shapes.empty();
+    }
+
+    @Override
+    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player,
+                                               BlockHitResult hit) {
+        if (!player.isShiftKeyDown()) {
+            return InteractionResult.PASS;
+        }
+        if (level.isClientSide) {
+            return InteractionResult.SUCCESS;
+        }
+        return player instanceof ServerPlayer server && HavenPortal.pickUp(server, level, pos)
+                ? InteractionResult.CONSUME : InteractionResult.PASS;
     }
 
     @Override
