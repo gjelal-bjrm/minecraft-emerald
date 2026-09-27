@@ -240,6 +240,57 @@ public final class ArcenciumAutotest {
         check("hors Eclipse : une goule naturelle est refusee, une goule de commande passe (essais)",
                 !naturalIn && commandIn, "naturelle " + naturalIn + ", commande " + commandIn);
 
+        // LE BESTIAIRE DE L'ECLIPSE (§108) : chaque creature installee se cree en monstre
+        List<String> absentRoster = new ArrayList<>();
+        List<String> notMonster = new ArrayList<>();
+        List<String> unkillable = new ArrayList<>();
+        List<String> unlocked = new ArrayList<>();
+        FakePlayer striker = fake(level, "frappe", probe);
+        int presentRoster = 0;
+        for (String id : com.emerald.weather.Eclipse.rosterIds()) {
+            java.util.Optional<net.minecraft.world.entity.EntityType<?>> type =
+                    net.minecraft.world.entity.EntityType.byString(id);
+            if (type.isEmpty()) {
+                absentRoster.add(id);
+                continue;
+            }
+            presentRoster++;
+            // LE VERROU : chacune porte le tag des horreurs, et n'apparait nulle part hors de l'Eclipse
+            if (!type.get().is(com.emerald.weather.Eclipse.HORRORS)) {
+                unlocked.add(id);
+            }
+            net.minecraft.world.entity.Entity made = type.get().spawn(level, probe,
+                    net.minecraft.world.entity.MobSpawnType.COMMAND);
+            // une creature du jeu : l'Eclipse lui donne sa proie (l'esprit vengeur d'EvilCraft n'est
+            // declare ni ennemi ni neutre, et chasse pourtant)
+            boolean monster = made instanceof net.minecraft.world.entity.Mob;
+            if (!monster) {
+                notMonster.add(id + (made == null ? " (ne se cree pas)" : " (" + made.getClass().getSimpleName() + ")"));
+            }
+            // ELLE MEURT sous les coups d'un joueur : sinon sa vague ne mourrait jamais, ni son portail
+            if (made != null) {
+                for (int hit = 0; hit < 40 && made.isAlive(); hit++) {
+                    made.invulnerableTime = 0;
+                    made.hurt(level.damageSources().playerAttack(striker), 100000.0F);
+                    if (made instanceof net.minecraft.world.entity.LivingEntity living && living.isDeadOrDying()) {
+                        break;
+                    }
+                }
+                boolean dead = !made.isAlive() || (made instanceof net.minecraft.world.entity.LivingEntity l && l.isDeadOrDying());
+                if (!dead) {
+                    unkillable.add(id);
+                }
+                made.discard();
+            }
+        }
+        line("bestiaire de l'Eclipse : " + presentRoster + " installes ; absents : "
+                + (absentRoster.isEmpty() ? "aucun" : String.join(", ", absentRoster)));
+        check("bestiaire de l'Eclipse : au moins douze creatures installees, chacune une creature qui chasse, que les coups tuent, sous le verrou",
+                presentRoster >= 12 && notMonster.isEmpty() && unkillable.isEmpty() && unlocked.isEmpty(),
+                presentRoster + " installees" + (notMonster.isEmpty() ? "" : ", pas des monstres : " + String.join(", ", notMonster))
+                        + (unkillable.isEmpty() ? "" : ", immortelles : " + String.join(", ", unkillable))
+                        + (unlocked.isEmpty() ? "" : ", hors du verrou : " + String.join(", ", unlocked)));
+
         // le terrain autour du point d'apparition, charge : les portails s'y cherchent une place
         for (int cx = -4; cx <= 4; cx++) {
             for (int cz = -4; cz <= 4; cz++) {
@@ -273,33 +324,39 @@ public final class ArcenciumAutotest {
             com.emerald.weather.Eclipse.tickForAutotest(level);
         }
         int emerged = 0;
-        boolean allHorrors = true;
+        boolean allRoster = true;
         boolean allTagged = true;
         java.util.Set<String> kinds = new java.util.TreeSet<>();
         for (BlockPos p : rifts) {
             for (net.minecraft.world.entity.Entity e : com.emerald.weather.Eclipse.aliveAt(level, p)) {
                 emerged++;
                 kinds.add(net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.getKey(e.getType()).toString());
-                allHorrors &= e.getType().is(com.emerald.weather.Eclipse.HORRORS);
+                allRoster &= com.emerald.weather.Eclipse.inRoster(e.getType());
                 allTagged &= e.getTags().contains(com.emerald.weather.Eclipse.TAG)
                         && e.getTags().contains(com.emerald.weather.WeatherEffects.TAG_STORM);
             }
         }
-        check("la vague : quatre horreurs par portail, toutes du tag, marquees Eclipse et tempete",
-                emerged == 4 * rifts.size() && allHorrors && allTagged,
+        check("la vague : quatre horreurs par portail, toutes du bestiaire de l'Eclipse, marquees Eclipse et tempete",
+                emerged == 4 * rifts.size() && allRoster && allTagged,
                 emerged + " sorties : " + String.join(", ", kinds));
 
         BlockPos first = rifts.get(0);
         List<String> killed = new ArrayList<>();
         FakePlayer hunter = fake(level, "chasseur", first.above());
-        for (net.minecraft.world.entity.Entity e : com.emerald.weather.Eclipse.aliveAt(level, first)) {
-            // UN VRAI COUP DE JOUEUR : le spectre de The Graveyard est immunise contre tout ce qui
-            // ignore l'armure -- /kill, et meme les degats generiques -- et contre les fleches.
-            // A l'epee, il meurt comme un autre.
-            e.invulnerableTime = 0;
-            e.hurt(level.damageSources().playerAttack(hunter), 100000.0F);
-            killed.add(net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.getKey(e.getType()).getPath()
-                    + (e.isAlive() ? " (vivant)" : ""));
+        // JUSQU'A CE QUE LA VAGUE SOIT VRAIMENT MORTE : un revenant de The Graveyard se releve parfois
+        for (int round = 0; round < 40 && !com.emerald.weather.Eclipse.aliveAt(level, first).isEmpty(); round++) {
+            for (net.minecraft.world.entity.Entity e : com.emerald.weather.Eclipse.aliveAt(level, first)) {
+                // UN VRAI COUP DE JOUEUR : le spectre de The Graveyard est immunise contre tout ce qui
+                // ignore l'armure -- /kill, et meme les degats generiques -- et contre les fleches.
+                // A l'epee, il meurt comme un autre.
+                e.invulnerableTime = 0;
+                e.hurt(level.damageSources().playerAttack(hunter), 100000.0F);
+                killed.add(net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.getKey(e.getType()).getPath()
+                        + (e.isAlive() ? " (vivant)" : ""));
+            }
+            for (int t = 0; t < 5; t++) {
+                com.emerald.weather.Eclipse.tickForAutotest(level);
+            }
         }
         com.emerald.weather.Eclipse.tickForAutotest(level);
         line("premier portail : tues " + killed + ", encore vivants " + com.emerald.weather.Eclipse.aliveAt(level, first).size());
@@ -318,6 +375,58 @@ public final class ArcenciumAutotest {
         check("sa vague morte, le portail se referme et laisse ses Eclats du Destin",
                 closed && shards >= com.emerald.weather.Eclipse.SHARDS,
                 "referme " + closed + ", Eclats " + shards);
+
+        // LES GUETTEURS (§108) : une silhouette immobile, invulnerable ; regardee en face, elle s'en va
+        // il ne se pose que la ou on le verrait : au point d'apparition, sinon a 24 blocs de la
+        FakePlayer watched = fake(level, "guette", spawn.above());
+        net.minecraft.world.entity.Entity watcher = null;
+        StringBuilder misses = new StringBuilder();
+        int[][] stands = {{0, 0}, {24, 0}, {-24, 0}, {0, 24}, {0, -24}};
+        for (int[] stand : stands) {
+            if (watcher != null) {
+                break;
+            }
+            int sx = spawn.getX() + stand[0];
+            int sz = spawn.getZ() + stand[1];
+            watched.moveTo(sx + 0.5, level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                    sx, sz), sz + 0.5, 0.0F, 0.0F);
+            for (int attempt = 0; attempt < 12 && watcher == null; attempt++) {
+                watched.setYRot(attempt * 30.0F);
+                watcher = com.emerald.weather.EclipseWatchers.appearForTest(level, watched);
+            }
+            if (watcher == null) {
+                misses.append(" / (").append(stand[0]).append(", ").append(stand[1]).append(") ")
+                        .append(com.emerald.weather.EclipseWatchers.lastMiss());
+            }
+        }
+        line("guetteur : " + (misses.length() == 0 ? "pose depuis le point d'apparition" : "places refusees" + misses));
+        boolean still = watcher instanceof net.minecraft.world.entity.Mob mob && mob.isNoAi() && mob.isInvulnerable()
+                && mob.isSilent() && mob.getTags().contains(com.emerald.weather.EclipseWatchers.TAG)
+                && mob.getTags().contains(com.emerald.weather.Eclipse.TAG);
+        double watchDistance = watcher == null ? 0 : Math.sqrt(watcher.distanceToSqr(watched));
+        // on le voit : rien entre les yeux du cobaye et sa tete
+        boolean inSight = watcher != null && level.clip(new net.minecraft.world.level.ClipContext(watched.getEyePosition(),
+                watcher.position().add(0.0, watcher.getBbHeight() * 0.85, 0.0),
+                net.minecraft.world.level.ClipContext.Block.COLLIDER, net.minecraft.world.level.ClipContext.Fluid.NONE,
+                watched)).getType() == net.minecraft.world.phys.HitResult.Type.MISS;
+        boolean vanished = false;
+        if (watcher != null) {
+            // le cobaye le regarde en face
+            net.minecraft.world.phys.Vec3 to = watcher.position().add(0.0, watcher.getBbHeight() * 0.7, 0.0)
+                    .subtract(watched.getEyePosition());
+            watched.setYRot((float) (Math.toDegrees(Math.atan2(-to.x, to.z))));
+            watched.setXRot((float) (-Math.toDegrees(Math.atan2(to.y, Math.sqrt(to.x * to.x + to.z * to.z)))));
+            List<net.minecraft.server.level.ServerPlayer> one = List.of(watched);
+            com.emerald.weather.EclipseWatchers.tickForTest(level, one);
+            boolean stillThere = watcher.isAlive();
+            com.emerald.weather.EclipseWatchers.tickForTest(level, one);
+            vanished = stillThere && !watcher.isAlive();
+        }
+        check("un guetteur se pose au bord du noir (15-24 blocs), en vue, immobile, muet, invulnerable ; regarde en face, il s'en va",
+                still && inSight && watchDistance >= 14 && watchDistance <= 27 && vanished,
+                (watcher == null ? "aucun" : net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.getKey(watcher.getType())
+                        + " a " + Math.round(watchDistance) + " blocs") + ", en vue " + inSight + ", immobile " + still
+                        + ", parti " + vanished);
 
         int left = com.emerald.weather.Eclipse.rifts().size();
         com.emerald.weather.Eclipse.endForAutotest(level);

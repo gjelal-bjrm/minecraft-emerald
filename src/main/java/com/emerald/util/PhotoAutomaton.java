@@ -202,6 +202,11 @@ public final class PhotoAutomaton {
             return "eclipse".equals(this.biome.getNamespace());
         }
 
+        /** Une creature posee seule, de jour, pour juger de sa forme (cahier §108). */
+        boolean casting() {
+            return "casting".equals(this.biome.getNamespace());
+        }
+
         /** Une prise d'un vehicule de Haven, le joueur au volant (cahier §98). */
         boolean vehicle() {
             return "vehicule".equals(this.biome.getNamespace());
@@ -616,6 +621,99 @@ public final class PhotoAutomaton {
     private static net.minecraft.core.Direction eclipseFacing;
     @Nullable
     private static BlockPos eclipseStand;
+    /** Le guetteur pose pour la prise « guetteur », ou la camera le regarde. */
+    @Nullable
+    private static net.minecraft.world.phys.Vec3 eclipseWatcher;
+    /** La creature du casting, retiree a la prise suivante, et la place d'ou on la regarde. */
+    @Nullable
+    private static net.minecraft.world.entity.Entity castingSubject;
+    @Nullable
+    private static BlockPos castingStand;
+
+    /**
+     * Le casting des horreurs (cahier §108) : « nom@casting:deeperdarker.sculk_centipede » pose cette
+     * creature seule, sans IA, face a la camera, a une distance faite a sa taille -- pour juger de sa
+     * forme avant de la mettre dans l'Eclipse. Un STUDIO : une dalle noire a 200 de haut, a minuit
+     * (les morts-vivants ne brulent pas, le loup-garou d'EvilCraft est loup), la creature eclairee
+     * par des lumieres invisibles, sur le ciel de nuit. Au bord d'un lac en plein jour, la premiere
+     * serie les montrait petites, dans l'eau, en feu, ou en villageois.
+     */
+    private static boolean placeCasting(ServerLevel level, ServerPlayer player, Shot shot) {
+        String id = shot.biome().getPath().replaceFirst("[.]", ":");
+        if (castingStand == null) {
+            castingStand = new BlockPos(player.getBlockX(), 200, player.getBlockZ());
+            level.setDayTime(18000L);
+            // l'Afrit d'Occultism met le feu autour de lui : la seconde serie en brulait encore
+            level.getGameRules().getRule(net.minecraft.world.level.GameRules.RULE_DOFIRETICK).set(false, level.getServer());
+            level.setWeatherParameters(20 * 600, 0, false, false);
+            net.minecraft.world.level.block.state.BlockState floor =
+                    net.minecraft.world.level.block.Blocks.BLACK_CONCRETE.defaultBlockState();
+            for (int dx = -9; dx <= 9; dx++) {
+                for (int dz = -16; dz <= 7; dz++) {
+                    level.setBlock(castingStand.offset(dx, -1, dz), floor, 2);
+                }
+            }
+            net.minecraft.world.level.block.state.BlockState light = net.minecraft.world.level.block.Blocks.LIGHT
+                    .defaultBlockState().setValue(net.minecraft.world.level.block.LightBlock.LEVEL, 15);
+            int[][] lamps = {{-3, 1, -3}, {3, 1, -3}, {-3, 4, -3}, {3, 4, -3}, {0, 2, -5}, {0, 6, 0}, {-4, 2, 2}, {4, 2, 2}};
+            for (int[] lamp : lamps) {
+                level.setBlock(castingStand.offset(lamp[0], lamp[1], lamp[2]), light, 2);
+            }
+        }
+        if (PREPARED.add("casting_" + shot.name())) {
+            if (castingSubject != null) {
+                castingSubject.discard();
+                castingSubject = null;
+            }
+            // le studio remis a neuf : ni feu ni restes (projectiles, invocations) de la precedente
+            for (BlockPos pos : BlockPos.betweenClosed(castingStand.offset(-9, 0, -16), castingStand.offset(9, 7, 7))) {
+                if (level.getBlockState(pos).is(net.minecraft.tags.BlockTags.FIRE)) {
+                    level.setBlock(pos, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 2);
+                }
+            }
+            for (net.minecraft.world.entity.Entity left : level.getEntities((net.minecraft.world.entity.Entity) null,
+                    new net.minecraft.world.phys.AABB(castingStand).inflate(24.0), e -> !(e instanceof net.minecraft.world.entity.player.Player))) {
+                left.discard();
+            }
+            BlockPos at = castingStand;
+            castingSubject = net.minecraft.world.entity.EntityType.byString(id)
+                    .map(type -> type.spawn(level, at, net.minecraft.world.entity.MobSpawnType.COMMAND))
+                    .orElse(null);
+            if (castingSubject == null) {
+                LOGGER.warn("photos : casting, {} ne se cree pas", id);
+                return false;
+            }
+            if (castingSubject instanceof net.minecraft.world.entity.Mob mob) {
+                mob.setNoAi(true);
+                mob.setPersistenceRequired();
+                mob.setYBodyRot(180.0F);
+            }
+            castingSubject.setYRot(180.0F);
+            castingSubject.setYHeadRot(180.0F);
+            LOGGER.info("photos : casting {} ({} x {}) en {}", id, castingSubject.getBbWidth(),
+                    castingSubject.getBbHeight(), castingSubject.position());
+        }
+        if (castingSubject == null) {
+            return false;
+        }
+        // de face, a une distance faite a sa taille ; la camera au-dessus du sol ou elle se trouve
+        float size = Math.max(castingSubject.getBbHeight(), castingSubject.getBbWidth());
+        double back = Math.max(2.6, 2.0 * size + 1.5);
+        net.minecraft.world.phys.Vec3 center = castingSubject.position().add(0.0, castingSubject.getBbHeight() * 0.5, 0.0);
+        net.minecraft.world.phys.Vec3 eye = new net.minecraft.world.phys.Vec3(center.x,
+                castingStand.getY() + Math.max(1.62, castingSubject.getBbHeight() * 0.6), center.z - back);
+        double dx = center.x - eye.x;
+        double dz = center.z - eye.z;
+        float yaw = (float) Math.toDegrees(Math.atan2(-dx, dz));
+        float pitch = (float) -Math.toDegrees(Math.atan2(center.y - eye.y, Math.sqrt(dx * dx + dz * dz)));
+        player.setGameMode(GameType.SPECTATOR);
+        player.teleportTo(level, eye.x, eye.y - player.getEyeHeight(), eye.z, yaw, pitch);
+        return true;
+    }
+
+    /** L'horreur posee pour une prise « horreur/... », retiree a la suivante. */
+    @Nullable
+    private static net.minecraft.world.entity.Entity eclipseHorror;
 
     /**
      * L'Eclipse : levee une fois, la ou se tient le joueur ; un portail a une dizaine de
@@ -652,7 +750,78 @@ public final class PhotoAutomaton {
         net.minecraft.world.phys.Vec3 rift = net.minecraft.world.phys.Vec3.atBottomCenterOf(eclipseRift);
         net.minecraft.world.phys.Vec3 eye;
         net.minecraft.world.phys.Vec3 target;
-        if ("brume".equals(view)) {
+        if ("guetteur".equals(view) || "loin".equals(view) || "cote".equals(view) || view.startsWith("horreur/")) {
+            // « loin » : a soixante blocs du centre des portails, dos a eux -- l'obscurite hors danger ;
+            // « guetteur » : de la, une silhouette au bord du noir, qu'on regarde (§108) ;
+            // « cote » : le meme guetteur, du coin de l'oeil (le regard a 35 degres de lui)
+            double cx = 0.0;
+            double cz = 0.0;
+            List<BlockPos> all = com.emerald.weather.Eclipse.rifts();
+            for (BlockPos p : all) {
+                cx += p.getX();
+                cz += p.getZ();
+            }
+            cx /= Math.max(1, all.size());
+            cz /= Math.max(1, all.size());
+            double ax = eclipseStand.getX() - cx;
+            double az = eclipseStand.getZ() - cz;
+            double len = Math.max(0.01, Math.sqrt(ax * ax + az * az));
+            int fx = (int) Math.round(eclipseStand.getX() + ax / len * 60.0);
+            int fz = (int) Math.round(eclipseStand.getZ() + az / len * 60.0);
+            int fy = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, fx, fz);
+            eye = new net.minecraft.world.phys.Vec3(fx + 0.5, fy + 1.62, fz + 0.5);
+            float away = (float) Math.toDegrees(Math.atan2(-ax, az));
+            target = eye.add(-Math.sin(Math.toRadians(away)) * 20.0, -1.0, Math.cos(Math.toRadians(away)) * 20.0);
+            if ("guetteur".equals(view)) {
+                if (PREPARED.add("guetteur_" + shot.name())) {
+                    player.teleportTo(level, eye.x, eye.y - player.getEyeHeight(), eye.z, away, 0.0F);
+                    net.minecraft.world.entity.Entity watcher = null;
+                    for (int attempt = 0; attempt < 8 && watcher == null; attempt++) {
+                        player.setYRot(away + attempt * 45.0F);
+                        watcher = com.emerald.weather.EclipseWatchers.appearForTest(level, player);
+                    }
+                    eclipseWatcher = watcher == null ? null
+                            : watcher.position().add(0.0, watcher.getBbHeight() * 0.8, 0.0);
+                    LOGGER.info("photos : guetteur {} en {}", watcher == null ? "aucun" : watcher.getType(), eclipseWatcher);
+                }
+                if (eclipseWatcher != null) {
+                    target = eclipseWatcher;
+                }
+            } else if ("cote".equals(view) && eclipseWatcher != null) {
+                net.minecraft.world.phys.Vec3 to = eclipseWatcher.subtract(eye);
+                double a = Math.toRadians(35.0);
+                target = eye.add(to.x * Math.cos(a) - to.z * Math.sin(a), to.y, to.x * Math.sin(a) + to.z * Math.cos(a));
+            } else if (view.startsWith("horreur/")) {
+                // « horreur/deeperdarker.shattered » : cette creature a sept blocs, de face, loin des
+                // portails -- la voit-on quand le noir se referme sur elle ?
+                if (PREPARED.add("horreur_" + shot.name())) {
+                    if (eclipseHorror != null) {
+                        eclipseHorror.discard();
+                        eclipseHorror = null;
+                    }
+                    String id = view.substring("horreur/".length()).replaceFirst("[.]", ":");
+                    int hx = (int) Math.floor(eye.x - Math.sin(Math.toRadians(away)) * 7.0);
+                    int hz = (int) Math.floor(eye.z + Math.cos(Math.toRadians(away)) * 7.0);
+                    BlockPos at = new BlockPos(hx, level.getHeight(
+                            net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, hx, hz), hz);
+                    eclipseHorror = net.minecraft.world.entity.EntityType.byString(id)
+                            .map(type -> type.spawn(level, at, net.minecraft.world.entity.MobSpawnType.COMMAND))
+                            .orElse(null);
+                    if (eclipseHorror instanceof net.minecraft.world.entity.Mob mob) {
+                        mob.setNoAi(true);
+                        mob.setPersistenceRequired();
+                        float face = away + 180.0F;
+                        mob.setYRot(face);
+                        mob.setYHeadRot(face);
+                        mob.setYBodyRot(face);
+                    }
+                    LOGGER.info("photos : horreur {} en {}", id, eclipseHorror == null ? "aucune" : eclipseHorror.position());
+                }
+                if (eclipseHorror != null) {
+                    target = eclipseHorror.position().add(0.0, eclipseHorror.getBbHeight() * 0.55, 0.0);
+                }
+            }
+        } else if ("brume".equals(view)) {
             BlockPos far = eclipseRift;
             for (BlockPos p : com.emerald.weather.Eclipse.rifts()) {
                 if (p.distSqr(eclipseStand) > far.distSqr(eclipseStand)) {
@@ -1694,6 +1863,9 @@ public final class PhotoAutomaton {
         }
         if (shot.eclipse()) {
             return placeEclipse(level, player, shot);
+        }
+        if (shot.casting()) {
+            return placeCasting(level, player, shot);
         }
         if (shot.sanctuary()) {
             return placeSanctuary(level, player, shot);

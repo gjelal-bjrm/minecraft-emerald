@@ -111,9 +111,6 @@ public final class WeatherClient {
         return switch (w) {
             case AURORE -> new float[]{0.07F, 0.10F, 0.20F, 0.45F, 0.90F, 210.0F};
             case NUIT -> new float[]{0.03F, 0.02F, 0.08F, 0.55F, 1.0F, 96.0F};
-            // L'ECLIPSE : le mur noir, a soixante blocs ; SkyVeilRenderer ajoute des couches
-            // plus proches et plus legeres, pour un brouillard qui s'epaissit avec la distance
-            case ECLIPSE -> new float[]{0.012F, 0.004F, 0.010F, 0.97F, 1.0F, 60.0F};
             case METEORES -> new float[]{0.30F, 0.13F, 0.07F, 0.88F, 1.0F, 150.0F};
             case DECHIRURE -> new float[]{0.30F, 0.18F, 0.38F, 0.72F, 0.90F, 140.0F};
             case ORAGE -> {

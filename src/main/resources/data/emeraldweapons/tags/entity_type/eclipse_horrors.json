@@ -52,6 +52,30 @@
     {
       "id": "alexsmobs:skreecher",
       "required": false
+    },
+    {
+      "id": "deeperdarker:shattered",
+      "required": false
+    },
+    {
+      "id": "deeperdarker:stalker",
+      "required": false
+    },
+    {
+      "id": "eternal_starlight:tangled",
+      "required": false
+    },
+    {
+      "id": "eternal_starlight:stranghoul",
+      "required": false
+    },
+    {
+      "id": "endermanoverhaul:dark_oak_enderman",
+      "required": false
+    },
+    {
+      "id": "evilcraft:werewolf",
+      "required": false
     }
   ]
 }

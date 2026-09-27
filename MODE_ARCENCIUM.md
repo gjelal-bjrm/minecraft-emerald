@@ -9844,3 +9844,139 @@ de parcours garde `fenetres` et `meubles`. Les joueurs deja passes au QG n'ont r
   pas dehors ; casser ce qu'on a pose et pas un mur. Les cobayes des autres essais ont leurs quetes
   d'appartement faites (HavenProgress.temporary) ; a la borne, un cobaye n'y est pas tenu.
 - `vote` 36, `salles` 27, `haven` 25, `atelier` 18 OK ; `quetes` 55 OK (et les mouettes).
+
+## 108. L'Eclipse, deuxieme version *(27 sept. 2026)*
+
+« L'espece de cercle autour de moi qui est cense mettre une ambiance sombre, je le vois tres
+facilement, et au loin j'ai l'impression de voir des lignes, comme un quadrille. C'est vraiment pas
+beau. J'entends quand meme les bruits de la nature, alors que dans ce genre de moment les oiseaux se
+taisent et tous les animaux se cachent ; le vent, ca c'est normal, l'eau aussi. La variete de
+monstres n'est pas assez effrayante : a part un monstre qui avait une tres longue tete et qui me
+suivait tres loin, la plupart ressemblent a des zombies normaux. Il faut plus de variete, comme des
+abominations, des choses stressantes et dangereuses. Et ca manque de son inquietant -- je croyais
+qu'on avait telecharge des mods expres pour ca. C'est a refaire, en tout cas a ameliorer. » (le
+joueur, 27 sept., apres une Eclipse jouee)
+
+### A. Le noir, sans rien dessiner
+
+**D'ou venaient le cercle et le quadrille.** Le brouillard du §88 etait fait de quatre coupoles
+(SkyVeilRenderer) : la ou chacune coupait le terrain, un cercle au sol ; au loin, leurs facettes
+dessinaient un quadrille dans le ciel. Elles sont parties : l'Eclipse ne dessine plus rien
+(SkyVeilRenderer ne fait rien pour elle, WeatherClient ne lui donne plus de voile ; la couleur de
+brouillard reste).
+
+**Ce qui les remplace.** L'Obscurite du Gardien, gardee sur le joueur par le client seul (sans icone
+ni particules), et DOSEE : Iris lit sa force par `MobEffectInstance.getBlendFactor`, que le greffon
+`mixin/MobEffectInstanceMixin` (cote client) fait passer par `EclipseClient.darkness`.
+Complementary (DoDarknessFog des EuphoriaPatches) en fait un noir qui monte en douceur avec la
+distance, sans bord ni facette ; sans shaders, le jeu de base en fait un brouillard.
+- Force 0,50 hors danger, qui RESPIRE de 0,07 sur dix secondes ;
+- elle SE REFERME jusqu'a 0,90 quand une horreur approche (18 blocs), ou un portail (24 blocs,
+  aux quatre cinquiemes) ;
+- elle suit la force de la meteo (montee, fin), et glisse de 5 % par tique vers sa cible.
+Le serveur ne donne plus l'Obscurite par bouffees pres des portails ; le rejet d'un portail la
+donne toujours.
+
+### B. Le silence de la nature
+
+- **AmbientSounds** : ses 54 sons d'animaux (oiseaux, grillons, cigales, grenouilles, hiboux,
+  loups) sont refuses pendant l'Eclipse (`PlaySoundEvent`) ; ses boucles lancees avant sont
+  arretees au debut, puis toutes les cinq secondes.
+- **Les animaux du jeu et des mods** : les sons de la categorie « neutre », quand une creature
+  vivante et paisible est la ou le son part. Les vehicules, wagonnets et bateaux gardent leur voix
+  -- les chocs, l'explosion de nos voitures et les tremplins du JET-Board sont aussi « neutres ».
+- Restent le vent, l'eau, la pluie et les grottes. La musique se tait (comme avant).
+Les animaux eux-memes sont toujours la : on les croise, muets.
+
+### C. Les sons inquietants (`client/EclipseClient`)
+
+Puises dans les mods d'horreur du modpack ; un son absent est saute (en dev, les 38 sont connus) :
+- **le fond**, continu : la boucle de la Vallee des ames jouee grave, et l'abime de l'Undergarden ;
+- **des cris** lointains (21 : liche, Cauchemar, Faucheuse, spectre, goule de The Graveyard ;
+  Stalker et Shattered de Deeper Darker ; crane et haine des Tangled, Monstruosite lunaire
+  d'Eternal Starlight ; esprit vengeur d'EvilCraft ; regards d'Enderman Overhaul ; Murmur et Farseer
+  d'Alex's Mobs ; ghast, enderman, hurleur de sculk et wither, graves), toutes les 7 a 16 s, a 20-38
+  blocs, six fois sur dix dans le dos ;
+- **des chuchotements** tout pres (2,5 a 5 blocs), toutes les 20 a 40 s ;
+- **des pas** qui approchent dans le dos, quatre a six, puis plus rien, toutes les 30 a 55 s ;
+- **une cloche** tres loin (50 a 64 blocs), trois secondes apres le debut, puis toutes les 60 a
+  100 s ;
+- **un souffle haletant** quand un ennemi est a moins de 10 blocs, et le battement de coeur a
+  moins de 20 ;
+- cote serveur, **les portails grondent** (le grondement des portails de Deeper Darker, a defaut
+  celui du Nether) toutes les cinq secondes environ, entendus a 48 blocs : dans le noir, on les
+  trouve a l'oreille ; **une elite sort dans un rugissement** (celui du Gardien, grave).
+
+### D. Le bestiaire
+
+Les vagues puisent maintenant dans cinq mods (poids entre parentheses) :
+- ordinaires : Shattered de Deeper Darker (4), Tangled d'Eternal Starlight (4), Murmur d'Alex's
+  Mobs (3), spectre de The Graveyard (3), Enderman du chene noir d'Enderman Overhaul (2),
+  Stranghoul d'Eternal Starlight (2), squelette-creeper (2), acolyte et illageois corrompus (1
+  chacun) ;
+- elites, a partir de la Pression : Stalker de Deeper Darker (3), Cauchemar (3), Faucheuse (2),
+  loup-garou d'EvilCraft (2), Farseer (2).
+**Ecartes** : la goule et le revenant (des zombies a peine changes, justement ce que le joueur
+reprochait ; le revenant fait le mort puis se releve, et les coups ne le touchent plus entre-temps
+-- sa vague, et son portail, trainaient), l'esprit vengeur d'EvilCraft (les coups d'un joueur ne le
+tuent pas : il faut les armes de son mod), l'Enderman des cavernes d'Enderman Overhaul (a ciel
+ouvert, il se teleporte de lui-meme sous un bloc, meme sans IA : il fuirait sa vague -- vu au
+casting en photo, et lu dans son code). Aucune n'est dans les bestiaires des autres meteos.
+
+Chaque horreur sortie **chasse** aussitot le joueur le plus proche (56 blocs), meme un enderman,
+d'ordinaire neutre.
+
+**Le verrou s'etend** (choix du joueur : l'horreur, « seulement pendant l'Eclipse »). Le tag
+`eclipse_horrors` (The Graveyard, dont la goule et le revenant ; le Murmur, le Farseer et le
+Skreecher) range aussi les nouvelles venues : Shattered, Stalker, Tangled, Stranghoul, Enderman du
+chene noir, loup-garou. Leurs apparitions naturelles sont refusees partout, le Deep Dark,
+l'Otherside et les dimensions d'Eternal Starlight compris ; le banc verifie que chaque creature des
+vagues porte le tag.
+
+**Le loup-garou d'EvilCraft ne nait pas d'une apparition.** Un villageois frappe par la foudre a une
+chance sur deux de devenir villageois loup-garou (`EntityStruckByLightningEventHook`), et celui-ci
+se change en loup-garou chaque nuit, en passant par `addFreshEntity`, sans apparition : le verrou ne
+le voit pas. Avec les eclairs de la Nuit d'Arcencium et de l'Orage, ce serait frequent. La config
+d'EvilCraft ferme la porte : `[mob.werewolf] convertOnLightning = false`, dans le dev et dans le
+profil, copie suivie dans `modpack/config/evilcraft-common.toml` (celle du profil, seule cette
+ligne changee).
+
+Mods du dev : undergarden, eternal_starlight, evilcraft et endermanoverhaul ajoutes a `run/mods`
+(avec cyclopscore, geckolib, resourcefulconfig, resourcefullib), copies du profil.
+
+### E. Les guetteurs (`weather/EclipseWatchers`)
+
+Ce qui avait le plus saisi le joueur : le Murmur, sa tete au bout d'un cou sans fin, qui le suivait
+de loin. Un guetteur est une silhouette -- le Stalker de Deeper Darker, le Cauchemar de The
+Graveyard, l'Enderman du chene noir ; l'enderman du jeu a defaut -- qui se tient au bord du noir, a
+15-24 blocs, de 40 a 75 degres du regard (on le devine du coin de l'oeil), tourne vers le joueur :
+sans IA, muet, invulnerable, dans aucune vague. Il s'en va quand on le regarde en face (a moins de
+11 degres, une demi-seconde) -- fumee, encre, un bruit de teleportation, et une ame qui s'echappe
+si on le regardait --, quand on s'en approche a moins de 12 blocs, ou au bout de 14 s. Un par
+joueur, toutes les 25 a 50 s.
+
+**Il faut le voir.** La premiere photo le montrait noir sur une colline noire, a 22 blocs :
+invisible sans eclaircir l'image. Il essaie donc douze places et garde la plus lisible : jamais
+derriere un arbre ou une colline (rien entre les yeux du joueur et sa tete, ou au moins son buste),
+decoupe sur le ciel si possible, sinon devant le noir du lointain, a defaut devant un talus ; rien
+de possible, il reessaie trois secondes plus tard.
+
+### F. Vu, et essaye
+
+- Photos (automate, Complementary, monde `eclipse_photos`) :
+  - `ecl_apres_brume` : plus de cercle ni de quadrille, un noir qui monte avec la distance ;
+  - `ecl_apres_vague` : les fissures rouges des portails a travers le noir ;
+  - `ecl_loin`, a 60 blocs des portails : sombre, mais le sol se lit et un arbre se decoupe ;
+  - `ecl_guetteur` : un Stalker sur une crete, decoupe sur le ciel, ses yeux pales ;
+  - `ecl_cote` : le meme, du coin de l'oeil, au bord de l'image.
+- Journal du client : « sons connus -- cris 21/21, chuchotements 7/7, pas 4/4, cloches 2/2,
+  souffle 1/1, fonds 3/3 » ; « 54 sons d'animaux d'AmbientSounds a faire taire » ; des chants
+  d'oiseaux, de grillons et de cigales tus.
+- Banc `partie` : 69 OK, 0 KO. L'epreuve de l'Eclipse cree chaque creature du bestiaire (15
+  installees), verifie qu'elle se laisse tuer par les coups d'un joueur (c'est ainsi que le
+  revenant a ete trouve), puis une vague de douze, la fermeture, un guetteur (en vue, immobile,
+  parti des qu'on le regarde) et la fin. Les mods du serveur des bancs :
+  `python tools/dev_mods.py --server graveyard alexsmobs twilightforest cataclysm irons_spellbooks
+  undergarden eternal_starlight creeperoverhaul variantsandventures lionfishapi resourcefullib
+  deeperdarker evilcraft endermanoverhaul`, puis `--server --clean`.
+- Pas entendu : l'automate ne peut pas ecouter. Le son se juge en partie.

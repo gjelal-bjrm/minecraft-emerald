@@ -26,6 +26,7 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
@@ -72,6 +73,28 @@ import java.util.UUID;
  *
  * Rien de ceci ne se sauvegarde : un redemarrage en pleine Eclipse ferme tout, et les
  * blocs des portails s'effacent d'eux-memes (EclipsePortalBlockEntity).
+ *
+ * LA DEUXIEME VERSION (27 sept., cahier §108) : « la variete de monstres n'est pas assez
+ * effrayante [...] la plupart ressemblent a des zombies normaux ; il faut plus de variete, des
+ * abominations, des choses stressantes et dangereuses ». Les vagues puisent aussi dans Deeper
+ * Darker (Shattered, Stalker), Eternal Starlight (Tangled, Stranghoul), EvilCraft (loup-garou) et
+ * Enderman Overhaul (l'Enderman du chene noir) -- aucun n'est dans les
+ * bestiaires des autres meteos. Chaque horreur sortie CHASSE aussitot le joueur le plus proche ; une
+ * elite sort dans un rugissement ; les portails grondent, et c'est a l'oreille qu'on les trouve dans
+ * le noir. Les guetteurs (EclipseWatchers) regardent depuis le bord du noir. L'Obscurite n'est plus
+ * donnee ici par bouffees : le client la dose lui-meme (EclipseClient.darkness).
+ *
+ * LE VERROU S'ETEND aux nouvelles venues (le joueur : l'horreur, « seulement pendant l'Eclipse ») :
+ * le tag les range avec The Graveyard, et leurs apparitions naturelles sont refusees partout, le Deep
+ * Dark, l'Otherside et les dimensions d'Eternal Starlight compris. Le banc verifie que chaque
+ * creature des vagues porte le tag.
+ * L'esprit vengeur d'EvilCraft n'y est pas : les coups d'un joueur ne le tuent pas (il lui faut les
+ * armes de son mod), et sa vague ne serait jamais morte -- le portail ne se serait pas referme. Ni la
+ * goule ni le revenant de The Graveyard : des zombies a peine changes, justement ce que le joueur
+ * reprochait ; et le revenant fait le mort puis se releve, les coups ne le touchant plus entre-temps.
+ * Tous deux restent dans le tag : nulle part ailleurs non plus. Ni l'Enderman des cavernes
+ * d'Enderman Overhaul : a ciel ouvert, il se teleporte de lui-meme sous un bloc (CaveEnderman.tick,
+ * meme sans IA -- le casting en photo l'a montre), et fuirait sa vague.
  */
 @EventBusSubscriber(modid = EmeraldWeaponsMod.MODID)
 public final class Eclipse {
@@ -97,21 +120,29 @@ public final class Eclipse {
     private static final int MAX_ALIVE = 10;
     public static final int SHARDS = 4;
     private static final int HERO_XP = 40;
-    /** Pres d'un portail ouvert, la nuit se referme : l'Obscurite du Gardien, par bouffees. */
-    private static final double DARK_RADIUS = 20.0;
+    /** Une horreur sortie chasse le joueur le plus proche, a tant de blocs au plus. */
+    private static final double HUNT_RADIUS = 56.0;
+    /** Le grondement d'un portail : une fois toutes les 4 a 6 secondes, entendu a 48 blocs. */
+    private static final float GROAN_VOLUME = 3.0F;
 
     /**
-     * Les horreurs d'une vague, et leur poids. The Graveyard d'abord (goules, revenants,
-     * squelettes-creepers, spectres, acolytes et illageois corrompus), le Murmur d'Alex's
-     * Mobs ; en fin de vague, a partir de la Pression, une horreur d'elite : la Faucheuse,
-     * le Cauchemar, le Farseer. Un mod absent, et ses monstres sont simplement sautes.
+     * Les horreurs d'une vague, et leur poids. Les creatures les plus derangeantes pesent le plus :
+     * les Shattered aveugles de Deeper Darker, le Murmur et son cou sans fin, les spectres, les
+     * Tangled d'Eternal Starlight, l'Enderman du chene noir ; de The Graveyard, les
+     * squelettes-creepers, les acolytes et les illageois corrompus, plus rares. En fin de vague, a
+     * partir de la Pression, une ELITE : le Stalker, le Cauchemar, la Faucheuse, le loup-garou, le
+     * Farseer. Un mod absent, et ses monstres sont simplement sautes.
      */
     private static final String[][] COMMON = {
-            {"graveyard:ghoul", "5"}, {"graveyard:revenant", "4"}, {"graveyard:skeleton_creeper", "3"},
-            {"graveyard:wraith", "3"}, {"graveyard:acolyte", "2"}, {"graveyard:corrupted_vindicator", "2"},
-            {"graveyard:corrupted_pillager", "2"}, {"alexsmobs:murmur", "2"}};
+            {"deeperdarker:shattered", "4"}, {"alexsmobs:murmur", "3"}, {"graveyard:wraith", "3"},
+            {"eternal_starlight:tangled", "4"},
+            {"endermanoverhaul:dark_oak_enderman", "2"},
+            {"eternal_starlight:stranghoul", "2"}, {"graveyard:skeleton_creeper", "2"},
+            {"graveyard:acolyte", "1"}, {"graveyard:corrupted_vindicator", "1"},
+            {"graveyard:corrupted_pillager", "1"}};
     private static final String[][] ELITE = {
-            {"graveyard:reaper", "3"}, {"graveyard:nightmare", "2"}, {"alexsmobs:farseer", "1"}};
+            {"deeperdarker:stalker", "3"}, {"graveyard:nightmare", "3"}, {"graveyard:reaper", "2"},
+            {"evilcraft:werewolf", "2"}, {"alexsmobs:farseer", "2"}};
     /** Si aucun mod d'horreur n'est la : de quoi que l'Eclipse ne soit pas vide. */
     private static final String[][] FALLBACK = {{"minecraft:wither_skeleton", "2"}, {"minecraft:stray", "3"}};
 
@@ -144,6 +175,35 @@ public final class Eclipse {
 
     public static boolean active() {
         return active;
+    }
+
+    /** Une creature des vagues de l'Eclipse, ordinaire ou d'elite ? (le banc) */
+    public static boolean inRoster(EntityType<?> type) {
+        String id = net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.getKey(type).toString();
+        for (String[][] table : new String[][][]{COMMON, ELITE, FALLBACK}) {
+            for (String[] row : table) {
+                if (row[0].equals(id)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /** Les creatures des vagues, installees ou non (le banc). */
+    public static List<String> rosterIds() {
+        List<String> out = new ArrayList<>();
+        for (String[][] table : new String[][][]{COMMON, ELITE}) {
+            for (String[] row : table) {
+                out.add(row[0]);
+            }
+        }
+        return out;
+    }
+
+    /** Nos apparitions passent le verrou : les guetteurs aussi (EclipseWatchers). */
+    static void spawning(boolean on) {
+        spawning = on;
     }
 
     /** L'Eclipse connait-elle ce portail ? Sinon son bloc s'efface. */
@@ -324,8 +384,14 @@ public final class Eclipse {
             implode(level, rift, rift.hadAny);
         }
         repel(level);
-        if (level.getGameTime() % 40 == 0) {
-            darken(level);
+        if (level.getGameTime() % 5 == 0) {
+            List<ServerPlayer> hunted = new ArrayList<>();
+            for (ServerPlayer player : level.players()) {
+                if (!player.isSpectator() && !player.isCreative() && player.isAlive()) {
+                    hunted.add(player);
+                }
+            }
+            EclipseWatchers.tick(level, hunted);
         }
     }
 
@@ -359,6 +425,16 @@ public final class Eclipse {
         }
         rift.alive.add(entity.getUUID());
         rift.hadAny = true;
+        if (entity instanceof Mob mob) {
+            // elle ne rode pas : elle chasse (le joueur le plus proche, meme un enderman d'ordinaire neutre)
+            Player prey = level.getNearestPlayer(mob, HUNT_RADIUS);
+            if (prey != null && !prey.isCreative() && !prey.isSpectator()) {
+                mob.setTarget(prey);
+            }
+        }
+        if (elite) {
+            level.playSound(null, at, SoundEvents.WARDEN_ROAR, SoundSource.HOSTILE, 3.0F, 0.6F);
+        }
         level.sendParticles(ParticleTypes.LARGE_SMOKE, out.x, out.y + 1.0, out.z, 18, 0.35, 0.7, 0.35, 0.02);
         level.sendParticles(ParticleTypes.SQUID_INK, out.x, out.y + 1.2, out.z, 10, 0.3, 0.6, 0.3, 0.02);
         level.playSound(null, at, SoundEvents.SOUL_ESCAPE.value(), SoundSource.HOSTILE, 1.3F, 0.5F);
@@ -426,6 +502,17 @@ public final class Eclipse {
         if (level.random.nextInt(3) == 0) {
             level.sendParticles(ParticleTypes.ASH, cx, rift.pos.getY() + 2.0, cz, 6, 1.2, 1.6, 1.2, 0.0);
         }
+        // LE PORTAIL GRONDE : dans le noir, c'est a l'oreille qu'on le trouve
+        if (level.random.nextInt(25) == 0) {
+            level.playSound(null, rift.pos, groan(), SoundSource.HOSTILE, GROAN_VOLUME, 0.5F + level.random.nextFloat() * 0.15F);
+        }
+    }
+
+    /** Le grondement des portails : celui des portails de Deeper Darker, a defaut celui du Nether, grave. */
+    private static net.minecraft.sounds.SoundEvent groan() {
+        return net.minecraft.core.registries.BuiltInRegistries.SOUND_EVENT
+                .getOptional(ResourceLocation.fromNamespaceAndPath("deeperdarker", "ambient.portal.groan"))
+                .orElse(SoundEvents.PORTAL_AMBIENT);
     }
 
     /**
@@ -456,21 +543,6 @@ public final class Eclipse {
                     player.addEffect(new MobEffectInstance(MobEffects.DARKNESS, 80, 0, false, false, true));
                     level.playSound(null, player.blockPosition(), SoundEvents.SCULK_CLICKING, SoundSource.HOSTILE,
                             1.0F, 0.5F);
-                }
-            }
-        }
-    }
-
-    /** Pres d'un portail ouvert, l'Obscurite revient par bouffees. */
-    private static void darken(ServerLevel level) {
-        for (ServerPlayer player : level.players()) {
-            if (player.isSpectator()) {
-                continue;
-            }
-            for (BlockPos pos : RIFTS.keySet()) {
-                if (player.blockPosition().closerThan(pos, DARK_RADIUS)) {
-                    player.addEffect(new MobEffectInstance(MobEffects.DARKNESS, 70, 0, true, false, false));
-                    break;
                 }
             }
         }
@@ -518,6 +590,7 @@ public final class Eclipse {
         dissolve(level);
         active = false;
         LAST_BURN.clear();
+        EclipseWatchers.clear();
     }
 
     /** @return combien d'horreurs se sont dissoutes */
@@ -541,6 +614,7 @@ public final class Eclipse {
         RIFTS.clear();
         LAST_BURN.clear();
         active = false;
+        EclipseWatchers.clear();
     }
 
     /** Pour le banc : une tique d'Eclipse, hors de la meteo. */
