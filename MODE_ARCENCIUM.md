@@ -9980,3 +9980,136 @@ de possible, il reessaie trois secondes plus tard.
   undergarden eternal_starlight creeperoverhaul variantsandventures lionfishapi resourcefullib
   deeperdarker evilcraft endermanoverhaul`, puis `--server --clean`.
 - Pas entendu : l'automate ne peut pas ecouter. Le son se juge en partie.
+
+## 109. Les abominations de l'Eclipse : Born in Chaos et Mutant Monsters *(27 sept. 2026, soir)*
+
+« As-tu reellement ajoute des monstres plus effrayants et plus inquietants ? Parce que celui que tu
+as mis, je l'ai vu, il est sympa, mais j'avais vu des choses plus effrayantes, par exemple des
+abominations. Est-ce que c'est le genre de choses qu'on a dans nos mods ? » (le joueur, 27 sept.)
+
+### A. Ce que le modpack avait : un casting en photo
+
+La reponse honnete etait non : la deuxieme version (§108) avait pris ce qui etait deja en dev. Les
+cles `entity.*` des fichiers de langue des 446 jars du profil donnent 1 539 creatures dans 65 mods ;
+37 candidates ont ete photographiees par l'automate, une par une, dans un STUDIO
+(`nom@casting:mod.creature`, `PhotoAutomaton.placeCasting`) : une dalle noire a 200 de haut, a
+minuit, la creature sans IA eclairee par des lumieres invisibles, la camera a une distance faite a
+sa taille. La premiere serie, au bord d'un lac en plein jour, ne valait rien : creatures petites et
+dans l'eau, morts-vivants en feu, loup-garou d'EvilCraft encore villageois ; la deuxieme brulait
+(l'Afrit d'Occultism met le feu autour de lui : `doFireTick` coupe, feu et restes nettoyes entre deux
+prises).
+
+Verdict, montre au joueur sur planche : de l'inquietant (les hommes-poissons Deepling de Cataclysm,
+le Ver hurleur et le Mille-pattes de sculk de Deeper Darker, le Pendu sans nom), aucune abomination.
+Le Rejeton de Shub-Niggurath d'Occultism, seule horreur lovecraftienne, fait une demi-case et sert un
+familier. Ailleurs, pour NeoForge 1.21.1 : Fungal Infection: Spore (119 Mo, une infection qui se
+propage), Mutant Monsters, Born in Chaos ; Scape and Run: Parasites n'existe qu'en 1.12.2.
+
+**Choix du joueur** : ni mes favorites du modpack, ni Spore ; TELECHARGER Mutant Monsters v21.1.1
+(Modrinth, 1,3 Mo, demande Puzzles Lib, deja la) et Born in Chaos 1.7.6 (Modrinth, 11,8 Mo). Tailles
+et SHA-512 verifiees contre Modrinth ; NeoForge 21.1.21+ et 21.1.65+ : le profil (21.1.174) et le dev
+(21.1.193) conviennent.
+
+### B. Le bestiaire (`weather/Eclipse`, troisieme version)
+
+Casting des deux mods (35 creatures). Les vagues :
+- ordinaires : Rodeur des cauchemars (3 ; invisible, deux yeux qui luisent), Chiens de l'effroi (3),
+  Essaim (2 ; un homme fait de mouches), Squelettes siamois (2), Voleur de vie (2), Esprit sans
+  repos (2), Persecuteur ecarlate (2), Squelette cogneur (1), Chevalier a la porte (1) ; et de la
+  deuxieme version : Shattered (3), Murmur (3), spectre (2), Tangled (2), Enderman du chene noir
+  (2), Stranghoul (1), squelette-creeper (1) ; Creeper fantome (2, ajoute a la demande du joueur :
+  il explose, mais le terrain ne bouge pas) ;
+- elites : Enderman mutant (3), Zombie mutant (2, ajoute a la demande du joueur), vraie forme du
+  Voleur de vie (2), Chef de meute (2), Mere des
+  araignees (1), Esprit du chaos (1), Chevalier du chaos dechu (1), squelette mutant (1) ; et
+  Stalker (2), Cauchemar (2), Faucheuse (1), loup-garou (1), Farseer (2).
+**Sortis** : l'acolyte et les illageois corrompus (des humains). **Pas pris** : le creeper mutant
+(vert vif, il ne fait pas peur dans le noir), la famille des citrouilles et le Krampus (Halloween,
+Noel), les mouches et asticots seuls (trop petits). J'avais aussi laisse le zombie mutant et le
+Creeper fantome ; le joueur, sur la planche : « il manque le phantom creeper et le mutant zombie,
+ajoute-les ».
+
+### C. Le verrou, et les portes derobees
+
+- Le tag `eclipse_horrors` compte 105 types : tout Born in Chaos (sauf ses projectiles) et les
+  mutants s'y ajoutent. Leurs apparitions naturelles, leurs structures et leurs evenements (les
+  « invasions » de Born in Chaos, le Rodeur qui traque la nuit) sont refuses hors de l'Eclipse.
+- **Ce qui entre sans apparition** (`EntityJoinLevelEvent`) : hors de l'Eclipse, une horreur qui
+  n'est pas passee par l'apparition -- une invocation, un evenement du mod, une transformation --
+  est refusee ; la commande, l'oeuf et nos propres apparitions passent (`ALLOWED`, note a
+  l'apparition, relu a l'entree). Seule exception, le loup-garou d'EvilCraft (§108).
+- **Pendant l'Eclipse**, ce qu'une horreur fait naitre (les mouches de l'Essaim, la meute du Chef,
+  la vraie forme du Voleur de vie, les deux moities des Squelettes siamois) recoit la marque, et se
+  dissout avec elle a la fin.
+
+### D. Le monde n'est pas abime
+
+L'Enderman mutant arrache des blocs pour les lancer. Les horreurs de l'Eclipse ne touchent plus au
+monde (`EntityMobGriefingEvent` refuse pour tout ce qui porte la marque, et pour les projectiles
+qu'elles tirent) : ni bloc arrache, ni terrain explose. Elles restent dangereuses pour le joueur.
+
+### E. Les guetteurs
+
+S'ajoutent le Rodeur des cauchemars -- de loin, deux yeux dans le noir --, le Voleur de vie
+encapuchonne, et le Missionnaire, qui porte un pendu au bout d'une perche.
+
+### F. Vu, et essaye
+
+- Banc `partie` (serveur des bancs avec les deux jars) : 28 creatures installees, puis 30 ; premier passage
+  68 OK, 1 KO : la vraie forme du Voleur de vie et l'Esprit du chaos « ne mouraient pas ». Elles ont
+  une ENTREE EN SCENE : le banc frappait 40 fois sans leur laisser vivre une tique. Avec cinq tiques
+  de vie entre deux coups, toutes meurent : 69 OK, 0 KO ; de meme avec le Zombie mutant et le Creeper
+  fantome (30 creatures, 69 OK). Le guetteur est sorti en Missionnaire, puis en Voleur de vie, en
+  vue, et parti des qu'on l'a regarde.
+- Photos : le casting des deux mods (studio, vignettes eclaircies) ; les nouvelles dans le noir de
+  l'Eclipse, a sept blocs (`nom@eclipse:horreur/mod.creature`) : on voit surtout des YEUX (le
+  Rodeur, le Chef de meute, la vraie forme du Voleur de vie, la Mere des araignees) et des formes ;
+  eclaircies, elles y sont toutes, a moitie dans les herbes d'un sous-bois. Pres d'une horreur, le
+  noir se referme a 0,75 (§108) : c'est voulu, mais peut-etre trop pour se battre -- a juger en
+  partie ; `EclipseClient.CLOSED` est le seul reglage.
+
+## 110. Les modeles de Jak en cubes : l'essai du JET-Board *(27 sept. 2026, soir)*
+
+« Actuellement, on a les voitures originales du jeu Jak. Pareil pour l'arme, et pour toutes les armes
+de Jak 3, et pour le JET-Board. D'apres toi, est-ce que ce serait difficile de les faire en version
+Minecraft ? Je trouve que ca deconnecte un petit peu de la realite du jeu, qui est cense etre
+cubique. » (le joueur, 27 sept.) Reponse : faisable ; essai sur le JET-Board d'abord (accepte).
+
+### A. L'outil (`tools/jak_cubes.py`)
+
+Il relit un .bin du dossier `jak_gun` tel que le mod le lit, et en fait des cubes de 1/N bloc :
+1. chaque triangle est parcouru en points serres (un tiers de cube), avec la couleur que le mod
+   dessinerait (texel de l'atlas x couleur de sommet) ; un texel transparent est un trou ;
+2. la palette (16 couleurs) se fait sur les points ; chaque cube prend la MOYENNE de ses points,
+   ramenee a la couleur la plus proche de la palette, eclaircie d'un gain de 1,3 ; un cube dont aucun
+   voisin ne partage la couleur prend celle de ses voisins (les points isoles s'en vont, les traits
+   d'eco bleu restent) ;
+3. seules les faces a l'air libre sont gardees, fusionnees en rectangles de meme couleur.
+La grille est faite OS PAR OS : les pieces qui bougent bougent avec leurs cubes (c'est ce qui
+permettra le Morph Gun, dont les douze armes sont douze poses d'un seul squelette). Os, poses et
+transformations sont recopies octet pour octet. Chaque face vise un texel blanc de l'atlas et porte
+sa couleur en couleur de sommet : ni atlas nouveau, ni rendu nouveau.
+
+Sortie : `jak_gun/cubes/<modele>_c<N>.bin`. L'ESSAI : avec `EMERALDWEAPONS_JAK_CUBES=16` (ou 32), le
+mod lit la version en cubes quand elle existe (`JakGunModel.load`) ; sans la variable, rien ne change.
+
+### B. Ce que les essais ont appris
+
+1. La couleur la plus frequente d'un cube tombait sur les jointures sombres de la texture ; la
+   moyenne brute faisait des taches boueuses. La moyenne ramenee a la palette garde la clarte et des
+   couleurs franches.
+2. En jeu, meme a couleur egale, les cubes sortent plus sombres que le modele de Jak (le pont mesure
+   36-42 contre 73 sur les photos) : leurs faces sont droites la ou Jak a des pentes tournees vers le
+   ciel, et le pack de shaders ombre les creux entre les cubes. Le gain (1,3) en rattrape une partie.
+3. JET-Board : 244 triangles de Jak ; en 1/16 de bloc, 2 895 cubes et 7 866 triangles ; en 1/32,
+   10 627 cubes et 22 736 triangles. Une planche seule les porte sans peine ; une voiture (4 a 5 blocs)
+   devra rester en 1/16.
+
+### C. Vu
+
+Photos en jeu (monde `haven_board_photos` copie, vues `haven:board_face` et `haven:board_planche`),
+le modele de Jak, puis les cubes de 1/16 et de 1/32 : la forme passe (le rebord dore, les ailerons a
+l'arriere, les eclats cyan) ; les cubes restent un peu plus sombres.
+
+**Choix du joueur** : les cubes de 1/16 (le pixel de Minecraft) ; puis les voitures, les motos et le
+Morph Gun, dans cet ordre, photos a chaque etape. La version de 1/32 est retiree du mod.

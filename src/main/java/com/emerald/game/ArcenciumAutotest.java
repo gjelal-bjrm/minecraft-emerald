@@ -269,16 +269,26 @@ public final class ArcenciumAutotest {
             }
             // ELLE MEURT sous les coups d'un joueur : sinon sa vague ne mourrait jamais, ni son portail
             if (made != null) {
+                // cinq tiques de vie entre deux coups : certaines (Born in Chaos) ont une entree en scene
+                // pendant laquelle rien ne les touche
                 for (int hit = 0; hit < 40 && made.isAlive(); hit++) {
                     made.invulnerableTime = 0;
                     made.hurt(level.damageSources().playerAttack(striker), 100000.0F);
                     if (made instanceof net.minecraft.world.entity.LivingEntity living && living.isDeadOrDying()) {
                         break;
                     }
+                    for (int t = 0; t < 5 && made.isAlive(); t++) {
+                        made.tick();
+                    }
                 }
                 boolean dead = !made.isAlive() || (made instanceof net.minecraft.world.entity.LivingEntity l && l.isDeadOrDying());
                 if (!dead) {
-                    unkillable.add(id);
+                    String why = made instanceof net.minecraft.world.entity.LivingEntity l
+                            ? " (PV " + Math.round(l.getHealth()) + "/" + Math.round(l.getMaxHealth()) + ", invulnerable "
+                            + made.isInvulnerable() + ", effets " + l.getActiveEffects().stream()
+                            .map(e -> e.getEffect().getRegisteredName() + " " + e.getAmplifier()).toList() + ")"
+                            : "";
+                    unkillable.add(id + why);
                 }
                 made.discard();
             }

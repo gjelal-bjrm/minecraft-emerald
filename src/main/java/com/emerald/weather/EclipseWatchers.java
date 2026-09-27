@@ -40,6 +40,9 @@ import java.util.UUID;
  * silencieux) et ne compte dans aucune vague : ce n'est que de la peur. Marque de l'Eclipse, il se
  * dissout avec elle.
  *
+ * Depuis le §109, aussi le Rodeur des cauchemars de Born in Chaos (invisible : deux yeux qui
+ * luisent dans le noir), le Voleur de vie encapuchonne et le Missionnaire, qui porte un pendu.
+ *
  * Il faut le VOIR : noir sur une colline noire, a 22 blocs, la premiere photo le cachait tout a fait.
  * Il essaie donc plusieurs places et garde la plus lisible -- jamais derriere un arbre ou une
  * colline (rien entre les yeux du joueur et lui), decoupe sur le ciel si possible, sinon devant le
@@ -53,7 +56,8 @@ public final class EclipseWatchers {
     public static final String TAG = "emeraldweapons_eclipse_watcher";
     /** Ce qui guette, du plus effrayant au repli du jeu de base. */
     private static final String[] TYPES = {"deeperdarker:stalker", "graveyard:nightmare",
-            "endermanoverhaul:dark_oak_enderman", "minecraft:enderman"};
+            "endermanoverhaul:dark_oak_enderman", "born_in_chaos_v1:nightmare_stalker",
+            "born_in_chaos_v1:lifestealer", "born_in_chaos_v1:missioner", "minecraft:enderman"};
     private static final double NEAR = 15.0;
     private static final double FAR = 24.0;
     /** Tant de places essayees par apparition ; la plus lisible l'emporte. */

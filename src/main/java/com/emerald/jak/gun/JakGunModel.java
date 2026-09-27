@@ -241,9 +241,20 @@ public final class JakGunModel {
         return new JakGunModel(name, ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN));
     }
 
+    /**
+     * L'ESSAI DES CUBES (cahier §109) : avec EMERALDWEAPONS_JAK_CUBES=16 (ou 32), le mod lit la
+     * version en cubes d'un modele (tools/jak_cubes.py, dossier jak_gun/cubes/) quand elle existe.
+     */
+    private static final String CUBES = System.getenv("EMERALDWEAPONS_JAK_CUBES");
+
     /** Lit un .bin du dossier jak_gun, sans cache. */
     public static JakGunModel load(String name) throws IOException {
         String path = FOLDER + name + ".bin";
+        if (CUBES != null && !CUBES.isBlank()
+                && JakGunModel.class.getResource(FOLDER + "cubes/" + name + "_c" + CUBES.trim() + ".bin") != null) {
+            path = FOLDER + "cubes/" + name + "_c" + CUBES.trim() + ".bin";
+            LOGGER.info("Morph Gun : {} en cubes ({})", name, path);
+        }
         try (InputStream in = JakGunModel.class.getResourceAsStream(path)) {
             if (in == null) {
                 throw new IOException(path + " introuvable dans le jar du mod");

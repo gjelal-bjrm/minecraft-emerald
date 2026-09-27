@@ -638,16 +638,22 @@ quelque chose approche.
 
 - **Trois portails d'horreur** s'ouvrent autour de chaque joueur. On les entend gronder avant de
   les voir, et leurs fissures rouges percent le noir.
-- Il en sort des **vagues** qui vous chassent aussitôt : Shattered, Murmur, spectres, Tangled,
-  Enderman du chêne noir… À partir de la Pression, une **élite** ferme la vague
-  dans un rugissement : Stalker, Cauchemar, Faucheuse, loup-garou ou Farseer.
+- Il en sort des **vagues** qui vous chassent aussitôt : le Rôdeur des cauchemars (invisible, on ne
+  voit que ses yeux), les Chiens de l'effroi, l'Essaim, les Squelettes siamois, le Voleur de vie,
+  le Creeper fantôme, des esprits, des Shattered, le Murmur… À partir de la Pression, une **élite**
+  ferme la vague dans un rugissement : l'Enderman mutant, le Zombie mutant, la vraie forme du Voleur
+  de vie, le Chef de meute, la Mère des araignées, l'Esprit du chaos, le Chevalier du chaos déchu, le
+  Stalker, le Cauchemar… Certaines
+  élites ont une entrée en scène pendant laquelle rien ne les touche.
 - **Tuez toute la vague d'un portail** : il implose et laisse **4 Éclats du Destin**. Laissé
   ouvert 75 secondes, il en relâche une autre.
 - On ne traverse pas un portail : il vous rejette, vous blesse et vous aveugle.
-- Parfois, une **silhouette** vous observe au bord du noir, sans bouger. Elle ne reste pas
-  quand on la regarde en face.
-- À la fin, les portails restants implosent et les horreurs se dissolvent. Ces créatures
-  n'apparaissent nulle part ailleurs.
+- Parfois, une **silhouette** vous observe au bord du noir, sans bouger — ou seulement deux yeux.
+  Elle ne reste pas quand on la regarde en face.
+- Les horreurs n'abîment pas le monde : elles n'arrachent ni ne font sauter aucun bloc. Vous,
+  en revanche, elles ne vous épargnent pas.
+- À la fin, les portails restants implosent et les horreurs se dissolvent, avec tout ce qu'elles
+  ont appelé. Ces créatures n'apparaissent nulle part ailleurs.
 
 Le **Filtre de Brume** immunise à tous les dégâts de météo — mais laisse la
 Surcharge.
@@ -1057,7 +1063,7 @@ Sur un serveur d'essai (`run-server`), chacun écrit son rapport puis arrête le
 - `EMERALDWEAPONS_AUTOTEST=parcours ./gradlew runServer` : le parcours (fiche sur disque, arme qui suit les formes du joueur, ville paisible, bouton verrouillé, titre et objectifs du guide ; puis le lot 2 : râtelier du QG, deuxième arrivée envahie, reprise des rues, retour après la défaite, porte de la victoire ; le Portail de Haven — recette, pose, anneau de la ville au QG, aller-retour du Monde ouvert, Défi quitté, reprise ; les appartements — catalogue du coffre sans fond, objets qui restent à Haven, un coffre par appartement, fenêtres fermées puis ouvertes, poser chez soi et pas dehors, casser ce qu'on a posé et pas les murs ; puis les transports : les huit stations, l'arche et sa recharge, le portail des tours ; puis l'agenda, l'équipe attendue au QG et la réunion), rapport `run-server/parcours_autotest.txt` ;
 - `EMERALDWEAPONS_AUTOTEST=faune ./gradlew runServer` : les animaux de la ville (carte de l'eau, places de chaque espèce, plafonds, dangers tenus au large et agressifs au large seulement, piqûre des méduses, armée de mouettes, compagnons à l'invasion), rapport `run-server/faune_autotest.txt` ; avant, `python tools/dev_mods.py --server alexsmobs aquaculture livingthings`, après, `python tools/dev_mods.py --server --clean` ;
 - `EMERALDWEAPONS_AUTOTEST=quetes ./gradlew runServer` : les quêtes des héros (le livre des quêtes, les six héros et le bateau du Pêcheur, les cartes du chat et leurs jetons, l'épreuve de tir jusqu'à la médaille, la pêche au poids, les coffres engloutis, la chasse aux mouettes, la patrouille, la tenue du port et l'invasion qui va avec, les orbes cachés et ceux des rails, la boutique de Tess et ses sceaux, la course du JET-Board et ses médailles, puis le ménage), rapport `run-server/quetes_autotest.txt` ; avant, `python tools/dev_mods.py --server alexsmobs aquaculture livingthings`, après, `python tools/dev_mods.py --server --clean` ;
-- `EMERALDWEAPONS_AUTOTEST=partie ./gradlew runServer` : la partie (chances de la Forge et métal perdu, coffres des sanctuaires selon l'avancée, vol d'élytre des ailes +20, bouclier d'Arcencium, plumes d'ailes en récompense, usure sans casse, Grand Froid de l'Aurore, Proie de la Battue et sa garde, arches, cycle d'ouverture des météos, Éclipse, bestiaires, garnisons et matières des trois sanctuaires, arène du boss), rapport `run-server/partie_autotest.txt`. Les épreuves 9 à 12 demandent des mods au serveur des bancs : `python tools/dev_mods.py --server graveyard alexsmobs twilightforest cataclysm irons_spellbooks undergarden eternal_starlight creeperoverhaul variantsandventures lionfishapi resourcefullib deeperdarker evilcraft endermanoverhaul`, puis `--server --clean`.
+- `EMERALDWEAPONS_AUTOTEST=partie ./gradlew runServer` : la partie (chances de la Forge et métal perdu, coffres des sanctuaires selon l'avancée, vol d'élytre des ailes +20, bouclier d'Arcencium, plumes d'ailes en récompense, usure sans casse, Grand Froid de l'Aurore, Proie de la Battue et sa garde, arches, cycle d'ouverture des météos, Éclipse, bestiaires, garnisons et matières des trois sanctuaires, arène du boss), rapport `run-server/partie_autotest.txt`. Les épreuves 9 à 12 demandent des mods au serveur des bancs : `python tools/dev_mods.py --server graveyard alexsmobs twilightforest cataclysm irons_spellbooks undergarden eternal_starlight creeperoverhaul variantsandventures lionfishapi resourcefullib deeperdarker evilcraft endermanoverhaul puzzleslib`, plus les jars de Mutant Monsters et de Born in Chaos copiés dans `run-server/mods` tant qu'ils ne sont pas dans le profil, puis `--server --clean`.
 
 Pour regarder un terrain (arbres, biomes) sans jouer : le run `photos` entre dans le monde
 jetable `run/saves/photos` ; avec `EMERALDWEAPONS_PHOTOS="nom@biome;nom@biome@hauteur"` (et
@@ -1120,6 +1126,10 @@ Les animations des apparences d'ailes (vingt images chacune, `textures/wings/ani
 un rechargement des ressources (F3+T) les relit en jeu.
 
 La vitesse des voitures et des motos se règle dans `VehicleSpec.MAX_SPEED_MS`.
+
+Les modèles de Jak en cubes (cahier §110) : `python tools/jak_cubes.py jet_board --cube 16 --apercu`
+écrit `jak_gun/cubes/jet_board_c16.bin` (et des vues de contrôle dans `build/jak/cubes/`) ; le jeu le
+lit à la place du modèle de Jak quand on le lance avec `EMERALDWEAPONS_JAK_CUBES=16`.
 
 Pour arriver devant le bar du Hip Hog juste après la pose, sans bouger avant :
 `/tp @s ~375 ~66 ~211` — la porte est à quelques pas.

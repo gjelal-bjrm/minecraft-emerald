@@ -95,6 +95,26 @@ import java.util.UUID;
  * Tous deux restent dans le tag : nulle part ailleurs non plus. Ni l'Enderman des cavernes
  * d'Enderman Overhaul : a ciel ouvert, il se teleporte de lui-meme sous un bloc (CaveEnderman.tick,
  * meme sans IA -- le casting en photo l'a montre), et fuirait sa vague.
+ *
+ * LES ABOMINATIONS (27 sept. soir, cahier §109). Le joueur : « As-tu reellement ajoute des monstres
+ * plus effrayants ? [...] j'avais vu des choses plus effrayantes, des abominations ». Le modpack
+ * n'en avait pas ; il a fait telecharger Mutant Monsters et Born in Chaos. Les vagues y puisent :
+ * le Rodeur des cauchemars (invisible, deux yeux), les Chiens de l'effroi, l'Essaim, les Squelettes
+ * siamois, le Voleur de vie, les esprits ; en elites, l'Enderman mutant, la vraie forme du Voleur de
+ * vie, la Mere des araignees, le Chef de meute... Les illageois corrompus et l'acolyte (des humains)
+ * sortent des vagues. Tout Born in Chaos et les mutants rejoignent le verrou. Le joueur, sur la
+ * planche du casting : « il manque le phantom creeper et le mutant zombie, ajoute-les » -- le Creeper
+ * fantome dans les vagues (il explose, mais le terrain ne bouge pas : onGrief), le Zombie mutant en
+ * elite.
+ *
+ * TROIS GARDE-FOUS, pour ces creatures-la :
+ *   - rien de ce qui entre dans le monde hors de l'Eclipse sans etre passe par l'apparition (un
+ *     evenement du mod, une invocation) n'y reste (onJoin) -- sauf ce que la commande, l'oeuf ou
+ *     nous-memes avons fait naitre ;
+ *   - pendant l'Eclipse, ce qu'une horreur fait naitre (les mouches de l'Essaim, la meute du Chef)
+ *     porte la marque, et se dissout avec elle ;
+ *   - les horreurs de l'Eclipse n'abiment pas le monde (onGrief) : l'Enderman mutant n'arrache pas
+ *     de blocs, rien n'explose le terrain. Elles restent dangereuses pour le joueur.
  */
 @EventBusSubscriber(modid = EmeraldWeaponsMod.MODID)
 public final class Eclipse {
@@ -126,23 +146,39 @@ public final class Eclipse {
     private static final float GROAN_VOLUME = 3.0F;
 
     /**
-     * Les horreurs d'une vague, et leur poids. Les creatures les plus derangeantes pesent le plus :
-     * les Shattered aveugles de Deeper Darker, le Murmur et son cou sans fin, les spectres, les
-     * Tangled d'Eternal Starlight, l'Enderman du chene noir ; de The Graveyard, les
-     * squelettes-creepers, les acolytes et les illageois corrompus, plus rares. En fin de vague, a
-     * partir de la Pression, une ELITE : le Stalker, le Cauchemar, la Faucheuse, le loup-garou, le
-     * Farseer. Un mod absent, et ses monstres sont simplement sautes.
+     * Les horreurs d'une vague, et leur poids. Born in Chaos d'abord (§109) : le Rodeur des
+     * cauchemars, les Chiens de l'effroi, l'Essaim, les Squelettes siamois, le Voleur de vie, les
+     * esprits ; puis les Shattered aveugles de Deeper Darker, le Murmur et son cou sans fin, les
+     * spectres, les Tangled, l'Enderman du chene noir. En fin de vague, a partir de la Pression, une
+     * ELITE : l'Enderman mutant, la vraie forme du Voleur de vie, le Chef de meute, la Mere des
+     * araignees, l'Esprit du chaos, le Chevalier dechu, le Stalker, le Cauchemar... Un mod absent, et
+     * ses monstres sont simplement sautes.
      */
     private static final String[][] COMMON = {
-            {"deeperdarker:shattered", "4"}, {"alexsmobs:murmur", "3"}, {"graveyard:wraith", "3"},
-            {"eternal_starlight:tangled", "4"},
-            {"endermanoverhaul:dark_oak_enderman", "2"},
-            {"eternal_starlight:stranghoul", "2"}, {"graveyard:skeleton_creeper", "2"},
-            {"graveyard:acolyte", "1"}, {"graveyard:corrupted_vindicator", "1"},
-            {"graveyard:corrupted_pillager", "1"}};
+            {"born_in_chaos_v1:nightmare_stalker", "3"}, {"born_in_chaos_v1:dread_hound", "3"},
+            {"born_in_chaos_v1:swarmer", "2"}, {"born_in_chaos_v1:siamese_skeletons", "2"},
+            {"born_in_chaos_v1:lifestealer", "2"}, {"born_in_chaos_v1:restless_spirit", "2"},
+            {"born_in_chaos_v1:scarlet_persecutor", "2"}, {"born_in_chaos_v1:skeleton_thrasher", "1"},
+            {"born_in_chaos_v1:door_knight", "1"}, {"born_in_chaos_v1:phantom_creeper", "2"},
+            {"deeperdarker:shattered", "3"}, {"alexsmobs:murmur", "3"}, {"graveyard:wraith", "2"},
+            {"eternal_starlight:tangled", "2"}, {"endermanoverhaul:dark_oak_enderman", "2"},
+            {"eternal_starlight:stranghoul", "1"}, {"graveyard:skeleton_creeper", "1"}};
     private static final String[][] ELITE = {
-            {"deeperdarker:stalker", "3"}, {"graveyard:nightmare", "3"}, {"graveyard:reaper", "2"},
-            {"evilcraft:werewolf", "2"}, {"alexsmobs:farseer", "2"}};
+            {"mutantmonsters:mutant_enderman", "3"}, {"mutantmonsters:mutant_zombie", "2"},
+            {"born_in_chaos_v1:lifestealer_true_form", "2"},
+            {"born_in_chaos_v1:dire_hound_leader", "2"}, {"born_in_chaos_v1:mother_spider", "1"},
+            {"born_in_chaos_v1:spiritof_chaos", "1"}, {"born_in_chaos_v1:fallen_chaos_knight", "1"},
+            {"mutantmonsters:mutant_skeleton", "1"},
+            {"deeperdarker:stalker", "2"}, {"graveyard:nightmare", "2"}, {"graveyard:reaper", "1"},
+            {"evilcraft:werewolf", "1"}, {"alexsmobs:farseer", "2"}};
+    /**
+     * Ce qui entre dans le monde sans apparition et qu'on laisse faire hors de l'Eclipse : le
+     * villageois loup-garou d'EvilCraft se change la nuit par addFreshEntity, en retirant le
+     * villageois -- l'arreter le ferait disparaitre.
+     */
+    private static final java.util.Set<String> JOIN_EXEMPT = java.util.Set.of("evilcraft:werewolf");
+    /** Les horreurs que l'apparition a laissees passer (commande, oeuf...), attendues a l'entree. */
+    private static final java.util.Set<UUID> ALLOWED = new java.util.HashSet<>();
     /** Si aucun mod d'horreur n'est la : de quoi que l'Eclipse ne soit pas vide. */
     private static final String[][] FALLBACK = {{"minecraft:wither_skeleton", "2"}, {"minecraft:stray", "3"}};
 
@@ -638,6 +674,7 @@ public final class Eclipse {
         MobSpawnType type = event.getSpawnType();
         if (type == MobSpawnType.COMMAND || type == MobSpawnType.SPAWN_EGG
                 || type == MobSpawnType.DISPENSER || type == MobSpawnType.BUCKET) {
+            ALLOWED.add(mob.getUUID());
             return;                                 // les essais a la main
         }
         if (active && (type == MobSpawnType.MOB_SUMMONED || type == MobSpawnType.REINFORCEMENT
@@ -649,11 +686,42 @@ public final class Eclipse {
 
     @SubscribeEvent
     public static void onJoin(EntityJoinLevelEvent event) {
-        if (event.getLevel().isClientSide() || !event.loadedFromDisk() || active) {
+        if (event.getLevel().isClientSide()) {
             return;
         }
-        if (event.getEntity().getTags().contains(TAG)) {
-            event.setCanceled(true);                // une horreur d'une Eclipse passee ne revient pas
+        Entity entity = event.getEntity();
+        if (event.loadedFromDisk()) {
+            if (!active && entity.getTags().contains(TAG)) {
+                event.setCanceled(true);            // une horreur d'une Eclipse passee ne revient pas
+            }
+            return;
+        }
+        if (spawning || !entity.getType().is(HORRORS)) {
+            return;                                 // nos apparitions se marquent elles-memes
+        }
+        boolean allowed = ALLOWED.remove(entity.getUUID());
+        if (active) {
+            // ce qu'une horreur fait naitre (mouches de l'Essaim, meute du Chef) se dissout avec elle
+            entity.addTag(TAG);
+            return;
+        }
+        String id = net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).toString();
+        if (!allowed && !JOIN_EXEMPT.contains(id)) {
+            event.setCanceled(true);                // un evenement du mod, une invocation : pas hors de l'Eclipse
+        }
+    }
+
+    /** Les horreurs de l'Eclipse n'abiment pas le monde : ni blocs arraches, ni terrain explose. */
+    @SubscribeEvent
+    public static void onGrief(net.neoforged.neoforge.event.entity.EntityMobGriefingEvent event) {
+        Entity entity = event.getEntity();
+        if (entity == null) {
+            return;
+        }
+        Entity source = entity instanceof net.minecraft.world.entity.projectile.Projectile shot && shot.getOwner() != null
+                ? shot.getOwner() : entity;
+        if (source.getTags().contains(TAG)) {
+            event.setCanGrief(false);
         }
     }
 }
