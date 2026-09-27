@@ -44,7 +44,10 @@ public class JakVehicleRenderer extends EntityRenderer<JakVehicleEntity> {
     @Override
     public void render(JakVehicleEntity entity, float entityYaw, float partialTick,
                        PoseStack poseStack, MultiBufferSource buffers, int packedLight) {
-        JakVehicleModel model = JakVehicleModels.get(entity.model());
+        // de loin, les cubes plus gros (cahier §110) : le trafic de Haven ne pese pas sur l'image
+        boolean distant = entity.distanceToSqr(this.entityRenderDispatcher.camera.getPosition())
+                > com.emerald.jak.JakCubes.FAR_DISTANCE * com.emerald.jak.JakCubes.FAR_DISTANCE;
+        JakVehicleModel model = JakVehicleModels.drawn(entity.model(), distant);
         if (model != null) {
             poseStack.pushPose();
             // Lacet Minecraft y : l'entite regarde (-sin y, 0, cos y). La rotation
@@ -65,9 +68,12 @@ public class JakVehicleRenderer extends EntityRenderer<JakVehicleEntity> {
             PoseStack.Pose pose = poseStack.last();
             // l'epave est noircie au quart de ses couleurs (hvehicle.gc:1172), comme dans le jeu
             boolean wreck = entity.wrecked();
-            emit(model, pose, buffers.getBuffer(RenderType.entityCutoutNoCull(ATLAS)), packedLight, false, wreck);
+            // en cubes, la couleur est dans les sommets : une texture blanche (cahier §110)
+            ResourceLocation texture = com.emerald.jak.JakCubes.isCubed(model.atlasWidth, model.atlasHeight)
+                    ? com.emerald.jak.JakCubes.TEXTURE : ATLAS;
+            emit(model, pose, buffers.getBuffer(RenderType.entityCutoutNoCull(texture)), packedLight, false, wreck);
             if (model.hasBlend) {
-                emit(model, pose, buffers.getBuffer(RenderType.entityTranslucent(ATLAS)), packedLight, true, wreck);
+                emit(model, pose, buffers.getBuffer(RenderType.entityTranslucent(texture)), packedLight, true, wreck);
             }
             poseStack.popPose();
             poseStack.popPose();
@@ -85,11 +91,22 @@ public class JakVehicleRenderer extends EntityRenderer<JakVehicleEntity> {
             if (((model.flags[t] & JakVehicleModel.FLAG_BLEND) != 0) != blend) {
                 continue;
             }
+            boolean quad = (model.flags[t] & JakVehicleModel.FLAG_QUAD) != 0;
             for (int corner = 0; corner < 4; corner++) {
                 int s = t * 3 + Math.min(corner, 2);   // le 4e sommet repete le 3e
                 int i3 = s * 3;
                 int i2 = s * 2;
-                out.addVertex(pose, p[i3], p[i3 + 1], p[i3 + 2])
+                float x = p[i3];
+                float y = p[i3 + 1];
+                float z = p[i3 + 2];
+                if (quad && corner == 3) {
+                    // un rectangle des cubes : le quatrieme coin, c0 + c2 - c1
+                    int c = t * 9;
+                    x = p[c] + p[c + 6] - p[c + 3];
+                    y = p[c + 1] + p[c + 7] - p[c + 4];
+                    z = p[c + 2] + p[c + 8] - p[c + 5];
+                }
+                out.addVertex(pose, x, y, z)
                         .setColor(wreck ? darken(color[s]) : color[s])
                         .setUv(uv[i2], uv[i2 + 1])
                         .setOverlay(OverlayTexture.NO_OVERLAY)

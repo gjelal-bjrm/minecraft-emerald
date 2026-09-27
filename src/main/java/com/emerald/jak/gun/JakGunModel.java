@@ -39,6 +39,11 @@ public final class JakGunModel {
 
     public static final int FLAG_BLEND = 1;
     public static final int FLAG_ENVMAP = 2;
+    /**
+     * Un RECTANGLE (les modeles en cubes, cahier §110) : les trois sommets sont trois coins, le
+     * quatrieme est c0 + c2 - c1. Une face de cube en un seul quad, au lieu de deux triangles.
+     */
+    public static final int FLAG_QUAD = 4;
 
     private static final int MAGIC = 'J' | ('K' << 8) | ('G' << 16) | ('N' << 24);
     private static final int VERSION = 1;
@@ -242,17 +247,46 @@ public final class JakGunModel {
     }
 
     /**
-     * L'ESSAI DES CUBES (cahier §109) : avec EMERALDWEAPONS_JAK_CUBES=16 (ou 32), le mod lit la
-     * version en cubes d'un modele (tools/jak_cubes.py, dossier jak_gun/cubes/) quand elle existe.
+     * Le modele de Jak 3 lui-meme, jamais les cubes : celui que les bancs mesurent (triangles, os,
+     * poses) -- les cubes n'en sont que l'image.
      */
-    private static final String CUBES = System.getenv("EMERALDWEAPONS_JAK_CUBES");
+    public static JakGunModel loadJak(String name) throws IOException {
+        String path = FOLDER + name + ".bin";
+        try (InputStream in = JakGunModel.class.getResourceAsStream(path)) {
+            if (in == null) {
+                throw new IOException(path + " introuvable dans le jar du mod");
+            }
+            return parse(name, in.readAllBytes());
+        }
+    }
 
-    /** Lit un .bin du dossier jak_gun, sans cache. */
+    /**
+     * Le coin c (0 a 3) du triangle t, au repos, dans out. Le quatrieme repete le troisieme -- chaque
+     * triangle se dessine en quad --, sauf pour un rectangle des cubes (FLAG_QUAD) : c0 + c2 - c1.
+     */
+    public void corner(int t, int c, float[] out) {
+        if (c == 3 && (this.flags[t] & FLAG_QUAD) != 0) {
+            int b = t * 9;
+            out[0] = this.positions[b] + this.positions[b + 6] - this.positions[b + 3];
+            out[1] = this.positions[b + 1] + this.positions[b + 7] - this.positions[b + 4];
+            out[2] = this.positions[b + 2] + this.positions[b + 8] - this.positions[b + 5];
+            return;
+        }
+        int s = (t * 3 + Math.min(c, 2)) * 3;
+        out[0] = this.positions[s];
+        out[1] = this.positions[s + 1];
+        out[2] = this.positions[s + 2];
+    }
+
+    /**
+     * Lit un .bin du dossier jak_gun, sans cache ; sa version en cubes (dossier cubes/) quand le
+     * modele est passe en cubes et qu'elle existe (com.emerald.jak.JakCubes, cahier §110).
+     */
     public static JakGunModel load(String name) throws IOException {
         String path = FOLDER + name + ".bin";
-        if (CUBES != null && !CUBES.isBlank()
-                && JakGunModel.class.getResource(FOLDER + "cubes/" + name + "_c" + CUBES.trim() + ".bin") != null) {
-            path = FOLDER + "cubes/" + name + "_c" + CUBES.trim() + ".bin";
+        String cubed = com.emerald.jak.JakCubes.suffix(name);
+        if (cubed != null && JakGunModel.class.getResource(FOLDER + "cubes/" + name + cubed + ".bin") != null) {
+            path = FOLDER + "cubes/" + name + cubed + ".bin";
             LOGGER.info("Morph Gun : {} en cubes ({})", name, path);
         }
         try (InputStream in = JakGunModel.class.getResourceAsStream(path)) {

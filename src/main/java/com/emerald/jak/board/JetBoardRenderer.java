@@ -58,9 +58,20 @@ public class JetBoardRenderer extends EntityRenderer<JetBoardEntity> {
             if (((model.flags[tri] & JakGunModel.FLAG_BLEND) != 0) != blend) {
                 continue;
             }
+            boolean quad = (model.flags[tri] & JakGunModel.FLAG_QUAD) != 0;
             for (int corner = 0; corner < 4; corner++) {
                 int s = tri * 3 + Math.min(corner, 2);
-                out.addVertex(pose, model.positions[s * 3], model.positions[s * 3 + 1], model.positions[s * 3 + 2])
+                float x = model.positions[s * 3];
+                float y = model.positions[s * 3 + 1];
+                float z = model.positions[s * 3 + 2];
+                if (quad && corner == 3) {
+                    // un rectangle des cubes (cahier §110) : le quatrieme coin, c0 + c2 - c1
+                    int c = tri * 9;
+                    x = model.positions[c] + model.positions[c + 6] - model.positions[c + 3];
+                    y = model.positions[c + 1] + model.positions[c + 7] - model.positions[c + 4];
+                    z = model.positions[c + 2] + model.positions[c + 8] - model.positions[c + 5];
+                }
+                out.addVertex(pose, x, y, z)
                         .setColor(model.colors[s])
                         .setUv(model.uvs[s * 2], model.uvs[s * 2 + 1])
                         .setOverlay(overlay)

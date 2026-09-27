@@ -138,6 +138,9 @@ public final class MorphGunItemRenderer extends BlockEntityWithoutLevelRenderer 
     }
 
     /** La boite des sommets visibles de la pose courante. */
+    private final double[] first = new double[3];
+    private final double[] second = new double[3];
+
     private float[] bounds(JakGunModel model) {
         float[] box = {Float.MAX_VALUE, Float.MAX_VALUE, Float.MAX_VALUE, -Float.MAX_VALUE, -Float.MAX_VALUE, -Float.MAX_VALUE};
         double[] p = this.point;
@@ -161,14 +164,28 @@ public final class MorphGunItemRenderer extends BlockEntityWithoutLevelRenderer 
         GunPose pose = this.pose;
         double[] p = this.point;
         double[] n = this.normal;
+        double[] first = this.first;
+        double[] second = this.second;
         for (int t = 0; t < model.triangles; t++) {
             if (((model.flags[t] & JakGunModel.FLAG_BLEND) != 0) != blend || !pose.visible(t)) {
                 continue;
             }
+            boolean quad = (model.flags[t] & JakGunModel.FLAG_QUAD) != 0;
             for (int corner = 0; corner < 4; corner++) {
                 int s = t * 3 + Math.min(corner, 2);   // le 4e sommet repete le 3e
                 pose.vertex(s, p);
                 pose.normal(s, n);
+                if (corner == 0) {
+                    System.arraycopy(p, 0, first, 0, 3);
+                } else if (corner == 1) {
+                    System.arraycopy(p, 0, second, 0, 3);
+                } else if (corner == 3 && quad) {
+                    // un rectangle des cubes (cahier §110) : c0 + c2 - c1, une fois habille
+                    pose.vertex(t * 3 + 2, p);
+                    p[0] = first[0] + p[0] - second[0];
+                    p[1] = first[1] + p[1] - second[1];
+                    p[2] = first[2] + p[2] - second[2];
+                }
                 out.addVertex(last, (float) p[0], (float) p[1], (float) p[2])
                         .setColor(model.colors[s])
                         .setUv(model.uvs[s * 2], model.uvs[s * 2 + 1])

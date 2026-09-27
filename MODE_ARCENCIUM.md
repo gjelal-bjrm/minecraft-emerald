@@ -10113,3 +10113,46 @@ l'arriere, les eclats cyan) ; les cubes restent un peu plus sombres.
 
 **Choix du joueur** : les cubes de 1/16 (le pixel de Minecraft) ; puis les voitures, les motos et le
 Morph Gun, dans cet ordre, photos a chaque etape. La version de 1/32 est retiree du mod.
+
+### D. Les vehicules : le poids
+
+Les voitures de Jak font 8 blocs de long ; en 1/16, 134 cubes. Premier essai : 82 000 triangles et
+9 Mo pour la seule cara (celle de Jak : 1 189 triangles), un quart d'heure de calcul. Trois
+remedes, dans l'outil :
+1. l'ECHANTILLONNAGE suit le cote le plus court de chaque triangle (un pas unique, sur le plus long,
+   couvrait une languette de 4 m sur 5 cm comme un triangle plein) : cinq secondes par voiture ;
+2. le DEDANS FERME est rempli (ce que l'air du dehors n'atteint pas, os par os) : les parois
+   cachees de la carrosserie ne comptent plus ; un habitacle ouvert reste vide ;
+3. les couleurs sont LISSEES (deux passes : un cube prend la couleur d'au moins quatre de ses six
+   voisins de face) : les grandes faces deviennent unies, donc de grands rectangles.
+Et dans le format : un rectangle s'ecrit en UN enregistrement (drapeau 4, trois coins ; le mod deduit
+le quatrieme, c0 + c2 - c1) -- moitie moins de sommets. La cara passe a 19 712 rectangles (2,2 Mo).
+
+C'est encore seize fois Jak, redessine a chaque image : plusieurs voitures du trafic feraient ramer
+Haven. D'ou deux NIVEAUX DE DETAIL (`JakCubes.FAR_DISTANCE`, 24 blocs) : de pres -- sa propre
+voiture, celles d'a cote -- les cubes de 1/16 ; au loin, ou la difference ne se voit plus, ceux de
+1/8 (5 888 rectangles pour la cara). Les six vehicules : 10 Mo pour les deux tailles.
+
+Le modele de Jak reste celui du JEU : la camera du conducteur y mesure encore son capot
+(`JakVehicleClient.cockpit`) ; `JakVehicleModels.drawn` donne ce qui se dessine. L'atlas des
+vehicules n'a pas un texel blanc : leurs cubes annoncent un atlas de 16 x 16, et le rendu leur donne
+une texture blanche (`textures/entity/jak_cubes.png`).
+
+### E. Le Morph Gun et ce qu'il tire
+
+42 os en cubes, 3 212 rectangles (Jak : 1 115 triangles). Les poses et les treize transformations
+sont recopiees : chaque forme cache les pieces des autres comme avant. Pour un rectangle, le
+quatrieme coin se deduit APRES l'habillage (ses coins suivent le meme os). Les couleurs de famille
+(chargeurs rouges, jaunes, bleus, violets) sont de petites pieces : 40 couleurs pour l'arme au lieu
+de 16, une couleur vive qui couvre le tiers d'un cube l'emporte sur la moyenne, et un point vif isole
+n'est plus repeint. Aussi en cubes : les quatre munitions d'eco, la grenade, la soucoupe, le missile
+de la Super Nova. Le banc de l'arme mesure toujours le modele de Jak (`JakGunModel.loadJak`) : les
+cubes n'en sont que l'image. Restent comme dans Jak 3 : l'oeuf des orbes et les cibles du stand.
+
+### F. Vu
+
+Photos en jeu : les six vehicules de pres, au volant de cara (le capot ne cache pas la route) ; le
+Morph Gun au ratelier du QG (`haven:ratelier`), la forme rouge, en Jak 3 et en cubes. Le Morph Gun
+en main ne se photographie pas hors d'une partie ouverte de Haven : son gardien le reprend (l'arme
+n'existe que dans la ville, lobby ouvert, formes debloquees) ; le ratelier passe par le meme rendu.
+`EMERALDWEAPONS_JAK_CUBES=jak` montre tout comme dans Jak 3.

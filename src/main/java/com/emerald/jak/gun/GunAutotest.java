@@ -227,7 +227,7 @@ public final class GunAutotest {
         line("--- poses, par le chemin Java (JakGunModel depuis le jar, GunPose)");
         JakGunModel model;
         try {
-            model = JakGunModel.load(JakGunModel.GUN);
+            model = JakGunModel.loadJak(JakGunModel.GUN);
         } catch (IOException e) {
             check("morph_gun.bin lu depuis le jar", false, e.toString());
             return;
@@ -241,7 +241,12 @@ public final class GunAutotest {
         StringBuilder ammo = new StringBuilder();
         boolean ammoOk = true;
         for (GunForm.Family family : GunForm.Family.values()) {
-            JakGunModel m = JakGunModel.ammo(family);
+            JakGunModel m;
+            try {
+                m = JakGunModel.loadJak("gun_ammo_" + family.jak);
+            } catch (IOException e) {
+                m = null;
+            }
             int want = ammoTriangles[family.ordinal()];
             ammoOk &= m != null && m.triangles == want && m.poseNames.length == 0;
             ammo.append(family.jak).append(' ').append(m == null ? "illisible" : m.triangles + " triangles").append(" ; ");

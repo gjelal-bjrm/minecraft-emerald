@@ -18,6 +18,8 @@ import java.nio.charset.StandardCharsets;
 public final class JakVehicleModel {
 
     public static final int FLAG_BLEND = 1;
+    /** Un rectangle : le quatrieme coin est c0 + c2 - c1 (les vehicules en cubes, cahier §110). */
+    public static final int FLAG_QUAD = 4;
     /** Ce qui est devant un siege : a plus de tant de blocs devant lui... */
     private static final float AHEAD_FROM = 0.3F;
     /** ... et a moins de tant de cote. */

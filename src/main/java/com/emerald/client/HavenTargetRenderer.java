@@ -46,10 +46,12 @@ public class HavenTargetRenderer extends EntityRenderer<HavenTargetEntity> {
             pose.scale(scale, scale, scale);
             PoseStack.Pose last = pose.last();
             VertexConsumer out = buffers.getBuffer(RenderType.entityCutoutNoCull(MorphGunItemRenderer.ATLAS));
+            float[] at = new float[3];
             for (int tri = 0; tri < model.triangles; tri++) {
                 for (int corner = 0; corner < 4; corner++) {
                     int s = tri * 3 + Math.min(corner, 2);
-                    out.addVertex(last, model.positions[s * 3], model.positions[s * 3 + 1], model.positions[s * 3 + 2])
+                    model.corner(tri, corner, at);
+                    out.addVertex(last, at[0], at[1], at[2])
                             .setColor(model.colors[s])
                             .setUv(model.uvs[s * 2], model.uvs[s * 2 + 1])
                             .setOverlay(OverlayTexture.NO_OVERLAY)

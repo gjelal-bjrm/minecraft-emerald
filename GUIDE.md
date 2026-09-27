@@ -1127,9 +1127,11 @@ un rechargement des ressources (F3+T) les relit en jeu.
 
 La vitesse des voitures et des motos se règle dans `VehicleSpec.MAX_SPEED_MS`.
 
-Les modèles de Jak en cubes (cahier §110) : `python tools/jak_cubes.py jet_board --cube 16 --apercu`
-écrit `jak_gun/cubes/jet_board_c16.bin` (et des vues de contrôle dans `build/jak/cubes/`) ; le jeu le
-lit à la place du modèle de Jak quand on le lance avec `EMERALDWEAPONS_JAK_CUBES=16`.
+Les modèles de Jak en cubes (cahier §110) : le JET-Board, les six véhicules, le Morph Gun et ce qu'il
+tire se dessinent en cubes de 1/16 de bloc (les véhicules en 1/8 au-delà de 24 blocs). Pour les
+refaire : `python tools/jak_cubes.py <modèle> --cube 16` (et `--cube 8` pour un véhicule), `--apercu`
+pour une vue de contrôle dans `build/jak/cubes/`. Lancer le jeu avec `EMERALDWEAPONS_JAK_CUBES=jak`
+montre tout comme dans Jak 3.
 
 Pour arriver devant le bar du Hip Hog juste après la pose, sans bouger avant :
 `/tp @s ~375 ~66 ~211` — la porte est à quelques pas.

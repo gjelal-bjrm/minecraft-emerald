@@ -552,6 +552,17 @@ public final class PhotoAutomaton {
         net.minecraft.world.item.ItemStack stack = new net.minecraft.world.item.ItemStack(item);
         boolean offhand = item instanceof net.minecraft.world.item.ShieldItem;
         player.getInventory().selected = 0;
+        if (item == com.emerald.item.ModItems.MORPH_GUN.get()) {
+            // LE MORPH GUN n'existe que dans Haven, et c'est son gardien qui le donne (numero du lobby,
+            // formes du joueur) : toutes les formes debloquees, la barre videe, il le pose en premiere case
+            com.emerald.haven.journey.HavenProgress.grantForms(player.getUUID(), 0xFFF);
+            player.getInventory().clearContent();
+            handsView = shot.biome().getPath();
+            pendingGui = true;
+            player.teleportTo(level, stage.getX() + 0.5, stage.getY(), stage.getZ() - 2.5, 180.0F, 8.0F);
+            LOGGER.info("photos : {} (en main : le Morph Gun du gardien, {})", shot.name(), shot.biome().getPath());
+            return true;
+        }
         player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND,
                 offhand ? net.minecraft.world.item.ItemStack.EMPTY : stack.copy());
         player.setItemInHand(net.minecraft.world.InteractionHand.OFF_HAND,

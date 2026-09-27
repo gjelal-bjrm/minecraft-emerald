@@ -20,7 +20,12 @@ L'outil relit un .bin cuit par jak_gun.py, TEL QUE LE MOD LE LIT, et en fait des
    partage la couleur prend celle de ses voisins : les points isoles s'en vont, les lignes fines
    restent.
 4. NE GARDER QUE LES FACES A L'AIR LIBRE, et fusionner en rectangles les faces voisines de meme
-   couleur et de meme os (le « maillage glouton ») : bien moins de triangles.
+   couleur et de meme os (le « maillage glouton ») : bien moins de triangles. Un rectangle s'ecrit en
+   UN enregistrement (drapeau 4, trois coins ; le mod deduit le quatrieme) : moitie moins de sommets
+   a dessiner a chaque image.
+5. POUR LES VEHICULES, remplir ce que l'air du dehors n'atteint pas (l'interieur d'une carrosserie :
+   ses parois cachees ne comptent plus), et lisser les couleurs (un cube prend celle d'au moins quatre
+   de ses six voisins) : les grandes faces deviennent unies, donc de grands rectangles.
 
 LES OS RESTENT. La grille est faite OS PAR OS : chaque cube appartient a l'os du triangle qui l'a
 fait naitre. Les pieces qui bougent (ailerons de la planche, formes du Morph Gun) bougent avec leurs
@@ -54,19 +59,33 @@ except ImportError:
     sys.exit("Pillow est necessaire")
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-FOLDER = os.path.join(ROOT, "src", "main", "resources", "assets", "emeraldweapons", "jak_gun")
+ASSETS = os.path.join(ROOT, "src", "main", "resources", "assets", "emeraldweapons")
+FOLDER = os.path.join(ASSETS, "jak_gun")
 ATLAS = os.path.join(FOLDER, "morph_gun.png")
 OUT = os.path.join(FOLDER, "cubes")
+VEHICLES = os.path.join(ASSETS, "jak_vehicles")
+VEHICLE_ATLAS = os.path.join(ASSETS, "textures", "entity", "jak_vehicles", "atlas.png")
 PREVIEW = os.path.join(ROOT, "build", "jak", "cubes")
 
-# le format de jak_gun.py (repris ici : importer jak_gun tirerait les outils d'extraction)
+# le format de jak_gun.py, JKGN (repris ici : importer jak_gun tirerait les outils d'extraction)
 MAGIC = b"JKGN"
 VERSION = 1
 HEADER = struct.Struct("<4sIIIIIIIif3f3f")
 BONE = struct.Struct("<32shH10f12f")
 TRI = struct.Struct("<BBH" + "B3x3f2f3f4B" * 3)
 FLAG_BLEND = 1
+# un rectangle en un seul enregistrement : trois coins, le mod en deduit le quatrieme (c0 + c2 - c1)
+FLAG_QUAD = 4
 assert HEADER.size == 64 and BONE.size == 124 and TRI.size == 124
+# celui de jak_vehicle.py, JKVH : les voitures et les motos, sans os par sommet ni poses. Leur atlas
+# n'a pas de texel blanc : les cubes des vehicules disent un atlas de 16 x 16, et le rendu leur donne
+# alors la texture blanche des cubes (textures/entity/jak_cubes.png).
+VH_MAGIC = b"JKVH"
+VH_HEADER = struct.Struct("<4sIIIII3f3f")
+VH_BONE = struct.Struct("<24shH3f")
+VH_TRI = struct.Struct("<BBH" + "3f2f3f4B" * 3)
+assert VH_HEADER.size == 48 and VH_BONE.size == 40 and VH_TRI.size == 112
+CUBE_ATLAS = 16
 
 # les six faces d'un cube : direction, puis les deux axes du plan (u, v) et le cote
 FACES = [((1, 0, 0), 1, 2), ((-1, 0, 0), 1, 2), ((0, 1, 0), 0, 2),
@@ -75,6 +94,20 @@ FACES = [((1, 0, 0), 1, 2), ((-1, 0, 0), 1, 2), ((0, 1, 0), 0, 2),
 
 def read_model(path):
     raw = open(path, "rb").read()
+    if raw[:4] == VH_MAGIC:
+        head = list(VH_HEADER.unpack_from(raw, 0))
+        count, bones = head[2], head[3]
+        start = VH_HEADER.size + bones * VH_BONE.size
+        tris = []
+        for t in range(count):
+            f = VH_TRI.unpack_from(raw, start + t * VH_TRI.size)
+            verts = []
+            for q in range(3):
+                b = 3 + q * 12
+                verts.append({"bone": f[0], "pos": f[b:b + 3], "uv": f[b + 3:b + 5], "rgba": f[b + 8:b + 12]})
+            tris.append({"bone": f[0], "flags": f[1], "verts": verts})
+        return {"kind": "JKVH", "raw": raw, "head": head, "start": start, "end": start + count * VH_TRI.size,
+                "tris": tris}
     head = list(HEADER.unpack_from(raw, 0))
     if head[0] != MAGIC or head[1] != VERSION:
         sys.exit("%s : magie %r version %d" % (path, head[0], head[1]))
@@ -88,7 +121,7 @@ def read_model(path):
             b = 3 + q * 13
             verts.append({"bone": f[b], "pos": f[b + 1:b + 4], "uv": f[b + 4:b + 6], "rgba": f[b + 9:b + 13]})
         tris.append({"bone": f[0], "flags": f[1], "verts": verts})
-    return {"raw": raw, "head": head, "start": start, "end": start + count * TRI.size, "tris": tris}
+    return {"kind": "JKGN", "raw": raw, "head": head, "start": start, "end": start + count * TRI.size, "tris": tris}
 
 
 def white_texel(atlas):
@@ -108,20 +141,28 @@ def sample(model, atlas, cube):
     w, h = atlas.size
     px = atlas.load()
     size = 1.0 / cube
-    step = size / 3.0
+    step = size / 4.0
     keys, rgbs, blends = [], [], []
     holes = 0
     for tri in model["tris"]:
-        p = [v["pos"] for v in tri["verts"]]
-        uv = [v["uv"] for v in tri["verts"]]
-        col = [v["rgba"] for v in tri["verts"]]
+        verts = tri["verts"]
+        # LE COTE LE PLUS COURT D'ABORD : on part d'une de ses extremites, et le pas suit chaque cote.
+        # Un pas unique, sur le plus long cote, couvrait une languette de 4 m sur 5 cm comme un
+        # triangle plein -- des millions de points pour une voiture, un quart d'heure de calcul.
+        order = min(((0, 1, 2), (1, 2, 0), (2, 0, 1)),
+                    key=lambda o: math.dist(verts[o[0]]["pos"], verts[o[1]]["pos"]))
+        verts = [verts[order[0]], verts[order[1]], verts[order[2]]]
+        p = [v["pos"] for v in verts]
+        uv = [v["uv"] for v in verts]
+        col = [v["rgba"] for v in verts]
         blend = bool(tri["flags"] & FLAG_BLEND)
-        edge = max(math.dist(p[0], p[1]), math.dist(p[1], p[2]), math.dist(p[2], p[0]))
-        n = max(1, int(math.ceil(edge / step)))
-        for i in range(n + 1):
-            for j in range(n + 1 - i):
-                a, b = i / n, j / n
-                c = 1.0 - a - b
+        n1 = max(1, int(math.ceil(math.dist(p[0], p[1]) / step)))
+        n2 = max(1, int(math.ceil(max(math.dist(p[0], p[2]), math.dist(p[1], p[2])) / step)))
+        for i in range(n1 + 1):
+            b = i / n1                                  # le long du cote court, de p0 vers p1
+            for j in range(int((1.0 - b) * n2 + 1e-9) + 1):
+                c = j / n2                              # vers p2
+                a = 1.0 - b - c
                 x = a * p[0][0] + b * p[1][0] + c * p[2][0]
                 y = a * p[0][1] + b * p[1][1] + c * p[2][1]
                 z = a * p[0][2] + b * p[1][2] + c * p[2][2]
@@ -141,7 +182,11 @@ def sample(model, atlas, cube):
     return keys, rgbs, blends, holes
 
 
-def palette_of(keys, rgbs, blends, colors, gain=1.0):
+def saturation(rgb):
+    return max(rgb) - min(rgb)
+
+
+def palette_of(keys, rgbs, blends, colors, gain=1.0, smooth=0):
     """
     La couleur de chaque cube. La palette se fait sur les POINTS ; chaque cube prend la MOYENNE de
     ses points, ramenee a la couleur la plus proche de la palette : franche, et juste en clarte. (La
@@ -159,7 +204,9 @@ def palette_of(keys, rgbs, blends, colors, gain=1.0):
     indices = reduced.get_flattened_data() if hasattr(reduced, "get_flattened_data") else reduced.getdata()
     sums = defaultdict(lambda: [0, 0, 0, 0])
     translucent = Counter()
-    for key, rgb, blend in zip(keys, rgbs, blends):
+    votes = defaultdict(Counter)
+    for key, rgb, blend, index in zip(keys, rgbs, blends, indices):
+        votes[key][index] += 1
         acc = sums[key]
         acc[0] += rgb[0]
         acc[1] += rgb[1]
@@ -172,7 +219,14 @@ def palette_of(keys, rgbs, blends, colors, gain=1.0):
     def nearest(rgb):
         return min(range(colors), key=lambda i: (swatches[i][0] - rgb[0]) ** 2 * 3 + (swatches[i][1] - rgb[1]) ** 2 * 4
                    + (swatches[i][2] - rgb[2]) ** 2 * 2)
-    color = {key: nearest((acc[0] / acc[3], acc[1] / acc[3], acc[2] / acc[3])) for key, acc in sums.items()}
+    def pick(key, acc):
+        # UNE COULEUR VIVE QUI COUVRE LE TIERS DU CUBE L'EMPORTE : la moyenne delavait le violet d'un
+        # chargeur en gris rose ; sinon, la moyenne ramenee a la palette
+        index, count = votes[key].most_common(1)[0]
+        if saturation(swatches[index]) >= 60 and count * 10 >= acc[3] * 3:
+            return index
+        return nearest((acc[0] / acc[3], acc[1] / acc[3], acc[2] / acc[3]))
+    color = {key: pick(key, acc) for key, acc in sums.items()}
     lonely = 0
     fixed = {}
     for (bone, i, j, k), own in color.items():
@@ -185,15 +239,70 @@ def palette_of(keys, rgbs, blends, colors, gain=1.0):
                         if other is not None:
                             around[other] += 1
         if around and around[own] == 0:
-            fixed[(bone, i, j, k)] = around.most_common(1)[0][0]
+            other = around.most_common(1)[0][0]
+            # UN VOYANT N'EST PAS UN POINT ISOLE : une couleur vive au milieu du gris (les lumieres et
+            # les chargeurs colores du Morph Gun) reste ; seule une teinte proche est repeinte
+            if saturation(swatches[own]) >= 60 and saturation(swatches[own]) - saturation(swatches[other]) >= 30:
+                continue
+            fixed[(bone, i, j, k)] = other
             lonely += 1
     color.update(fixed)
+    # LE LISSAGE (les vehicules) : un cube prend la couleur que partagent au moins quatre de ses six
+    # voisins de face. Les grandes faces d'une carrosserie deviennent unies, et le maillage glouton en
+    # fait de grands rectangles : la voiture passe de 80 000 triangles a quelques milliers.
+    for _ in range(smooth):
+        fixed = {}
+        for (bone, i, j, k), own in color.items():
+            around = Counter()
+            for d in ((1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1)):
+                other = color.get((bone, i + d[0], j + d[1], k + d[2]))
+                if other is not None:
+                    around[other] += 1
+            if around:
+                best, count = around.most_common(1)[0]
+                if best != own and count >= 4:
+                    fixed[(bone, i, j, k)] = best
+        color.update(fixed)
     out = {}
     for key, index in color.items():
         see_through = translucent[key] * 2 > sums[key][3]
         r, g, b = (min(255, int(round(c * gain))) for c in swatches[index])
         out[key] = (r, g, b, 160 if see_through else 255, see_through)
     return out, lonely
+
+
+def fill_inside(voxels):
+    """
+    Les cubes que l'air du dehors n'atteint pas (six directions, os par os) : l'interieur d'une
+    carrosserie, entre deux parois. Remplis, ils ne laissent plus de faces cachees dans le modele --
+    la moitie des triangles d'une voiture. Un habitacle ouvert reste vide : l'air y entre.
+    """
+    by_bone = defaultdict(set)
+    for (bone, i, j, k) in voxels:
+        by_bone[bone].add((i, j, k))
+    added = {}
+    for bone, cells in by_bone.items():
+        lo = [min(c[a] for c in cells) - 1 for a in range(3)]
+        hi = [max(c[a] for c in cells) + 1 for a in range(3)]
+        outside = {tuple(lo)}
+        stack = [tuple(lo)]
+        while stack:
+            x, y, z = stack.pop()
+            for d in ((1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1)):
+                n = (x + d[0], y + d[1], z + d[2])
+                if (lo[0] <= n[0] <= hi[0] and lo[1] <= n[1] <= hi[1] and lo[2] <= n[2] <= hi[2]
+                        and n not in cells and n not in outside):
+                    outside.add(n)
+                    stack.append(n)
+        # la couleur d'un cube interieur ne se voit jamais : celle du premier cube de l'os
+        any_look = voxels[(bone,) + next(iter(cells))]
+        for x in range(lo[0] + 1, hi[0]):
+            for y in range(lo[1] + 1, hi[1]):
+                for z in range(lo[2] + 1, hi[2]):
+                    if (x, y, z) not in cells and (x, y, z) not in outside:
+                        added[(bone, x, y, z)] = any_look
+    voxels.update(added)
+    return len(added)
 
 
 def greedy_faces(voxels, cube):
@@ -244,27 +353,33 @@ def greedy_faces(voxels, cube):
 
 
 def write_model(model, quads, white, path):
+    vehicle = model["kind"] == "JKVH"
     tris = []
     for quad in quads:
         c = quad["corners"]
         r, g, b, a, translucent = quad["look"]
-        for tri in ((c[0], c[1], c[2]), (c[0], c[2], c[3])):
-            fields = [quad["bone"], FLAG_BLEND if translucent else 0, 0]
+        for tri in ((c[0], c[1], c[2]),):
+            fields = [quad["bone"], FLAG_QUAD | (FLAG_BLEND if translucent else 0), 0]
             for corner in tri:
-                fields.append(quad["bone"])
+                if not vehicle:
+                    fields.append(quad["bone"])
                 fields.extend(corner)
                 fields.extend(white)
                 fields.extend(quad["normal"])
                 fields.extend((r, g, b, a))
-            tris.append(TRI.pack(*fields))
+            tris.append((VH_TRI if vehicle else TRI).pack(*fields))
     points = [corner for quad in quads for corner in quad["corners"]]
     mn = [min(p[k] for p in points) for k in range(3)]
     mx = [max(p[k] for p in points) for k in range(3)]
     head = model["head"]
-    header = HEADER.pack(head[0], head[1], len(tris), head[3], head[4], head[5], head[6], head[7], head[8],
-                         head[9], *mn, *mx)
+    if vehicle:
+        header = VH_HEADER.pack(head[0], head[1], len(tris), head[3], CUBE_ATLAS, CUBE_ATLAS, *mn, *mx)
+    else:
+        header = HEADER.pack(head[0], head[1], len(tris), head[3], head[4], head[5], head[6], head[7], head[8],
+                             head[9], *mn, *mx)
     raw = model["raw"]
-    body = raw[HEADER.size:model["start"]] + b"".join(tris) + raw[model["end"]:]
+    size = VH_HEADER.size if vehicle else HEADER.size
+    body = raw[size:model["start"]] + b"".join(tris) + raw[model["end"]:]
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "wb") as handle:
         handle.write(header + body)
@@ -327,41 +442,58 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("model", help="nom du .bin du dossier jak_gun (jet_board, morph_gun...)")
     parser.add_argument("--cube", type=int, action="append", help="cubes par bloc (16 : le pixel de Minecraft)")
-    parser.add_argument("--palette", type=int, default=16, help="nombre de couleurs")
+    parser.add_argument("--palette", type=int, default=None,
+                        help="nombre de couleurs (par defaut 16 ; 40 pour un modele a plus de vingt os, le Morph Gun)")
     parser.add_argument("--gain", type=float, default=1.3, help="eclaircissement de la palette")
+    parser.add_argument("--lisse", type=int, default=None,
+                        help="passes de lissage des couleurs (par defaut : 2 pour un vehicule, 0 sinon)")
     parser.add_argument("--apercu", action="store_true", help="dessiner les vues de controle")
     args = parser.parse_args()
     cubes = args.cube or [16]
-    model = read_model(os.path.join(FOLDER, args.model + ".bin"))
-    atlas = Image.open(ATLAS).convert("RGBA")
-    white = white_texel(atlas)
+    if os.path.exists(os.path.join(VEHICLES, args.model + ".bin")):
+        model = read_model(os.path.join(VEHICLES, args.model + ".bin"))
+        atlas = Image.open(VEHICLE_ATLAS).convert("RGBA")
+        white = (0.5, 0.5)                      # le centre de la texture blanche des cubes
+        out_dir = os.path.join(VEHICLES, "cubes")
+    else:
+        model = read_model(os.path.join(FOLDER, args.model + ".bin"))
+        atlas = Image.open(ATLAS).convert("RGBA")
+        white = white_texel(atlas)
+        out_dir = OUT
     print("%s : %d triangles de Jak 3" % (args.model, len(model["tris"])))
     if args.apercu:
         draw(original_tris(model, atlas), "%s : le modele de Jak 3" % args.model,
              os.path.join(PREVIEW, args.model + "_jak.png"))
     for cube in cubes:
         keys, rgbs, blends, holes = sample(model, atlas, cube)
-        voxels, lonely = palette_of(keys, rgbs, blends, args.palette, args.gain)
+        smooth = args.lisse if args.lisse is not None else (2 if model["kind"] == "JKVH" else 0)
+        # LE MORPH GUN et ses quarante-sept os : ses couleurs de famille (chargeurs rouges, jaunes, bleus,
+        # violets) sont de petites pieces ; seize couleurs pour toute l'arme les noyaient dans le gris
+        colors = args.palette or (40 if model["head"][3] > 20 else 16)
+        voxels, lonely = palette_of(keys, rgbs, blends, colors, args.gain, smooth)
+        inside = fill_inside(voxels)
         quads = greedy_faces(voxels, cube)
-        path = os.path.join(OUT, "%s_c%d.bin" % (args.model, cube))
+        path = os.path.join(out_dir, "%s_c%d.bin" % (args.model, cube))
         count, mn, mx = write_model(model, quads, white, path)
         bones = Counter(key[0] for key in voxels)
-        print("  1/%d de bloc : %d cubes sur %d os (%d points isoles repeints), %d rectangles, %d triangles, "
-              "%.2f x %.2f x %.2f blocs -> %s"
-              % (cube, len(voxels), len(bones), lonely, len(quads), count, mx[0] - mn[0], mx[1] - mn[1],
-                 mx[2] - mn[2], os.path.relpath(path, ROOT)))
+        print("  1/%d de bloc : %d cubes sur %d os (%d points isoles repeints, %d cubes interieurs, lissage %d), "
+              "%d rectangles, %d triangles, %.2f x %.2f x %.2f blocs, %d Ko -> %s"
+              % (cube, len(voxels), len(bones), lonely, inside, smooth, len(quads), count, mx[0] - mn[0],
+                 mx[1] - mn[1], mx[2] - mn[2], os.path.getsize(path) // 1024, os.path.relpath(path, ROOT)))
         if args.apercu:
             back = read_model(path)
             tris = []
             for tri in back["tris"]:
                 pts = [v["pos"] for v in tri["verts"]]
+                if tri["flags"] & FLAG_QUAD:
+                    pts = pts + [tuple(pts[0][k] + pts[2][k] - pts[1][k] for k in range(3))]
                 rgb = tri["verts"][0]["rgba"][:3]
                 e1 = [pts[1][k] - pts[0][k] for k in range(3)]
                 e2 = [pts[2][k] - pts[0][k] for k in range(3)]
                 n = (e1[1] * e2[2] - e1[2] * e2[1], e1[2] * e2[0] - e1[0] * e2[2], e1[0] * e2[1] - e1[1] * e2[0])
                 ln = math.sqrt(sum(c * c for c in n)) or 1.0
                 tris.append((pts, tuple(abs(c / ln) for c in n), rgb))
-            draw(tris, "%s : cubes de 1/%d de bloc, %d couleurs" % (args.model, cube, args.palette),
+            draw(tris, "%s : cubes de 1/%d de bloc, %d couleurs" % (args.model, cube, colors),
                  os.path.join(PREVIEW, "%s_c%d.png" % (args.model, cube)))
 
 
