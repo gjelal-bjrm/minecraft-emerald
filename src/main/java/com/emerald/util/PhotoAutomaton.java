@@ -1319,6 +1319,32 @@ public final class PhotoAutomaton {
         if (shot.biome().getPath().startsWith("porte")) {
             return doorShot(server, player, shot, shot.biome().getPath().substring("porte".length()));
         }
+        if (shot.biome().getPath().startsWith("coffre")) {
+            // le coffre d'amenagement de l'appartement 1 (cahier §107), ouvert sur l'onglet N
+            String n = shot.biome().getPath().substring("coffre".length());
+            ServerLevel haven = com.emerald.haven.Haven.level(server);
+            com.emerald.haven.HavenArrival.Layout rooms = com.emerald.haven.HavenArrival.layout(server);
+            if (haven == null || rooms == null || rooms.rooms().isEmpty()) {
+                return false;
+            }
+            com.emerald.haven.HavenArrival.Room room = rooms.rooms().get(0);
+            com.emerald.haven.furnish.HavenApartments.keepChests(server, haven);
+            BlockPos chest = com.emerald.haven.furnish.HavenApartments.chestSpot(server, haven, room);
+            if (chest == null) {
+                return false;
+            }
+            if (PREPARED.add(shot.name())) {
+                // une fois : un changement de mode ou de place a chaque tique refermerait le menu
+                net.minecraft.core.Direction front = com.emerald.haven.furnish.HavenApartments.toDoor(room);
+                BlockPos stand = chest.relative(front, 2);
+                player.teleportTo(haven, stand.getX() + 0.5, stand.getY(), stand.getZ() + 0.5,
+                        front.getOpposite().toYRot(), 20.0F);
+                if (!n.isEmpty()) {
+                    com.emerald.haven.furnish.HavenFurnish.open(player, chest, Integer.parseInt(n));
+                }
+            }
+            return true;
+        }
         boolean ring = shot.biome().getPath().startsWith("anneau_ville");
         if (ring || shot.biome().getPath().startsWith("camera")) {
             if (ring && PREPARED.add(shot.name())) {

@@ -264,6 +264,10 @@ public final class HavenAgenda {
             return Component.translatable("game.emeraldweapons.haven.agenda.ferme");
         }
         return switch (HavenJourney.objective(player)) {
+            case FENETRES -> Component.translatable("game.emeraldweapons.haven.agenda.rdv.fenetres");
+            case MEUBLES -> Component.translatable("game.emeraldweapons.haven.agenda.rdv.meubles",
+                    HavenProgress.get(player.getUUID()).furnished,
+                    com.emerald.haven.furnish.HavenApartments.FURNITURE_GOAL);
             case QG -> Component.translatable("game.emeraldweapons.haven.agenda.rdv.qg");
             case EQUIPE -> Component.translatable("game.emeraldweapons.haven.agenda.rdv.equipe",
                     HavenJourney.reachedHq(player.server), HavenJourney.teamSize(player.server));

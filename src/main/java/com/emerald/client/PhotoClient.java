@@ -58,7 +58,8 @@ public final class PhotoClient {
         }
         String hands = PhotoAutomaton.handsView();
         // l'inventaire et le livre se prennent OUVERTS : leur ecran ne retient pas la prise
-        boolean wantsScreen = "inventaire".equals(hands) || (hands != null && hands.startsWith("livre")) || "curios".equals(hands);
+        boolean wantsScreen = "inventaire".equals(hands) || (hands != null && hands.startsWith("livre")) || "curios".equals(hands)
+                || wanted.startsWith("menu_");     // un menu que le serveur ouvre (le coffre d'amenagement, §107)
         if (hands == null && (mc.options.keyUp.isDown() || mc.options.keyDown.isDown())) {
             // la prise d'avant tenait Z ou S (en planche) : on les lache
             mc.options.keyUp.setDown(false);

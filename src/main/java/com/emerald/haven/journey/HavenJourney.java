@@ -90,7 +90,7 @@ public final class HavenJourney {
     public static final int REPRISE_GOAL = 25;
 
     /** Ce que le guide demande au joueur. */
-    public enum Objective { QG, EQUIPE, BORNE, ATTENTE, ARME, REPRISE, QUETE }
+    public enum Objective { FENETRES, MEUBLES, QG, EQUIPE, BORNE, ATTENTE, ARME, REPRISE, QUETE }
 
     /** Un titre a jouer : a quelle tique, et lequel (HavenTitlePayload). */
     private record Title(long due, int kind) {
@@ -147,6 +147,8 @@ public final class HavenJourney {
         if (!entry.welcomed) {
             entry.welcomed = true;
             HavenProgress.save();
+            // ses fenetres se ferment : la premiere quete les lui fait ouvrir (cahier §107)
+            com.emerald.haven.furnish.HavenApartments.closeWindows(player);
             TITLES.put(player.getUUID(), new Title(due, HavenTitlePayload.ARRIVEE));
             award(player, "haven_arrivee");
             LOGGER.info("Parcours de Haven : premiere arrivee de {}", player.getGameProfile().getName());
@@ -207,6 +209,12 @@ public final class HavenJourney {
      */
     public static Objective objective(ServerPlayer player) {
         UUID id = player.getUUID();
+        // les quetes de l'appartement, avant tout le reste, a la premiere arrivee (cahier §107) : le QG
+        // n'est pas compte tant qu'elles ne sont pas faites
+        HavenProgress.Entry first = HavenProgress.get(id);
+        if (com.emerald.haven.furnish.HavenApartments.pending(first)) {
+            return first.windows ? Objective.MEUBLES : Objective.FENETRES;
+        }
         if (!HQ_THIS_LOBBY.contains(id) && inHq(player)) {
             reachHq(player);
         }
@@ -389,6 +397,18 @@ public final class HavenJourney {
         ServerBossEvent bar = BARS.computeIfAbsent(id, k -> new ServerBossEvent(Component.empty(),
                 BossEvent.BossBarColor.BLUE, BossEvent.BossBarOverlay.PROGRESS));
         switch (objective) {
+            case FENETRES -> {
+                bar.setName(Component.translatable("game.emeraldweapons.haven.parcours.objectif.fenetres"));
+                bar.setColor(BossEvent.BossBarColor.GREEN);
+                bar.setProgress(0.0F);
+            }
+            case MEUBLES -> {
+                int placed = HavenProgress.get(id).furnished;
+                int goal = com.emerald.haven.furnish.HavenApartments.FURNITURE_GOAL;
+                bar.setName(Component.translatable("game.emeraldweapons.haven.parcours.objectif.meubles", placed, goal));
+                bar.setColor(BossEvent.BossBarColor.GREEN);
+                bar.setProgress(Math.min(1.0F, placed / (float) goal));
+            }
             case QG -> {
                 double distance = distanceToHq(player);
                 double start = START_DISTANCE.computeIfAbsent(id, k -> Math.max(1.0, distance));

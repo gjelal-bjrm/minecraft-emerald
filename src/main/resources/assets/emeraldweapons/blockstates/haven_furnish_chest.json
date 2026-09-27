@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "emeraldweapons:block/haven_furnish_chest"
+    },
+    "facing=east": {
+      "model": "emeraldweapons:block/haven_furnish_chest",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "emeraldweapons:block/haven_furnish_chest",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "emeraldweapons:block/haven_furnish_chest",
+      "y": 270
+    }
+  }
+}

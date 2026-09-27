@@ -223,6 +223,9 @@ public final class HavenRules {
             return;
         }
         event.setCanceled(true);
+        if (com.emerald.haven.furnish.HavenApartments.handleBreak(event)) {
+            return;             // pose chez lui : retire, sans rien lacher (cahier §107)
+        }
         if (event.getPlayer() instanceof ServerPlayer player) {
             player.displayClientMessage(Component.translatable("game.emeraldweapons.haven.protected")
                     .withStyle(ChatFormatting.RED), true);
@@ -231,14 +234,9 @@ public final class HavenRules {
 
     @SubscribeEvent
     public static void onPlace(BlockEvent.EntityPlaceEvent event) {
-        if (inHaven(event.getLevel()) && guarded(event.getEntity())) {
-            event.setCanceled(true);
-        }
-    }
-
-    @SubscribeEvent
-    public static void onMultiPlace(BlockEvent.EntityMultiPlaceEvent event) {
-        if (inHaven(event.getLevel()) && guarded(event.getEntity())) {
+        // un lit ou une porte arrivent aussi par ici (EntityMultiPlaceEvent en est une sorte)
+        if (inHaven(event.getLevel()) && guarded(event.getEntity())
+                && !com.emerald.haven.furnish.HavenApartments.acceptPlace(event)) {
             event.setCanceled(true);
         }
     }
@@ -367,7 +365,8 @@ public final class HavenRules {
     @SubscribeEvent
     public static void onUseBlock(PlayerInteractEvent.RightClickBlock event) {
         Level level = event.getLevel();
-        if (level.isClientSide() || !Haven.is(level) || chantier(event.getEntity())) {
+        if (level.isClientSide() || !Haven.is(level) || chantier(event.getEntity())
+                || com.emerald.haven.furnish.HavenApartments.mayUse(event.getEntity(), event.getItemStack())) {
             return;
         }
         Block block = level.getBlockState(event.getPos()).getBlock();

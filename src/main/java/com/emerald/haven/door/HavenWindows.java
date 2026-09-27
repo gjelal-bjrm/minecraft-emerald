@@ -98,6 +98,11 @@ public final class HavenWindows {
                 SoundSource.BLOCKS, Math.min(1.0F, 0.5F + 0.05F * n), 1.35F);
     }
 
+    /** Toute la fenetre fermee (ou ouverte) tout de suite, sans course de l'iris : les quetes de l'appartement. */
+    public static void set(Level level, Window window, boolean closed) {
+        apply(level, window, closed, level.getGameTime() - DURATION);
+    }
+
     /** Toute la fenetre a cet etat, depuis cette tique : chaque vitre le garde avec le rectangle. */
     static void apply(Level level, Window window, boolean closed, long start) {
         for (BlockPos pane : window.panes()) {

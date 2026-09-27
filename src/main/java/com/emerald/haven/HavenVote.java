@@ -374,6 +374,13 @@ public final class HavenVote {
                     .withStyle(ChatFormatting.YELLOW), true);
             return;
         }
+        if (!player.isFakePlayer() && com.emerald.haven.furnish.HavenApartments.pending(
+                com.emerald.haven.journey.HavenProgress.get(player.getUUID()))) {
+            // les quetes de l'appartement d'abord (cahier §107)
+            player.displayClientMessage(Component.translatable("game.emeraldweapons.haven.appart.vote")
+                    .withStyle(ChatFormatting.YELLOW), true);
+            return;
+        }
         boolean changed = state.setVote(player.getUUID(), mode);
         // la confirmation, a chaque clic (vitre de la borne ou bouton de l'ecran) :
         // le nom du choix au-dessus de la barre d'objets, et un son

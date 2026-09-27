@@ -162,6 +162,10 @@ public class HavenWindowBlock extends Block implements EntityBlock {
                                                BlockHitResult hit) {
         if (!level.isClientSide) {
             HavenWindows.toggle(level, pos);
+            if (player instanceof net.minecraft.server.level.ServerPlayer server) {
+                // la premiere quete de l'appartement : ouvrir ses fenetres (cahier §107)
+                com.emerald.haven.furnish.HavenApartments.windowUsed(server, pos);
+            }
         }
         return InteractionResult.sidedSuccess(level.isClientSide);
     }

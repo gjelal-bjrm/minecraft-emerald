@@ -49,6 +49,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -186,6 +187,7 @@ public final class HavenJourneyAutotest {
         returnDefeat(server);
         returnVictory(server);
         portal(server);
+        apartments(server);
         gates(server, level);
         departure(server, level);
         isolation(server);
@@ -1012,6 +1014,178 @@ public final class HavenJourneyAutotest {
             HavenReturn.resetForTest(server);
             HavenReturn.clearSubjects();
             restore(server, saved);
+        }
+    }
+
+    // ================================================================ 9 ter. les appartements a amenager (§107)
+
+    private static void apartments(MinecraftServer server) {
+        line("--- les appartements : coffre sans fond, construire chez soi, fenetres et meubles avant le QG");
+        ServerLevel overworld = server.overworld();
+        ServerLevel haven = Haven.level(server);
+        HavenState state = HavenState.get(server);
+        if (haven == null) {
+            check("appartements : la ville", false, "pas de dimension");
+            return;
+        }
+        // le catalogue : sans les mods du modpack (serveur des bancs), le jeu de base et le mod suffisent
+        var catalogue = com.emerald.haven.furnish.HavenFurnish.catalogue();
+        var cat = com.emerald.haven.furnish.HavenFurnish.Category.class;
+        int jak = catalogue.get(com.emerald.haven.furnish.HavenFurnish.Category.JAK3).size();
+        int lights = catalogue.get(com.emerald.haven.furnish.HavenFurnish.Category.LUMIERES).size();
+        int furniture = catalogue.get(com.emerald.haven.furnish.HavenFurnish.Category.MEUBLES).size();
+        int joinery = catalogue.get(com.emerald.haven.furnish.HavenFurnish.Category.MENUISERIE).size();
+        int fabric = catalogue.get(com.emerald.haven.furnish.HavenFurnish.Category.TISSUS).size();
+        int blocks = catalogue.get(com.emerald.haven.furnish.HavenFurnish.Category.BLOCS).size();
+        boolean noDanger = true;
+        for (var list : catalogue.values()) {
+            for (var item : list) {
+                String id = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(item).getPath();
+                noDanger &= !(id.equals("tnt") || id.equals("redstone") || id.endsWith("_ore") || id.contains("spawner")
+                        || id.contains("piston") || id.contains("pointed_dripstone"));
+            }
+        }
+        check("coffre d'amenagement : les onglets du jeu de base et de Jak 3 sont garnis, rien de dangereux",
+                jak >= 30 && lights >= 25 && furniture >= 10 && joinery >= 30 && fabric >= 60 && blocks >= 200 && noDanger,
+                "Jak 3 " + jak + ", lumieres " + lights + ", meubles " + furniture + ", menuiserie " + joinery
+                        + ", tissus " + fabric + ", blocs " + blocks + ", rien de dangereux " + noDanger + " " + cat.getSimpleName());
+
+        // les objets du coffre restent a Haven
+        FakePlayer q = new FakePlayer(overworld, new GameProfile(uuid("appart-q"), "[Parcours]"));
+        q.getInventory().add(com.emerald.haven.furnish.HavenFurnish.stack(net.minecraft.world.item.Items.OAK_PLANKS));
+        q.getInventory().add(new ItemStack(net.minecraft.world.item.Items.OAK_PLANKS, 5));
+        int stripped = com.emerald.haven.furnish.HavenFurnish.strip(q);
+        int keptPlanks = q.getInventory().countItem(net.minecraft.world.item.Items.OAK_PLANKS);
+        check("les objets du coffre (marques) sont retires en quittant la ville, les siens restent",
+                stripped == 1 && keptPlanks == 5, stripped + " retire(s), " + keptPlanks + " planches gardees");
+
+        // le menu, clique comme un joueur
+        String menu = com.emerald.haven.furnish.HavenFurnish.benchMenu(q, BlockPos.ZERO.offset((int) q.getX(), (int) q.getY(), (int) q.getZ()));
+        com.emerald.haven.furnish.HavenFurnish.strip(q);
+        check("le menu du coffre : onglets, pages, une pile entiere et marquee en main, rendue au catalogue, rangee accroupi ;"
+                + " le catalogue n'accepte rien", menu == null, menu == null ? "tout va" : menu);
+
+        // un coffre dans chaque appartement
+        com.emerald.haven.furnish.HavenApartments.keepChests(server, haven);
+        HavenArrival.Layout rooms = HavenArrival.layout(server);
+        List<String> chests = new ArrayList<>();
+        boolean chestsOk = rooms != null && !rooms.rooms().isEmpty();
+        if (rooms != null) {
+            for (HavenArrival.Room room : rooms.rooms()) {
+                BlockPos spot = com.emerald.haven.furnish.HavenApartments.chestSpot(server, haven, room);
+                boolean ok = spot != null && haven.getBlockState(spot).is(ModBlocks.HAVEN_FURNISH_CHEST.get())
+                        && com.emerald.haven.furnish.HavenApartments.inBox(server, room, spot, 0);
+                chestsOk &= ok;
+                chests.add(room.number() + ": " + (spot == null ? "rien" : spot.subtract(state.origin()).toShortString()) + " " + ok);
+            }
+        }
+        check("un coffre d'amenagement dans chaque appartement", chestsOk, String.join(" ; ", chests));
+
+        // les quetes : un nouveau venu
+        UUID id = q.getUUID();
+        HavenProgress.temporary(id, 0);
+        HavenProgress.get(id).windows = false;          // un vrai nouveau venu : ses quetes restent a faire
+        HavenProgress.get(id).furnished = 0;
+        HavenArrival.Placement home = HavenArrival.place(server, id, "[Parcours]");
+        Set<Long> placedBefore = null;
+        BlockPos spot = null;
+        BlockPos testPane = null;
+        try {
+            HavenProgress.Entry entry = HavenProgress.get(id);
+            boolean firstWindows = HavenJourney.objective(q) == HavenJourney.Objective.FENETRES
+                    && com.emerald.haven.furnish.HavenApartments.pending(entry);
+            BlockPos pane = null;
+            BlockPos origin = state.origin();
+            for (BlockPos pos : BlockPos.betweenClosed(origin.offset(home.room().boxMin()).offset(-1, -1, -1),
+                    origin.offset(home.room().boxMax()).offset(1, 1, 1))) {
+                if (haven.getBlockEntity(pos) instanceof com.emerald.block.entity.HavenWindowBlockEntity w) {
+                    pane = pos.immutable();
+                    break;
+                }
+            }
+            if (pane == null) {
+                // une ville reposee sans le releve du joueur (un autre banc) : une vitre d'essai, retiree ensuite
+                BlockPos air = origin.offset(home.room().boxMin()).offset(2, 3, 2);
+                if (haven.getBlockState(air).isAir()) {
+                    haven.setBlock(air, ModBlocks.HAVEN_WINDOW.get().defaultBlockState(), 3);
+                    testPane = air.immutable();
+                    pane = testPane;
+                }
+            }
+            com.emerald.haven.furnish.HavenApartments.closeWindows(q);
+            boolean closed = pane != null && haven.getBlockEntity(pane) instanceof com.emerald.block.entity.HavenWindowBlockEntity w
+                    && w.closed();
+            if (pane != null) {
+                com.emerald.haven.door.HavenWindows.toggle(haven, pane);
+                com.emerald.haven.furnish.HavenApartments.windowUsed(q, pane);
+            }
+            check("premiere quete : l'objectif est d'ouvrir ses fenetres ; elles sont fermees a l'arrivee ; une vitre ouverte"
+                            + " chez soi fait la quete",
+                    firstWindows && closed && entry.windows && HavenJourney.objective(q) == HavenJourney.Objective.MEUBLES,
+                    "objectif d'abord " + firstWindows + ", vitre " + (pane == null ? "aucune" : pane.toShortString())
+                            + " fermee " + closed + ", faite " + entry.windows + ", puis " + HavenJourney.objective(q));
+
+            // deuxieme quete : poser chez soi, pas ailleurs ; ne casser que ce qu'on a pose
+            var data = com.emerald.haven.furnish.HavenApartments.data(server);
+            placedBefore = new java.util.HashSet<>(data.placed(home.room().number()));
+            BlockPos chest = com.emerald.haven.furnish.HavenApartments.chestSpot(server, haven, home.room());
+            for (BlockPos pos : BlockPos.betweenClosed(origin.offset(home.room().boxMin()), origin.offset(home.room().boxMax()))) {
+                if (haven.getBlockState(pos).isAir() && haven.getBlockState(pos.above()).isAir()
+                        && haven.getBlockState(pos.below()).isFaceSturdy(haven, pos.below(), net.minecraft.core.Direction.UP)
+                        && (chest == null || !pos.equals(chest))) {
+                    spot = pos.immutable();
+                    break;
+                }
+            }
+            boolean inside = false;
+            boolean second = false;
+            boolean outside = true;
+            if (spot != null) {
+                inside = com.emerald.haven.furnish.HavenApartments.acceptPlace(new net.neoforged.neoforge.event.level.BlockEvent
+                        .EntityPlaceEvent(net.neoforged.neoforge.common.util.BlockSnapshot.create(haven.dimension(), haven, spot),
+                        haven.getBlockState(spot.below()), q));
+                haven.setBlock(spot, net.minecraft.world.level.block.Blocks.OAK_PLANKS.defaultBlockState(), 3);
+                second = com.emerald.haven.furnish.HavenApartments.acceptPlace(new net.neoforged.neoforge.event.level.BlockEvent
+                        .EntityPlaceEvent(net.neoforged.neoforge.common.util.BlockSnapshot.create(haven.dimension(), haven, spot.above()),
+                        haven.getBlockState(spot), q));
+                haven.setBlock(spot.above(), net.minecraft.world.level.block.Blocks.LANTERN.defaultBlockState(), 3);
+                BlockPos door = origin.offset(home.room().doorMin()).offset(0, 0, 1).west(2);
+                outside = com.emerald.haven.furnish.HavenApartments.acceptPlace(new net.neoforged.neoforge.event.level.BlockEvent
+                        .EntityPlaceEvent(net.neoforged.neoforge.common.util.BlockSnapshot.create(haven.dimension(), haven, door),
+                        haven.getBlockState(door.below()), q));
+            }
+            check("deuxieme quete : poser chez soi compte (" + com.emerald.haven.furnish.HavenApartments.FURNITURE_GOAL
+                            + " objets), dehors c'est refuse ; les quetes faites, le QG redevient l'objectif",
+                    spot != null && inside && second && !outside && entry.furnished == 2
+                            && !com.emerald.haven.furnish.HavenApartments.pending(entry)
+                            && HavenJourney.objective(q) != HavenJourney.Objective.MEUBLES,
+                    "place " + (spot == null ? "aucune" : spot.toShortString()) + ", chez soi " + inside + "/" + second
+                            + ", dehors " + outside + ", poses " + entry.furnished + ", objectif " + HavenJourney.objective(q));
+
+            boolean broke = spot != null && com.emerald.haven.furnish.HavenApartments.handleBreak(
+                    new net.neoforged.neoforge.event.level.BlockEvent.BreakEvent(haven, spot.above(), haven.getBlockState(spot.above()), q))
+                    && haven.getBlockState(spot.above()).isAir();
+            BlockPos wall = origin.offset(home.room().boxMin()).offset(-1, 0, 0);
+            boolean wallKept = !com.emerald.haven.furnish.HavenApartments.handleBreak(
+                    new net.neoforged.neoforge.event.level.BlockEvent.BreakEvent(haven, wall, haven.getBlockState(wall), q));
+            check("casser : ce qu'on a pose s'en va (sans rien lacher), un mur de la ville reste",
+                    broke && wallKept, "pose casse " + broke + ", mur garde " + wallKept);
+        } finally {
+            if (testPane != null) {
+                haven.setBlock(testPane, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
+            }
+            if (spot != null) {
+                haven.setBlock(spot.above(), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
+                haven.setBlock(spot, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
+            }
+            if (placedBefore != null) {
+                var set = com.emerald.haven.furnish.HavenApartments.data(server).placed(home.room().number());
+                set.clear();
+                set.addAll(placedBefore);
+                com.emerald.haven.furnish.HavenApartments.data(server).setDirty();
+            }
+            state.removeApartment(id);
+            HavenProgress.dropTemporary(id);
         }
     }
 

@@ -81,6 +81,10 @@ public final class HavenProgress {
         public boolean welcomed;
         /** Il a deja rejoint le QG une fois. */
         public boolean hq;
+        /** Premiere quete de l'appartement (cahier §107) : il a ouvert ses fenetres. */
+        public boolean windows;
+        /** Deuxieme quete de l'appartement : les objets poses chez lui, jusqu'a l'objectif. */
+        public int furnished;
         /** Ses departs de la ville vers une partie. */
         public int departures;
         /** La deuxieme arrivee, dans la ville envahie, a eu lieu : titre joue (lot 2). */
@@ -100,8 +104,14 @@ public final class HavenProgress {
         /** Fiche d'un cobaye de banc : jamais ecrite. */
         boolean temporary;
 
+        /** Les deux quetes de l'appartement sont faites. */
+        public boolean furnishedDone() {
+            return this.windows && this.furnished >= com.emerald.haven.furnish.HavenApartments.FURNITURE_GOAL;
+        }
+
         boolean blank() {
-            return this.forms == 0 && !this.welcomed && !this.hq && this.departures == 0 && !this.invaded
+            return this.forms == 0 && !this.welcomed && !this.hq && !this.windows && this.furnished == 0
+                    && this.departures == 0 && !this.invaded
                     && !this.reprise && this.quests.isEmpty() && this.orbs == 0 && this.found.isEmpty()
                     && this.medals.isEmpty() && this.bonus.isEmpty();
         }
@@ -321,11 +331,16 @@ public final class HavenProgress {
         save();
     }
 
-    /** Une fiche de cobaye, jamais ecrite ; les formes donnees remplacent celles qu'il avait. */
+    /**
+     * Une fiche de cobaye, jamais ecrite ; les formes donnees remplacent celles qu'il avait. Les
+     * quetes de l'appartement y sont faites : les bancs qui ne les essaient pas vont droit au QG.
+     */
     public static Entry temporary(UUID id, int forms) {
         Entry entry = get(id);
         entry.temporary = true;
         entry.forms = forms & ALL_FORMS;
+        entry.windows = true;
+        entry.furnished = com.emerald.haven.furnish.HavenApartments.FURNITURE_GOAL;
         return entry;
     }
 
@@ -378,6 +393,8 @@ public final class HavenProgress {
                 entry.forms = o.has("formes") ? o.get("formes").getAsInt() & ALL_FORMS : 0;
                 entry.welcomed = o.has("accueilli") && o.get("accueilli").getAsBoolean();
                 entry.hq = o.has("qg") && o.get("qg").getAsBoolean();
+                entry.windows = o.has("fenetres") && o.get("fenetres").getAsBoolean();
+                entry.furnished = o.has("meubles") ? o.get("meubles").getAsInt() : 0;
                 entry.departures = o.has("departs") ? o.get("departs").getAsInt() : 0;
                 entry.invaded = o.has("envahie") && o.get("envahie").getAsBoolean();
                 entry.reprise = o.has("reprise") && o.get("reprise").getAsBoolean();
@@ -424,6 +441,12 @@ public final class HavenProgress {
             o.addProperty("formes", entry.forms & ALL_FORMS);
             o.addProperty("accueilli", entry.welcomed);
             o.addProperty("qg", entry.hq);
+            if (entry.windows) {
+                o.addProperty("fenetres", true);
+            }
+            if (entry.furnished > 0) {
+                o.addProperty("meubles", entry.furnished);
+            }
             o.addProperty("departs", entry.departures);
             o.addProperty("envahie", entry.invaded);
             o.addProperty("reprise", entry.reprise);

@@ -9764,3 +9764,83 @@ qui n'est plus le sien (remplace pendant que son tronçon dormait) s'efface a so
   40 tiques et continue pour les autres ; le dernier parti, la ville rouvre ; reprise refusee a un
   autre, accordee a son maitre -- 58 OK. `haven` 25 OK, `vote` 36 OK, `quetes` 55 OK (et les
   mouettes, absentes du serveur des bancs).
+
+## 107. Les appartements a amenager : le coffre sans fond, et deux quetes avant le QG *(27 sept. 2026)*
+
+« Quand les joueurs apparaissent dans la ville apres avoir lance le jeu pour la premiere fois, on
+pourrait ajouter des quetes obligatoires avant d'aller au QG. Dans chacune des salles des joueurs,
+des coffres qui contiennent enormement de materiaux de construction de Jak 3, plein de lumieres et
+d'autres meubles en grande quantite, des blocs en tres grande quantite, pour qu'ils decorent la salle
+comme ils le souhaitent. La premiere quete, ce serait d'ouvrir les fenetres de Jak 3 -- d'ailleurs,
+elle etait deja ouverte quand j'ai lance le jeu pour la premiere fois. La deuxieme, placer quelques
+meubles dans leur salle, juste un ou deux. » (le joueur, 27 sept.)
+
+**Choix du joueur** : un coffre d'amenagement SANS FOND (plutot que de vrais coffres remplis une
+fois) ; on ne casse QUE CE QU'ON A POSE (plutot que tout l'appartement).
+
+### A. Construire chez soi (`haven/furnish/HavenApartments`)
+
+Dans Haven, les joueurs sont en aventure : on n'y pose ni n'y casse rien. Dans la boite d'air de SON
+appartement, le joueur passe en survie (regarde toutes les 10 tiques), en aventure des qu'il en sort.
+- Poser : permis dans la boite de son appartement, sur une place libre (air ou remplacable) ; un lit
+  ou une porte (EntityMultiPlaceEvent) comptent chacune de leurs cellules. Chaque cellule posee est
+  notee par appartement (sauvegarde du monde, `emeraldweapons_haven_apartments`).
+- Casser : seulement une cellule notee ; elle s'en va sans rien lacher (le coffre en redonne). Les
+  murs, le sol, les vitres, la porte et les meubles de la ville -- ceux du releve du joueur --
+  restent.
+- Un clic sur un bloc protege (lit, pot) avec un bloc en main, chez soi : la pose passe.
+
+### B. Le coffre d'amenagement (`haven/furnish/HavenFurnish`, `block/HavenFurnishChestBlock`)
+
+Un par appartement, pose par le mod deux cellules derriere la place d'arrivee du milieu, face a la
+porte (x 103 dans les trois appartements), s'il y a la place ; incassable, jamais releve
+(JakCityCapture.managed). La caisse du Hip Hog cerclee de metal, un fermoir et un voyant cyan.
+
+Le catalogue se dresse a la premiere ouverture, depuis le registre des objets -- rien que des blocs :
+- Jak 3 : les 30 blocs du bar du Hip Hog, la vitre de Jak 3 ;
+- lumieres : Simply Light, Macaw's Lights, Additional Lights, et celles du jeu de base ;
+- meubles : Macaw's Furniture et Holidays, Handcrafted, Refurbished, et ceux du jeu de base ;
+- portes, fenetres, toits : les Macaw's (portes, fenetres, trappes, clotures, toits, escaliers,
+  chemins, ponts), et le jeu de base ;
+- tapis, laine, lits, bannieres ;
+- blocs de construction du jeu de base ;
+- variantes (Chipped).
+Supplementaries n'y est pas (certains de ses blocs agissent) ; du jeu de base sont ecartes ce qui
+agit, blesse ou tombe (TNT, pistons, minerais, redstone, dripstone pointu...). Les onglets des mods
+absents sont vides : le coffre suit le modpack.
+
+Un menu de coffre du jeu de base (9 x 6), mene cote serveur : cinq rangees de catalogue ; en bas la
+page precedente, les sept onglets (le choisi brille), la page suivante -- accroupi, dix pages. Un
+clic : une pile entiere en main ; accroupi : dans l'inventaire ; un objet du coffre repose sur le
+catalogue y retourne. Les cases du catalogue n'acceptent rien.
+
+**Les objets du coffre restent a Haven** : marques (CustomData), ils quittent l'inventaire au
+changement de monde -- sinon le Defi recevrait des materiaux gratuits.
+
+### C. Les deux quetes
+
+A la premiere arrivee, avant le rendez-vous au QG (HavenJourney : objectifs FENETRES puis MEUBLES,
+barre verte ; l'agenda les dit ; le sous-titre de l'arrivee devient « Installe-toi dans ton
+appartement ») :
+1. OUVRIR SES FENETRES : a l'arrivee d'un nouveau venu, toutes les fenetres de son appartement se
+   ferment (c'etait le defaut vu par le joueur : elles etaient ouvertes) ; un clic sur une vitre de
+   chez lui qui l'ouvre fait la quete.
+2. POSER DEUX OBJETS chez soi (apres la premiere).
+Le QG n'est pas compte tant qu'elles ne sont pas faites, et la borne ne prend pas le vote. La fiche
+de parcours garde `fenetres` et `meubles`. Les joueurs deja passes au QG n'ont rien a refaire.
+
+### D. Vu, et essaye
+
+- Photos (`coffre_piece`, `menu_meubles`) : le coffre dans l'appartement 1, contre le mur du fond,
+  a cote des appliques du joueur ; en y entrant, la survie et « Chez toi : tu peux poser et reprendre
+  ce que tu as pose ». L'ecran du coffre rendu dans le jeu : les blocs du Hip Hog et la vitre, la
+  rangee des onglets, les fleches et l'aide au survol. Avec les mods du dev, le catalogue compte
+  330 lumieres et 1 350 meubles. L'automate de photos perd le menu quand il en ouvre plusieurs de
+  suite (pas le coffre : son outil) ; la mecanique du menu est donc essayee au banc, sur un vrai menu.
+- Banc `parcours` : 65 OK -- catalogue sans mods (Jak 3 31, lumieres 30, meubles 36, menuiserie 84,
+  tissus 65, blocs 336, rien de dangereux) ; objets du coffre retires en quittant la ville ; le menu
+  clique comme un joueur (onglets, pages, pile entiere et marquee, rendue, rangee, depot refuse) ;
+  un coffre par appartement (x 103) ; fenetres fermees a l'arrivee puis ouvertes ; poser chez soi et
+  pas dehors ; casser ce qu'on a pose et pas un mur. Les cobayes des autres essais ont leurs quetes
+  d'appartement faites (HavenProgress.temporary) ; a la borne, un cobaye n'y est pas tenu.
+- `vote` 36, `salles` 27, `haven` 25, `atelier` 18 OK ; `quetes` 55 OK (et les mouettes).

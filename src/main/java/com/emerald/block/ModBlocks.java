@@ -313,6 +313,14 @@ public class ModBlocks {
                     .isSuffocating((state, level, pos) -> false)
                     .isViewBlocking((state, level, pos) -> false)));
 
+    /** Le coffre d'amenagement de chaque appartement (HavenApartments, cahier §107) : incassable, sans butin. */
+    public static final DeferredBlock<HavenFurnishChestBlock> HAVEN_FURNISH_CHEST = registerBlock("haven_furnish_chest",
+            () -> new HavenFurnishChestBlock(BlockBehaviour.Properties.of()
+                    .strength(-1.0F, 3600000.0F).noLootTable()
+                    .pushReaction(net.minecraft.world.level.material.PushReaction.BLOCK)
+                    .mapColor(MapColor.COLOR_GREEN)
+                    .sound(SoundType.WOOD)));
+
     public static final DeferredBlock<HavenGateBlock> HAVEN_GATE = registerBlockOnly("haven_gate",
             () -> new HavenGateBlock(BlockBehaviour.Properties.of()
                     .strength(-1.0F, 3600000.0F).noLootTable()

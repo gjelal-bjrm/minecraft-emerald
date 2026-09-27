@@ -22,15 +22,32 @@ touché. Votre mode de jeu habituel vous est rendu au village.
 
 ### Le parcours dans Haven
 
-- **La première fois**, un titre vous accueille : « Bienvenue à Haven — Rendez-vous
-  au quartier général ». Le chat reste vide à l'arrivée : ce qui est à lire passe
+- **La première fois**, un titre vous accueille : « Bienvenue à Haven — Installe-toi
+  dans ton appartement ». Le chat reste vide à l'arrivée : ce qui est à lire passe
   après le titre.
+- **Votre appartement, d'abord** : deux quêtes avant le quartier général.
+  1. **Ouvrir ses fenêtres** : elles sont fermées à votre arrivée ; un clic droit sur
+     une vitre ouvre toute la fenêtre.
+  2. **L'aménager** : poser **deux objets** pris dans le **coffre d'aménagement**,
+     près des places d'arrivée. Il est sans fond : sept onglets (Jak 3, lumières,
+     meubles, portes-fenêtres-toits, tapis-laine-lits, blocs de construction,
+     variantes de Chipped) ; un clic donne une pile en main, accroupi elle va dans
+     l'inventaire ; reposer un objet du coffre sur le catalogue le rend.
+  Chez vous, vous passez en survie : vous posez ce que vous voulez dans la pièce, et
+  vous ne cassez que ce qui y a été posé (les murs, le sol, les vitres, la porte et
+  les meubles de la ville restent). Ce qu'on casse ne lâche rien : le coffre en
+  redonne. Ailleurs dans la ville, rien ne change. Les objets du coffre restent à
+  Haven : ils quittent l'inventaire quand on part. La borne ne prend pas votre vote
+  tant que ces deux quêtes ne sont pas faites. Les joueurs déjà passés au QG n'ont
+  rien à refaire.
 - **L'agenda de Haven** remplace le livre des animaux d'Alex's Mobs : vous le recevez
   à la première arrivée (et de nouveau s'il se perd). Clic droit pour le lire : le
-  **prochain rendez-vous** (d'abord « Rendez-vous au quartier général, le bar du Hip
-  Hog, pour discuter avec l'équipe ») et le **carnet de route**, coché au fil du
+  **prochain rendez-vous** (d'abord « Installe-toi : ouvre les fenêtres de ton
+  appartement », puis l'aménagement, puis « Rendez-vous au quartier général, le bar du
+  Hip Hog, pour discuter avec l'équipe ») et le **carnet de route**, coché au fil du
   parcours.
-- L'**objectif reste affiché en haut de l'écran** : le QG, avec la distance et la
+- L'**objectif reste affiché en haut de l'écran** : les deux quêtes de l'appartement,
+  puis le QG, avec la distance et la
   direction (la barre se remplit en approchant). Dans le bar, tant que toute
   l'équipe n'y est pas passée : « l'équipe arrive (1 sur 3) ». Toute l'équipe
   réunie dans le bar : un titre « L'équipe est réunie — Quel mode voulez-vous
@@ -1018,7 +1035,7 @@ Sur un serveur d'essai (`run-server`), chacun écrit son rapport puis arrête le
 - `EMERALDWEAPONS_AUTOTEST=vehicules ./gradlew runServer` : voitures et motos (dont leurs dégâts, leur destruction et leur explosion), puis le JET-Board (l'eau, la glisse lâchée, le frein, les sauts, le sol, un rail, les trois tremplins, et la course de Tess faite par la planche seule, bouton tenu, en sautant au bout des rails), rapport `run-server/vehicules_autotest.txt` ;
 - `EMERALDWEAPONS_AUTOTEST=invasion ./gradlew runServer` : invasion, décor destructible, bouton du QG et MSPT, rapport `run-server/invasion_autotest.txt` ;
 - `EMERALDWEAPONS_AUTOTEST=armes ./gradlew runServer` : Morph Gun (poses, confinement, tir des douze armes, munitions, décor, MSPT avec quatre tireurs), rapport `run-server/armes_autotest.txt` ;
-- `EMERALDWEAPONS_AUTOTEST=parcours ./gradlew runServer` : le parcours (fiche sur disque, arme qui suit les formes du joueur, ville paisible, bouton verrouillé, titre et objectifs du guide ; puis le lot 2 : râtelier du QG, deuxième arrivée envahie, reprise des rues, retour après la défaite, porte de la victoire ; le Portail de Haven — recette, pose, anneau de la ville au QG, aller-retour du Monde ouvert, Défi quitté, reprise ; puis les transports : les huit stations, l'arche et sa recharge, le portail des tours ; puis l'agenda, l'équipe attendue au QG et la réunion), rapport `run-server/parcours_autotest.txt` ;
+- `EMERALDWEAPONS_AUTOTEST=parcours ./gradlew runServer` : le parcours (fiche sur disque, arme qui suit les formes du joueur, ville paisible, bouton verrouillé, titre et objectifs du guide ; puis le lot 2 : râtelier du QG, deuxième arrivée envahie, reprise des rues, retour après la défaite, porte de la victoire ; le Portail de Haven — recette, pose, anneau de la ville au QG, aller-retour du Monde ouvert, Défi quitté, reprise ; les appartements — catalogue du coffre sans fond, objets qui restent à Haven, un coffre par appartement, fenêtres fermées puis ouvertes, poser chez soi et pas dehors, casser ce qu'on a posé et pas les murs ; puis les transports : les huit stations, l'arche et sa recharge, le portail des tours ; puis l'agenda, l'équipe attendue au QG et la réunion), rapport `run-server/parcours_autotest.txt` ;
 - `EMERALDWEAPONS_AUTOTEST=faune ./gradlew runServer` : les animaux de la ville (carte de l'eau, places de chaque espèce, plafonds, dangers tenus au large et agressifs au large seulement, piqûre des méduses, armée de mouettes, compagnons à l'invasion), rapport `run-server/faune_autotest.txt` ; avant, `python tools/dev_mods.py --server alexsmobs aquaculture livingthings`, après, `python tools/dev_mods.py --server --clean` ;
 - `EMERALDWEAPONS_AUTOTEST=quetes ./gradlew runServer` : les quêtes des héros (le livre des quêtes, les six héros et le bateau du Pêcheur, les cartes du chat et leurs jetons, l'épreuve de tir jusqu'à la médaille, la pêche au poids, les coffres engloutis, la chasse aux mouettes, la patrouille, la tenue du port et l'invasion qui va avec, les orbes cachés et ceux des rails, la boutique de Tess et ses sceaux, la course du JET-Board et ses médailles, puis le ménage), rapport `run-server/quetes_autotest.txt` ; avant, `python tools/dev_mods.py --server alexsmobs aquaculture livingthings`, après, `python tools/dev_mods.py --server --clean` ;
 - `EMERALDWEAPONS_AUTOTEST=partie ./gradlew runServer` : la partie (chances de la Forge et métal perdu, coffres des sanctuaires selon l'avancée, vol d'élytre des ailes +20, bouclier d'Arcencium, plumes d'ailes en récompense, usure sans casse, Grand Froid de l'Aurore, Proie de la Battue et sa garde, arches, cycle d'ouverture des météos, Éclipse, bestiaires, garnisons et matières des trois sanctuaires, arène du boss), rapport `run-server/partie_autotest.txt`. Les épreuves 9 à 12 demandent des mods au serveur des bancs : `python tools/dev_mods.py --server graveyard alexsmobs twilightforest cataclysm irons_spellbooks undergarden eternal_starlight creeperoverhaul variantsandventures lionfishapi resourcefullib`, puis `--server --clean`.

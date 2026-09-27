@@ -49,6 +49,7 @@ public class ModCreativeModeTabs {
                         output.accept(ModItems.HAVEN_DOOR_PETITE);
                         output.accept(ModItems.HAVEN_DOOR_SAS);
                         output.accept(com.emerald.block.ModBlocks.HAVEN_WINDOW);
+                        output.accept(com.emerald.block.ModBlocks.HAVEN_FURNISH_CHEST);
                         // le bar du Hip Hog en blocs (cahier §103), pour l'atelier
                         for (var block : com.emerald.block.HipHogBlocks.all()) {
                             output.accept(block);
