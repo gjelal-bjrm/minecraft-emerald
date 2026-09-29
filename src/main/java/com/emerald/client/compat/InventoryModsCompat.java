@@ -6,6 +6,7 @@ import com.emerald.menu.bag.BagMenu;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
@@ -25,7 +26,7 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Deux mods d'inventaire du modpack, sur les ecrans du panneau du sac (cahier 111).
+ * Trois mods du modpack, sur les ecrans du panneau du sac (cahier 111).
  *
  * INVENTORY TWEAKS trie, cote serveur, toutes les cases « de conteneur » d'un menu comme
  * un seul coffre. Nos menus melangent une grille d'artisanat, des cases d'artefacts, une
@@ -41,6 +42,14 @@ import java.util.Set;
  * inventaire est « desactivee par defaut » (le joueur peut toujours la rallumer par la
  * touche de TrashSlot). La Forge, l'Autel et l'Etabli gardent la sienne, comme avant.
  * Par reflexion : TrashSlot n'est pas une dependance de compilation.
+ *
+ * FTB LIBRARY pose sa grille de boutons (quetes, equipe, jour et nuit, mode de jeu, reglages) dans
+ * un coin de tout ecran de conteneur, sans eviter l'interface, et prend tous les clics de son cadre,
+ * meme sur une cellule vide (un clic droit la passe en edition). Sur un petit ecran -- le client du
+ * dev, plein ecran a l'echelle 6 : 426 x 240 --, elle couvrait les deux premieres rangees
+ * d'artefacts, et la case de l'arme sur la Forge. Elle est retiree de nos ecrans quand son cadre
+ * chevauche leur image ; a l'echelle 4 du profil (640 x 360), elle reste. L'inventaire du jeu (le
+ * livre vert) la garde toujours.
  */
 @EventBusSubscriber(modid = EmeraldWeaponsMod.MODID, value = Dist.CLIENT)
 public final class InventoryModsCompat {
@@ -48,6 +57,8 @@ public final class InventoryModsCompat {
     private static final Logger LOGGER = LoggerFactory.getLogger(EmeraldWeaponsMod.MODID);
 
     private static final String INVTWEAKS = "invtweaks.";
+    /** La grille de boutons de FTB Library (un seul widget pour toute la grille). */
+    private static final String FTB_SIDEBAR = "dev.ftb.mods.ftblibrary.sidebar.SidebarGroupGuiButton";
     /** Les touches de tri d'Inventory Tweaks (options.txt : key_key.invtweaks_...). */
     private static final Set<String> INVTWEAKS_SORT = Set.of(
             "key.invtweaks_sort_inventory.desc", "key.invtweaks_sort_either.desc", "key.invtweaks_sort_player.desc");
@@ -64,11 +75,27 @@ public final class InventoryModsCompat {
         if (!ours(event.getScreen())) {
             return;
         }
+        AbstractContainerScreen<?> screen = (AbstractContainerScreen<?>) event.getScreen();
         for (GuiEventListener listener : List.copyOf(event.getListenersList())) {
-            if (listener.getClass().getName().startsWith(INVTWEAKS)) {
+            String name = listener.getClass().getName();
+            if (name.startsWith(INVTWEAKS) || (FTB_SIDEBAR.equals(name) && covers(listener, screen))) {
                 event.removeListener(listener);
             }
         }
+    }
+
+    /**
+     * Le cadre de ce widget chevauche-t-il l'image de l'ecran ? Celui de FTB est calcule des sa
+     * construction : il est juste ici, avant le premier dessin.
+     */
+    private static boolean covers(GuiEventListener listener, AbstractContainerScreen<?> screen) {
+        if (!(listener instanceof AbstractWidget widget) || widget.getWidth() <= 0 || widget.getHeight() <= 0) {
+            return false;
+        }
+        int left = screen.getGuiLeft();
+        int top = screen.getGuiTop();
+        return widget.getX() < left + screen.getXSize() && widget.getX() + widget.getWidth() > left
+                && widget.getY() < top + screen.getYSize() && widget.getY() + widget.getHeight() > top;
     }
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)

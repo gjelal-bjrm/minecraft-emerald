@@ -10298,3 +10298,58 @@ Les passages du gardien ne ferment plus qu'un menu qui MONTRE une arme (dans une
 les retraits d'un instant -- depart, mort, connexion, reapparition -- ferment toujours, comme avant.
 Banc `armes` : 179 OK, dont l'essai du nouveau venu sans forme (menu garde ; une arme montree dans le
 coffre de l'Ender le ferme, et l'arme est retiree).
+
+### I. Le plantage de la ceinture, et des cases pour tous les artefacts (29 sept., soir)
+
+« Lorsque j'ai mis un artefact qui se met a la place de la ceinture, qui permet de faire en sorte
+que les enderpearls ne se consomment pas [...] Verifie pourquoi j'ai eu ce crash et s'il y a un
+risque que j'ai un crash avec d'autres artefacts. » Puis : « j'aimerais bien qu'on puisse tous les
+porter, mais ca necessite d'augmenter l'espace pour chaque slot. [...] Au pire, tu fais en sorte
+qu'on doit scroller. » (le joueur, 29 sept.)
+
+**Le plantage** (client du dev, monde g1, 18 h 57 : « Slot 1 not in valid range - [0,1) », serveur,
+envoi du menu). Les trois ceintures de Relics ajoutent des cases de CHARME (leur capacite « slots ») :
+celle de cuir +1 a +3, celle du chasseur +1 a +2, celle du noye +0 a +2, une de plus par
+amelioration. La Warp Drive d'Artifacts posee a la place de la ceinture de cuir, la case de charme en
+plus a disparu. La premiere version du panneau faisait une case Curios par case du joueur, a
+l'ouverture : celle-la restait dans le menu, et sa lecture a plante. Dans le profil, seules ces
+trois ceintures changent le nombre de cases (tous les mods fouilles, 29 sept.) ; une commande de
+Curios, un rechargement des donnees ou un mod ajoute plus tard le peuvent aussi.
+
+**La fenetre des artefacts** (`menu/curio/CurioPanel`, `CurioWindowSlot`, `client/CurioPanelView`).
+Deux colonnes de douze, sur toute la hauteur de l'ecran, avec une barre de defilement (molette,
+glisser) ; le corps et le sac sont centres en hauteur a cote. Les 24 cases du menu sont fixes, et
+chacune designe A CHAQUE LECTURE la case Curios de son rang dans la liste du moment : une case qui
+disparait se vide, une case qui apparait se montre, sans rouvrir l'ecran, et la fenetre se reborne
+si la liste raccourcit. Le serveur relit la liste a chaque envoi du menu et l'envoie au client quand
+elle change (`CurioLayoutPayload`) ; cote client, les cases gardent ce que le serveur y envoie et ne
+demandent a Curios que l'icone et ce qui s'y pose. Maj+clic sur un artefact le pose dans la premiere
+case libre qui l'accepte, montree ou non. Une pile posee sur une case qui vient de disparaitre est
+rendue a l'inventaire.
+
+**Des cases pour tous les artefacts** (choix du joueur : autant que d'objets d'Artifacts et de Relics
+par type). Curios retient, pour chaque type, la plus grande taille declaree par un mod : le mod
+declare (`data/emeraldweapons/curios/slots`) tete 9, collier 12, ceinture 11, mains 13, pieds 17,
+charme 9, anneau 3, dos 2, bracelet 2 -- 78 cases, plus celles du JET-Board et du grimoire d'Iron's
+Spellbooks, et les charmes des ceintures de Relics par-dessus. Le dos a deux cases : le Sac
+d'Arcencium et un autre objet.
+
+**La grille de FTB.** Dans le client du dev (plein ecran, echelle 6 : 426 x 240), la grille de
+boutons de FTB Library (quetes, equipe, jour, nuit, mode de jeu, reglages) couvrait les deux
+premieres rangees d'artefacts, et prenait leurs clics : FTB prend tous ceux de son cadre, meme sur
+une cellule vide. Sur la Forge et l'Autel, elle couvrait deja le haut (le titre, et la case de l'arme
+sur la Forge). Elle est
+retiree de nos ecrans (inventaire, Forge, Autel, Etabli) quand son cadre chevauche leur image
+(`InventoryModsCompat`) ; a l'echelle 4 du profil (640 x 360), rien ne chevauche et elle reste.
+L'inventaire du jeu (le livre vert) la garde toujours.
+
+**Vu, et essaye.** Banc `ecran` : 41 OK. Sur le serveur du banc, Curios ne donne au joueur que le dos
+et le JET-Board : quarante cases de dos y sont ajoutees ecran ouvert (la fenetre defile jusqu'en bas,
+rangee 10/10), puis retirees ; les cases qui les montraient sont lues sans erreur, la fenetre remonte
+(0/0) ; le JET-Board se pose d'un Maj+clic. Photos dans le client du dev, avec Artifacts et Relics :
+le panneau en haut et en bas, la Forge, et le geste du joueur rejoue -- la ceinture de cuir remplacee
+par la Warp Drive, inventaire ouvert (charmes 11 -> 9), vue sur les ceintures puis sur les charmes.
+Deux defauts du banc photo corriges au passage : il prenait l'image une seconde apres l'ouverture de
+l'ecran (a cause du livre, qui met le jeu en pause), donc avant le remplacement -- la prise attend
+maintenant (`holdsScreen`) ; et son equipement ajoutait une echarpe de plus a chaque prise, les cases
+etant la.

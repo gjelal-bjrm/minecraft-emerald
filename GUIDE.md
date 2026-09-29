@@ -720,8 +720,12 @@ aux crans d'avant, **5 seulement** à ces trois-là.
 
 La touche **E** ouvre l'**inventaire d'Arcencium** : tout sur un seul écran.
 
-- **À gauche**, les cases d'artefacts (Curios) : on équipe un anneau, une amulette, le sac
-  lui-même, sans ouvrir d'autre écran. Une case vide dit son nom au survol.
+- **À gauche**, les cases d'artefacts (Curios), sur deux colonnes qui défilent (molette ou
+  barre) : on équipe un anneau, une amulette, le sac lui-même, sans ouvrir d'autre écran. Une case
+  vide dit son nom au survol. Il y a de quoi porter tous les artefacts d'Artifacts et de Relics :
+  tête 9, collier 12, ceinture 11, mains 13, pieds 17, charme 9, anneau 3, dos 2, bracelet 2 (les
+  ceintures de Relics ajoutent encore des charmes). Si une case apparaît ou disparaît pendant que
+  l'écran est ouvert (une ceinture de Relics qu'on retire), le panneau suit sans se fermer.
 - **Au milieu**, l'inventaire du jeu tel quel : le personnage, l'armure, la main gauche, la
   grille d'artisanat 2×2. Dessous, trois boutons : le **livre vert** ouvre l'inventaire classique
   (livre de recettes, effets), puis la **poubelle**, puis le **tri** de l'inventaire (la barre
@@ -754,7 +758,9 @@ puise : plus besoin de sortir neuf lingots pour essayer un cran.
 Sur ces écrans, le tri d'Inventory Tweaks (clic molette, touches de tri) ne joue pas : il
 mélangerait le sac, les artefacts et la poubelle. Les boutons de tri de l'écran le remplacent. La
 poubelle de TrashSlot est éteinte sur l'inventaire (sa touche la rallume) ; la Forge, l'Autel et
-l'Établi gardent la leur.
+l'Établi gardent la leur. Sur un petit écran (interface très grande), la grille de boutons de FTB
+(quêtes, équipe, jour et nuit…) n'est pas dessinée sur ces écrans quand elle couvrirait leurs
+cases ; l'inventaire classique (livre vert) la garde toujours.
 
 En créatif, E ouvre l'inventaire créatif comme avant.
 

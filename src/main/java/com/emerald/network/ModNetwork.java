@@ -151,6 +151,11 @@ public class ModNetwork {
         registrar.playToClient(BagAmmoPayload.TYPE, BagAmmoPayload.STREAM_CODEC,
                 (payload, context) -> context.enqueueWork(() -> com.emerald.item.BagAmmo.accept(payload)));
 
+        // les cases d'artefacts de l'inventaire d'Arcencium, quand elles changent ecran ouvert (cahier §111)
+        registrar.playToClient(CurioLayoutPayload.TYPE, CurioLayoutPayload.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(
+                        () -> com.emerald.client.ArcInventoryClient.acceptCurioLayout(payload)));
+
         // les onglets du panneau du sac : l'icone de chaque sac porte (cahier §111)
         registrar.playToClient(BagTabsPayload.TYPE, BagTabsPayload.STREAM_CODEC,
                 (payload, context) -> context.enqueueWork(

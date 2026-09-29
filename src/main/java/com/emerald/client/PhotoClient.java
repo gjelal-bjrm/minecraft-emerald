@@ -149,7 +149,7 @@ public final class PhotoClient {
             }
             return;
         }
-        if (PhotoAutomaton.readyToShoot() || screenTicks >= 20) {
+        if (PhotoAutomaton.readyToShoot() || (screenTicks >= 20 && !PhotoAutomaton.holdsScreen())) {
             screenTicks = 0;
             if (wanted.endsWith("_rafale")) {
                 if (wanted.equals(burstDone)) {

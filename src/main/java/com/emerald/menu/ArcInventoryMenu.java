@@ -3,6 +3,8 @@ package com.emerald.menu;
 import com.emerald.menu.bag.BagMenu;
 import com.emerald.menu.bag.BagPanel;
 import com.emerald.menu.bag.Bags;
+import com.emerald.menu.curio.CurioPanel;
+import com.emerald.menu.curio.CurioRef;
 import com.mojang.datafixers.util.Pair;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
@@ -33,6 +35,7 @@ import net.minecraft.world.item.enchantment.EnchantmentEffectComponents;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.neoforged.fml.ModList;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -48,12 +51,12 @@ import java.util.Optional;
  *
  * LES INDEX DE L'INVENTAIRE DU JEU. 0 le resultat, 1-4 la grille, 5-8 l'armure, 9-35
  * l'inventaire, 36-44 la barre d'action, 45 la main gauche : ce que les mods et le jeu
- * supposent d'un inventaire. Puis 46 la poubelle, les cases d'artefacts, et le sac.
+ * supposent d'un inventaire. Puis 46 la poubelle, la fenetre des artefacts, et le sac.
  *
- * LES CASES D'ARTEFACTS sont celles de Curios (CurioSlot), decrites par le serveur a
- * l'ouverture : leur liste depend des mods et des objets portes. Le client refait les
- * memes cases sur sa copie de l'inventaire Curios ; une case qu'il ne connait pas
- * encore devient une case d'affichage, que le serveur remplit.
+ * LES CASES D'ARTEFACTS sont une fenetre qui defile (CurioPanel) : ses cases lisent en
+ * direct la case Curios de leur rang. Le nombre de cases d'un type change ecran ouvert
+ * (une ceinture de Relics ajoute des charmes) sans rien casser : c'est ce qui plantait
+ * la premiere version (cahier 111, I).
  *
  * LE MORPH GUN reste dans l'inventaire tant que l'ecran est ouvert (MorphGunKeeper
  * exempte ce menu, comme l'inventaire du jeu) : la grille, la poubelle et le sac le
@@ -76,13 +79,9 @@ public class ArcInventoryMenu extends BagMenu {
     public static final int BODY_W = 176;
     public static final int BODY_H = 166;
     public static final int GAP = 2;
-    /** Les cases d'artefacts, en colonnes de huit. */
-    public static final int CURIO_ROWS = 8;
     /** La poubelle, sous la grille d'artisanat, dans le corps. */
     public static final int TRASH_X = 131;
     public static final int TRASH_Y = 62;
-    /** Au plus : au-dela, trois colonnes et plus ne tiendraient plus a l'ecran. */
-    private static final int MAX_CURIOS = 40;
 
     private static final EquipmentSlot[] ARMOR = {
             EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET};
@@ -90,42 +89,43 @@ public class ArcInventoryMenu extends BagMenu {
             InventoryMenu.EMPTY_ARMOR_SLOT_HELMET, InventoryMenu.EMPTY_ARMOR_SLOT_CHESTPLATE,
             InventoryMenu.EMPTY_ARMOR_SLOT_LEGGINGS, InventoryMenu.EMPTY_ARMOR_SLOT_BOOTS};
 
-    /** Une case d'artefact : le type de case Curios et son rang. */
-    public record CurioRef(String identifier, int index) {
-    }
-
     private final Player owner;
     private final CraftingContainer craftSlots = new TransientCraftingContainer(this, 2, 2);
     private final ResultContainer resultSlots = new ResultContainer();
     private final SimpleContainer trash = new SimpleContainer(1);
-    private final int curios;
-    private final List<CurioRef> curioRefs;
-    /** La mise en page, la meme des deux cotes : elle ne depend que du nombre de cases d'artefacts. */
-    public final int curioColumns;
+    /** La fenetre des artefacts ; null sans Curios. */
+    @Nullable
+    private final CurioPanel curios;
+    /**
+     * La mise en page, la meme des deux cotes. Les artefacts a gauche, sur toute la hauteur ; le
+     * corps et le sac a cote, centres en hauteur (bodyY).
+     */
     public final int mainX;
+    public final int bodyY;
     public final int bagX;
     public final int width;
+    public final int height;
 
     /** Cote client : la liste des cases d'artefacts arrive avec l'ouverture. */
     public ArcInventoryMenu(int id, Inventory inventory, RegistryFriendlyByteBuf buf) {
         this(id, inventory, readCurios(buf));
     }
 
-    private ArcInventoryMenu(int id, Inventory inventory, List<CurioRef> curios) {
+    private ArcInventoryMenu(int id, Inventory inventory, List<CurioRef> curioLayout) {
         super(ModMenus.ARC_INVENTORY.get(), id);
         this.owner = inventory.player;
-        this.curios = curios.size();
-        this.curioRefs = List.copyOf(curios);
-        this.curioColumns = (curios.size() + CURIO_ROWS - 1) / CURIO_ROWS;
-        int curiosWidth = this.curioColumns == 0 ? 0 : this.curioColumns * 18 + 14;
-        this.mainX = curiosWidth == 0 ? 0 : curiosWidth + GAP;
+        boolean withCurios = ModList.get().isLoaded("curios");
+        this.mainX = withCurios ? CurioPanel.WIDTH + GAP : 0;
+        this.height = withCurios ? Math.max(CurioPanel.HEIGHT, BODY_H) : BODY_H;
+        this.bodyY = (this.height - BODY_H) / 2;
         this.bagX = this.mainX + BODY_W + GAP;
         this.width = this.bagX + BagPanel.WIDTH;
+        int y0 = this.bodyY;
 
-        this.addSlot(new ResultSlot(this.owner, this.craftSlots, this.resultSlots, 0, this.mainX + 154, 28));
+        this.addSlot(new ResultSlot(this.owner, this.craftSlots, this.resultSlots, 0, this.mainX + 154, y0 + 28));
         for (int row = 0; row < 2; row++) {
             for (int col = 0; col < 2; col++) {
-                this.addSlot(new Slot(this.craftSlots, col + row * 2, this.mainX + 98 + col * 18, 18 + row * 18) {
+                this.addSlot(new Slot(this.craftSlots, col + row * 2, this.mainX + 98 + col * 18, y0 + 18 + row * 18) {
                     @Override
                     public boolean mayPlace(ItemStack stack) {
                         return !Bags.forbidden(stack);
@@ -134,17 +134,17 @@ public class ArcInventoryMenu extends BagMenu {
             }
         }
         for (int i = 0; i < ARMOR.length; i++) {
-            this.addSlot(new Armor(inventory, this.owner, ARMOR[i], 39 - i, this.mainX + 8, 8 + i * 18, ARMOR_ICONS[i]));
+            this.addSlot(new Armor(inventory, this.owner, ARMOR[i], 39 - i, this.mainX + 8, y0 + 8 + i * 18, ARMOR_ICONS[i]));
         }
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
-                this.addSlot(new Slot(inventory, col + (row + 1) * 9, this.mainX + 8 + col * 18, 84 + row * 18));
+                this.addSlot(new Slot(inventory, col + (row + 1) * 9, this.mainX + 8 + col * 18, y0 + 84 + row * 18));
             }
         }
         for (int col = 0; col < 9; col++) {
-            this.addSlot(new Slot(inventory, col, this.mainX + 8 + col * 18, 142));
+            this.addSlot(new Slot(inventory, col, this.mainX + 8 + col * 18, y0 + 142));
         }
-        this.addSlot(new Slot(inventory, Inventory.SLOT_OFFHAND, this.mainX + 77, 62) {
+        this.addSlot(new Slot(inventory, Inventory.SLOT_OFFHAND, this.mainX + 77, y0 + 62) {
             @Override
             public void setByPlayer(ItemStack newStack, ItemStack oldStack) {
                 ArcInventoryMenu.this.owner.onEquipItem(EquipmentSlot.OFFHAND, oldStack, newStack);
@@ -156,35 +156,31 @@ public class ArcInventoryMenu extends BagMenu {
                 return Pair.of(InventoryMenu.BLOCK_ATLAS, InventoryMenu.EMPTY_ARMOR_SLOT_SHIELD);
             }
         });
-        this.addSlot(new Slot(this.trash, 0, this.mainX + TRASH_X, TRASH_Y) {
+        this.addSlot(new Slot(this.trash, 0, this.mainX + TRASH_X, y0 + TRASH_Y) {
             @Override
             public boolean mayPlace(ItemStack stack) {
                 return trashable(stack);
             }
         });
-        for (int k = 0; k < curios.size(); k++) {
-            int x = 8 + (k / CURIO_ROWS) * 18;
-            int y = 8 + (k % CURIO_ROWS) * 18;
-            this.addSlot(curioSlot(this.owner, curios.get(k), x, y));
+        if (withCurios) {
+            this.curios = new CurioPanel(this, this.owner, curioLayout, this::addSlot, 0, 0);
+            this.addDataSlots(this.curios.data());
+        } else {
+            this.curios = null;
         }
-        this.addBag(this.owner, this.bagX, 0);
+        this.addBag(this.owner, this.bagX, y0);
     }
 
     /** Ouvre l'inventaire d'Arcencium : le serveur decrit les cases d'artefacts du joueur. */
     public static void open(ServerPlayer player) {
-        List<CurioRef> shown = curios(player);
+        List<CurioRef> layout = CurioPanel.layout(player);
         player.openMenu(new SimpleMenuProvider((id, inventory, viewer) ->
-                new ArcInventoryMenu(id, inventory, shown), TITLE), buf -> writeCurios(buf, shown));
+                new ArcInventoryMenu(id, inventory, layout), TITLE), buf -> writeCurios(buf, layout));
     }
 
     /** Le menu d'un joueur, sans l'ouvrir : pour le banc d'essai. */
     static ArcInventoryMenu create(int id, ServerPlayer player) {
-        return new ArcInventoryMenu(id, player.getInventory(), curios(player));
-    }
-
-    private static List<CurioRef> curios(ServerPlayer player) {
-        List<CurioRef> curios = ModList.get().isLoaded("curios") ? CuriosSlots.layout(player) : List.of();
-        return curios.size() > MAX_CURIOS ? List.copyOf(curios.subList(0, MAX_CURIOS)) : curios;
+        return new ArcInventoryMenu(id, player.getInventory(), CurioPanel.layout(player));
     }
 
     private static void writeCurios(RegistryFriendlyByteBuf buf, List<CurioRef> curios) {
@@ -196,7 +192,7 @@ public class ArcInventoryMenu extends BagMenu {
     }
 
     private static List<CurioRef> readCurios(RegistryFriendlyByteBuf buf) {
-        int count = Math.min(buf.readVarInt(), MAX_CURIOS);
+        int count = Math.min(buf.readVarInt(), 512);
         List<CurioRef> curios = new ArrayList<>(count);
         for (int i = 0; i < count; i++) {
             curios.add(new CurioRef(buf.readUtf(128), buf.readVarInt()));
@@ -204,47 +200,19 @@ public class ArcInventoryMenu extends BagMenu {
         return curios;
     }
 
-    private static Slot curioSlot(Player player, CurioRef ref, int x, int y) {
-        if (ModList.get().isLoaded("curios")) {
-            Slot slot = CuriosSlots.slot(player, ref, x, y);
-            if (slot != null) {
-                return slot;
-            }
-        }
-        return placeholder(x, y);
-    }
-
-    /** Une case d'affichage : le serveur y montre l'objet, on n'y pose rien. */
-    static Slot placeholder(int x, int y) {
-        return new Slot(new SimpleContainer(1), 0, x, y) {
-            @Override
-            public boolean mayPlace(ItemStack stack) {
-                return false;
-            }
-
-            @Override
-            public boolean mayPickup(Player player) {
-                return false;
-            }
-        };
-    }
-
     /** La poubelle prend tout, sauf ce que les gardiens suivent et ce qui contient d'autres objets. */
     public static boolean trashable(ItemStack stack) {
         return !stack.isEmpty() && !Bags.forbidden(stack) && !Bags.isContainer(stack);
     }
 
-    public int curioCount() {
+    /** La fenetre des artefacts, ou null sans Curios. */
+    @Nullable
+    public CurioPanel curios() {
         return this.curios;
     }
 
-    /** La case d'artefact de ce rang (0 : la premiere), pour l'infobulle d'une case vide. */
-    public CurioRef curioRef(int k) {
-        return this.curioRefs.get(k);
-    }
-
     public boolean isCurio(int index) {
-        return index >= SLOT_CURIOS && index < SLOT_CURIOS + this.curios;
+        return this.curios != null && this.curios.isWindowSlot(index);
     }
 
     public ItemStack trashed() {
@@ -259,6 +227,37 @@ public class ArcInventoryMenu extends BagMenu {
     @Override
     protected int inventoryEnd() {
         return SLOT_OFFHAND;
+    }
+
+    // ================================================================ envoi
+
+    @Override
+    public void broadcastChanges() {
+        if (this.curios != null) {
+            this.curios.refresh();                      // la liste du moment, avant de lire les cases
+        }
+        super.broadcastChanges();
+    }
+
+    @Override
+    public void broadcastFullState() {
+        if (this.curios != null) {
+            this.curios.refresh();
+        }
+        super.broadcastFullState();
+    }
+
+    @Override
+    public void sendAllDataToRemote() {
+        super.sendAllDataToRemote();
+        if (this.curios != null) {
+            this.curios.opened();
+        }
+    }
+
+    @Override
+    protected boolean onButton(Player player, int id) {
+        return this.curios != null && this.curios.button(id);
     }
 
     // ================================================================ artisanat
@@ -308,7 +307,8 @@ public class ArcInventoryMenu extends BagMenu {
 
     @Override
     public boolean canDragTo(Slot slot) {
-        return slot.container != this.resultSlots && slot.container != this.trash && super.canDragTo(slot);
+        return slot.container != this.resultSlots && slot.container != this.trash && !isCurio(slot.index)
+                && super.canDragTo(slot);
     }
 
     @Override
@@ -319,9 +319,9 @@ public class ArcInventoryMenu extends BagMenu {
 
     /**
      * Maj+clic. De l'inventaire : l'armure et la main gauche d'abord (comme le jeu), puis
-     * une case d'artefact libre qui l'accepte, puis le sac, et sinon de l'inventaire a la
-     * barre d'action et retour. De partout ailleurs (sac, armure, artefacts, grille,
-     * poubelle) : vers l'inventaire.
+     * une case d'artefact libre qui l'accepte (montree ou non), puis le sac, et sinon de
+     * l'inventaire a la barre d'action et retour. De partout ailleurs (sac, armure,
+     * artefacts, grille, poubelle) : vers l'inventaire.
      */
     @Override
     public ItemStack quickMoveStack(Player player, int index) {
@@ -355,7 +355,11 @@ public class ArcInventoryMenu extends BagMenu {
             if (!this.moveItemStackTo(stack, SLOT_OFFHAND, SLOT_OFFHAND + 1, false)) {
                 return ItemStack.EMPTY;
             }
-        } else if (this.curios > 0 && this.moveItemStackTo(stack, SLOT_CURIOS, SLOT_CURIOS + this.curios, false)) {
+        } else if (this.curios != null && this.curios.isCurio(stack)
+                && (player.level().isClientSide || this.curios.equip(stack))) {
+            if (player.level().isClientSide) {
+                return ItemStack.EMPTY;                 // le serveur equipe, ou range ailleurs
+            }
             // equipe dans une case d'artefact
         } else {
             ItemStack bagged = moveIntoBag(player, slot);

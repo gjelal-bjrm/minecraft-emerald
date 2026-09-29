@@ -331,6 +331,14 @@ public final class PhotoAutomaton {
         return pendingGui;
     }
 
+    /**
+     * Le client attend-il encore avant de prendre la prise d'ecran ? Sans cela il la prend une
+     * seconde apres l'ouverture (le livre met le jeu en pause) : avant le remplacement de la ceinture.
+     */
+    public static boolean holdsScreen() {
+        return pending != null && waited < holdUntil;
+    }
+
     /** La prise attend depuis plus d'une minute : le client la fait quand meme. */
     public static boolean overdue() {
         return pending != null && waited >= MAX_WAIT;
@@ -428,6 +436,9 @@ public final class PhotoAutomaton {
         if (shot.wings() && handsView != null && handsView.startsWith("vol")) {
             orbit(player);
         }
+        if (beltSwapAt > 0) {
+            beltSteps(player);
+        }
         if (explosionTarget != null && burstStarted) {
             com.emerald.jak.vehicle.VehicleDamage.damage(explosionTarget, com.emerald.jak.vehicle.VehicleDamage.NOVA);
             explosionTarget = null;
@@ -441,6 +452,7 @@ public final class PhotoAutomaton {
                     waited >= MAX_WAIT ? " (terrain pas entierement dessine)" : "");
             pending = null;
             pendingGui = false;
+            holdUntil = 0;
             handsView = null;
             index++;
         }
@@ -579,12 +591,28 @@ public final class PhotoAutomaton {
             } else {
                 com.emerald.menu.ArcInventoryMenu.open(player);
             }
+            if (view.contains("_ceinture")) {
+                // la ceinture de cuir de Relics d'abord (elle ajoute des charmes) ; remplacee plus tard,
+                // ecran ouvert (beltSteps) -- « _ceinture » montre les ceintures, « _ceinture_charmes » le bas
+                BuiltInRegistries.ITEM.getOptional(ResourceLocation.parse("relics:leather_belt")).ifPresent(item -> {
+                    com.emerald.item.CuriosStash.unequip(player, item);
+                    com.emerald.item.CuriosStash.equip(player, "belt", new net.minecraft.world.item.ItemStack(item));
+                });
+                BuiltInRegistries.ITEM.getOptional(ResourceLocation.parse("artifacts:warp_drive"))
+                        .ifPresent(item -> com.emerald.item.CuriosStash.unequip(player, item));
+                beltSwapAt = 50;
+                beltView = view.endsWith("_ceinture") ? "belt" : null;
+                holdUntil = beltSwapAt + 20;
+            }
             if (player.containerMenu instanceof com.emerald.menu.bag.BagMenu menu) {
                 if (view.endsWith("_bas")) {
                     menu.clickMenuButton(player, com.emerald.menu.bag.BagPanel.BUTTON_ROW + 99);
                 }
                 if (view.endsWith("_boite")) {
                     menu.clickMenuButton(player, com.emerald.menu.bag.BagPanel.BUTTON_TAB + 1);
+                }
+                if (view.endsWith("_artefacts")) {
+                    menu.clickMenuButton(player, com.emerald.menu.curio.CurioPanel.BUTTON_ROW + 99);
                 }
                 menu.broadcastChanges();
             }
@@ -626,8 +654,11 @@ public final class PhotoAutomaton {
         // quelques artefacts dans leurs cases, si le mod est la
         for (String[] curio : new String[][]{{"necklace", "artifacts:lucky_scarf"}, {"belt", "artifacts:cloud_in_a_bottle"},
                 {"feet", "artifacts:running_shoes"}, {"hands", "artifacts:power_glove"}}) {
-            BuiltInRegistries.ITEM.getOptional(ResourceLocation.parse(curio[1])).ifPresent(item ->
-                    com.emerald.item.CuriosStash.equip(player, curio[0], new net.minecraft.world.item.ItemStack(item)));
+            BuiltInRegistries.ITEM.getOptional(ResourceLocation.parse(curio[1])).ifPresent(item -> {
+                // une seule piece : avec des cases en plus, chaque prise en ajoutait une (trois echarpes)
+                com.emerald.item.CuriosStash.unequip(player, item);
+                com.emerald.item.CuriosStash.equip(player, curio[0], new net.minecraft.world.item.ItemStack(item));
+            });
         }
         if (!com.emerald.game.ArcenciumBackpack.available()) {
             return;
@@ -1867,6 +1898,55 @@ public final class PhotoAutomaton {
     /** La voiture a faire exploser au debut de la rafale (« dos_explosion »), serveur. */
     @Nullable
     private static com.emerald.jak.vehicle.JakVehicleEntity explosionTarget;
+    /** La tique des prises « inventaire_ceinture... » ou la ceinture de Relics est remplacee, ecran ouvert. */
+    private static int beltSwapAt;
+    /** Ou le panneau des artefacts defile avant le remplacement : « belt », ou le bas (null). */
+    @Nullable
+    private static String beltView;
+    /** Les cases de charme juste avant le remplacement, pour le journal. */
+    private static int charmsBefore;
+    /** Le client ne prend pas la prise d'ecran avant cette tique (holdsScreen). */
+    private static volatile int holdUntil;
+
+    /**
+     * LE PLANTAGE DU 29 SEPT., rejoue : la ceinture de cuir de Relics (des cases de CHARME en plus)
+     * remplacee par la Warp Drive d'Artifacts pendant que l'inventaire d'Arcencium est ouvert. Vingt
+     * tiques avant, les charmes de la ceinture sont la : le panneau defile vers les ceintures, ou
+     * jusqu'en bas ; puis le remplacement ; dix tiques apres, le compte des charmes ; la prise enfin.
+     */
+    private static void beltSteps(ServerPlayer player) {
+        if (waited == beltSwapAt - 20 && player.containerMenu instanceof com.emerald.menu.ArcInventoryMenu menu
+                && menu.curios() != null) {
+            List<com.emerald.menu.curio.CurioRef> refs = menu.curios().refs();
+            int row = 99;                                           // le bas : le serveur borne
+            for (int i = 0; "belt".equals(beltView) && i < refs.size(); i++) {
+                if ("belt".equals(refs.get(i).identifier())) {
+                    row = i / com.emerald.menu.curio.CurioPanel.COLS;
+                    break;
+                }
+            }
+            menu.clickMenuButton(player, com.emerald.menu.curio.CurioPanel.BUTTON_ROW + row);
+            menu.broadcastChanges();
+        }
+        if (waited == beltSwapAt) {
+            charmsBefore = com.emerald.menu.curio.CurioPanel.slotCount(player, "charm");
+            java.util.Optional<net.minecraft.world.item.Item> leather = BuiltInRegistries.ITEM.getOptional(
+                    ResourceLocation.parse("relics:leather_belt"));
+            java.util.Optional<net.minecraft.world.item.Item> warp = BuiltInRegistries.ITEM.getOptional(
+                    ResourceLocation.parse("artifacts:warp_drive"));
+            int removed = leather.map(item -> com.emerald.item.CuriosStash.unequip(player, item)).orElse(0);
+            boolean put = warp.map(item -> com.emerald.item.CuriosStash.equip(player, "belt",
+                    new net.minecraft.world.item.ItemStack(item))).orElse(false);
+            LOGGER.info("photos : ceinture de cuir retiree ({}), Warp Drive posee ({}), ecran {}", removed, put,
+                    player.containerMenu.getClass().getSimpleName());
+        }
+        if (waited == beltSwapAt + 10) {
+            LOGGER.info("photos : cases de charme {} -> {} apres le remplacement, ecran {}", charmsBefore,
+                    com.emerald.menu.curio.CurioPanel.slotCount(player, "charm"),
+                    player.containerMenu.getClass().getSimpleName());
+            beltSwapAt = 0;
+        }
+    }
     /** Le client a commence une rafale (PhotoClient). */
     private static volatile boolean burstStarted;
 

@@ -13,6 +13,7 @@ import com.emerald.main.EmeraldWeaponsMod;
 import com.emerald.menu.bag.Bag;
 import com.emerald.menu.bag.BagPanel;
 import com.emerald.menu.bag.Bags;
+import com.emerald.menu.curio.CurioPanel;
 import com.mojang.authlib.GameProfile;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -176,15 +177,18 @@ public final class ArcInventoryAutotest {
         p.containerMenu = m;
         BagPanel panel = m.bag();
         int first = panel.firstSlot();
-        check("le menu : 47 cases fixes, les cases d'artefacts, puis 54 cases du sac",
-                m.slots.size() == ArcInventoryMenu.SLOT_CURIOS + m.curioCount() + BagPanel.SIZE
-                        && first == ArcInventoryMenu.SLOT_CURIOS + m.curioCount() && m.curioCount() > 0,
-                m.slots.size() + " cases, " + m.curioCount() + " d'artefacts, sac a partir de " + first);
+        CurioPanel curios = m.curios();
+        check("le menu : 47 cases fixes, la fenetre des artefacts (24), puis 54 cases du sac",
+                curios != null && m.slots.size() == ArcInventoryMenu.SLOT_CURIOS + CurioPanel.SIZE + BagPanel.SIZE
+                        && first == ArcInventoryMenu.SLOT_CURIOS + CurioPanel.SIZE && !curios.refs().isEmpty(),
+                m.slots.size() + " cases, " + (curios == null ? 0 : curios.refs().size())
+                        + " cases d'artefacts, sac a partir de " + first);
         check("le panneau : le sac montre, 14 rangees, un onglet",
                 panel.present() && panel.size() == 120 && panel.rows() == 14 && panel.maxFirstRow() == 8
                         && panel.tabs() == 1 && panel.selected() == 0,
                 "taille " + panel.size() + ", rangees " + panel.rows() + ", onglets " + panel.tabs());
 
+        curioChanges(p, m);
         shiftInto(p, m, inv);
         clicks(p, m, inv, first);
         rules(p, m, first);
@@ -197,6 +201,81 @@ public final class ArcInventoryAutotest {
         arrows(p);
         board(p);
         furniture(p);
+    }
+
+    /**
+     * LE PLANTAGE DU 29 SEPT. : une ceinture de Relics retiree ecran ouvert enlevait une case de
+     * charme que le menu lisait encore. Sur le serveur du banc, Curios ne donne au joueur que le dos et
+     * le JET-Board : quarante cases de dos y apparaissent, la fenetre defile jusqu'en bas ; puis elles
+     * disparaissent, et les cases de la fenetre, qui les montraient, sont lues sans relire la liste
+     * d'abord, comme le faisait l'envoi du menu.
+     */
+    private static void curioChanges(FakePlayer p, ArcInventoryMenu m) {
+        line("--- des cases d'artefacts qui changent ecran ouvert");
+        CurioPanel curios = m.curios();
+        if (curios == null) {
+            check("la fenetre des artefacts existe", false, "Curios absent");
+            return;
+        }
+        net.minecraft.resources.ResourceLocation id =
+                net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(EmeraldWeaponsMod.MODID, "banc_ecran");
+        int extra = 40;
+        int before = CurioPanel.slotCount(p, "back");
+        int refsBefore = curios.refs().size();
+        CurioPanel.addTestSlots(p, "back", id, extra);
+        m.broadcastChanges();
+        m.clickMenuButton(p, CurioPanel.BUTTON_ROW + 99);          // le bas : le serveur borne
+        m.broadcastChanges();
+        int grown = CurioPanel.slotCount(p, "back");
+        int refsGrown = curios.refs().size();
+        int added = 0;
+        boolean shown = true;
+        for (int k = 0; k < CurioPanel.SIZE; k++) {
+            com.emerald.menu.curio.CurioRef ref = curios.ref(k);
+            if (ref != null && "back".equals(ref.identifier()) && ref.index() >= before) {
+                added++;
+                shown &= m.getSlot(curios.firstSlot() + k).isActive();
+            }
+        }
+        check("quarante cases de dos en plus, ecran ouvert : la fenetre defile jusqu'en bas et les montre",
+                grown == before + extra && refsGrown == refsBefore + extra && curios.firstRow() > 0
+                        && curios.firstRow() == curios.maxFirstRow() && added > 0 && shown,
+                "dos " + before + " -> " + grown + ", cases " + refsBefore + " -> " + refsGrown + ", rangee "
+                        + curios.firstRow() + "/" + curios.maxFirstRow() + ", nouvelles dans la fenetre " + added);
+
+        CurioPanel.removeTestSlots(p, "back", id);
+        String failure = "aucune";
+        try {
+            for (int k = 0; k < CurioPanel.SIZE; k++) {
+                m.getSlot(curios.firstSlot() + k).getItem();
+            }
+            m.broadcastChanges();
+        } catch (RuntimeException e) {
+            failure = e.toString();
+        }
+        check("les quarante cases retirees ecran ouvert : leur lecture ne plante plus, la fenetre revient a sa"
+                        + " taille et remonte",
+                "aucune".equals(failure) && curios.refs().size() == refsBefore
+                        && CurioPanel.slotCount(p, "back") == before && curios.firstRow() == curios.maxFirstRow(),
+                "erreur " + failure + ", cases " + curios.refs().size() + ", dos " + CurioPanel.slotCount(p, "back")
+                        + ", rangee " + curios.firstRow() + "/" + curios.maxFirstRow());
+
+        ItemStack board = new ItemStack(ModItems.JET_BOARD.get());
+        p.getInventory().setItem(12, board);
+        m.clicked(ArcInventoryMenu.SLOT_MAIN + 3, 0, ClickType.QUICK_MOVE, p);
+        boolean worn = false;
+        for (ItemStack stack : CuriosStash.worn(p)) {
+            worn |= stack.is(ModItems.JET_BOARD.get());
+        }
+        check("Maj+clic sur le JET-Board : pose dans sa case d'artefact, quel que soit le defilement",
+                worn && p.getInventory().getItem(12).isEmpty(),
+                "dans sa case " + worn + ", reste dans l'inventaire " + show(p.getInventory().getItem(12)));
+        for (int k = 0; k < CurioPanel.SIZE; k++) {
+            Slot slot = m.getSlot(curios.firstSlot() + k);
+            if (slot.getItem().is(ModItems.JET_BOARD.get())) {
+                slot.set(ItemStack.EMPTY);                // rien de ce banc ne reste porte
+            }
+        }
     }
 
     /** Maj+clic de l'inventaire vers le sac : tout le sac, pas seulement les cases visibles. */

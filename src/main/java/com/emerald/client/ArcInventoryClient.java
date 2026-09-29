@@ -63,6 +63,15 @@ public final class ArcInventoryClient {
         classic = false;
     }
 
+    /** La liste des cases d'artefacts, quand elle change ecran ouvert. */
+    public static void acceptCurioLayout(com.emerald.network.CurioLayoutPayload payload) {
+        Minecraft minecraft = Minecraft.getInstance();
+        if (minecraft.player != null && minecraft.player.containerMenu instanceof com.emerald.menu.ArcInventoryMenu menu
+                && menu.containerId == payload.containerId() && menu.curios() != null) {
+            menu.curios().setRefs(payload.refs());
+        }
+    }
+
     /** Les icones des onglets du panneau du sac, pour le menu ouvert. */
     public static void acceptTabs(BagTabsPayload payload) {
         Minecraft minecraft = Minecraft.getInstance();

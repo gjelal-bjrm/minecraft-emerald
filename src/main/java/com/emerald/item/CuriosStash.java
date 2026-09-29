@@ -29,6 +29,21 @@ public final class CuriosStash {
         return out;
     }
 
+    /** Retire des cases Curios toutes les piles de cet objet. Rend combien. */
+    public static int unequip(Player player, net.minecraft.world.item.Item item) {
+        int[] removed = {0};
+        CuriosApi.getCuriosInventory(player).ifPresent(curios -> {
+            IItemHandlerModifiable equipped = curios.getEquippedCurios();
+            for (int slot = 0; slot < equipped.getSlots(); slot++) {
+                if (equipped.getStackInSlot(slot).is(item)) {
+                    equipped.setStackInSlot(slot, ItemStack.EMPTY);
+                    removed[0]++;
+                }
+            }
+        });
+        return removed[0];
+    }
+
     /** Pose l'objet dans la premiere case libre de ce type. Faux si aucune. */
     public static boolean equip(Player player, String slotType, ItemStack stack) {
         return CuriosApi.getCuriosInventory(player)
