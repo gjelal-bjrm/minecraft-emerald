@@ -212,6 +212,14 @@ public final class PhotoAutomaton {
             return "vehicule".equals(this.biome.getNamespace());
         }
 
+        /**
+         * Un ecran du mod ouvert, cahier 111 : l'inventaire d'Arcencium, la Forge, l'Autel,
+         * l'Etabli (le nom de la prise commence par « menu_ »).
+         */
+        boolean screen() {
+            return "ecran".equals(this.biome.getNamespace());
+        }
+
         /** Une prise de l'arene du boss, levee pour elle. */
         boolean arena() {
             return "arene".equals(this.biome.getNamespace());
@@ -538,6 +546,129 @@ public final class PhotoAutomaton {
      * Haven s'ouvre (ses pages du moment) ; le client fait le reste (camera, clic tenu,
      * inventaire).
      */
+    /**
+     * L'INVENTAIRE D'ARCENCIUM ET LES POSTES (cahier 111) : le joueur equipe, le Sac d'Arcencium
+     * garni, une boite de Shulker dans la barre (le second onglet), puis l'ecran ouvert par le
+     * serveur : « inventaire », « inventaire_bas » (le sac defile jusqu'en bas),
+     * « inventaire_boite » (le second onglet), « forge », « autel », « etabli ».
+     */
+    private static boolean placeScreen(ServerLevel level, ServerPlayer player, Shot shot) {
+        if (stage == null) {
+            placeShowcase(level, player, new Shot(shot.name(), ResourceLocation.fromNamespaceAndPath("vitrine", "face"), 0));
+        }
+        String view = shot.biome().getPath();
+        if (PREPARED.add(shot.name())) {
+            player.closeContainer();
+            player.setGameMode(GameType.SURVIVAL);
+            player.getAbilities().invulnerable = true;
+            player.onUpdateAbilities();
+            player.teleportTo(level, stage.getX() + 0.5, stage.getY(), stage.getZ() - 2.5, 180.0F, 8.0F);
+            screenKit(player);
+            net.minecraft.world.inventory.ContainerLevelAccess none = net.minecraft.world.inventory.ContainerLevelAccess.NULL;
+            if (view.startsWith("forge")) {
+                player.getInventory().selected = 0;      // l'epee en main monte d'elle-meme sur la forge
+                player.openMenu(new net.minecraft.world.SimpleMenuProvider((id, inventory, p) ->
+                        new com.emerald.menu.ArcenciumForgeMenu(id, inventory, none), com.emerald.block.ArcenciumForgeBlock.TITLE));
+            } else if (view.startsWith("autel")) {
+                player.openMenu(new net.minecraft.world.SimpleMenuProvider((id, inventory, p) ->
+                        new com.emerald.menu.SpecializationAltarMenu(id, inventory, none),
+                        com.emerald.block.SpecializationAltarBlock.TITLE));
+            } else if (view.startsWith("etabli")) {
+                player.openMenu(new net.minecraft.world.SimpleMenuProvider((id, inventory, p) ->
+                        new com.emerald.menu.SocketBenchMenu(id, inventory, none), com.emerald.block.SocketBenchBlock.TITLE));
+            } else {
+                com.emerald.menu.ArcInventoryMenu.open(player);
+            }
+            if (player.containerMenu instanceof com.emerald.menu.bag.BagMenu menu) {
+                if (view.endsWith("_bas")) {
+                    menu.clickMenuButton(player, com.emerald.menu.bag.BagPanel.BUTTON_ROW + 99);
+                }
+                if (view.endsWith("_boite")) {
+                    menu.clickMenuButton(player, com.emerald.menu.bag.BagPanel.BUTTON_TAB + 1);
+                }
+                menu.broadcastChanges();
+            }
+            LOGGER.info("photos : {} (ecran {}, menu {})", shot.name(), view, player.containerMenu.getClass().getSimpleName());
+        }
+        handsView = null;
+        pendingGui = true;
+        return true;
+    }
+
+    /** L'equipement des prises d'ecran : armure, bouclier, barre, inventaire, un sac garni. */
+    private static void screenKit(ServerPlayer player) {
+        net.minecraft.world.entity.player.Inventory inv = player.getInventory();
+        inv.clearContent();
+        inv.setItem(39, new net.minecraft.world.item.ItemStack(com.emerald.item.ModItems.ARCENCIUM_HELMET.get()));
+        inv.setItem(38, new net.minecraft.world.item.ItemStack(com.emerald.item.ModItems.ARCENCIUM_CHESTPLATE.get()));
+        inv.setItem(37, new net.minecraft.world.item.ItemStack(com.emerald.item.ModItems.ARCENCIUM_LEGGINGS.get()));
+        inv.setItem(36, new net.minecraft.world.item.ItemStack(com.emerald.item.ModItems.ARCENCIUM_BOOTS.get()));
+        inv.setItem(40, new net.minecraft.world.item.ItemStack(com.emerald.item.ModItems.ARCENCIUM_SHIELD.get()));
+        inv.setItem(0, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.DIAMOND_SWORD));
+        inv.setItem(1, new net.minecraft.world.item.ItemStack(com.emerald.item.ModItems.ARCENCIUM_BOW.get()));
+        inv.setItem(2, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BREAD, 24));
+        inv.setItem(3, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.TORCH, 64));
+        inv.setItem(4, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.DIAMOND_PICKAXE));
+        net.minecraft.world.item.ItemStack box = new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.CYAN_SHULKER_BOX);
+        box.set(net.minecraft.core.component.DataComponents.CONTAINER,
+                net.minecraft.world.item.component.ItemContainerContents.fromItems(List.of(
+                        new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.OAK_LOG, 64),
+                        new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.GLASS, 32),
+                        new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.LANTERN, 12))));
+        inv.setItem(8, box);
+        inv.setItem(9, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.COBBLESTONE, 64));
+        inv.setItem(10, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.OAK_PLANKS, 40));
+        inv.setItem(13, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.COOKED_BEEF, 16));
+        inv.setItem(20, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.WATER_BUCKET));
+        if (!net.neoforged.fml.ModList.get().isLoaded("curios")) {
+            return;
+        }
+        // quelques artefacts dans leurs cases, si le mod est la
+        for (String[] curio : new String[][]{{"necklace", "artifacts:lucky_scarf"}, {"belt", "artifacts:cloud_in_a_bottle"},
+                {"feet", "artifacts:running_shoes"}, {"hands", "artifacts:power_glove"}}) {
+            BuiltInRegistries.ITEM.getOptional(ResourceLocation.parse(curio[1])).ifPresent(item ->
+                    com.emerald.item.CuriosStash.equip(player, curio[0], new net.minecraft.world.item.ItemStack(item)));
+        }
+        if (!com.emerald.game.ArcenciumBackpack.available()) {
+            return;
+        }
+        List<com.emerald.menu.bag.Bag> bags = com.emerald.menu.bag.Bags.scan(player, 4);
+        com.emerald.menu.bag.Bag bag = null;
+        for (com.emerald.menu.bag.Bag candidate : bags) {
+            if (candidate.size() > 27) {
+                bag = candidate;
+                break;
+            }
+        }
+        if (bag == null) {
+            com.emerald.item.CuriosStash.equip(player, "back", com.emerald.game.ArcenciumBackpack.make());
+            bag = com.emerald.menu.bag.Bags.scan(player, 4).get(0);
+        }
+        for (int slot = 0; slot < bag.size(); slot++) {
+            bag.set(slot, net.minecraft.world.item.ItemStack.EMPTY);
+        }
+        Object[][] contents = {
+                {net.minecraft.world.item.Items.IRON_INGOT, 256}, {net.minecraft.world.item.Items.IRON_INGOT, 44},
+                {net.minecraft.world.item.Items.GOLD_INGOT, 120}, {net.minecraft.world.item.Items.DIAMOND, 21},
+                {com.emerald.item.ModItems.ARCENCIUM_INGOT.get(), 9}, {com.emerald.item.ModItems.FORGE_STONE.get(), 6},
+                {com.emerald.item.ModItems.ARCENCIUM_FEATHER.get(), 14}, {com.emerald.item.ModItems.FATE_SHARD.get(), 5},
+                {net.minecraft.world.item.Items.ARROW, 180}, {net.minecraft.world.item.Items.COAL, 90},
+                {net.minecraft.world.item.Items.RAW_IRON, 38}, {net.minecraft.world.item.Items.EMERALD, 47},
+                {net.minecraft.world.item.Items.ROTTEN_FLESH, 12}, {net.minecraft.world.item.Items.COOKED_PORKCHOP, 30},
+                {net.minecraft.world.item.Items.IRON_SWORD, 1}, {net.minecraft.world.item.Items.GOLDEN_APPLE, 3},
+                {net.minecraft.world.item.Items.REDSTONE, 150}, {net.minecraft.world.item.Items.LAPIS_LAZULI, 64},
+                {net.minecraft.world.item.Items.STRING, 22}, {net.minecraft.world.item.Items.BONE, 17},
+                {net.minecraft.world.item.Items.ENDER_PEARL, 9}, {net.minecraft.world.item.Items.EXPERIENCE_BOTTLE, 24}};
+        int slot = 0;
+        for (Object[] entry : contents) {
+            bag.set(slot++, new net.minecraft.world.item.ItemStack((net.minecraft.world.item.Item) entry[0], (Integer) entry[1]));
+        }
+        // le bas du sac : pour la prise defilee
+        bag.set(110, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.NETHERITE_INGOT, 2));
+        bag.set(116, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BLAZE_ROD, 11));
+        bag.set(119, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.TOTEM_OF_UNDYING));
+    }
+
     private static boolean placeHands(ServerLevel level, ServerPlayer player, Shot shot) {
         net.minecraft.world.item.Item item = BuiltInRegistries.ITEM.get(ResourceLocation.parse(
                 HELD.isEmpty() ? "emeraldweapons:arcencium_shield" : HELD));
@@ -1862,6 +1993,9 @@ public final class PhotoAutomaton {
         }
         if (shot.hands()) {
             return placeHands(level, player, shot);
+        }
+        if (shot.screen()) {
+            return placeScreen(level, player, shot);
         }
         if (shot.wings()) {
             return placeWings(level, player, shot);

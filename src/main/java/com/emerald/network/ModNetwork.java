@@ -139,6 +139,23 @@ public class ModNetwork {
                 (payload, context) -> context.enqueueWork(
                         () -> com.emerald.jak.gun.GunClient.accept(payload)));
 
+        // la touche E : l'inventaire d'Arcencium, ouvert par le serveur (cahier §111)
+        registrar.playToServer(OpenArcInventoryPayload.TYPE, OpenArcInventoryPayload.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(() -> {
+                    if (context.player() instanceof ServerPlayer player && player.isAlive() && !player.isSpectator()) {
+                        com.emerald.menu.ArcInventoryMenu.open(player);
+                    }
+                }));
+
+        // les munitions des sacs : l'arc se bande chez le client sans fleche dans l'inventaire (cahier §111)
+        registrar.playToClient(BagAmmoPayload.TYPE, BagAmmoPayload.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(() -> com.emerald.item.BagAmmo.accept(payload)));
+
+        // les onglets du panneau du sac : l'icone de chaque sac porte (cahier §111)
+        registrar.playToClient(BagTabsPayload.TYPE, BagTabsPayload.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(
+                        () -> com.emerald.client.ArcInventoryClient.acceptTabs(payload)));
+
         // la touche du JET-Board : le serveur la sort sous les pieds, ou la range (cahier §100)
         registrar.playToServer(JetBoardTogglePayload.TYPE, JetBoardTogglePayload.STREAM_CODEC,
                 (payload, context) -> context.enqueueWork(() -> {

@@ -845,9 +845,14 @@ public final class MorphGunKeeper {
         }
     }
 
-    /** Un menu du mod sans aucune case : rien a deposer. */
+    /**
+     * Un menu du mod sans aucune case : rien a deposer. Et l'inventaire d'Arcencium (la
+     * touche E, cahier §111), qui remplace celui du jeu : l'arme y reste dans l'inventaire,
+     * et la grille, la poubelle et le sac la refusent.
+     */
     static boolean exempt(AbstractContainerMenu menu) {
-        return menu.slots.isEmpty() && menu.getClass().getName().startsWith("com.emerald.");
+        return menu instanceof com.emerald.menu.ArcInventoryMenu
+                || menu.slots.isEmpty() && menu.getClass().getName().startsWith("com.emerald.");
     }
 
     @SubscribeEvent

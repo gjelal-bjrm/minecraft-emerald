@@ -13,9 +13,13 @@ import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 /**
  * Le JET-Board n'est jamais perdu (cahier §100). C'est l'achat qui fait le proprietaire
  * (JetBoard.owns) : toutes les secondes, dans Haven, celui qui l'a achete et n'a plus sa planche
- * nulle part -- ni dans sa case, ni dans son sac, ni au bout de sa souris -- la retrouve dans sa
- * case, ou dans son sac si elle est prise. Sa case est gardee a la mort (drop_rule ALWAYS_KEEP) ;
- * une planche jetee disparait au sol (JetBoardItem) et revient ici.
+ * nulle part -- ni dans sa case, ni dans son inventaire, ni dans un sac porte, ni dans la grille
+ * d'artisanat, ni au bout de sa souris -- la retrouve dans sa case, ou dans son inventaire si elle
+ * est prise. Sa case est gardee a la mort (drop_rule ALWAYS_KEEP) ; une planche jetee disparait au
+ * sol (JetBoardItem) et revient ici.
+ *
+ * LE SAC COMPTE (cahier §111) : l'ecran de Sophisticated Backpacks accepte la planche, et le
+ * gardien, qui ne regardait pas dedans, en donnait une seconde a chaque passage.
  */
 @EventBusSubscriber(modid = EmeraldWeaponsMod.MODID)
 public final class JetBoardKeeper {
@@ -45,6 +49,18 @@ public final class JetBoardKeeper {
         if (player.getInventory().contains(stack -> stack.is(ModItems.JET_BOARD.get()))
                 || player.containerMenu.getCarried().is(ModItems.JET_BOARD.get())) {
             return true;
+        }
+        for (ItemStack stack : player.inventoryMenu.getCraftSlots().getItems()) {
+            if (stack.is(ModItems.JET_BOARD.get())) {
+                return true;
+            }
+        }
+        for (net.neoforged.neoforge.items.IItemHandler bag : com.emerald.item.Stash.bags(player)) {
+            for (int slot = 0; slot < bag.getSlots(); slot++) {
+                if (bag.getStackInSlot(slot).is(ModItems.JET_BOARD.get())) {
+                    return true;
+                }
+            }
         }
         return ModList.get().isLoaded("curios") && JetBoardCurios.worn(player);
     }

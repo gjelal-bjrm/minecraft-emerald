@@ -716,6 +716,48 @@ redescendre. **Jusqu'à +7**, il rend le métal ; **vers +8, +9 et +10**, le mé
 perdu aussi. Chances vers +8, +9, +10 : **18, 9 et 4 %** ; l'Heure Dorée ajoute 15 points
 aux crans d'avant, **5 seulement** à ces trois-là.
 
+### L'inventaire (touche E) et le sac
+
+La touche **E** ouvre l'**inventaire d'Arcencium** : tout sur un seul écran.
+
+- **À gauche**, les cases d'artefacts (Curios) : on équipe un anneau, une amulette, le sac
+  lui-même, sans ouvrir d'autre écran. Une case vide dit son nom au survol.
+- **Au milieu**, l'inventaire du jeu tel quel : le personnage, l'armure, la main gauche, la
+  grille d'artisanat 2×2. Dessous, trois boutons : le **livre vert** ouvre l'inventaire classique
+  (livre de recettes, effets), puis la **poubelle**, puis le **tri** de l'inventaire (la barre
+  d'action ne bouge pas).
+- **À droite**, le **sac porté** : six rangées, la molette ou la barre pour défiler, un bouton
+  pour le trier. Un onglet par sac porté — dans le dos, en main gauche, dans l'inventaire (une
+  boîte de Shulker compte) —, quatre au plus.
+
+**Maj+clic** : depuis l'inventaire, l'armure et le bouclier vont à leur place, un artefact dans
+sa case libre, et le reste **dans le sac** (tout le sac, pas seulement les rangées affichées) ;
+sans sac, de l'inventaire à la barre et retour. Depuis le sac, une pile à la fois vers
+l'inventaire.
+
+Une case du Sac d'Arcencium tient **quatre piles** (256 lingots) : un clic en prend une pile, un
+clic droit la moitié (une pile au plus), un clic avec le même objet complète la case jusqu'à 256.
+Ce qu'on range à la main n'est **jamais détruit** par l'amélioration Vide du sac : elle ne joue
+qu'au ramassage.
+
+La **poubelle** prend tout, sauf le Morph Gun, le JET-Board et les sacs. Ce qu'on y pose est
+détruit à la fermeture de l'écran ; d'ici là on peut le reprendre, et un second objet détruit le
+premier. Le Morph Gun et le JET-Board ne vont ni dans le sac ni dans la grille.
+
+**La Forge, l'Autel et l'Établi montrent aussi le sac**, à droite. Maj+clic sur une pièce du sac
+la pose sur la Forge ; sur une pierre, un artefact, une rune ou une pièce, dans l'Établi. Les
+pierres, le métal et les plumes affichés comptent **ce que contient le sac**, et la tentative y
+puise : plus besoin de sortir neuf lingots pour essayer un cran.
+
+**Les flèches du sac** : un arc sans flèche dans l'inventaire tire celles du sac.
+
+Sur ces écrans, le tri d'Inventory Tweaks (clic molette, touches de tri) ne joue pas : il
+mélangerait le sac, les artefacts et la poubelle. Les boutons de tri de l'écran le remplacent. La
+poubelle de TrashSlot est éteinte sur l'inventaire (sa touche la rallume) ; la Forge, l'Autel et
+l'Établi gardent la leur.
+
+En créatif, E ouvre l'inventaire créatif comme avant.
+
 ### Les ailes
 
 La spécialisation fait pousser des ailes : dès +5, maintenir Saut en l'air freine la
@@ -1063,6 +1105,7 @@ Sur un serveur d'essai (`run-server`), chacun écrit son rapport puis arrête le
 - `EMERALDWEAPONS_AUTOTEST=parcours ./gradlew runServer` : le parcours (fiche sur disque, arme qui suit les formes du joueur, ville paisible, bouton verrouillé, titre et objectifs du guide ; puis le lot 2 : râtelier du QG, deuxième arrivée envahie, reprise des rues, retour après la défaite, porte de la victoire ; le Portail de Haven — recette, pose, anneau de la ville au QG, aller-retour du Monde ouvert, Défi quitté, reprise ; les appartements — catalogue du coffre sans fond, objets qui restent à Haven, un coffre par appartement, fenêtres fermées puis ouvertes, poser chez soi et pas dehors, casser ce qu'on a posé et pas les murs ; puis les transports : les huit stations, l'arche et sa recharge, le portail des tours ; puis l'agenda, l'équipe attendue au QG et la réunion), rapport `run-server/parcours_autotest.txt` ;
 - `EMERALDWEAPONS_AUTOTEST=faune ./gradlew runServer` : les animaux de la ville (carte de l'eau, places de chaque espèce, plafonds, dangers tenus au large et agressifs au large seulement, piqûre des méduses, armée de mouettes, compagnons à l'invasion), rapport `run-server/faune_autotest.txt` ; avant, `python tools/dev_mods.py --server alexsmobs aquaculture livingthings`, après, `python tools/dev_mods.py --server --clean` ;
 - `EMERALDWEAPONS_AUTOTEST=quetes ./gradlew runServer` : les quêtes des héros (le livre des quêtes, les six héros et le bateau du Pêcheur, les cartes du chat et leurs jetons, l'épreuve de tir jusqu'à la médaille, la pêche au poids, les coffres engloutis, la chasse aux mouettes, la patrouille, la tenue du port et l'invasion qui va avec, les orbes cachés et ceux des rails, la boutique de Tess et ses sceaux, la course du JET-Board et ses médailles, puis le ménage), rapport `run-server/quetes_autotest.txt` ; avant, `python tools/dev_mods.py --server alexsmobs aquaculture livingthings`, après, `python tools/dev_mods.py --server --clean` ;
+- `EMERALDWEAPONS_AUTOTEST=ecran ./gradlew runServer` : l'inventaire d'Arcencium et le panneau du sac, avec un vrai Sac d'Arcencium (Maj+clic vers le sac et depuis le sac, clics sur une case de 256, touche 1, échange refusé, chair putride pas détruite, poubelle, grille 2×2, tris, défilement, onglet d'une boîte de Shulker, Forge, Autel et Établi payés depuis le sac, flèches du sac, JET-Board rangé dans le sac, meubles du coffre), rapport `run-server/ecran_autotest.txt` ; avant, `python tools/dev_mods.py --server sophisticatedbackpacks curios`, après, `python tools/dev_mods.py --server --clean` ;
 - `EMERALDWEAPONS_AUTOTEST=partie ./gradlew runServer` : la partie (chances de la Forge et métal perdu, coffres des sanctuaires selon l'avancée, vol d'élytre des ailes +20, bouclier d'Arcencium, plumes d'ailes en récompense, usure sans casse, Grand Froid de l'Aurore, Proie de la Battue et sa garde, arches, cycle d'ouverture des météos, Éclipse, bestiaires, garnisons et matières des trois sanctuaires, arène du boss), rapport `run-server/partie_autotest.txt`. Les épreuves 9 à 12 demandent des mods au serveur des bancs : `python tools/dev_mods.py --server graveyard alexsmobs twilightforest cataclysm irons_spellbooks undergarden eternal_starlight creeperoverhaul variantsandventures lionfishapi resourcefullib deeperdarker evilcraft endermanoverhaul puzzleslib`, plus les jars de Mutant Monsters et de Born in Chaos copiés dans `run-server/mods` tant qu'ils ne sont pas dans le profil, puis `--server --clean`.
 
 Pour regarder un terrain (arbres, biomes) sans jouer : le run `photos` entre dans le monde
@@ -1109,6 +1152,10 @@ voiture posée devant explose au début d'une rafale) ; la hauteur de prise est 
 centièmes (`nom@vehicule:cara/dos@40` : l'état « mal » et sa fumée).
 Toujours une `EMERALDWEAPONS_PHOTOS_ORIGINE` neuve (le monde garde les estrades
 d'avant), et une première prise de rodage : juste après le téléport, le terrain n'est pas encore là.
+Les écrans du mod (cahier §111) : une prise nommée `menu_…` avec `ecran:inventaire`,
+`ecran:inventaire_bas` (le sac défilé jusqu'en bas), `ecran:inventaire_boite` (le second onglet,
+une boîte de Shulker), `ecran:forge`, `ecran:autel` ou `ecran:etabli` équipe le joueur, garnit le
+Sac d'Arcencium et ouvre l'écran.
 Pour photographier des animaux ou des blocs, un datapack jetable dans `run/saves/photos/datapacks/`
 peut les poser devant la caméra : l'automate place le joueur 200 tiques après son arrivée, une
 fonction de tique qui compte les tiques du joueur agit juste après (vitrine d'Alex's Mobs, cahier §78.5).

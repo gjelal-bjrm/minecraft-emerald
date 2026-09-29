@@ -10,7 +10,10 @@ import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.ItemStack;
 
+import javax.annotation.Nullable;
 import java.util.Locale;
 
 /**
@@ -40,11 +43,16 @@ public class SpecializationAltarScreen extends AbstractContainerScreen<Specializ
     private static final int INK = 0xFF3F3F3F;
     private static final int PALE = 0xFF8A8A8A;
 
+    private static final int BODY_W = SpecializationAltarMenu.BODY_W;
+
     private Button attempt;
+    private BagPanelView bagView;
+    private boolean swallowRelease;
 
     public SpecializationAltarScreen(SpecializationAltarMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
-        this.imageWidth = 176;
+        // le corps de l'autel, puis le panneau du sac a droite (cahier §111)
+        this.imageWidth = BODY_W + 2 + com.emerald.menu.bag.BagPanel.WIDTH;
         this.imageHeight = 240;
         this.titleLabelY = 6;
         this.inventoryLabelY = -1000;
@@ -66,6 +74,7 @@ public class SpecializationAltarScreen extends AbstractContainerScreen<Specializ
                 .tooltip(Tooltip.create(Component.translatable("altar.emeraldweapons.button.tip")))
                 .build();
         this.addRenderableWidget(this.attempt);
+        this.bagView = new BagPanelView(this.menu);
     }
 
     private int level() {
@@ -76,6 +85,7 @@ public class SpecializationAltarScreen extends AbstractContainerScreen<Specializ
     @Override
     protected void containerTick() {
         super.containerTick();
+        this.bagView.tick();
         this.attempt.active = level() < Specialization.MAX;
     }
 
@@ -83,15 +93,16 @@ public class SpecializationAltarScreen extends AbstractContainerScreen<Specializ
     protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
         int x = (this.width - this.imageWidth) / 2;
         int y = (this.height - this.imageHeight) / 2;
-        graphics.blit(TEXTURE, x, y, 0, 0, this.imageWidth, this.imageHeight);
+        graphics.blit(TEXTURE, x, y, 0, 0, BODY_W, this.imageHeight);
+        this.bagView.renderBg(graphics, x, y, mouseX, mouseY);
     }
 
     @Override
     protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
         super.renderLabels(graphics, mouseX, mouseY);
+        this.bagView.renderLabels(graphics, this.font);
         int level = level();
-        int feathers = this.minecraft == null || this.minecraft.player == null
-                ? 0 : SpecializationAltarMenu.feathers(this.minecraft.player);
+        int feathers = this.menu.feathersCarried();      // compte du serveur : le sac compris
 
         // ---- le cartouche : palier, prochain, chance ; les plumes
         if (level >= Specialization.MAX) {
@@ -119,7 +130,7 @@ public class SpecializationAltarScreen extends AbstractContainerScreen<Specializ
             };
             int color = result == SpecializationAltarMenu.RESULT_WON ? GREEN : RED;
             int w = this.font.width(verdict);
-            graphics.drawString(this.font, verdict, this.imageWidth - 8 - w, 33, color, false);
+            graphics.drawString(this.font, verdict, BODY_W - 8 - w, 33, color, false);
         }
 
         // ---- l'echelle, en deux colonnes de dix
@@ -145,8 +156,9 @@ public class SpecializationAltarScreen extends AbstractContainerScreen<Specializ
                 String plumes = done ? Component.translatable("altar.emeraldweapons.done").getString()
                         : String.format(Locale.ROOT, "%d/%d", feathers, cost);
                 int plumesColor = done ? GREEN : next ? (feathers >= cost ? GREEN : RED) : ink;
-                graphics.drawString(this.font, plumes, cx + 26, ry, plumesColor, false);
                 String odds = Specialization.ODDS[tier] + " %";
+                ArcGui.drawFit(graphics, this.font, plumes, cx + 26, ry, plumesColor,
+                        COL_W - 26 - this.font.width(odds) - 3);
                 graphics.drawString(this.font, odds, cx + COL_W - this.font.width(odds), ry,
                         next ? VIOLET : ink, false);
             }
@@ -157,5 +169,48 @@ public class SpecializationAltarScreen extends AbstractContainerScreen<Specializ
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         super.render(graphics, mouseX, mouseY, partialTick);
         this.renderTooltip(graphics, mouseX, mouseY);
+        this.bagView.renderTooltip(graphics, this.font, mouseX, mouseY, this.leftPos, this.topPos);
+    }
+
+    @Override
+    protected void renderSlotContents(GuiGraphics graphics, ItemStack stack, Slot slot, @Nullable String countString) {
+        if (!BagPanelView.renderCount(graphics, this.font, stack, slot, countString, this.imageWidth)) {
+            super.renderSlotContents(graphics, stack, slot, countString);
+        }
+    }
+
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (this.bagView.mouseClicked(mouseX, mouseY, button, this.leftPos, this.topPos)) {
+            this.swallowRelease = true;
+            return true;
+        }
+        return super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    @Override
+    public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+        if (this.bagView.mouseDragged(mouseX, mouseY, button, this.leftPos, this.topPos)) {
+            return true;
+        }
+        return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+    }
+
+    @Override
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        boolean dragged = this.bagView.mouseReleased(button);
+        if (this.swallowRelease || dragged) {
+            this.swallowRelease = false;
+            return true;
+        }
+        return super.mouseReleased(mouseX, mouseY, button);
+    }
+
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+        if (this.bagView.mouseScrolled(mouseX, mouseY, scrollY, this.leftPos, this.topPos)) {
+            return true;
+        }
+        return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
     }
 }

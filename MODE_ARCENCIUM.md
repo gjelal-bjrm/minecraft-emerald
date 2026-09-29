@@ -10156,3 +10156,127 @@ Morph Gun au ratelier du QG (`haven:ratelier`), la forme rouge, en Jak 3 et en c
 en main ne se photographie pas hors d'une partie ouverte de Haven : son gardien le reprend (l'arme
 n'existe que dans la ville, lobby ouvert, formes debloquees) ; le ratelier passe par le meme rendu.
 `EMERALDWEAPONS_JAK_CUBES=jak` montre tout comme dans Jak 3.
+
+## 111. L'inventaire d'Arcencium : tout sur un ecran, et le sac partout *(29 sept. 2026)*
+
+« Lorsque je veux faire des tentatives d'amelioration, je suis oblige d'ouvrir mon sac, de
+recuperer les objets pour les mettre dans mon inventaire, et apres ce qui reste, je dois le remettre
+dans le sac. Meme concept quand je veux porter un equipement qui est dans mon sac. Il manque une
+interface centralisee : l'inventaire du personnage, le sac, les artefacts equipes, l'apparence du
+joueur, ses equipements. Le but, c'est de reduire au maximum le temps que le joueur passe dans les
+interfaces. » (le joueur, 27 sept.)
+
+**Choix du joueur** : l'ecran REMPLACE E (un bouton ramene a l'inventaire du jeu) ; un PANNEAU DU
+SAC aussi dans la Forge, l'Etabli et l'Autel ; en plus, la grille 2 x 2, une poubelle, le tri de
+l'inventaire et du sac. Pas le resume du heros.
+
+### A. L'ecran (`menu/ArcInventoryMenu`, `client/ArcInventoryScreen`, `client/ArcInventoryClient`)
+
+De gauche a droite : les cases d'artefacts de Curios (colonnes de huit), le corps -- la texture de
+l'inventaire du jeu telle quelle : le personnage, l'armure, la main gauche, la grille 2 x 2 --, puis
+le panneau du sac. Sous la grille : un livre (l'inventaire du jeu, pour le livre de recettes et les
+effets), la poubelle, le tri de l'inventaire.
+- LES INDEX DE L'INVENTAIRE DU JEU : 0 le resultat, 1-4 la grille, 5-8 l'armure, 9-35 l'inventaire,
+  36-44 la barre, 45 la main gauche ; puis 46 la poubelle, les artefacts, les 54 cases du sac.
+- LES ARTEFACTS : les cases de Curios elles-memes (CurioSlot : leurs validations, la malediction du
+  lien, l'icone du type), decrites par le serveur a l'ouverture ; seuls les types visibles.
+- LA TOUCHE E : le jeu ouvre son inventaire cote client ; `ScreenEvent.Opening` l'en empeche (pas
+  en creatif, pas un autre ecran qui en herite) et demande le notre au serveur
+  (`OpenArcInventoryPayload`). Le livre ferme notre menu et laisse passer une fois celui du jeu.
+- Maj+clic depuis l'inventaire : l'armure et le bouclier a leur place, un artefact dans sa case
+  libre, le reste dans le sac ; sans sac, de l'inventaire a la barre et retour.
+- LE MORPH GUN reste dans l'inventaire (MorphGunKeeper exempte ce menu, comme celui du jeu) : la
+  grille, la poubelle et le sac le refusent, comme le JET-Board -- leurs gardiens ne les y
+  verraient pas.
+
+### B. Le panneau du sac (`menu/bag/*`, `compat/SophisticatedBags`, `client/BagPanelView`)
+
+Six rangees de neuf, une barre de defilement (molette, glisser), un onglet par sac porte -- le dos
+d'abord, la main gauche, l'inventaire ; une boite de Shulker compte ; quatre au plus --, un bouton de
+tri. Le serveur fait foi : il lit le sac, envoie la taille, la rangee et les onglets par les donnees
+du menu, les icones par un paquet (`BagTabsPayload`) ; defilement, onglet et tri passent par les
+boutons de menu du jeu.
+- LE CONTENEUR BRUT du sac, pas celui qu'il offre aux autres mods : ce dernier passe par les
+  ameliorations a l'entree, et l'amelioration Vide du Sac d'Arcencium y detruit la chair putride et
+  les os. On ecrit les cases comme l'ecran du sac lui-meme, apres lui avoir demande si l'objet est
+  admis (sacs imbriques, cases memorisees) et combien la case en tient (256 lingots).
+- DES COPIES, JAMAIS LES PILES DU SAC (`BagWindow`). Le code des menus modifie en place la pile d'une
+  case ; Sophisticated Backpacks n'enregistre que ce qu'on lui ecrit. La fenetre relit le sac au
+  debut de chaque clic et a chaque tique, et n'ecrit a la fin du clic que les cases que le clic a
+  changees -- rien d'autre, pour ne pas ecraser ce que le sac a ramasse, cuit ou mange entre-temps.
+- UNE CASE TIENT PLUS QU'UNE PILE (`BagSlot`) : un clic n'en prend qu'une pile, un clic droit la
+  moitie d'une pile au plus ; une case trop pleine ne s'echange pas contre un autre objet ; les
+  touches 1 a 9 n'en sortent qu'une pile. On complete une case jusqu'a 256.
+- Maj+clic vers le sac range dans TOUT le sac (pas les seules rangees visibles), sur les piles du
+  meme objet d'abord ; le client ne le predit pas, le serveur corrige l'ecran a la tique suivante.
+- Les nombres au-dela de 99 s'ecrivent en petit : « 256 » prenait toute la case.
+
+### C. La Forge, l'Autel et l'Etabli
+
+Le meme panneau, a droite. Maj+clic sur une piece du sac la pose sur la Forge ; sur une pierre, un
+artefact, une rune ou une piece, dans l'Etabli ; le reste va a l'inventaire, et de l'inventaire au
+sac. LES RESERVES AFFICHEES (pierres et metal de chaque cran, plumes) sont COMPTEES PAR LE SERVEUR,
+sac compris, et envoyees par les donnees du menu : les ecrans comptaient cote client, ou la copie du
+sac est vide, et affichaient 0/9 avec neuf lingots dans le sac. Les tentatives puisaient deja dans le
+sac (`Stash`) ; l'ecran le dit maintenant.
+
+### D. Tris et poubelle (`item/Sorting`)
+
+- L'inventaire : les 27 cases du milieu, piles fusionnees, dans l'ordre du jeu (celui des objets
+  enregistres), puis par nom ; la barre d'action ne bouge pas, ni le Morph Gun ni le JET-Board.
+- Le sac : son propre tri (ses reglages, ses cases a ne pas trier) ; une boite, le tri ci-dessus.
+- La poubelle prend tout sauf le Morph Gun, le JET-Board et ce qui contient d'autres objets ; un
+  second objet detruit le premier ; on reprend avant de fermer ; la fermeture detruit.
+
+### E. Les defauts du sac corriges
+
+- LE JET-BOARD range dans le sac etait compte absent : son gardien en donnait un second a chaque
+  passage (`JetBoardKeeper` regarde les sacs et la grille du jeu).
+- LES FLECHES DU SAC (`item/BagAmmo`) : un arc sans fleche dans l'inventaire tire dans le sac. Le
+  serveur donne a l'arc une COPIE de la case, puis retire du sac ce que l'arc a pris ; le client, qui
+  ne voit pas le sac, recoit toutes les secondes les sortes de munitions presentes
+  (`BagAmmoPayload`) : sans cela, l'arc ne se bandait pas chez lui.
+- LES MEUBLES DU COFFRE d'amenagement quittaient Haven caches dans le sac (`HavenFurnish.strip`).
+- LES RELIQUES rangees dans le sac, ou equipees depuis le nouvel ecran, restaient a etudier
+  (`RelicResearch` regarde les cases Curios et les sacs).
+
+### F. Les mods d'inventaire du modpack (`client/compat/InventoryModsCompat`)
+
+- INVENTORY TWEAKS trie cote serveur toutes les cases « de conteneur » d'un menu comme un seul
+  coffre : sur nos menus, il aurait verse le sac dans les artefacts ou la poubelle. Dans le profil,
+  le clic molette est lie a son tri. Sur nos ecrans : ses boutons retires, ses touches de tri
+  ignorees.
+- TRASHSLOT posait sa case sur le titre du sac ; son API l'eteint par defaut sur notre inventaire
+  (sa touche la rallume). La Forge, l'Autel et l'Etabli gardent la sienne.
+- Le bouton du livre de recettes du jeu (ImageButton) ne s'affichait pas sur l'ecran : le livre est
+  un bouton a nous.
+- CURIOS : son constructeur court de CurioSlot laisse la liste des etats actifs vide, et
+  `CurioSlot.set` la lit des que le contenu change -- le client plantait a la deuxieme ouverture.
+  Le constructeur complet, comme l'ecran de Curios.
+
+### G. Vu, et essaye
+
+- Banc `ecran` (`menu/ArcInventoryAutotest`, avec `dev_mods.py --server sophisticatedbackpacks
+  curios`) : 38 OK. Un cobaye porte un vrai Sac d'Arcencium ; de vrais clics : 320 lingots ranges
+  d'un Maj+clic (256 puis 64) ; une pile au curseur sur une case de 256, la moitie plafonnee au clic
+  droit, la case completee a 192, l'echange refuse, la touche 1, la sortie pile par pile ; la chair
+  putride pas detruite ; le Morph Gun, le JET-Board et un second sac refuses ; poubelle et grille ;
+  tris sans perte ; defilement jusqu'a la rangee 8 ; l'onglet d'une boite de Shulker, et la boite
+  retiree pendant qu'elle est montree ; la Forge, l'Autel et l'Etabli avec ce qui est dans le sac (une
+  tentative payee depuis le sac) ; une fleche tiree du sac ; le JET-Board dans le sac ; un meuble du
+  coffre retire en quittant Haven. A chaque pas, le compte des objets ne bouge pas.
+- Photos (`menu_inventaire`, `_bas`, `_boite`, `menu_forge`, `menu_autel`, `menu_etabli`), client du
+  dev en 2560 x 1440 (echelle 6 : un ecran de 426 x 240) : l'ecran tient, 418 de large avec deux
+  colonnes d'artefacts ; la Forge montre 6 pierres, 300/4 fer et 2/2 netherite venus du sac, l'Autel
+  14 plumes ; le second onglet ; le sac defile jusqu'a sa case 119.
+- La premiere serie a montre : le plantage de Curios a la deuxieme ouverture ; les boutons
+  d'Inventory Tweaks et la case de TrashSlot sur le panneau ; l'etiquette « Inventaire » sur la case
+  du personnage ; « 256 » sur toute la case ; les icones des onglets jamais arrivees a la Forge
+  (envoyees des la construction du menu, avant l'ecran : elles partent maintenant a l'envoi du
+  menu) ; les reserves du sac debordant sur la colonne voisine (« 14/1030 % »). Tout est corrige et
+  revu en photo.
+- Le serveur des bancs s'est bloque deux fois sur trois a l'arret, apres le rapport : il tournait
+  sans fin dans le dechargement des troncons (un troncon jamais « pret a sauver »). Le banc arretait
+  le serveur deux secondes apres son demarrage, pendant que le jeu et Haven chargeaient encore les
+  leurs. Il attend maintenant dix secondes, et la fin d'une pose de Haven comme les bancs de la
+  ville : deux lancements propres depuis.

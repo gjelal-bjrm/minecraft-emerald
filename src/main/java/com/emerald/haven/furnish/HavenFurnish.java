@@ -429,6 +429,24 @@ public final class HavenFurnish {
             player.containerMenu.setCarried(ItemStack.EMPTY);
             removed++;
         }
+        // ET DANS LES SACS (cahier §111) : un meuble range dans le sac sortait de Haven
+        for (net.neoforged.neoforge.items.IItemHandler bag : com.emerald.item.Stash.bags(player)) {
+            for (int slot = 0; slot < bag.getSlots(); slot++) {
+                ItemStack stack = bag.getStackInSlot(slot);
+                if (!marked(stack)) {
+                    continue;
+                }
+                if (bag instanceof net.neoforged.neoforge.items.IItemHandlerModifiable modifiable) {
+                    modifiable.setStackInSlot(slot, ItemStack.EMPTY);
+                } else {
+                    while (!bag.getStackInSlot(slot).isEmpty()
+                            && !bag.extractItem(slot, bag.getStackInSlot(slot).getCount(), false).isEmpty()) {
+                        // une case de sac peut tenir plus qu'une pile : on tire jusqu'au bout
+                    }
+                }
+                removed++;
+            }
+        }
         if (removed > 0) {
             player.displayClientMessage(Component.translatable("game.emeraldweapons.haven.appart.restent")
                     .withStyle(ChatFormatting.GRAY), true);

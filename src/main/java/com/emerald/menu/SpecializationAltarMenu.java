@@ -6,7 +6,8 @@ import com.emerald.specialization.Specialization;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.inventory.AbstractContainerMenu;
+import com.emerald.menu.bag.BagMenu;
+import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.SimpleContainerData;
 import net.minecraft.world.inventory.Slot;
@@ -20,8 +21,11 @@ import net.minecraft.world.item.ItemStack;
  * menus : le serveur fait la tentative avec Specialization.tryUpgrade, la
  * MEME routine que la plume en clic droit. Une seule regle, deux portes.
  * Le verdict revient par ContainerData.
+ *
+ * LE SAC A COTE (cahier §111), et les plumes COMPTEES PAR LE SERVEUR, sac compris :
+ * le client ne voit pas le contenu du sac, et l'ecran affichait 0 plume.
  */
-public class SpecializationAltarMenu extends AbstractContainerMenu {
+public class SpecializationAltarMenu extends BagMenu {
 
     public static final int BUTTON_ATTEMPT = 0;
     public static final int RESULT_NONE = 0;
@@ -31,9 +35,14 @@ public class SpecializationAltarMenu extends AbstractContainerMenu {
     public static final int RESULT_MAX = 4;
     public static final int DATA_RESULT = 0;
     public static final int DATA_LEVEL = 1;
+    /** Les plumes portees, sac compris, dans une seconde donnee du menu. */
+    public static final int DATA_FEATHERS = 0;
+    /** Le corps de l'ecran ; le panneau du sac est a sa droite. */
+    public static final int BODY_W = 176;
 
     private final ContainerLevelAccess access;
     private final SimpleContainerData data = new SimpleContainerData(2);
+    private final ContainerData reserves;
 
     public SpecializationAltarMenu(int id, Inventory inventory) {
         this(id, inventory, ContainerLevelAccess.NULL);
@@ -51,6 +60,39 @@ public class SpecializationAltarMenu extends AbstractContainerMenu {
             this.addSlot(new Slot(inventory, col, 8 + col * 18, 216));
         }
         this.addDataSlots(this.data);
+        Player owner = inventory.player;
+        this.reserves = owner.level().isClientSide ? new SimpleContainerData(1) : new ContainerData() {
+            @Override
+            public int get(int index) {
+                return Math.min(Short.MAX_VALUE, feathers(owner));
+            }
+
+            @Override
+            public void set(int index, int value) {
+            }
+
+            @Override
+            public int getCount() {
+                return 1;
+            }
+        };
+        this.addDataSlots(this.reserves);
+        this.addBag(owner, BODY_W + 2, 0);
+    }
+
+    /** Les plumes portees, sac compris (compte du serveur). */
+    public int feathersCarried() {
+        return this.reserves.get(DATA_FEATHERS);
+    }
+
+    @Override
+    protected int inventoryStart() {
+        return 0;
+    }
+
+    @Override
+    protected int inventoryEnd() {
+        return 36;
     }
 
     public int lastResult() {
@@ -67,7 +109,7 @@ public class SpecializationAltarMenu extends AbstractContainerMenu {
     }
 
     @Override
-    public boolean clickMenuButton(Player player, int id) {
+    protected boolean onButton(Player player, int id) {
         if (id != BUTTON_ATTEMPT || !(player instanceof ServerPlayer server)) {
             return false;
         }
@@ -90,6 +132,13 @@ public class SpecializationAltarMenu extends AbstractContainerMenu {
         Slot slot = this.slots.get(index);
         if (slot == null || !slot.hasItem()) {
             return ItemStack.EMPTY;
+        }
+        if (this.bag != null && this.bag.isBagSlot(index)) {
+            return moveOutOfBag(slot);
+        }
+        ItemStack bagged = moveIntoBag(player, slot);
+        if (bagged != null) {
+            return bagged;
         }
         ItemStack stack = slot.getItem();
         ItemStack moved = stack.copy();

@@ -9,7 +9,7 @@ import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.inventory.AbstractContainerMenu;
+import com.emerald.menu.bag.BagMenu;
 import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
@@ -25,8 +25,11 @@ import javax.annotation.Nullable;
  * artefact en plus. Si elle en portait deja un, celui-ci est DETRUIT -- on peut
  * changer d'avis, mais cela coute. C'est ce qui donne du poids au choix sans
  * jamais l'enfermer.
+ *
+ * LE SAC A COTE (cahier §111) : Maj+clic sur une piece, un artefact, une rune ou
+ * une pierre du sac la pose sur l'etabli ; le reste va a l'inventaire.
  */
-public class SocketBenchMenu extends AbstractContainerMenu {
+public class SocketBenchMenu extends BagMenu {
 
     private static final org.slf4j.Logger LOGGER = com.mojang.logging.LogUtils.getLogger();
 
@@ -43,6 +46,10 @@ public class SocketBenchMenu extends AbstractContainerMenu {
      * longueur 1, et le client se deconnectait des l'ouverture de l'ecran.
      */
     private static final int RESULT_IN_CONTAINER = 0;
+    /** Le corps de l'ecran ; le panneau du sac est a sa droite. */
+    public static final int BODY_W = 176;
+    private static final int INV_START = SLOT_RESULT + 1;
+    private static final int INV_END = INV_START + 36;
 
     private final ContainerLevelAccess access;
     /**
@@ -270,6 +277,17 @@ public class SocketBenchMenu extends AbstractContainerMenu {
         for (int col = 0; col < 9; col++) {
             this.addSlot(new Slot(inventory, col, 8 + col * 18, 142));
         }
+        this.addBag(inventory.player, BODY_W + 2, 0);
+    }
+
+    @Override
+    protected int inventoryStart() {
+        return INV_START;
+    }
+
+    @Override
+    protected int inventoryEnd() {
+        return INV_END;
     }
 
     @Override
@@ -379,15 +397,20 @@ public class SocketBenchMenu extends AbstractContainerMenu {
         if (slot == null || !slot.hasItem()) {
             return moved;
         }
+        if (this.bag != null && this.bag.isBagSlot(index)) {
+            // du sac : vers les entrees de l'etabli si elles l'acceptent, sinon vers l'inventaire
+            return moveOutOfBag(slot, SLOT_GEAR, SLOT_RESULT);
+        }
         ItemStack stack = slot.getItem();
         moved = stack.copy();
         if (index <= SLOT_RESULT) {
-            if (!this.moveItemStackTo(stack, SLOT_RESULT + 1, this.slots.size(), true)) {
+            if (!this.moveItemStackTo(stack, INV_START, INV_END, true)) {
                 return ItemStack.EMPTY;
             }
             slot.onQuickCraft(stack, moved);
         } else if (!this.moveItemStackTo(stack, SLOT_GEAR, SLOT_RESULT, false)) {
-            return ItemStack.EMPTY;
+            ItemStack bagged = moveIntoBag(player, slot);   // ce que l'etabli ne prend pas va au sac
+            return bagged == null ? ItemStack.EMPTY : bagged;
         }
         if (stack.isEmpty()) {
             slot.setByPlayer(ItemStack.EMPTY);

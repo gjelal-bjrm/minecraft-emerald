@@ -8,7 +8,8 @@ import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.inventory.AbstractContainerMenu;
+import com.emerald.menu.bag.BagMenu;
+import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.SimpleContainerData;
 import net.minecraft.world.inventory.Slot;
@@ -27,8 +28,14 @@ import net.minecraft.world.item.ItemStack;
  * Le bouton passe par le mecanisme vanilla des menus (clickMenuButton) : pas
  * de paquet a ecrire, et le serveur revalide tout -- la piece, le cran, la
  * pierre, le metal -- avant de tirer.
+ *
+ * LE SAC A COTE (cahier §111) : le panneau du sac porte, a droite de la forge.
+ * Maj+clic sur une piece du sac la pose sur la forge. Et ce que le joueur porte
+ * -- pierres, metal de chaque cran -- est COMPTE PAR LE SERVEUR, sac compris, et
+ * envoye a l'ecran : le client ne voit pas le contenu du sac, et l'ecran
+ * affichait 0/9 avec neuf lingots dans le sac.
  */
-public class ArcenciumForgeMenu extends AbstractContainerMenu {
+public class ArcenciumForgeMenu extends BagMenu {
 
     public static final int SLOT_GEAR = 0;
     /** Le bouton « Forger ». */
@@ -41,10 +48,18 @@ public class ArcenciumForgeMenu extends AbstractContainerMenu {
     public static final int RESULT_MISSING = 3;
     public static final int DATA_RESULT = 0;
     public static final int DATA_LEVEL = 1;
+    /** Les reserves du joueur, sac compris : la pierre, puis le metal de chaque cran. */
+    public static final int COUNT_STONES = 0;
+    public static final int COUNTS = 1 + Upgrade.MAX;
+    /** Le corps de l'ecran ; le panneau du sac est a sa droite. */
+    public static final int BODY_W = 176;
+    private static final int INV_START = 1;
+    private static final int INV_END = 37;
 
     private final ContainerLevelAccess access;
     private final Player owner;
     private final SimpleContainerData data = new SimpleContainerData(2);
+    private final ContainerData counts;
     private final Container input = new SimpleContainer(1) {
         @Override
         public void setChanged() {
@@ -76,6 +91,10 @@ public class ArcenciumForgeMenu extends AbstractContainerMenu {
             this.addSlot(new Slot(inventory, col, 8 + col * 18, 216));
         }
         this.addDataSlots(this.data);
+        this.counts = inventory.player.level().isClientSide
+                ? new SimpleContainerData(COUNTS) : new Reserves(inventory.player);
+        this.addDataSlots(this.counts);
+        this.addBag(inventory.player, BODY_W + 2, 0);
         // LA PIECE EN MAIN MONTE D'ELLE-MEME SUR LA FORGE.
         //
         // On vient a la forge avec l'arme qu'on veut monter ; la poser a la
@@ -121,6 +140,62 @@ public class ArcenciumForgeMenu extends AbstractContainerMenu {
         return this.data.get(DATA_LEVEL);
     }
 
+    /** Les pierres de forge portees, sac compris (compte du serveur). */
+    public int stonesCarried() {
+        return this.counts.get(COUNT_STONES);
+    }
+
+    /** Le metal du cran vise (1 a 10) porte, sac compris (compte du serveur). */
+    public int carried(int target) {
+        return this.counts.get(Math.max(1, Math.min(Upgrade.MAX, target)));
+    }
+
+    @Override
+    protected int inventoryStart() {
+        return INV_START;
+    }
+
+    @Override
+    protected int inventoryEnd() {
+        return INV_END;
+    }
+
+    /** Les reserves, recomptees une fois par tique au plus, a chaque envoi du menu. */
+    private static final class Reserves implements ContainerData {
+        private final Player player;
+        private final int[] values = new int[COUNTS];
+        private long stamp = Long.MIN_VALUE;
+
+        Reserves(Player player) {
+            this.player = player;
+        }
+
+        @Override
+        public int get(int index) {
+            long now = this.player.level().getGameTime();
+            if (now != this.stamp) {
+                this.stamp = now;
+                java.util.Map<net.minecraft.world.item.Item, Integer> seen = new java.util.HashMap<>();
+                this.values[COUNT_STONES] = Math.min(Short.MAX_VALUE, stones(this.player));
+                for (int target = 1; target <= Upgrade.MAX; target++) {
+                    Upgrade.Cost cost = Upgrade.cost(target);
+                    this.values[target] = seen.computeIfAbsent(cost.material(),
+                            item -> Math.min(Short.MAX_VALUE, Upgrade.carried(this.player, cost)));
+                }
+            }
+            return index >= 0 && index < COUNTS ? this.values[index] : 0;
+        }
+
+        @Override
+        public void set(int index, int value) {
+        }
+
+        @Override
+        public int getCount() {
+            return COUNTS;
+        }
+    }
+
     /** Vrai si le joueur a la Pierre et le metal du cran suivant, poches comprises. */
     public static boolean canPay(Player player, ItemStack gear) {
         return stones(player) >= 1 && Upgrade.affordable(player, gear);
@@ -149,7 +224,7 @@ public class ArcenciumForgeMenu extends AbstractContainerMenu {
     }
 
     @Override
-    public boolean clickMenuButton(Player player, int id) {
+    protected boolean onButton(Player player, int id) {
         if (id != BUTTON_FORGE || player.level().isClientSide) {
             return false;
         }
@@ -216,20 +291,25 @@ public class ArcenciumForgeMenu extends AbstractContainerMenu {
         if (slot == null || !slot.hasItem()) {
             return moved;
         }
+        boolean gearFree = !this.slots.get(SLOT_GEAR).hasItem();
+        if (this.bag != null && this.bag.isBagSlot(index)) {
+            // du sac : une piece monte sur la forge si elle est libre, le reste va a l'inventaire
+            return gearFree && isGear(slot.getItem())
+                    ? moveOutOfBag(slot, SLOT_GEAR, SLOT_GEAR + 1) : moveOutOfBag(slot);
+        }
         ItemStack stack = slot.getItem();
         moved = stack.copy();
-        int playerStart = 1;
-        int playerEnd = this.slots.size();
         if (index == SLOT_GEAR) {
-            if (!this.moveItemStackTo(stack, playerStart, playerEnd, true)) {
+            if (!this.moveItemStackTo(stack, INV_START, INV_END, true)) {
                 return ItemStack.EMPTY;
             }
-        } else if (isGear(stack) && !this.slots.get(SLOT_GEAR).hasItem()) {
+        } else if (isGear(stack) && gearFree) {
             if (!this.moveItemStackTo(stack, SLOT_GEAR, SLOT_GEAR + 1, false)) {
                 return ItemStack.EMPTY;
             }
         } else {
-            return ItemStack.EMPTY;
+            ItemStack bagged = moveIntoBag(player, slot);   // le reste va au sac
+            return bagged == null ? ItemStack.EMPTY : bagged;
         }
         if (stack.isEmpty()) {
             slot.setByPlayer(ItemStack.EMPTY);

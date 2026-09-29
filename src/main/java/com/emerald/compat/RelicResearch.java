@@ -21,7 +21,9 @@ import java.util.Map;
  * recompense. On marque donc toutes les capacites comme etudiees : a la
  * creation quand c'est nous qui donnons l'objet, et une fois par seconde dans
  * l'inventaire de chaque joueur pour tout ce qui arrive autrement (coffres,
- * echanges, fabrication).
+ * echanges, fabrication) -- ses cases Curios et ses sacs compris : l'inventaire
+ * d'Arcencium (cahier §111) equipe une relique sortie du sac sans qu'elle passe
+ * par l'inventaire.
  *
  * Tout passe par la reflexion sur IRelicItem : le mod n'est pas une
  * dependance, et sans lui cette classe ne fait rien.
@@ -105,6 +107,27 @@ public final class RelicResearch {
         var inventory = player.getInventory();
         for (int slot = 0; slot < inventory.getContainerSize(); slot++) {
             complete(inventory.getItem(slot));
+        }
+        if (net.neoforged.fml.ModList.get().isLoaded("curios")) {
+            for (ItemStack worn : com.emerald.item.CuriosStash.worn(player)) {
+                complete(worn);
+            }
+        }
+        // dans un sac, on ecrit une copie : le sac n'enregistre que ce qu'on lui donne
+        for (net.neoforged.neoforge.items.IItemHandler bag : com.emerald.item.Stash.bags(player)) {
+            if (!(bag instanceof net.neoforged.neoforge.items.IItemHandlerModifiable modifiable)) {
+                continue;
+            }
+            for (int slot = 0; slot < bag.getSlots(); slot++) {
+                ItemStack stack = bag.getStackInSlot(slot);
+                if (stack.isEmpty() || !isRelic(stack.getItem())) {
+                    continue;
+                }
+                ItemStack copy = stack.copy();
+                if (complete(copy)) {
+                    modifiable.setStackInSlot(slot, copy);
+                }
+            }
         }
     }
 }

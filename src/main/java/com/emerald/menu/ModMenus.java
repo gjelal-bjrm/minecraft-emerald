@@ -30,6 +30,11 @@ public class ModMenus {
             MENUS.register("haven_vote", () -> net.neoforged.neoforge.common.extensions.IMenuTypeExtension
                     .create(HavenVoteMenu::new));
 
+    /** L'inventaire d'Arcencium (touche E) : les cases d'artefacts du joueur viennent avec l'ouverture. */
+    public static final DeferredHolder<MenuType<?>, MenuType<ArcInventoryMenu>> ARC_INVENTORY =
+            MENUS.register("arc_inventory", () -> net.neoforged.neoforge.common.extensions.IMenuTypeExtension
+                    .create(ArcInventoryMenu::new));
+
     public static void register(IEventBus eventBus) {
         MENUS.register(eventBus);
     }

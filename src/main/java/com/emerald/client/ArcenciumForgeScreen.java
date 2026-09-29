@@ -10,10 +10,12 @@ import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
+import javax.annotation.Nullable;
 import java.util.Locale;
 
 /**
@@ -59,11 +61,16 @@ public class ArcenciumForgeScreen extends AbstractContainerScreen<ArcenciumForge
     private static final int INK = 0xFF3F3F3F;
     private static final int PALE = 0xFF8A8A8A;
 
+    private static final int BODY_W = ArcenciumForgeMenu.BODY_W;
+
     private Button forge;
+    private BagPanelView bagView;
+    private boolean swallowRelease;
 
     public ArcenciumForgeScreen(ArcenciumForgeMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
-        this.imageWidth = 176;
+        // le corps de la forge, puis le panneau du sac a droite (cahier §111)
+        this.imageWidth = BODY_W + 2 + com.emerald.menu.bag.BagPanel.WIDTH;
         this.imageHeight = 240;
         this.titleLabelY = 6;
         this.inventoryLabelY = -1000;                  // pas d'etiquette : la place est a l'echelle
@@ -85,11 +92,13 @@ public class ArcenciumForgeScreen extends AbstractContainerScreen<ArcenciumForge
                 .tooltip(Tooltip.create(Component.translatable("forge.emeraldweapons.button.tip")))
                 .build();
         this.addRenderableWidget(this.forge);
+        this.bagView = new BagPanelView(this.menu);
     }
 
     @Override
     protected void containerTick() {
         super.containerTick();
+        this.bagView.tick();
         ItemStack gear = this.menu.gear();
         this.forge.active = ArcenciumForgeMenu.isGear(gear)
                 && Upgrade.of(gear) < com.emerald.item.GearEligibility.upgradeMax(gear);
@@ -99,17 +108,18 @@ public class ArcenciumForgeScreen extends AbstractContainerScreen<ArcenciumForge
     protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
         int x = (this.width - this.imageWidth) / 2;
         int y = (this.height - this.imageHeight) / 2;
-        graphics.blit(TEXTURE, x, y, 0, 0, this.imageWidth, this.imageHeight);
+        graphics.blit(TEXTURE, x, y, 0, 0, BODY_W, this.imageHeight);
+        this.bagView.renderBg(graphics, x, y, mouseX, mouseY);
     }
 
     @Override
     protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
         super.renderLabels(graphics, mouseX, mouseY);
+        this.bagView.renderLabels(graphics, this.font);
         ItemStack gear = this.menu.gear();
         boolean placed = ArcenciumForgeMenu.isGear(gear);
         int level = placed ? Upgrade.of(gear) : -1;
-        int stones = this.minecraft == null || this.minecraft.player == null
-                ? 0 : ArcenciumForgeMenu.stones(this.minecraft.player);
+        int stones = this.menu.stonesCarried();          // compte du serveur : le sac compris
 
         // ---- le cartouche : la piece, le prochain cran et sa chance ; la pierre
         int tx = 30;
@@ -144,28 +154,27 @@ public class ArcenciumForgeScreen extends AbstractContainerScreen<ArcenciumForge
             };
             int color = result == ArcenciumForgeMenu.RESULT_WON ? GREEN : RED;
             int w = this.font.width(verdict);
-            graphics.drawString(this.font, verdict, this.imageWidth - 8 - w, 33, color, false);
+            graphics.drawString(this.font, verdict, BODY_W - 8 - w, 33, color, false);
         }
 
         // ---- l'echelle : dix crans, metal, ce qu'on porte / ce qu'il faut, chance
         int hx = LADDER_X;
         graphics.drawString(this.font, Component.translatable("forge.emeraldweapons.column.level"),
                 hx, HEADER_Y, GREY, false);
-        graphics.drawString(this.font, Component.translatable("forge.emeraldweapons.column.material"),
-                hx + 32, HEADER_Y, GREY, false);
         Component chanceHead = Component.translatable("forge.emeraldweapons.column.chance");
-        graphics.drawString(this.font, chanceHead, this.imageWidth - 8 - this.font.width(chanceHead),
+        ArcGui.drawFit(graphics, this.font, Component.translatable("forge.emeraldweapons.column.material"),
+                hx + 32, HEADER_Y, GREY, BODY_W - 8 - this.font.width(chanceHead) - 3 - (hx + 32));
+        graphics.drawString(this.font, chanceHead, BODY_W - 8 - this.font.width(chanceHead),
                 HEADER_Y, GREY, false);
         for (int target = 1; target <= Upgrade.MAX; target++) {
             int ry = LADDER_Y + (target - 1) * ROW_H;
             boolean done = placed && target <= level;
             boolean next = placed && target == level + 1;
             if (next) {
-                graphics.fill(hx - 2, ry - 1, this.imageWidth - 6, ry + ROW_H - 1, 0x50FFD36B);
+                graphics.fill(hx - 2, ry - 1, BODY_W - 6, ry + ROW_H - 1, 0x50FFD36B);
             }
             Upgrade.Cost cost = Upgrade.cost(target);
-            int carried = this.minecraft == null || this.minecraft.player == null
-                    ? 0 : Upgrade.carried(this.minecraft.player, cost);
+            int carried = this.menu.carried(target);
             int ink = done ? PALE : INK;
             graphics.drawString(this.font, "+" + target, hx, ry, next ? GOLD : ink, false);
             // l'icone du metal, a demi-taille pour tenir dans la ligne
@@ -177,10 +186,12 @@ public class ArcenciumForgeScreen extends AbstractContainerScreen<ArcenciumForge
             String amount = done ? Component.translatable("forge.emeraldweapons.done").getString()
                     : String.format(Locale.ROOT, "%d/%d", carried, cost.amount());
             int amountColor = done ? GREEN : next ? (carried >= cost.amount() ? GREEN : RED) : ink;
-            graphics.drawString(this.font, amount, hx + 41, ry, amountColor, false);
-            graphics.drawString(this.font, metalName(cost.material()), hx + 72, ry, ink, false);
+            // les reserves comptees avec le sac vont a trois chiffres (« 300/4 ») : la colonne du
+            // metal recule de deux pixels, et un nombre plus long se reduit pour tenir
+            ArcGui.drawFit(graphics, this.font, amount, hx + 41, ry, amountColor, 30);
+            graphics.drawString(this.font, metalName(cost.material()), hx + 74, ry, ink, false);
             String chance = Upgrade.odds(target - 1, golden()) + " %";
-            graphics.drawString(this.font, chance, this.imageWidth - 8 - this.font.width(chance),
+            graphics.drawString(this.font, chance, BODY_W - 8 - this.font.width(chance),
                     ry, next ? GOLD : ink, false);
         }
     }
@@ -195,12 +206,55 @@ public class ArcenciumForgeScreen extends AbstractContainerScreen<ArcenciumForge
         if (key != null) {
             return Component.translatable("forge.emeraldweapons.metal." + key).getString();
         }
-        return this.font.plainSubstrByWidth(material.getDescription().getString(), 56);
+        return this.font.plainSubstrByWidth(material.getDescription().getString(), 54);
     }
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         super.render(graphics, mouseX, mouseY, partialTick);
         this.renderTooltip(graphics, mouseX, mouseY);
+        this.bagView.renderTooltip(graphics, this.font, mouseX, mouseY, this.leftPos, this.topPos);
+    }
+
+    @Override
+    protected void renderSlotContents(GuiGraphics graphics, ItemStack stack, Slot slot, @Nullable String countString) {
+        if (!BagPanelView.renderCount(graphics, this.font, stack, slot, countString, this.imageWidth)) {
+            super.renderSlotContents(graphics, stack, slot, countString);
+        }
+    }
+
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (this.bagView.mouseClicked(mouseX, mouseY, button, this.leftPos, this.topPos)) {
+            this.swallowRelease = true;
+            return true;
+        }
+        return super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    @Override
+    public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+        if (this.bagView.mouseDragged(mouseX, mouseY, button, this.leftPos, this.topPos)) {
+            return true;
+        }
+        return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+    }
+
+    @Override
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        boolean dragged = this.bagView.mouseReleased(button);
+        if (this.swallowRelease || dragged) {
+            this.swallowRelease = false;
+            return true;
+        }
+        return super.mouseReleased(mouseX, mouseY, button);
+    }
+
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+        if (this.bagView.mouseScrolled(mouseX, mouseY, scrollY, this.leftPos, this.topPos)) {
+            return true;
+        }
+        return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
     }
 }
