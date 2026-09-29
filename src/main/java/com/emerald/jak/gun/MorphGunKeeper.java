@@ -500,6 +500,19 @@ public final class MorphGunKeeper {
      * @return le nombre d'armes retirees
      */
     public static int strip(ServerPlayer player, boolean full) {
+        return strip(player, full, full);
+    }
+
+    /**
+     * Le retrait, en disant s'il ferme le menu etranger ouvert.
+     *
+     * LES PASSAGES DU GARDIEN, CHAQUE SECONDE, NE FERMENT UN MENU QUE S'IL MONTRE UNE ARME
+     * (showsGun). Pour un nouveau venu sans forme -- la premiere arrivee dans Haven --, le retrait
+     * complet de chaque passage fermait tout menu une seconde apres son ouverture : le coffre
+     * d'amenagement, l'inventaire d'Arcencium (cahier 111, 29 sept.). Les retraits d'un instant --
+     * depart, mort, connexion, reapparition -- ferment toujours, comme avant.
+     */
+    private static int strip(ServerPlayer player, boolean full, boolean closeMenu) {
         UUID id = player.getUUID();
         int removed = 0;
         if (isGun(HELD.remove(id))) {
@@ -512,7 +525,7 @@ public final class MorphGunKeeper {
                 removed++;
             }
         }
-        if (full && player.containerMenu != player.inventoryMenu) {
+        if (full && closeMenu && player.containerMenu != player.inventoryMenu) {
             player.closeContainer();
         }
         CraftingContainer grid = player.inventoryMenu.getCraftSlots();
@@ -536,6 +549,23 @@ public final class MorphGunKeeper {
             removed += pullStored(player).size();
         }
         return removed;
+    }
+
+    /** Le menu etranger ouvert montre-t-il une arme, dans une case ou au curseur ? */
+    private static boolean showsGun(ServerPlayer player) {
+        AbstractContainerMenu menu = player.containerMenu;
+        if (menu == player.inventoryMenu) {
+            return false;
+        }
+        if (isGun(menu.getCarried())) {
+            return true;
+        }
+        for (net.minecraft.world.inventory.Slot slot : menu.slots) {
+            if (isGun(slot.getItem())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** Oublie le dernier etat connu : l'arme suivante sera neuve. La gachette et une charge en cours aussi. */
@@ -566,7 +596,7 @@ public final class MorphGunKeeper {
             if (entitled(player)) {
                 ensure(player);
             } else if (candidate(player) && formsOf(player) == 0) {
-                int removed = strip(player, true);
+                int removed = strip(player, true, showsGun(player));
                 forget(player.getUUID());
                 if (removed > 0) {
                     LOGGER.info("Morph Gun : {} n'a aucune forme debloquee, {} arme(s) retiree(s)",
@@ -575,7 +605,8 @@ public final class MorphGunKeeper {
             }
             return;
         }
-        int removed = strip(player, Haven.is(player.level()));
+        boolean full = Haven.is(player.level());
+        int removed = strip(player, full, full && showsGun(player));
         forget(player.getUUID());
         if (removed > 0) {
             LOGGER.info("Morph Gun : gardien, {} arme(s) retiree(s) a {} ({}, lobby {})", removed,

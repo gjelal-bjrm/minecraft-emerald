@@ -10280,3 +10280,21 @@ sac (`Stash`) ; l'ecran le dit maintenant.
   le serveur deux secondes apres son demarrage, pendant que le jeu et Haven chargeaient encore les
   leurs. Il attend maintenant dix secondes, et la fin d'une pose de Haven comme les bancs de la
   ville : deux lancements propres depuis.
+
+### H. Apres coup : le gardien fermait les menus (29 sept., soir)
+
+« J'ai a peine essaye d'ouvrir le coffre pour poser des amenagements dans ma chambre, mais
+l'inventaire qu'on a fait se ferme automatiquement : je ne peux pas recuperer d'objets. » (le joueur,
+29 sept., dans un monde neuf du dev : premiere arrivee dans Haven)
+
+Le gardien du Morph Gun (`MorphGunKeeper.guard`) fait, chaque seconde, un retrait complet chez un
+joueur de Haven qui n'a aucune forme -- un nouveau venu, a sa premiere arrivee --, et ce retrait
+fermait tout menu ouvert. L'inventaire du jeu n'etait pas un « menu » pour lui ; le notre en est un :
+il se refermait une seconde apres son ouverture, comme le coffre d'amenagement. Le defaut datait du
+§107 : les cobayes des bancs ont toutes les formes, et les photos du §111 etaient prises hors de
+Haven, ou le gardien ne ferme rien.
+
+Les passages du gardien ne ferment plus qu'un menu qui MONTRE une arme (dans une case ou au curseur) ;
+les retraits d'un instant -- depart, mort, connexion, reapparition -- ferment toujours, comme avant.
+Banc `armes` : 179 OK, dont l'essai du nouveau venu sans forme (menu garde ; une arme montree dans le
+coffre de l'Ender le ferme, et l'arme est retiree).

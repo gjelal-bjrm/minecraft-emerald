@@ -207,6 +207,7 @@ public final class GunAutotest {
         then("hors de la ville, gardien", GUARD_WAIT, c::outsideGuard);
         then("lobby ferme et ancien lobby", 0, c::closedLobby);
         then("operateur en chantier", 0, c::chantier);
+        then("nouveau venu sans forme, menu ouvert", 0, c::formlessMenu);
         then("changement d'arme", 0, c::selection);
         then("nettoyage", 0, c::cleanup);
         // 3. le tir : GunFireBench, sur plusieurs centaines de tiques
@@ -1253,6 +1254,38 @@ public final class GunAutotest {
                 HavenRules.setChantier(op, false);
                 MorphGunKeeper.removeSubject(op.getUUID());
                 HavenState.get(server).forgetMode(op.getUUID());
+            }
+        }
+
+        // ------------------------------------------------------------- sans forme, menu ouvert
+
+        /**
+         * Le defaut du 29 sept. : pour un nouveau venu sans forme (premiere arrivee), chaque passage
+         * du gardien fermait tout menu ouvert -- le coffre d'amenagement, l'inventaire d'Arcencium
+         * se refermaient une seconde apres leur ouverture. Il ne ferme plus qu'un menu qui montre
+         * une arme.
+         */
+        void formlessMenu() {
+            FakePlayer n = subject("sansforme", null);
+            com.emerald.haven.journey.HavenProgress.temporary(n.getUUID(), 0);
+            try {
+                arrive(n);
+                ChestMenu menu = openEnder(n, 94);
+                MorphGunKeeper.guard(n);
+                MorphGunKeeper.guard(n);
+                boolean kept = n.containerMenu == menu;
+                n.getEnderChestInventory().setItem(0, freshGun(MorphGunKeeper.lobby(server)));
+                MorphGunKeeper.guard(n);
+                boolean closed = n.containerMenu == n.inventoryMenu;
+                boolean gone = !MorphGunKeeper.isGun(n.getEnderChestInventory().getItem(0));
+                check("nouveau venu sans forme : le gardien laisse son menu ouvert ; une arme montree dans le menu"
+                                + " le ferme, et l'arme est retiree",
+                        kept && closed && gone && MorphGunKeeper.count(n) == 0,
+                        "menu garde " + kept + ", ferme avec l'arme " + closed + ", arme retiree " + gone
+                                + ", armes " + MorphGunKeeper.count(n));
+            } finally {
+                n.getEnderChestInventory().clearContent();
+                MorphGunKeeper.removeSubject(n.getUUID());
             }
         }
 
