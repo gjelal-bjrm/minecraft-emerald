@@ -751,6 +751,13 @@ mais aussi un coffre, un tonneau, une boîte de Shulker ou le coffre d'un autre 
 **Suppr** sur une pile de l'inventaire la jette à la poubelle (on reprend le dernier objet jusqu'à la
 fermeture). Dans les coffres, c'est la poubelle de TrashSlot, avec la même touche.
 
+**Ces touches se changent** dans **Options > Commandes**, catégorie « Emerald Weapons : sac et
+poubelle » : n'importe quelle touche du clavier (même F13 à F24 des claviers de jeu) ou bouton de
+la souris, avec ou sans Ctrl, Maj ou Alt. « Ranger dans le sac » tenue avec **Maj** range tout le
+même objet, même sur un bouton sans modificateur ; « Ranger tout le même objet » peut recevoir sa
+propre touche (aucune par défaut). La ligne d'aide du sac et la bulle de la poubelle disent la
+touche choisie.
+
 Une case du Sac d'Arcencium tient **quatre piles** (256 lingots) : un clic en prend une pile, un
 clic droit la moitié (une pile au plus), un clic avec le même objet complète la case jusqu'à 256.
 Ce qu'on range à la main n'est **jamais détruit** par l'amélioration Vide du sac : elle ne joue

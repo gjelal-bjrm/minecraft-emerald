@@ -121,8 +121,12 @@ public class ArcInventoryScreen extends AbstractContainerScreen<ArcInventoryMenu
         Slot hovered = this.hoveredSlot;
         if (hovered != null && !hovered.hasItem() && this.menu.getCarried().isEmpty()) {
             if (hovered.index == ArcInventoryMenu.SLOT_TRASH) {
-                g.renderTooltip(this.font, this.font.split(Component.translatable("gui.emeraldweapons.trash"), 180),
-                        mouseX, mouseY);
+                net.minecraft.network.chat.MutableComponent tip = Component.translatable("gui.emeraldweapons.trash");
+                if (!QuickStashClient.TRASH.isUnbound()) {
+                    tip.append(" ").append(Component.translatable("gui.emeraldweapons.trash.key",
+                            QuickStashClient.TRASH.getTranslatedKeyMessage()));
+                }
+                g.renderTooltip(this.font, this.font.split(tip, 180), mouseX, mouseY);
             } else if (hovered instanceof CurioWindowSlot window && this.curioView != null) {
                 CurioRef ref = this.curioView.refAt(window.windowSlot());
                 if (ref != null) {

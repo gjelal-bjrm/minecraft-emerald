@@ -8,6 +8,7 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
+import org.lwjgl.glfw.GLFW;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -136,8 +137,16 @@ public final class PhotoClient {
         // UN ECRAN QUI MET LE JEU EN PAUSE (le livre) arrete le serveur integre : il ne compte
         // plus ses tiques et la prise attendrait toujours. Ecran ouvert depuis une seconde : on la prend.
         screenTicks = wantsScreen && mc.screen != null ? screenTicks + 1 : 0;
-        if (screenTicks == 10 && mc.screen instanceof net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<?> shown) {
-            quickGesture(wanted, shown);
+        if (mc.screen instanceof net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<?> shown) {
+            if (screenTicks == 10) {
+                quickGesture(wanted, shown);
+            }
+            if (wanted.endsWith("_touche")) {
+                rebound(wanted, shown, screenTicks);
+            }
+            if (wanted.endsWith("_aide") && screenTicks == 10) {
+                pointAt(shown, shown.getMenu().getSlot(com.emerald.menu.ArcInventoryMenu.SLOT_TRASH));
+            }
         }
         if (burst >= 0) {
             // LA RAFALE (« _rafale ») : une image toutes les deux tiques, pour voir bouger les ailes
@@ -186,6 +195,116 @@ public final class PhotoClient {
         }
         if (wanted.endsWith("_suppr") && screen instanceof ArcInventoryScreen inventory) {
             QuickStashClient.trash(inventory, screen.getMenu().getSlot(13));
+        }
+    }
+
+    private static final org.slf4j.Logger LOGGER = org.slf4j.LoggerFactory.getLogger(EmeraldWeaponsMod.MODID);
+
+    /**
+     * LES COMMANDES CHANGEES (cahier 112, D) : les touches passent par les evenements du jeu, comme un
+     * vrai clic ou une vraie touche -- les autres mods les voient aussi --, puis les commandes sont
+     * remises a leur valeur (jamais enregistrees). « coffre_touche » : ranger sur le bouton 4 de la
+     * souris, puis un clic gauche sans Alt, qui ne doit plus rien ranger. « inventaire_touche » : Suppr
+     * jette les planches ; jeter sur F13 (une touche des claviers de jeu) : Suppr ne jette plus la
+     * viande, F13 la jette.
+     */
+    private static void rebound(String wanted, net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<?> screen,
+                                int tick) {
+        net.minecraft.client.KeyMapping stash = QuickStashClient.STASH;
+        net.minecraft.client.KeyMapping trash = QuickStashClient.TRASH;
+        if (wanted.contains("coffre")) {
+            net.minecraft.world.inventory.Slot stone = screen.getMenu().getSlot(0);
+            net.minecraft.world.inventory.Slot diamonds = screen.getMenu().getSlot(10);
+            if (tick == 10) {
+                stash.setKeyModifierAndCode(net.neoforged.neoforge.client.settings.KeyModifier.NONE,
+                        com.mojang.blaze3d.platform.InputConstants.Type.MOUSE.getOrCreate(GLFW.GLFW_MOUSE_BUTTON_4));
+                net.minecraft.client.KeyMapping.resetMapping();
+                boolean used = net.neoforged.neoforge.client.ClientHooks.onScreenMouseClickedPre(screen,
+                        centerX(screen, stone), centerY(screen, stone), GLFW.GLFW_MOUSE_BUTTON_4);
+                LOGGER.info("photos (client) : ranger sur « {} », bouton 4 sur la pierre du coffre : pris {}",
+                        stash.getTranslatedKeyMessage().getString(), used);
+            }
+            if (tick == 16) {
+                LOGGER.info("photos (client) : apres le bouton 4, case 0 {}, case 4 {} (une pile, pas tout)",
+                        stone.getItem(), screen.getMenu().getSlot(4).getItem());
+                stash.setKeyModifierAndCode(stash.getDefaultKeyModifier(), stash.getDefaultKey());
+                net.minecraft.client.KeyMapping.resetMapping();
+                boolean used = net.neoforged.neoforge.client.ClientHooks.onScreenMouseClickedPre(screen,
+                        centerX(screen, diamonds), centerY(screen, diamonds), GLFW.GLFW_MOUSE_BUTTON_LEFT);
+                LOGGER.info("photos (client) : ranger remis sur « {} », clic gauche sans Alt sur les diamants : pris {}",
+                        stash.getTranslatedKeyMessage().getString(), used);
+            }
+            if (tick == 22) {
+                LOGGER.info("photos (client) : les diamants apres le clic sans Alt : {}", diamonds.getItem());
+            }
+            return;
+        }
+        net.minecraft.world.inventory.Slot planks = screen.getMenu().getSlot(10);
+        net.minecraft.world.inventory.Slot beef = screen.getMenu().getSlot(13);
+        int delete = GLFW.GLFW_KEY_DELETE;
+        if (tick == 10) {
+            pointAt(screen, planks);
+        }
+        if (tick == 13) {
+            boolean used = net.neoforged.neoforge.client.ClientHooks.onScreenKeyPressedPre(screen, delete,
+                    GLFW.glfwGetKeyScancode(delete), 0);
+            LOGGER.info("photos (client) : survol des planches {}, Suppr (« {} ») : pris {}",
+                    screen.getSlotUnderMouse() == planks, trash.getTranslatedKeyMessage().getString(), used);
+        }
+        if (tick == 18) {
+            LOGGER.info("photos (client) : apres Suppr, case des planches {}", planks.getItem());
+            trash.setKeyModifierAndCode(net.neoforged.neoforge.client.settings.KeyModifier.NONE,
+                    com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM.getOrCreate(GLFW.GLFW_KEY_F13));
+            net.minecraft.client.KeyMapping.resetMapping();
+            pointAt(screen, beef);
+        }
+        if (tick == 21) {
+            boolean used = net.neoforged.neoforge.client.ClientHooks.onScreenKeyPressedPre(screen, delete,
+                    GLFW.glfwGetKeyScancode(delete), 0);
+            LOGGER.info("photos (client) : jeter sur « {} », survol de la viande {}, Suppr : pris {}",
+                    trash.getTranslatedKeyMessage().getString(), screen.getSlotUnderMouse() == beef, used);
+        }
+        if (tick == 26) {
+            LOGGER.info("photos (client) : la viande apres Suppr (plus la touche) : {}", beef.getItem());
+            boolean used = net.neoforged.neoforge.client.ClientHooks.onScreenKeyPressedPre(screen, GLFW.GLFW_KEY_F13,
+                    GLFW.glfwGetKeyScancode(GLFW.GLFW_KEY_F13), 0);
+            LOGGER.info("photos (client) : F13 sur la viande : pris {}", used);
+        }
+        if (tick == 31) {
+            LOGGER.info("photos (client) : la viande apres F13 : {}", beef.getItem());
+            trash.setKeyModifierAndCode(trash.getDefaultKeyModifier(), trash.getDefaultKey());
+            net.minecraft.client.KeyMapping.resetMapping();
+            LOGGER.info("photos (client) : jeter remis sur « {} »", trash.getTranslatedKeyMessage().getString());
+        }
+    }
+
+    private static double centerX(net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<?> screen,
+                                  net.minecraft.world.inventory.Slot slot) {
+        return screen.getGuiLeft() + slot.x + 8;
+    }
+
+    private static double centerY(net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<?> screen,
+                                  net.minecraft.world.inventory.Slot slot) {
+        return screen.getGuiTop() + slot.y + 8;
+    }
+
+    /**
+     * La souris du jeu posee sur cette case (sa position, pas le curseur du systeme : on ne le
+     * deplace pas sous la main du joueur). L'ecran relit le survol a l'image suivante.
+     */
+    private static void pointAt(net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<?> screen,
+                                net.minecraft.world.inventory.Slot slot) {
+        Minecraft mc = Minecraft.getInstance();
+        double scale = mc.getWindow().getGuiScale();
+        try {
+            java.lang.reflect.Field x = net.minecraft.client.MouseHandler.class.getDeclaredField("xpos");
+            java.lang.reflect.Field y = net.minecraft.client.MouseHandler.class.getDeclaredField("ypos");
+            x.setAccessible(true);
+            y.setAccessible(true);
+            x.setDouble(mc.mouseHandler, centerX(screen, slot) * scale);
+            y.setDouble(mc.mouseHandler, centerY(screen, slot) * scale);
+        } catch (ReflectiveOperationException e) {
+            LOGGER.warn("photos (client) : souris non posee ({})", e.toString());
         }
     }
 

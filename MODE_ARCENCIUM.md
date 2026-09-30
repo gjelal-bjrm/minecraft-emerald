@@ -10401,3 +10401,31 @@ sac plein (l'or reste en place), Suppr sur l'inventaire puis sur une case du sac
 coffre : les diamants, deux piles d'or d'un coup, une pile de l'inventaire du joueur ; un cobaye sans
 sac ne perd rien. Photos dans le client du dev, le geste envoye par le client comme par la souris :
 un coffre avant et apres un Alt+Maj+clic sur sa pierre et un Alt+clic sur ses diamants (les trois piles de pierre et les diamants partis, le reste en place ; au sac, 165 pierres et 24 diamants), puis l'inventaire apres Suppr sur la viande cuite (a la poubelle, 16).
+
+### D. Des touches a son gre (30 sept., soir)
+
+« Est-ce que tu as fait en sorte qu'on puisse changer ces touches si jamais on a d'autres
+preferences, par exemple si on veut les relier a des nouvelles touches du clavier qu'on n'a pas sur
+des claviers classiques ou sur des touches specifiques de la souris ? » (le joueur, 30 sept.) Ce
+n'etait pas le cas : Alt+clic etait ecrit dans le code, et Suppr suivait la touche de TrashSlot.
+
+Trois commandes du jeu, dans Options > Commandes, categorie « Emerald Weapons : sac et poubelle »
+(`client/QuickStashClient`) :
+- **Ranger dans le sac** : Alt+clic gauche par defaut. Tenue avec Maj, tout le meme objet -- meme
+  choisie sans modificateur : sur un bouton lateral de la souris, Maj+bouton range tout.
+- **Ranger tout le meme objet** : aucune touche par defaut, pour qui veut un bouton a part.
+- **Jeter a la poubelle** : Suppr par defaut, sur l'inventaire d'Arcencium seul. Son contexte ne
+  vaut que la : elle ne se dispute plus Suppr avec TrashSlot, ni en jeu ni dans la liste des
+  commandes (pas de rouge).
+
+N'importe quelle touche du clavier -- F13 a F24 des claviers de jeu, et les touches sans nom, lues
+par leur code -- ou bouton de la souris, avec ou sans Ctrl, Maj ou Alt. Les boutons de la souris
+passent avant les autres mods (Inventory Essentials et Mouse Tweaks agissent des l'appui) ; les
+touches du clavier apres eux, pour qu'une barre de recherche qui a la main (celle de JEI) garde ce
+qu'on y tape. La ligne d'aide du sac et la bulle de la poubelle disent la touche choisie. Une
+commande ne demande que son propre modificateur, quels que soient les autres : AltGr (Ctrl+Alt
+sous Windows) range donc desormais aussi, contrairement a ce que disait le A.
+
+**Vu dans le client du dev**, les touches passees par les evenements du jeu comme de vraies touches
+(JEI, TrashSlot et Inventory Essentials, presents, les voient aussi), puis les commandes remises a
+leur valeur, jamais enregistrees : ranger passe sur le bouton 4 de la souris : une pile de pierre au sac (64, pas les 165), puis remis sur Alt+clic gauche : un clic gauche sans Alt ne range plus rien (les diamants restent). Jeter : Suppr jette les planches (TrashSlot ne prend pas la touche), puis passe sur F13 : Suppr ne jette plus la viande, F13 la jette. Les options du dev inchangees apres coup. Le panneau avec un seul sac : sa ligne d'aide dit « ALT + Clic gauche : ranger de partout », la bulle de la poubelle « Suppr sur une pile l'y jette ».

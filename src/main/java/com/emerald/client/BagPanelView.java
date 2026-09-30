@@ -139,10 +139,12 @@ public final class BagPanelView {
         String title = font.plainSubstrByWidth(bagName().getString(), BagPanel.WIDTH - 20 - countWidth);
         g.drawString(font, title, x + 8, y + 6, ArcGui.INK, false);
         if (Math.min(this.panel.tabs(), this.panel.icons().size()) <= 1) {
-            List<FormattedCharSequence> hint = font.split(
-                    Component.translatable("gui.emeraldweapons.bag.hint"), SORT_X - 12);
-            for (int i = 0; i < Math.min(2, hint.size()); i++) {
-                g.drawString(font, hint.get(i), x + 8, y + TABS_Y + 2 + i * 10, ArcGui.PALE, false);
+            // la seconde ligne dit la touche choisie pour ranger d'un clic (Options > Commandes)
+            ArcGui.drawFit(g, font, Component.translatable("gui.emeraldweapons.bag.hint"), x + 8, y + TABS_Y + 2,
+                    ArcGui.PALE, SORT_X - 12);
+            if (!QuickStashClient.STASH.isUnbound()) {
+                ArcGui.drawFit(g, font, Component.translatable("gui.emeraldweapons.bag.hint.stash",
+                        QuickStashClient.STASH.getTranslatedKeyMessage()), x + 8, y + TABS_Y + 12, ArcGui.PALE, SORT_X - 12);
             }
         }
     }

@@ -579,6 +579,10 @@ public final class PhotoAutomaton {
             player.onUpdateAbilities();
             player.teleportTo(level, stage.getX() + 0.5, stage.getY(), stage.getZ() - 2.5, 180.0F, 8.0F);
             screenKit(player);
+            if (view.endsWith("_aide")) {
+                // un seul sac : le panneau montre sa ligne d'aide, qui dit la touche pour ranger
+                player.getInventory().setItem(8, net.minecraft.world.item.ItemStack.EMPTY);
+            }
             net.minecraft.world.inventory.ContainerLevelAccess none = net.minecraft.world.inventory.ContainerLevelAccess.NULL;
             if (view.startsWith("forge")) {
                 player.getInventory().selected = 0;      // l'epee en main monte d'elle-meme sur la forge
@@ -599,10 +603,11 @@ public final class PhotoAutomaton {
             } else {
                 com.emerald.menu.ArcInventoryMenu.open(player);
             }
-            if (view.endsWith("_alt") || view.endsWith("_suppr")) {
-                // le client rejoue le geste a sa dixieme tique d'ecran (PhotoClient) ; la prise attend
+            if (view.endsWith("_alt") || view.endsWith("_suppr") || view.endsWith("_touche")) {
+                // le client rejoue le geste a sa dixieme tique d'ecran (PhotoClient) ; la prise attend.
+                // « _touche » : les commandes changees, puis remises, pendant une trentaine de tiques
                 quickView = view;
-                holdUntil = 60;
+                holdUntil = view.endsWith("_touche") ? 80 : 60;
             }
             if (view.contains("_ceinture")) {
                 // la ceinture de cuir de Relics d'abord (elle ajoute des charmes) ; remplacee plus tard,
@@ -1945,8 +1950,9 @@ public final class PhotoAutomaton {
             }
         }
         String trash = player.containerMenu instanceof com.emerald.menu.ArcInventoryMenu arc ? arc.trashed().toString() : "-";
-        LOGGER.info("photos : {} -- au sac {} pierres et {} diamants, a la poubelle {}, ecran {}", quickView, stone,
-                diamonds, trash, player.containerMenu.getClass().getSimpleName());
+        int planks = com.emerald.item.Stash.count(player, net.minecraft.world.item.Items.OAK_PLANKS);
+        LOGGER.info("photos : {} -- au sac {} pierres et {} diamants, a la poubelle {}, planches {}, ecran {}", quickView,
+                stone, diamonds, trash, planks, player.containerMenu.getClass().getSimpleName());
         quickView = null;
     }
 
