@@ -136,6 +136,9 @@ public final class PhotoClient {
         // UN ECRAN QUI MET LE JEU EN PAUSE (le livre) arrete le serveur integre : il ne compte
         // plus ses tiques et la prise attendrait toujours. Ecran ouvert depuis une seconde : on la prend.
         screenTicks = wantsScreen && mc.screen != null ? screenTicks + 1 : 0;
+        if (screenTicks == 10 && mc.screen instanceof net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<?> shown) {
+            quickGesture(wanted, shown);
+        }
         if (burst >= 0) {
             // LA RAFALE (« _rafale ») : une image toutes les deux tiques, pour voir bouger les ailes
             if (++burstTicks % BURST_STEP == 0) {
@@ -166,6 +169,32 @@ public final class PhotoClient {
             PhotoAutomaton.taken(wanted);
             if (wantsScreen && mc.screen != null) {
                 mc.setScreen(null);                       // la prise suivante part sans ecran
+            }
+        }
+    }
+
+    /**
+     * RANGER D'UN CLIC (cahier 112), le geste du joueur rejoue par le client, l'ecran ouvert : « _alt »,
+     * Alt+Maj+clic sur la premiere pierre du coffre puis Alt+clic sur ses diamants ; « _suppr », Suppr
+     * sur la viande cuite de l'inventaire (case 13). Par les memes appels que la souris et la touche.
+     */
+    private static void quickGesture(String wanted,
+                                     net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<?> screen) {
+        if (wanted.endsWith("_alt")) {
+            gesture(screen, net.minecraft.world.item.Items.COBBLESTONE, true);
+            gesture(screen, net.minecraft.world.item.Items.DIAMOND, false);
+        }
+        if (wanted.endsWith("_suppr") && screen instanceof ArcInventoryScreen inventory) {
+            QuickStashClient.trash(inventory, screen.getMenu().getSlot(13));
+        }
+    }
+
+    private static void gesture(net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<?> screen,
+                                net.minecraft.world.item.Item item, boolean bulk) {
+        for (net.minecraft.world.inventory.Slot slot : screen.getMenu().slots) {
+            if (slot.index < 27 && slot.getItem().is(item)) {
+                QuickStashClient.request(screen, slot, bulk);
+                return;
             }
         }
     }

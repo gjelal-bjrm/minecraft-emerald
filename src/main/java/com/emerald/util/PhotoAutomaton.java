@@ -439,6 +439,9 @@ public final class PhotoAutomaton {
         if (beltSwapAt > 0) {
             beltSteps(player);
         }
+        if (quickView != null && waited == holdUntil - 5) {
+            quickReport(player);
+        }
         if (explosionTarget != null && burstStarted) {
             com.emerald.jak.vehicle.VehicleDamage.damage(explosionTarget, com.emerald.jak.vehicle.VehicleDamage.NOVA);
             explosionTarget = null;
@@ -588,8 +591,18 @@ public final class PhotoAutomaton {
             } else if (view.startsWith("etabli")) {
                 player.openMenu(new net.minecraft.world.SimpleMenuProvider((id, inventory, p) ->
                         new com.emerald.menu.SocketBenchMenu(id, inventory, none), com.emerald.block.SocketBenchBlock.TITLE));
+            } else if (view.startsWith("coffre")) {
+                net.minecraft.world.SimpleContainer loot = lootChest();
+                player.openMenu(new net.minecraft.world.SimpleMenuProvider((id, inventory, p) ->
+                        net.minecraft.world.inventory.ChestMenu.threeRows(id, inventory, loot),
+                        net.minecraft.network.chat.Component.translatable("container.chest")));
             } else {
                 com.emerald.menu.ArcInventoryMenu.open(player);
+            }
+            if (view.endsWith("_alt") || view.endsWith("_suppr")) {
+                // le client rejoue le geste a sa dixieme tique d'ecran (PhotoClient) ; la prise attend
+                quickView = view;
+                holdUntil = 60;
             }
             if (view.contains("_ceinture")) {
                 // la ceinture de cuir de Relics d'abord (elle ajoute des charmes) ; remplacee plus tard,
@@ -1898,6 +1911,45 @@ public final class PhotoAutomaton {
     /** La voiture a faire exploser au debut de la rafale (« dos_explosion »), serveur. */
     @Nullable
     private static com.emerald.jak.vehicle.JakVehicleEntity explosionTarget;
+    /** Les prises « coffre_alt » et « inventaire_suppr » (cahier 112) : leur compte, pour le journal. */
+    @Nullable
+    private static String quickView;
+
+    /** Le butin du coffre des prises « menu_coffre... » : de la pierre en trois piles, des diamants. */
+    private static net.minecraft.world.SimpleContainer lootChest() {
+        net.minecraft.world.SimpleContainer loot = new net.minecraft.world.SimpleContainer(27);
+        Object[][] contents = {
+                {0, net.minecraft.world.item.Items.COBBLESTONE, 64}, {2, net.minecraft.world.item.Items.GOLD_INGOT, 12},
+                {4, net.minecraft.world.item.Items.COBBLESTONE, 64}, {10, net.minecraft.world.item.Items.DIAMOND, 3},
+                {13, net.minecraft.world.item.Items.COBBLESTONE, 37}, {16, net.minecraft.world.item.Items.STRING, 9},
+                {19, net.minecraft.world.item.Items.ROTTEN_FLESH, 20}, {21, net.minecraft.world.item.Items.BONE, 7},
+                {25, net.minecraft.world.item.Items.IRON_INGOT, 30}};
+        for (Object[] entry : contents) {
+            loot.setItem((Integer) entry[0], new net.minecraft.world.item.ItemStack(
+                    (net.minecraft.world.item.Item) entry[1], (Integer) entry[2]));
+        }
+        return loot;
+    }
+
+    /** Apres le geste du client : ce que le sac et la poubelle tiennent. */
+    private static void quickReport(ServerPlayer player) {
+        int stone = 0;
+        int diamonds = 0;
+        List<com.emerald.menu.bag.Bag> bags = com.emerald.menu.bag.Bags.scan(player, 1);
+        for (int slot = 0; !bags.isEmpty() && slot < bags.get(0).size(); slot++) {
+            net.minecraft.world.item.ItemStack stack = bags.get(0).get(slot);
+            if (stack.is(net.minecraft.world.item.Items.COBBLESTONE)) {
+                stone += stack.getCount();
+            } else if (stack.is(net.minecraft.world.item.Items.DIAMOND)) {
+                diamonds += stack.getCount();
+            }
+        }
+        String trash = player.containerMenu instanceof com.emerald.menu.ArcInventoryMenu arc ? arc.trashed().toString() : "-";
+        LOGGER.info("photos : {} -- au sac {} pierres et {} diamants, a la poubelle {}, ecran {}", quickView, stone,
+                diamonds, trash, player.containerMenu.getClass().getSimpleName());
+        quickView = null;
+    }
+
     /** La tique des prises « inventaire_ceinture... » ou la ceinture de Relics est remplacee, ecran ouvert. */
     private static int beltSwapAt;
     /** Ou le panneau des artefacts defile avant le remplacement : « belt », ou le bas (null). */

@@ -74,6 +74,8 @@ public class ArcInventoryMenu extends BagMenu {
     public static final int SLOT_OFFHAND = 45;
     public static final int SLOT_TRASH = 46;
     public static final int SLOT_CURIOS = 47;
+    /** Suppr au survol (client/QuickStashClient) : + l'index de la case a jeter. */
+    public static final int BUTTON_TRASH = 7000;
 
     /** Le corps de l'ecran : la texture de l'inventaire du jeu. */
     public static final int BODY_W = 176;
@@ -257,7 +259,37 @@ public class ArcInventoryMenu extends BagMenu {
 
     @Override
     protected boolean onButton(Player player, int id) {
+        if (id >= BUTTON_TRASH && id < BUTTON_TRASH + this.slots.size()) {
+            if (!player.level().isClientSide) {
+                trashFrom(player, id - BUTTON_TRASH);
+            }
+            return true;
+        }
         return this.curios != null && this.curios.button(id);
+    }
+
+    /**
+     * SUPPR AU SURVOL (cahier 112) : la pile de cette case a la poubelle, prise d'un clic comme a la
+     * main -- une pile au plus d'une case du sac --, et ce que la poubelle tenait est detruit. Ce
+     * qu'elle refuse reste en place.
+     */
+    private void trashFrom(Player player, int index) {
+        if (index == SLOT_TRASH || index == SLOT_RESULT || !this.getCarried().isEmpty()) {
+            return;
+        }
+        Slot slot = this.getSlot(index);
+        if (!slot.hasItem() || !slot.mayPickup(player)) {
+            return;
+        }
+        if (!trashable(slot.getItem())) {
+            com.emerald.menu.bag.QuickStash.say(player, "gui.emeraldweapons.trash.refused");
+            return;
+        }
+        this.clicked(index, 0, ClickType.PICKUP, player);
+        if (trashable(this.getCarried())) {
+            this.clicked(SLOT_TRASH, 0, ClickType.PICKUP, player);
+        }
+        com.emerald.menu.bag.QuickStash.giveBack(this, index, player);
     }
 
     // ================================================================ artisanat

@@ -147,6 +147,15 @@ public class ModNetwork {
                     }
                 }));
 
+        // Alt+clic : une pile rangee dans le sac porte, de tout ecran de conteneur (cahier §112)
+        registrar.playToServer(QuickStashPayload.TYPE, QuickStashPayload.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(() -> {
+                    if (context.player() instanceof ServerPlayer player && player.isAlive()) {
+                        com.emerald.menu.bag.QuickStash.stash(player, payload.containerId(), payload.slot(),
+                                payload.bulk());
+                    }
+                }));
+
         // les munitions des sacs : l'arc se bande chez le client sans fleche dans l'inventaire (cahier §111)
         registrar.playToClient(BagAmmoPayload.TYPE, BagAmmoPayload.STREAM_CODEC,
                 (payload, context) -> context.enqueueWork(() -> com.emerald.item.BagAmmo.accept(payload)));

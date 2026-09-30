@@ -90,6 +90,51 @@ public final class Bags {
         return MorphGunKeeper.isGun(stack) || stack.is(ModItems.JET_BOARD.get());
     }
 
+    /**
+     * Range cette pile dans ce sac, tout entier : d'abord sur les piles du meme objet, puis dans
+     * les cases vides. Rend ce qui n'est pas entre (la pile elle-meme si le sac la refuse). Cote
+     * serveur ; le panneau d'un ecran y passe aussi (BagPanel.insert), entre sa relecture et son
+     * ecriture.
+     */
+    public static ItemStack insert(Bag bag, ItemStack stack) {
+        if (stack.isEmpty() || forbidden(stack) || stack == bag.stack()) {
+            return stack;
+        }
+        ItemStack rest = stack.copy();
+        for (int pass = 0; pass < 2 && !rest.isEmpty(); pass++) {
+            for (int slot = 0; slot < bag.size() && !rest.isEmpty(); slot++) {
+                ItemStack here = bag.get(slot);
+                boolean fits = pass == 0
+                        ? !here.isEmpty() && ItemStack.isSameItemSameComponents(here, rest)
+                        : here.isEmpty();
+                if (!fits || !bag.accepts(slot, rest)) {
+                    continue;
+                }
+                int room = bag.limit(slot, rest) - here.getCount();
+                if (room <= 0) {
+                    continue;
+                }
+                int moved = Math.min(room, rest.getCount());
+                bag.set(slot, rest.copyWithCount(here.getCount() + moved));
+                rest.shrink(moved);
+            }
+        }
+        return rest;
+    }
+
+    /** Une case de ce sac au moins prend-elle cet objet ? (Plein ou non.) */
+    public static boolean accepts(Bag bag, ItemStack stack) {
+        if (stack.isEmpty() || forbidden(stack) || stack == bag.stack()) {
+            return false;
+        }
+        for (int slot = 0; slot < bag.size(); slot++) {
+            if (bag.accepts(slot, stack)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /** Un objet qui contient d'autres objets : un sac, une boite. La poubelle les refuse. */
     public static boolean isContainer(ItemStack stack) {
         return !stack.isEmpty() && stack.getCapability(Capabilities.ItemHandler.ITEM) != null;

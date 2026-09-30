@@ -188,6 +188,12 @@ public final class BagPanel {
 
     // ================================================================ serveur
 
+    /** Le sac montre, ou null (QuickStash). Serveur, entre begin et end. */
+    @Nullable
+    Bag shown() {
+        return current();
+    }
+
     @Nullable
     private Bag current() {
         return this.window.bag();
@@ -369,25 +375,7 @@ public final class BagPanel {
             return stack;
         }
         this.window.flush();
-        ItemStack rest = stack.copy();
-        for (int pass = 0; pass < 2 && !rest.isEmpty(); pass++) {
-            for (int slot = 0; slot < bag.size() && !rest.isEmpty(); slot++) {
-                ItemStack here = bag.get(slot);
-                boolean fits = pass == 0
-                        ? !here.isEmpty() && ItemStack.isSameItemSameComponents(here, rest)
-                        : here.isEmpty();
-                if (!fits || !bag.accepts(slot, rest)) {
-                    continue;
-                }
-                int room = bag.limit(slot, rest) - here.getCount();
-                if (room <= 0) {
-                    continue;
-                }
-                int moved = Math.min(room, rest.getCount());
-                bag.set(slot, rest.copyWithCount(here.getCount() + moved));
-                rest.shrink(moved);
-            }
-        }
+        ItemStack rest = Bags.insert(bag, stack);
         this.window.reload();
         return rest;
     }

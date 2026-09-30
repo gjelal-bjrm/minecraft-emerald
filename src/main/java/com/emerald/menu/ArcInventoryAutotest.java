@@ -13,6 +13,7 @@ import com.emerald.main.EmeraldWeaponsMod;
 import com.emerald.menu.bag.Bag;
 import com.emerald.menu.bag.BagPanel;
 import com.emerald.menu.bag.Bags;
+import com.emerald.menu.bag.QuickStash;
 import com.emerald.menu.curio.CurioPanel;
 import com.mojang.authlib.GameProfile;
 import net.minecraft.core.component.DataComponents;
@@ -21,7 +22,9 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ChestMenu;
 import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.Slot;
@@ -129,6 +132,19 @@ public final class ArcInventoryAutotest {
         return n;
     }
 
+    /** Combien de cet objet dans le sac, tel qu'il est enregistre. */
+    private static int inBag(Player player, Item item) {
+        Bag bag = sac(player);
+        int n = 0;
+        for (int slot = 0; bag != null && slot < bag.size(); slot++) {
+            ItemStack stack = bag.get(slot);
+            if (stack.is(item)) {
+                n += stack.getCount();
+            }
+        }
+        return n;
+    }
+
     /** Le sac tel qu'il est enregistre : relu par une nouvelle enveloppe. */
     private static Bag sac(Player player) {
         List<Bag> bags = Bags.scan(player, BagPanel.MAX_TABS);
@@ -201,6 +217,7 @@ public final class ArcInventoryAutotest {
         arrows(p);
         board(p);
         furniture(p);
+        quickStash(p, inv);
     }
 
     /**
@@ -276,6 +293,129 @@ public final class ArcInventoryAutotest {
                 slot.set(ItemStack.EMPTY);                // rien de ce banc ne reste porte
             }
         }
+    }
+
+    /**
+     * RANGER D'UN CLIC (cahier 112) : Alt+clic et Alt+Maj+clic vers le sac, depuis l'inventaire
+     * d'Arcencium et depuis un coffre ; Suppr a la poubelle. Le serveur est appele comme le paquet
+     * du client l'appelle (QuickStash.stash, le bouton de la poubelle).
+     */
+    private static void quickStash(FakePlayer p, Inventory inv) {
+        line("--- ranger d'un clic");
+        if (sac(p) == null) {
+            check("le sac, pour ranger d'un clic", false, "absent");
+            return;
+        }
+        clearBag(sac(p));
+        inv.clearContent();
+        ArcInventoryMenu m = ArcInventoryMenu.create(4, p);
+        p.containerMenu = m;
+
+        inv.setItem(12, new ItemStack(Items.COBBLESTONE, 40));
+        QuickStash.stash(p, m.containerId, ArcInventoryMenu.SLOT_MAIN + 3, false);
+        check("Alt+clic sur 40 pierres de l'inventaire : dans le sac, la case videe, le curseur vide",
+                inv.getItem(12).isEmpty() && inBag(p, Items.COBBLESTONE) == 40 && m.getCarried().isEmpty(),
+                "case " + show(inv.getItem(12)) + ", sac " + inBag(p, Items.COBBLESTONE));
+
+        inv.setItem(9, new ItemStack(Items.DIRT, 64));
+        inv.setItem(10, new ItemStack(Items.DIRT, 20));
+        inv.setItem(30, new ItemStack(Items.DIRT, 7));
+        inv.setItem(2, new ItemStack(Items.DIRT, 5));                  // la barre d'action
+        QuickStash.stash(p, m.containerId, ArcInventoryMenu.SLOT_MAIN, true);
+        check("Alt+Maj+clic sur la terre : les trois piles de l'inventaire dans le sac, la barre gardee",
+                inBag(p, Items.DIRT) == 91 && inv.getItem(9).isEmpty() && inv.getItem(10).isEmpty()
+                        && inv.getItem(30).isEmpty() && inv.getItem(2).getCount() == 5 && m.getCarried().isEmpty(),
+                "sac " + inBag(p, Items.DIRT) + ", barre " + show(inv.getItem(2)));
+
+        inv.setItem(14, new ItemStack(ModItems.JET_BOARD.get()));
+        QuickStash.stash(p, m.containerId, ArcInventoryMenu.SLOT_MAIN + 5, false);
+        boolean boardKept = inv.getItem(14).is(ModItems.JET_BOARD.get());
+        inv.setItem(14, ItemStack.EMPTY);
+        m.getSlot(ArcInventoryMenu.SLOT_CRAFT).set(new ItemStack(Items.OAK_LOG));
+        boolean offered = m.getSlot(ArcInventoryMenu.SLOT_RESULT).getItem().is(Items.OAK_PLANKS);
+        QuickStash.stash(p, m.containerId, ArcInventoryMenu.SLOT_RESULT, false);
+        boolean notMade = m.getSlot(ArcInventoryMenu.SLOT_CRAFT).getItem().is(Items.OAK_LOG)
+                && inBag(p, Items.OAK_PLANKS) == 0;
+        m.getSlot(ArcInventoryMenu.SLOT_CRAFT).set(ItemStack.EMPTY);
+        check("refuses : le JET-Board reste, le resultat de la grille ne se fabrique pas d'un Alt+clic",
+                boardKept && offered && notMade && m.getCarried().isEmpty(),
+                "planche gardee " + boardKept + ", planches offertes " + offered + ", buche intacte " + notMade);
+
+        Bag full = sac(p);
+        for (int slot = 0; slot < full.size(); slot++) {
+            full.set(slot, new ItemStack(Items.IRON_INGOT, full.limit(slot, new ItemStack(Items.IRON_INGOT))));
+        }
+        m.broadcastChanges();
+        inv.setItem(16, new ItemStack(Items.GOLD_INGOT, 10));
+        QuickStash.stash(p, m.containerId, ArcInventoryMenu.SLOT_MAIN + 7, false);
+        check("le sac plein : les 10 lingots d'or restent dans leur case, le curseur vide",
+                inv.getItem(16).is(Items.GOLD_INGOT) && inv.getItem(16).getCount() == 10 && m.getCarried().isEmpty()
+                        && inBag(p, Items.GOLD_INGOT) == 0,
+                "case " + show(inv.getItem(16)) + ", or au sac " + inBag(p, Items.GOLD_INGOT));
+        clearBag(sac(p));
+        inv.setItem(16, ItemStack.EMPTY);
+
+        inv.setItem(20, new ItemStack(Items.ROTTEN_FLESH, 12));
+        m.clickMenuButton(p, ArcInventoryMenu.BUTTON_TRASH + 20);
+        boolean flesh = m.trashed().is(Items.ROTTEN_FLESH) && m.trashed().getCount() == 12 && inv.getItem(20).isEmpty();
+        inv.setItem(21, new ItemStack(Items.BONE, 3));
+        m.clickMenuButton(p, ArcInventoryMenu.BUTTON_TRASH + 21);
+        boolean bones = m.trashed().is(Items.BONE) && inv.getItem(21).isEmpty();
+        inv.setItem(22, new ItemStack(ModItems.JET_BOARD.get()));
+        m.clickMenuButton(p, ArcInventoryMenu.BUTTON_TRASH + 22);
+        boolean kept = inv.getItem(22).is(ModItems.JET_BOARD.get()) && m.trashed().is(Items.BONE);
+        inv.setItem(22, ItemStack.EMPTY);
+        check("Suppr : la chair a la poubelle, les os la remplacent, le JET-Board refuse",
+                flesh && bones && kept && m.getCarried().isEmpty(),
+                "chair " + flesh + ", os " + bones + ", planche gardee " + kept + ", poubelle " + show(m.trashed()));
+
+        sac(p).set(0, new ItemStack(Items.IRON_INGOT, 256));
+        m.broadcastChanges();                           // la fenetre du sac relue, comme a chaque tique
+        m.clickMenuButton(p, ArcInventoryMenu.BUTTON_TRASH + m.bag().firstSlot());
+        ItemStack left = sac(p).get(0);
+        check("Suppr sur une case du sac (256 fers) : une pile a la poubelle, 192 restent",
+                m.trashed().is(Items.IRON_INGOT) && m.trashed().getCount() == 64 && left.getCount() == 192
+                        && m.getCarried().isEmpty(),
+                "poubelle " + show(m.trashed()) + ", case du sac " + show(left));
+        clearBag(sac(p));
+        m.removed(p);
+        inv.clearContent();
+
+        SimpleContainer chest = new SimpleContainer(27);
+        chest.setItem(0, new ItemStack(Items.GOLD_INGOT, 30));
+        chest.setItem(5, new ItemStack(Items.GOLD_INGOT, 12));
+        chest.setItem(7, new ItemStack(Items.DIAMOND, 3));
+        chest.setItem(9, new ItemStack(Items.IRON_INGOT, 8));
+        ChestMenu c = ChestMenu.threeRows(5, inv, chest);
+        p.containerMenu = c;
+        QuickStash.stash(p, c.containerId, 7, false);
+        check("dans un coffre, Alt+clic sur 3 diamants : dans le sac, la case du coffre videe",
+                chest.getItem(7).isEmpty() && inBag(p, Items.DIAMOND) == 3 && c.getCarried().isEmpty(),
+                "case " + show(chest.getItem(7)) + ", sac " + inBag(p, Items.DIAMOND));
+        QuickStash.stash(p, c.containerId, 0, true);
+        check("dans un coffre, Alt+Maj+clic sur l'or : les deux piles dans le sac, le fer reste",
+                chest.getItem(0).isEmpty() && chest.getItem(5).isEmpty() && inBag(p, Items.GOLD_INGOT) == 42
+                        && chest.getItem(9).getCount() == 8,
+                "or au sac " + inBag(p, Items.GOLD_INGOT) + ", fer au coffre " + show(chest.getItem(9)));
+        inv.setItem(9, new ItemStack(Items.COAL, 16));
+        QuickStash.stash(p, c.containerId, 27, false);           // la premiere case de l'inventaire, sous le coffre
+        check("dans un coffre, Alt+clic sur une pile de son inventaire : dans le sac aussi",
+                inv.getItem(9).isEmpty() && inBag(p, Items.COAL) == 16, "sac " + inBag(p, Items.COAL));
+        p.containerMenu = p.inventoryMenu;
+        clearBag(sac(p));
+        inv.clearContent();
+
+        FakePlayer q = FakePlayerFactory.get(p.serverLevel(), new GameProfile(
+                UUID.nameUUIDFromBytes("autotest:ecran:sans-sac".getBytes(StandardCharsets.UTF_8)), "[SansSac]"));
+        q.getInventory().clearContent();
+        SimpleContainer other = new SimpleContainer(27);
+        other.setItem(0, new ItemStack(Items.EMERALD, 5));
+        ChestMenu d = ChestMenu.threeRows(6, q.getInventory(), other);
+        q.containerMenu = d;
+        QuickStash.stash(q, d.containerId, 0, false);
+        check("sans sac porte : rien ne bouge", other.getItem(0).getCount() == 5 && d.getCarried().isEmpty()
+                && q.getInventory().isEmpty(), "coffre " + show(other.getItem(0)));
+        q.containerMenu = q.inventoryMenu;
     }
 
     /** Maj+clic de l'inventaire vers le sac : tout le sac, pas seulement les cases visibles. */

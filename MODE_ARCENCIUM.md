@@ -10353,3 +10353,51 @@ Deux defauts du banc photo corriges au passage : il prenait l'image une seconde 
 l'ecran (a cause du livre, qui met le jeu en pause), donc avant le remplacement -- la prise attend
 maintenant (`holdsScreen`) ; et son equipement ajoutait une echarpe de plus a chaque prise, les cases
 etant la.
+
+## 112. Ranger d'un clic : Alt+clic vers le sac, Suppr a la poubelle *(30 sept. 2026)*
+
+« si je veux deplacer des elements dans l'inventaire, je [...] clique gauche en maintenant la
+touche Shift et ca les met dans l'inventaire. Parfois, j'aimerais plutot les mettre [...] dans le sac
+a dos ou dans la corbeille. Et je suis oblige de le faire a la main. » (le joueur, 30 sept.) Ses choix : Alt+clic vers le sac et Suppr
+a la poubelle, partout ou il y a des cases, et Alt+Maj+clic pour tout un objet d'un coup.
+
+**Les touches deja prises dans le profil**, que rien ne recouvre : Ctrl+clic (Inventory Essentials,
+un seul objet), Espace+clic (Inventory Essentials, tout deplacer), Maj+clic hors de l'ecran
+(Inventory Essentials, tout jeter), Suppr et Maj+Suppr (TrashSlot, la ou sa poubelle est montree),
+glisser et molette (Mouse Tweaks). Alt+clic etait libre. Ctrl reste a Inventory Essentials : AltGr,
+que Windows envoie comme Ctrl+Alt, ne range donc pas.
+
+### A. Alt+clic et Alt+Maj+clic (`menu/bag/QuickStash`, `client/QuickStashClient`, `network/QuickStashPayload`)
+
+- **Partout** : l'inventaire d'Arcencium, la Forge, l'Autel, l'Etabli (le sac montre, son onglet
+  choisi), et tout autre ecran de conteneur -- coffre, tonneau, boite de Shulker, coffre
+  d'amenagement, coffres des autres mods -- ou la pile va au premier sac du joueur (le dos d'abord).
+  Pas l'inventaire creatif, ni l'ecran d'un sac de Sophisticated Backpacks.
+- **Le geste de la main, fait par le serveur** : la pile est prise par un clic du menu lui-meme (il
+  applique ses regles), posee dans tout le sac (sur les piles du meme objet, puis les cases vides),
+  et ce qui n'y entre pas retourne dans sa case, ou dans l'inventaire. Le curseur est vide avant et
+  apres : rien n'est cree, rien n'est perdu. Les cases de resultat (artisanat, four, marchand) ne
+  sont pas prises : on ne fabrique pas d'un Alt+clic.
+- **Alt+Maj+clic** : toutes les piles du meme objet du meme conteneur. Dans l'inventaire du joueur,
+  la barre d'action et le reste vont a part : le butin se range, pas ce qu'on garde en main.
+- **Les refus** : le Morph Gun, le JET-Board, le sac montre lui-meme ; ce que le sac n'accepte pas.
+  Un mot au-dessus de la barre d'action : « Aucun sac porte », « Le sac est plein », « Cet objet ne
+  va pas dans le sac ».
+
+### B. Suppr a la poubelle (`ArcInventoryMenu.BUTTON_TRASH`)
+
+Sur l'inventaire d'Arcencium, Suppr sur une pile la met a notre poubelle, prise d'un clic comme a la
+main : une pile au plus d'une case du sac (256 fers : 64 partent). Ce que la poubelle tenait est
+detruit, comme quand on y pose un objet ; on reprend le dernier jusqu'a la fermeture. C'est la
+touche « supprimer » de TrashSlot (le joueur a pu la changer) ; ailleurs, TrashSlot fait lui-meme
+la meme chose avec sa propre poubelle. La poubelle refuse toujours le Morph Gun, le JET-Board et les
+sacs.
+
+### C. Vu, et essaye
+
+Banc `ecran` : 51 OK, dont dix nouveaux -- Alt+clic sur 40 pierres de l'inventaire, Alt+Maj+clic sur
+trois piles de terre (la barre d'action gardee), le JET-Board et le resultat de la grille refuses, le
+sac plein (l'or reste en place), Suppr sur l'inventaire puis sur une case du sac, et dans un vrai
+coffre : les diamants, deux piles d'or d'un coup, une pile de l'inventaire du joueur ; un cobaye sans
+sac ne perd rien. Photos dans le client du dev, le geste envoye par le client comme par la souris :
+un coffre avant et apres un Alt+Maj+clic sur sa pierre et un Alt+clic sur ses diamants (les trois piles de pierre et les diamants partis, le reste en place ; au sac, 165 pierres et 24 diamants), puis l'inventaire apres Suppr sur la viande cuite (a la poubelle, 16).

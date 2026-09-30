@@ -45,6 +45,14 @@ public abstract class BagMenu extends AbstractContainerMenu {
 
     protected abstract int inventoryEnd();
 
+    /**
+     * Cette case se range-t-elle d'un Alt+clic (QuickStash) ? Pas les cases du sac lui-meme ;
+     * les menus y ajoutent les leurs.
+     */
+    public boolean stashable(int index) {
+        return this.bag == null || !this.bag.isBagSlot(index);
+    }
+
     /** Les boutons propres au menu. */
     protected boolean onButton(Player player, int id) {
         return false;
