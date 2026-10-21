@@ -202,6 +202,11 @@ public final class PhotoAutomaton {
             return "eclipse".equals(this.biome.getNamespace());
         }
 
+        /** Une prise de la Battue (« nom@battue:boussole ») : interface visible. */
+        boolean battue() {
+            return "battue".equals(this.biome.getNamespace());
+        }
+
         /** Une creature posee seule, de jour, pour juger de sa forme (cahier §108). */
         boolean casting() {
             return "casting".equals(this.biome.getNamespace());
@@ -2146,6 +2151,19 @@ public final class PhotoAutomaton {
         }
         if (shot.eclipse()) {
             return placeEclipse(level, player, shot);
+        }
+        if (shot.battue()) {
+            // LA BOUSSOLE DE LA BATTUE (cahier §113) : la Battue se leve la ou se tient le
+            // joueur, la Proie apparait au loin, et l'on prend l'ecran avec l'interface
+            if (PREPARED.add("battue")) {
+                player.setGameMode(GameType.SURVIVAL);
+                player.getAbilities().invulnerable = true;
+                com.emerald.weather.WeatherManager.force(level, com.emerald.weather.Weather.BATTUE, 20 * 280);
+            }
+            float yaw = shot.biome().getPath().endsWith("dos") ? player.getYRot() + 180.0F : player.getYRot();
+            player.teleportTo(level, player.getX(), player.getY(), player.getZ(), yaw, 0.0F);
+            pendingGui = true;
+            return true;
         }
         if (shot.casting()) {
             return placeCasting(level, player, shot);

@@ -1404,6 +1404,30 @@ public final class ArcenciumAutotest {
         check("la Proie : eteinte a 40 blocs, allumee a 8 ; sa garde (" + guards.size() + ") : marquee, jamais allumee",
                 darkFar && litNear && guards.size() >= 2 && guardsDark && guardsTagged,
                 "loin " + !darkFar + ", pres " + litNear + ", gardes " + guards.size() + ", eteintes " + guardsDark);
+        // 21 oct. : frappee, la Proie fuit A L'OPPOSE du chasseur, et sa garde le prend pour cible
+        guards.forEach(g -> {
+            if (g instanceof net.minecraft.world.entity.Mob mob) {
+                mob.setTarget(null);
+            }
+        });
+        beast.setHealth(beast.getMaxHealth());
+        beast.hurt(level.damageSources().playerAttack(hunter), 1.0F);
+        // le recul la souleve : le jeu ne cherche pas de chemin en l'air ; sa regle de fuite
+        // relance la course des qu'elle retombe, ce qu'on joue ici
+        beast.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+        beast.setOnGround(true);
+        BattueHunt.flee(level, beast, hunter);
+        net.minecraft.world.level.pathfinder.Path path = beast instanceof net.minecraft.world.entity.Mob m
+                ? m.getNavigation().getPath() : null;
+        BlockPos goal = path == null ? null : path.getTarget();
+        double before = beast.distanceTo(hunter);
+        double after = goal == null ? 0 : Math.sqrt(hunter.distanceToSqr(goal.getX() + 0.5, goal.getY(), goal.getZ() + 0.5));
+        long onHunter = guards.stream().filter(g -> g instanceof net.minecraft.world.entity.Mob mob
+                && mob.getTarget() == hunter).count();
+        check("frappee : la Proie fuit loin du chasseur, toute sa garde le prend pour cible",
+                goal != null && after >= before + 12 && onHunter == guards.size() && onHunter >= 2,
+                "chemin " + (goal != null) + ", " + Math.round(before) + " -> " + Math.round(after)
+                        + " blocs du chasseur, gardes sur lui " + onHunter + "/" + guards.size());
         BattueHunt.endForTest(level);
         boolean gone = beast.isRemoved() && guards.stream().allMatch(Entity::isRemoved);
         check("fin de la Battue : la Proie et sa garde s'en vont", gone,

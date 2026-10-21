@@ -21,7 +21,6 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.AvoidEntityGoal;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
 import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
-import net.minecraft.world.entity.ai.goal.PanicGoal;
 import net.minecraft.world.entity.ai.goal.WaterAvoidingRandomStrollGoal;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
@@ -93,6 +92,13 @@ public final class BattueHunt {
     public static final double PREY_SIGHT = 24.0;
     /** Sa garde : autant de monstres de la phase, autour d'elle. */
     public static final int ESCORT = 4;
+    /** Alertee, la garde poursuit jusqu'a tant de blocs de la Proie ; de pres, elle s'engage seule. */
+    public static final int ESCORT_CHASE = 24;
+    public static final double ESCORT_ENGAGE = 12.0;
+    /** La duree de l'alerte, et la distance de la fuite. */
+    private static final int ALARM_TICKS = 20 * 15;
+    private static final double FLEE_DISTANCE = 20.0;
+    private static long alarmUntil;
     /** La garde ne s'eloigne pas de la Proie au-dela de cela. */
     private static final int ESCORT_LEASH = 10;
     public static final String TAG_ESCORT = "emeraldweapons_battue_escort";
@@ -129,6 +135,7 @@ public final class BattueHunt {
         streaks.clear();
         prey = null;
         escort.clear();
+        alarmUntil = 0;
         if (level.players().isEmpty()) {
             return;
         }
@@ -209,14 +216,20 @@ public final class BattueHunt {
         beast.goalSelector.removeAllGoals(goal -> true);
         beast.targetSelector.removeAllGoals(goal -> true);
         beast.goalSelector.addGoal(0, new FloatGoal(beast));
-        // TOUCHEE, ELLE PANIQUE ; de loin, elle s'eloigne de qui approche
-        beast.goalSelector.addGoal(1, new PanicGoal(beast, preyIsBoar ? 1.7 : 1.9));
+        // TOUCHEE, ELLE DETALE A L'OPPOSE DE L'AGRESSEUR (la panique du jeu ne courait qu'a
+        // cinq blocs au hasard, et ecrasait la fuite) ; de loin, elle s'eloigne de qui approche
+        beast.goalSelector.addGoal(1, new FleeAttackerGoal(beast));
         beast.goalSelector.addGoal(2, new AvoidEntityGoal<>(beast, Player.class, 32.0F,
                 preyIsBoar ? 1.25 : 1.35, preyIsBoar ? 1.5 : 1.65));
         beast.goalSelector.addGoal(5, new WaterAvoidingRandomStrollGoal(beast, 1.0));
         beast.goalSelector.addGoal(6, new LookAtPlayerGoal(beast, Player.class, 12.0F));
-        level.addFreshEntity(beast);
+        // LA PROIE EST RETENUE AVANT D'ENTRER DANS LE MONDE. onJoin, plus bas, annule toute
+        // bete marquee Proie qui n'est pas la Proie en cours (les restes d'une Battue passee) ;
+        // retenue APRES addFreshEntity, la vraie Proie y etait annulee elle aussi, a chaque
+        // Battue depuis le 22 septembre. Le joueur cherchait une bete qui n'existait pas, et la
+        // boussole n'avait rien a montrer (cahier §113, mesure a la sonde).
         prey = beast.getUUID();
+        level.addFreshEntity(beast);
         preyHome = spot;
         lastCharge = level.getGameTime();
         raiseEscort(level, beast);
@@ -369,12 +382,41 @@ public final class BattueHunt {
             if (!(entity instanceof net.minecraft.world.entity.PathfinderMob guard) || !guard.isAlive()) {
                 return true;
             }
-            guard.restrictTo(beast.blockPosition(), ESCORT_LEASH);
+            // ALERTEE, la garde chasse loin ; au calme, elle reste dans les pattes de la Proie
+            boolean alarmed = level.getGameTime() < alarmUntil;
+            guard.restrictTo(beast.blockPosition(), alarmed ? ESCORT_CHASE : ESCORT_LEASH);
+            // ELLE S'ENGAGE DE PRES : un joueur a moins de douze blocs de la Proie est pris pour cible
+            if (guard.getTarget() == null) {
+                ServerPlayer intruder = nearestHunter(level, beast, ESCORT_ENGAGE);
+                if (intruder != null) {
+                    guard.setTarget(intruder);
+                }
+            }
             if (guard.getTarget() == null && guard.distanceToSqr(beast) > ESCORT_LEASH * ESCORT_LEASH) {
                 guard.getNavigation().moveTo(beast, 1.25);
             }
             return false;
         });
+    }
+
+    /** Le joueur le plus proche de la Proie a moins de « range » blocs, ni spectateur ni createur. */
+    @Nullable
+    private static ServerPlayer nearestHunter(ServerLevel level, LivingEntity beast, double range) {
+        ServerPlayer best = null;
+        double bestSq = range * range;
+        List<ServerPlayer> hunters = new java.util.ArrayList<>(level.players());
+        hunters.addAll(SUBJECTS);
+        for (ServerPlayer player : hunters) {
+            if (player.isSpectator() || player.isCreative()) {
+                continue;
+            }
+            double d = player.distanceToSqr(beast);
+            if (d <= bestSq) {
+                bestSq = d;
+                best = player;
+            }
+        }
+        return best;
     }
 
     /** La fin de la Battue : la garde se disperse. */
@@ -405,7 +447,122 @@ public final class BattueHunt {
         if (victim.level().isClientSide() || !victim.getTags().contains(BattueScene.TAG_PREY) || !victim.isAlive()) {
             return;
         }
-        victim.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, 60, 1, true, false, false));
+        victim.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, 80, 2, true, false, false));
+        // « QUAND ON TAPAIT LA CIBLE DOREE, ELLE NE FUYAIT PAS, ELLE N'ETAIT PAS DEFENDUE »
+        // (21 oct., cahier §113). La panique de la bete ne donnait pas de direction : elle
+        // detale maintenant A L'OPPOSE de qui l'a frappee, vingt blocs plus loin ; et sa garde,
+        // alertee, prend l'agresseur pour cible et peut le poursuivre jusqu'a vingt-quatre blocs.
+        if (!(event.getSource().getEntity() instanceof LivingEntity attacker)
+                || !(victim.level() instanceof ServerLevel level)) {
+            return;
+        }
+        flee(level, victim, attacker);
+        alarm(level, victim, attacker);
+    }
+
+    /** La Proie fuit a l'oppose de l'agresseur. Rend vrai si un chemin a ete trouve. */
+    public static boolean flee(ServerLevel level, LivingEntity beast, LivingEntity from) {
+        if (!(beast instanceof PathfinderMob mob)) {
+            return false;
+        }
+        // le chemin ne se cherche qu'a portee de « suivi » (16 pour un cochon) : vingt blocs
+        // de fuite n'aboutissaient pas
+        if (mob.getAttributeBaseValue(Attributes.FOLLOW_RANGE) < FLEE_DISTANCE + 12) {
+            setBase(mob, Attributes.FOLLOW_RANGE, FLEE_DISTANCE + 12);
+        }
+        double dx = beast.getX() - from.getX();
+        double dz = beast.getZ() - from.getZ();
+        double len = Math.max(0.01, Math.sqrt(dx * dx + dz * dz));
+        for (int attempt = 0; attempt < 4; attempt++) {
+            // tout droit d'abord, puis un peu de biais si le chemin manque
+            double turn = attempt == 0 ? 0.0 : (attempt % 2 == 0 ? 1 : -1) * 0.5 * ((attempt + 1) / 2);
+            double cos = Math.cos(turn);
+            double sin = Math.sin(turn);
+            double ux = (dx * cos - dz * sin) / len;
+            double uz = (dx * sin + dz * cos) / len;
+            int x = (int) Math.round(beast.getX() + ux * FLEE_DISTANCE);
+            int z = (int) Math.round(beast.getZ() + uz * FLEE_DISTANCE);
+            if (!level.isLoaded(new BlockPos(x, beast.getBlockY(), z))) {
+                continue;
+            }
+            int y = com.emerald.game.WorldSetup.surfaceY(level, x, z);
+            if (mob.getNavigation().moveTo(x + 0.5, y, z + 0.5, preyIsBoar ? 1.7 : 1.9)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Touchee, la Proie fuit l'agresseur ; elle relance sa course tant qu'il est a moins de seize blocs. */
+    private static final class FleeAttackerGoal extends net.minecraft.world.entity.ai.goal.Goal {
+        private final PathfinderMob beast;
+        private LivingEntity from;
+        private int until;
+
+        FleeAttackerGoal(PathfinderMob beast) {
+            this.beast = beast;
+            setFlags(java.util.EnumSet.of(Flag.MOVE));
+        }
+
+        @Override
+        public boolean canUse() {
+            LivingEntity attacker = beast.getLastHurtByMob();
+            if (attacker == null || beast.tickCount - beast.getLastHurtByMobTimestamp() > 100) {
+                return false;
+            }
+            from = attacker;
+            return true;
+        }
+
+        @Override
+        public void start() {
+            until = beast.tickCount + 100;
+            if (beast.level() instanceof ServerLevel level) {
+                flee(level, beast, from);
+            }
+        }
+
+        @Override
+        public boolean canContinueToUse() {
+            return beast.tickCount < until && from != null && from.isAlive();
+        }
+
+        @Override
+        public void tick() {
+            // soulevee par le recul du coup, elle n'a pas de chemin : elle repart des qu'elle retombe
+            if (beast.getNavigation().isDone() && beast.distanceToSqr(from) < 16 * 16
+                    && beast.level() instanceof ServerLevel level) {
+                flee(level, beast, from);
+            }
+        }
+
+        @Override
+        public void stop() {
+            from = null;
+        }
+    }
+
+    /** La garde se leve : chaque garde vivant prend l'agresseur pour cible, et peut le poursuivre. */
+    static int alarm(ServerLevel level, LivingEntity beast, LivingEntity attacker) {
+        if (attacker instanceof Player player && (player.isCreative() || player.isSpectator())) {
+            return 0;
+        }
+        boolean first = level.getGameTime() >= alarmUntil;
+        alarmUntil = level.getGameTime() + ALARM_TICKS;
+        int raised = 0;
+        for (UUID id : escort) {
+            if (level.getEntity(id) instanceof net.minecraft.world.entity.Mob guard && guard.isAlive()) {
+                guard.restrictTo(beast.blockPosition(), ESCORT_CHASE);
+                guard.setTarget(attacker);
+                guard.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, 100, 0, true, false, false));
+                raised++;
+            }
+        }
+        if (first && raised > 0) {
+            level.playSound(null, beast.blockPosition(), SoundEvents.RAID_HORN.value(), SoundSource.HOSTILE,
+                    1.2F, 1.3F);
+        }
+        return raised;
     }
 
     /**
@@ -441,6 +598,7 @@ public final class BattueHunt {
         SUBJECTS.clear();
         SUBJECTS.add(subject);
         escort.clear();
+        alarmUntil = 0;
         beast.addTag(BattueScene.TAG_PREY);
         prey = beast.getUUID();
         preyHome = beast.blockPosition();

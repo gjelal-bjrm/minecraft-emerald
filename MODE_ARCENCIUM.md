@@ -10429,3 +10429,37 @@ sous Windows) range donc desormais aussi, contrairement a ce que disait le A.
 **Vu dans le client du dev**, les touches passees par les evenements du jeu comme de vraies touches
 (JEI, TrashSlot et Inventory Essentials, presents, les voient aussi), puis les commandes remises a
 leur valeur, jamais enregistrees : ranger passe sur le bouton 4 de la souris : une pile de pierre au sac (64, pas les 165), puis remis sur Alt+clic gauche : un clic gauche sans Alt ne range plus rien (les diamants restent). Jeter : Suppr jette les planches (TrashSlot ne prend pas la touche), puis passe sur F13 : Suppr ne jette plus la viande, F13 la jette. Les options du dev inchangees apres coup. Le panneau avec un seul sac : sa ligne d'aide dit « ALT + Clic gauche : ranger de partout », la bulle de la poubelle « Suppr sur une pile l'y jette ».
+
+## 113. La Battue : une Proie qui existe, une boussole, une fuite et une garde *(21 oct. 2026)*
+
+« Quand la Battue arrive, je ne sais meme pas ou est la cible. » « Quand on tapait la cible doree,
+celle-ci ne fuyait pas, celle-ci n'etait pas non plus defendue par des monstres. Concretement, il
+n'y avait aucun challenge. » (le joueur, 21 oct.)
+
+**La cause premiere, mesuree a la sonde : la Proie n'existait pas.** `onJoin` annule toute bete
+marquee Proie qui n'est pas la Proie en cours (les restes d'une Battue passee). Or `spawnPrey` ne
+retenait la Proie qu'APRES l'avoir posee dans le monde : la vraie Proie etait annulee a son
+arrivee, a chaque Battue depuis le 22 septembre (0f4a492). Sa garde apparaissait seule, sans rien a
+garder. La Proie est desormais retenue avant d'entrer dans le monde.
+
+**La boussole** (`client/PreyCompassClient`) : une regle en haut au centre de l'ecran, son milieu
+droit devant, ses bords a 90 degres. Un repere dore glisse vers la Proie ; derriere soi, il se
+colle au bord avec un chevron (« ou ») qui dit de quel cote tourner. Dessous : « Proie 72 m ▲7 »,
+la distance et s'il faut monter ou descendre. Rien ne se dessine dans le monde : la demande du
+22 septembre contre l'effet « wall hack » tient toujours. Verifie en photo (`nom@battue:boussole`,
+`nom@battue:dos` de l'automate) : devant, le repere au bord droit ; de dos, a gauche du milieu.
+
+**La fuite** : la panique du jeu ne courait qu'a cinq blocs au hasard. Touchee, la Proie detale
+maintenant a l'oppose de qui l'a frappee, vingt blocs plus loin (tout droit, puis de biais si le
+terrain bloque), et relance sa course tant que l'agresseur est a moins de seize blocs, pendant
+cinq secondes apres chaque coup. Le recul du coup la souleve, et le jeu ne cherche pas de chemin
+en l'air : elle repart des qu'elle retombe. Sa portee de recherche passe a 32 blocs (16 chez un
+cochon : vingt blocs n'aboutissaient pas). Vitesse +3 crans pendant 4 s au lieu de +2 pendant 3 s.
+
+**La garde** : au premier coup, un cor de raid sonne. Chaque garde vivant prend l'agresseur pour
+cible et peut le poursuivre jusqu'a 24 blocs de la Proie pendant 15 s (12 au calme). Au calme, un
+joueur a moins de 12 blocs de la Proie est pris pour cible d'office : on ne s'en approche plus
+sans combattre.
+
+**Au banc** (`partie`) : frappee par le cobaye a 8 blocs, la Proie prend un chemin qui la mene a
+28 blocs de lui, et ses 4 gardes le visent. 56 OK, 5 KO (mods absents du banc, comme avant).

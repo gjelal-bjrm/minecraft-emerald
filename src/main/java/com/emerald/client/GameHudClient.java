@@ -104,6 +104,8 @@ public class GameHudClient {
         // LE REPERE DES FILONS, avant toute branche : il vaut au lobby comme
         // en partie, et il se dessine par-dessus le monde, jamais derriere.
         VeinMarkerClient.render(graphics, mc);
+        // LA BOUSSOLE DE LA BATTUE, en haut au centre (cahier §113) : le cap de la Proie
+        PreyCompassClient.render(graphics, mc);
         GameState.Status current = GameState.Status.values()[
                 Math.floorMod(status, GameState.Status.values().length)];
         if (current == GameState.Status.LOBBY) {
